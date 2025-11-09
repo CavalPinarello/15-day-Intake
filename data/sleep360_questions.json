@@ -1,0 +1,2217 @@
+[
+  {
+    "id": "D1",
+    "text": "Full Name",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Text",
+    "timeMinutes": 1
+  },
+  {
+    "id": "D2",
+    "text": "Date of Birth",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Date",
+    "timeMinutes": 1
+  },
+  {
+    "id": "D3",
+    "text": "Email",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Email",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "35",
+    "text": "Do you share your bedroom with a partner?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "36",
+    "text": "If yes, do they snore or disturb your sleep?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "37",
+    "text": "Do you have young children or infants at home?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "38",
+    "text": "If yes, how often do they wake you up per night?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "53A",
+    "text": "What is your current employment status? (Full-time/Part-time/Shift work/Unemployed/Retired/Student)",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Multiple choice",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "53B",
+    "text": "Do you work shifts or irregular hours? (Yes/No)",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "53D",
+    "text": "How many hours per day do you spend looking at screens for work?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Number (hours)",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "53E",
+    "text": "On a scale of 1-10, how would you rate your current work-related stress?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "1-10 scale",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "53F",
+    "text": "How many times per month do you travel for work or personal reasons?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "53G",
+    "text": "Do you frequently cross time zones (>2 hours)? (Never/Rarely/Sometimes/Often)",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "4-point scale",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "39",
+    "text": "Do you have caregiving responsibilities?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "59",
+    "text": "Do you have a bed partner or room mate?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5,
+    "notes": [
+      "---"
+    ]
+  },
+  {
+    "id": "D4",
+    "text": "Sex (Male/Female/Other)",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Multiple choice",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "D5",
+    "text": "Height",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "D6",
+    "text": "Weight",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "26",
+    "text": "Do you have diabetes or pre-diabetes?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Yes/No/Don't know",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "27",
+    "text": "Do you have high blood pressure?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Yes/No/Don't know",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "28",
+    "text": "Waist circumference (inches/cm)",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "44A",
+    "text": "Are you currently taking any prescription medications? (Yes/No)",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "44B",
+    "text": "If yes, please list all medications and dosages:",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Text (list)",
+    "timeMinutes": 2
+  },
+  {
+    "id": "44C",
+    "text": "Are you currently taking any supplements or vitamins? (Yes/No)",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "44D",
+    "text": "If yes, please list all supplements:",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Text (list)",
+    "timeMinutes": 1.5
+  },
+  {
+    "id": "44E",
+    "text": "Do you have any diagnosed chronic medical conditions? (Yes/No)",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "44F",
+    "text": "If yes, please list your chronic conditions:",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Text (list)",
+    "timeMinutes": 2
+  },
+  {
+    "id": "44G",
+    "text": "Have you had any surgeries or medical procedures in the past 6 months? (Yes/No)",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "44H",
+    "text": "If yes, please describe:",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Text",
+    "timeMinutes": 1.5
+  },
+  {
+    "id": "44I",
+    "text": "For women: Are you currently pregnant? (Yes/No/Not applicable)",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Multiple choice",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "44J",
+    "text": "For women: Are you currently breastfeeding? (Yes/No/Not applicable)",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "Multiple choice",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "44K",
+    "text": "Do you use recreational drugs or cannabis? (Never/Rarely/Sometimes/Regularly/Prefer not to answer)",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "scaleType": "5-point scale",
+    "timeMinutes": 0.5,
+    "notes": [
+      "---"
+    ]
+  },
+  {
+    "id": "1",
+    "text": "Overall sleep quality in past month (1=Very poor, 10=Excellent)",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "1-10 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "2",
+    "text": "How often do you feel refreshed after sleep? (Never/Rarely/Sometimes/Often/Always)",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "5-point scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "12A",
+    "text": "How many times do you typically wake up during the night?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "12B",
+    "text": "When you wake up at night, what is the MAIN reason? (Bathroom/Pain/Stress-Worry/Temperature/Noise/Unknown/Other)",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "Multiple choice",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "12C",
+    "text": "How long does it typically take you to fall back asleep after waking? (minutes)",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "Number (minutes)",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "41",
+    "text": "When have you usually gone to bed at night?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "Time",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "42",
+    "text": "How long to fall asleep each night? (minutes)",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "Minutes",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "43",
+    "text": "When have you usually gotten up in the morning?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "Time",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "44",
+    "text": "How many hours of actual sleep did you get?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "Hours",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "45",
+    "text": "Trouble sleeping: cannot get to sleep within 30 minutes",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "46",
+    "text": "Trouble sleeping: wake up in middle of night or early morning",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "47",
+    "text": "Trouble sleeping: have to get up to use bathroom",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "48",
+    "text": "Trouble sleeping: cannot breathe comfortably",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "49",
+    "text": "Trouble sleeping: cough or snore loudly",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "50",
+    "text": "Trouble sleeping: feel too cold",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "51",
+    "text": "Trouble sleeping: feel too hot",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "52",
+    "text": "Trouble sleeping: had bad dreams",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "53",
+    "text": "Trouble sleeping: have pain",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "54",
+    "text": "Trouble sleeping: other reason (describe)",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 + text",
+    "timeMinutes": 1.5
+  },
+  {
+    "id": "55",
+    "text": "Rate your sleep quality overall",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "57",
+    "text": "Trouble staying awake while driving, eating, socializing",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "58",
+    "text": "Problem keeping up enthusiasm to get things done",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "scaleType": "0-3 scale",
+    "timeMinutes": 1
+  },
+  {
+    "id": "3",
+    "text": "GATEWAY: Do you have trouble falling asleep, staying asleep, or waking too early?",
+    "pillar": "Sleep Quality",
+    "tier": "GATEWAY",
+    "trigger": "Always",
+    "scaleType": "Yes/No"
+  },
+  {
+    "id": "60",
+    "text": "Difficulty falling asleep (severity 0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "61",
+    "text": "Difficulty staying asleep (severity 0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "62",
+    "text": "Problem waking up too early (severity 0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "63",
+    "text": "Satisfaction with current sleep pattern (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "64",
+    "text": "How noticeable is sleep problem to others? (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "65",
+    "text": "How worried are you about sleep problem? (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "66",
+    "text": "Interference with daily functioning (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "67",
+    "text": "I need 8 hours of sleep to feel refreshed (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "68",
+    "text": "Must catch up on sleep after poor night (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "69",
+    "text": "Concerned chronic insomnia affects physical health (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "71",
+    "text": "Poor sleep will interfere with next day activities (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "72",
+    "text": "Better to take sleeping pill than poor sleep (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "73",
+    "text": "Irritability/depression due to poor sleep night before (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "74",
+    "text": "Concerned poor sleep affects daytime productivity (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "75",
+    "text": "One night poor sleep → whole week ruined (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "76",
+    "text": "Cannot function after poor night of sleep (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "77",
+    "text": "Cannot predict sleep patterns, feel helpless (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "78",
+    "text": "Worried about long-term sleep medication effects (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "79",
+    "text": "Single night bad sleep ruins next day (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "80",
+    "text": "Would be happy if I could just fall asleep (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "81",
+    "text": "If don't sleep well, whole next day ruined (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "82",
+    "text": "Feel like victim of poor sleep (0-10)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "99",
+    "text": "Take daytime naps ≥2 hours (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "100",
+    "text": "Go to bed at different times daily (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "102",
+    "text": "Exercise to sweating within 1hr of bed (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "103",
+    "text": "Stay in bed longer than should 2-3x/week (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "104",
+    "text": "Use alcohol/tobacco/caffeine within 4hr of bed (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "105",
+    "text": "Do wake-up activities before bed (games/internet/clean) (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "106",
+    "text": "Go to bed feeling hungry (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "107",
+    "text": "Sleep on uncomfortable bed (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "108",
+    "text": "Sleep in uncomfortable bedroom (too bright/noisy/hot/cold) (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "109",
+    "text": "Do important work before bed (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "110",
+    "text": "Think/worry/plan in bed (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway"
+  },
+  {
+    "id": "111",
+    "text": "Use bed for things other than sleep/sex (0-4)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "scaleType": "0-4 scale",
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "notes": [
+      "---"
+    ]
+  },
+  {
+    "id": "4",
+    "text": "Hours of sleep per night on WEEKDAYS (average)",
+    "pillar": "Sleep Quantity",
+    "tier": "CORE",
+    "scaleType": "Number (hours)",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "5",
+    "text": "Hours of sleep per night on WEEKENDS (average)",
+    "pillar": "Sleep Quantity",
+    "tier": "CORE",
+    "scaleType": "Number (hours)",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "6",
+    "text": "How long does it take you to fall asleep? (minutes)",
+    "pillar": "Sleep Quantity",
+    "tier": "CORE",
+    "scaleType": "Number (minutes)",
+    "timeMinutes": 0.5,
+    "notes": [
+      "---"
+    ]
+  },
+  {
+    "id": "7",
+    "text": "Typical BEDTIME on weekdays (HH:MM)",
+    "pillar": "Sleep Regularity",
+    "tier": "CORE",
+    "scaleType": "Time",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "8",
+    "text": "Typical WAKE TIME on weekdays (HH:MM)",
+    "pillar": "Sleep Regularity",
+    "tier": "CORE",
+    "scaleType": "Time",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "9",
+    "text": "Typical BEDTIME on weekends (HH:MM)",
+    "pillar": "Sleep Regularity",
+    "tier": "CORE",
+    "scaleType": "Time",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "10",
+    "text": "Typical WAKE TIME on weekends (HH:MM)",
+    "pillar": "Sleep Regularity",
+    "tier": "CORE",
+    "scaleType": "Time",
+    "timeMinutes": 0.5,
+    "notes": [
+      "---"
+    ]
+  },
+  {
+    "id": "11",
+    "text": "Do you use an alarm clock on weekdays?",
+    "pillar": "Sleep Timing",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "12",
+    "text": "How often do you get morning sunlight exposure?",
+    "pillar": "Sleep Timing",
+    "tier": "CORE",
+    "scaleType": "5-point scale",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "13",
+    "text": "What time do you usually turn off screens before bed? (HH:MM)",
+    "pillar": "Sleep Timing",
+    "tier": "CORE",
+    "scaleType": "Time",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "14",
+    "text": "Do you use blue light filters or glasses?",
+    "pillar": "Sleep Timing",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "231",
+    "text": "If entirely free, what time would you get up?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "Time range",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "232",
+    "text": "If entirely free, what time would you go to bed?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "Time range",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "233",
+    "text": "How dependent on alarm clock? (1-4)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "234",
+    "text": "How easy to get up in morning? (1-4)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "235",
+    "text": "How alert first 30min after waking? (1-4)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "236",
+    "text": "Appetite first 30min after waking? (1-4)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "237",
+    "text": "How tired first 30min after waking? (1-4)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "238",
+    "text": "Bedtime when no commitments next day vs usual? (1-4)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "239",
+    "text": "Physical exercise 7-8am: how would you perform? (1-4)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "240",
+    "text": "What time in evening do you feel tired? (time range)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "Time range",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "241",
+    "text": "Best time for 2hr mentally exhausting test? (1-4 options)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 options",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "242",
+    "text": "If went to bed at 11pm, level of tiredness? (0-3)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "243",
+    "text": "Went to bed late: most likely to experience? (1-4 options)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 options",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "244",
+    "text": "Night watch 4-6am: best alternative for you? (1-4 options)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 options",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "245",
+    "text": "2hrs hard physical work: best time? (1-4 options)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 options",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "246",
+    "text": "Hard physical exercise 10-11pm: how well perform? (1-4)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "247",
+    "text": "Choose 5 consecutive work hours: which? (time range)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "Time range",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "248",
+    "text": "What time do you reach \"feeling best\" peak? (time range)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "Time range",
+    "trigger": "Weekday-weekend difference >1hr"
+  },
+  {
+    "id": "249",
+    "text": "Morning or evening type person? (1-4)",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Weekday-weekend difference >1hr",
+    "notes": [
+      "---"
+    ]
+  },
+  {
+    "id": "15",
+    "text": "GATEWAY: In past 2 weeks, felt down, depressed, or hopeless?",
+    "pillar": "Mental Health",
+    "tier": "GATEWAY",
+    "trigger": "Always",
+    "scaleType": "4-point scale"
+  },
+  {
+    "id": "16",
+    "text": "GATEWAY: In past 2 weeks, felt nervous, anxious, or on edge?",
+    "pillar": "Mental Health",
+    "tier": "GATEWAY",
+    "trigger": "Always",
+    "scaleType": "4-point scale"
+  },
+  {
+    "id": "84",
+    "text": "Worry about falling asleep (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "85",
+    "text": "Review/ponder events of the day (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "86",
+    "text": "Depressing or anxious thoughts (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "87",
+    "text": "Worry about problems other than sleep (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "88",
+    "text": "Being mentally alert, active (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "89",
+    "text": "Unable to shut off thoughts (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "90",
+    "text": "Thoughts keep going through mind (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "91",
+    "text": "Heart racing or pounding (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "93",
+    "text": "Feeling tense (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "94",
+    "text": "Perspiring (not due to temperature) (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "95",
+    "text": "Shortness of breath (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "96",
+    "text": "Dry mouth (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "97",
+    "text": "Stomach upset (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "98",
+    "text": "Trembling/shaking (1-5)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Insomnia gateway = YES"
+  },
+  {
+    "id": "139",
+    "text": "Little interest or pleasure in doing things (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression gateway positive"
+  },
+  {
+    "id": "140",
+    "text": "Feeling down, depressed, or hopeless (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression gateway positive"
+  },
+  {
+    "id": "141",
+    "text": "Trouble falling/staying asleep, or sleeping too much (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression gateway positive"
+  },
+  {
+    "id": "142",
+    "text": "Feeling tired or having little energy (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression gateway positive"
+  },
+  {
+    "id": "143",
+    "text": "Poor appetite or overeating (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression gateway positive"
+  },
+  {
+    "id": "144",
+    "text": "Feeling bad about yourself or that you're a failure (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression gateway positive"
+  },
+  {
+    "id": "145",
+    "text": "Trouble concentrating on things (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression gateway positive"
+  },
+  {
+    "id": "146",
+    "text": "Moving/speaking slowly or being fidgety/restless (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression gateway positive"
+  },
+  {
+    "id": "147",
+    "text": "Thoughts of being better off dead or hurting yourself (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression gateway positive"
+  },
+  {
+    "id": "148",
+    "text": "Feeling nervous, anxious, or on edge (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Anxiety gateway positive"
+  },
+  {
+    "id": "149",
+    "text": "Not being able to stop or control worrying (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Anxiety gateway positive"
+  },
+  {
+    "id": "150",
+    "text": "Worrying too much about different things (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Anxiety gateway positive"
+  },
+  {
+    "id": "151",
+    "text": "Trouble relaxing (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Anxiety gateway positive"
+  },
+  {
+    "id": "152",
+    "text": "Being so restless it's hard to sit still (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Anxiety gateway positive"
+  },
+  {
+    "id": "153",
+    "text": "Becoming easily annoyed or irritable (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Anxiety gateway positive"
+  },
+  {
+    "id": "154",
+    "text": "Feeling afraid as if something awful might happen (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Anxiety gateway positive"
+  },
+  {
+    "id": "156",
+    "text": "Aware of dryness of mouth (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "157",
+    "text": "Couldn't experience any positive feeling (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "158",
+    "text": "Breathing difficulty/rapid breathing (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "159",
+    "text": "Difficult to work up initiative to do things (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "160",
+    "text": "Tended to over-react to situations (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "161",
+    "text": "Experienced trembling (e.g., hands) (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "162",
+    "text": "Felt using a lot of nervous energy (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "163",
+    "text": "Worried about situations panicking/making fool of self (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "165",
+    "text": "Found myself getting agitated (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "166",
+    "text": "Found it difficult to relax (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "167",
+    "text": "Felt down-hearted and blue (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "168",
+    "text": "Intolerant of anything keeping me from what I was doing (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "169",
+    "text": "Felt close to panic (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "170",
+    "text": "Unable to become enthusiastic about anything (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "171",
+    "text": "Felt I wasn't worth much as a person (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "172",
+    "text": "Felt rather touchy (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "173",
+    "text": "Aware of action of heart without physical exertion (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway"
+  },
+  {
+    "id": "174",
+    "text": "Felt scared without good reason (0-3)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Depression OR anxiety gateway",
+    "notes": [
+      "---"
+    ]
+  },
+  {
+    "id": "17",
+    "text": "GATEWAY: Do you feel excessively tired or sleepy during the day?",
+    "pillar": "Cognitive",
+    "tier": "GATEWAY",
+    "trigger": "Always",
+    "scaleType": "5-point scale"
+  },
+  {
+    "id": "18",
+    "text": "GATEWAY: Memory problems, difficulty concentrating, or mental fog?",
+    "pillar": "Cognitive",
+    "tier": "GATEWAY",
+    "trigger": "Always",
+    "scaleType": "Yes/No"
+  },
+  {
+    "id": "112",
+    "text": "Chance of dozing: Sitting and reading (0-3)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "113",
+    "text": "Chance of dozing: Watching TV (0-3)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "114",
+    "text": "Chance of dozing: Sitting inactive in public (0-3)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "115",
+    "text": "Chance of dozing: As car passenger for 1hr (0-3)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "116",
+    "text": "Chance of dozing: Lying down to rest in afternoon (0-3)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "117",
+    "text": "Chance of dozing: Sitting and talking to someone (0-3)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "118",
+    "text": "Chance of dozing: Sitting quietly after lunch (no alcohol) (0-3)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "119",
+    "text": "Chance of dozing: In car stopped in traffic (0-3)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "0-3 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "121",
+    "text": "Exercise brings on my fatigue (1-7)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-7 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "122",
+    "text": "I am easily fatigued (1-7)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-7 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "123",
+    "text": "Fatigue interferes with physical functioning (1-7)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-7 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "124",
+    "text": "Fatigue causes frequent problems for me (1-7)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-7 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "125",
+    "text": "Fatigue prevents sustained physical functioning (1-7)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-7 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "126",
+    "text": "Fatigue interferes with duties and responsibilities (1-7)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-7 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "127",
+    "text": "Fatigue is among my three most disabling symptoms (1-7)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-7 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "129",
+    "text": "Difficulty concentrating on things you read or do (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "130",
+    "text": "Difficulty remembering things (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "131",
+    "text": "Difficulty with hobbies (sewing/collecting/gardening) (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "132",
+    "text": "Difficulty getting things done due to tiredness (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "133",
+    "text": "Difficulty being active in evening (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "134",
+    "text": "Difficulty maintaining telephone conversation (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "135",
+    "text": "Difficulty maintaining intimacy with partner (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "136",
+    "text": "Difficulty visiting family or friends (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "137",
+    "text": "Difficulty doing things for family (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "138",
+    "text": "Difficulty keeping up with work responsibilities (1-4)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "Excessive daytime sleepiness"
+  },
+  {
+    "id": "176",
+    "text": "My thinking has been slow (1-5)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Cognitive gateway = YES"
+  },
+  {
+    "id": "177",
+    "text": "Had to work hard to pay attention (1-5)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Cognitive gateway = YES"
+  },
+  {
+    "id": "178",
+    "text": "My thinking has been fuzzy (1-5)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Cognitive gateway = YES"
+  },
+  {
+    "id": "179",
+    "text": "Had trouble forming thoughts (1-5)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Cognitive gateway = YES"
+  },
+  {
+    "id": "180",
+    "text": "Had trouble concentrating (1-5)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Cognitive gateway = YES"
+  },
+  {
+    "id": "181",
+    "text": "Had to work to keep track of what I was doing (1-5)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Cognitive gateway = YES"
+  },
+  {
+    "id": "182",
+    "text": "Trouble planning out steps of a task (1-5)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Cognitive gateway = YES"
+  },
+  {
+    "id": "183",
+    "text": "Difficulty doing more than one thing at a time (1-5)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "Cognitive gateway = YES",
+    "notes": [
+      "---"
+    ]
+  },
+  {
+    "id": "21",
+    "text": "Neck circumference (inches/cm)",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "33A",
+    "text": "What is the typical temperature in your bedroom at night? (°C or °F)",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "scaleType": "Number (temp)",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "33B",
+    "text": "How would you rate the noise level in your sleep environment? (1=Very quiet, 5=Very noisy)",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "scaleType": "1-5 scale",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "33C",
+    "text": "How dark is your bedroom at night? (1=Completely dark, 5=Very bright)",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "scaleType": "1-5 scale",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "33D",
+    "text": "Do you use any sleep aids? (White noise, fan, humidifier, air purifier, blackout curtains, etc.)",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "scaleType": "Multiple select",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "19",
+    "text": "GATEWAY: Do you snore loudly?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "trigger": "Always",
+    "scaleType": "Yes/No"
+  },
+  {
+    "id": "20",
+    "text": "GATEWAY: Has anyone observed you stop breathing during sleep?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "trigger": "Always",
+    "scaleType": "Yes/No"
+  },
+  {
+    "id": "22",
+    "text": "GATEWAY: Do you have pain that affects your sleep?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "trigger": "Always",
+    "scaleType": "Yes/No"
+  },
+  {
+    "id": "23",
+    "text": "If yes, pain severity (0-10 scale)",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "trigger": "If pain present",
+    "scaleType": "0-10 scale"
+  },
+  {
+    "id": "24",
+    "text": "GATEWAY: Do you exercise regularly?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "trigger": "Always",
+    "scaleType": "Yes/No"
+  },
+  {
+    "id": "25",
+    "text": "If yes, hours per week?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "trigger": "If exercise",
+    "scaleType": "Number"
+  },
+  {
+    "id": "184",
+    "text": "Snore loudly (louder than talking)? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "185",
+    "text": "Often feel Tired/fatigued/sleepy during day? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "186",
+    "text": "Anyone Observed you stop breathing during sleep? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "187",
+    "text": "Have or treated for high blood Pressure? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "188",
+    "text": "BMI more than 35? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "190",
+    "text": "Neck circumference >40cm (15.75\")? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "191",
+    "text": "Gender = Male? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "192",
+    "text": "Do you snore? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "193",
+    "text": "Your snoring is: (1=slightly louder, 4=very loud)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "1-4 scale",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "194",
+    "text": "How often do you snore? (1-5 frequency scale)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "195",
+    "text": "Has your snoring bothered other people? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "196",
+    "text": "Anyone noticed you stop breathing during sleep?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No + freq",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "197",
+    "text": "How often feel tired/fatigued after sleep?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "198",
+    "text": "During waking, feel tired/fatigued/not up to par?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "1-5 scale",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "199",
+    "text": "Ever nodded off/fallen asleep while driving?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "200",
+    "text": "Do you have high blood pressure?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No/Don't know",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "201",
+    "text": "BMI calculation",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Calculated",
+    "trigger": "OSA gateway positive"
+  },
+  {
+    "id": "203",
+    "text": "Shade areas where you feel pain (body diagram)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Body diagram",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "204",
+    "text": "Pain at its WORST in last 24 hours (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "205",
+    "text": "Pain at its LEAST in last 24 hours (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "206",
+    "text": "Pain on AVERAGE (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "207",
+    "text": "Pain RIGHT NOW (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "208",
+    "text": "Treatments/medications for pain (open text)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "Text",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "209",
+    "text": "Relief from pain treatments (0-100%)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-100%",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "210",
+    "text": "Pain interference: General Activity (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "211",
+    "text": "Pain interference: Mood (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "212",
+    "text": "Pain interference: Walking Ability (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "213",
+    "text": "Pain interference: Normal Work (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "214",
+    "text": "Pain interference: Relations with others (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "215",
+    "text": "Pain interference: Sleep (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep"
+  },
+  {
+    "id": "216",
+    "text": "Pain interference: Enjoyment of life (0-10)",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "scaleType": "0-10 scale",
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "notes": [
+      "---"
+    ]
+  },
+  {
+    "id": "29",
+    "text": "Do you consume caffeine?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "30",
+    "text": "If yes, how many cups per day?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "31",
+    "text": "If yes, time of LAST caffeinated beverage (HH:MM)",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Time",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "32",
+    "text": "Do you consume alcohol?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "33",
+    "text": "If yes, drinks per week?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "54A",
+    "text": "What time do you typically eat your last meal of the day?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Time (HH:MM)",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "54B",
+    "text": "How many hours before bed do you typically finish eating?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Number (hours)",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "54C",
+    "text": "What time do you typically have your last caffeinated beverage?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Time (HH:MM)",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "54D",
+    "text": "How many servings of fruits and vegetables do you eat per day on average?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Number",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "54E",
+    "text": "Do you skip breakfast regularly? (Yes/No)",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "scaleType": "Yes/No",
+    "timeMinutes": 0.5
+  },
+  {
+    "id": "217",
+    "text": "Use olive oil as principal source of fat? Yes/No",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "218",
+    "text": "How much olive oil per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Amount",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "219",
+    "text": "Servings of vegetables per day? (1 serving=200g)",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "220",
+    "text": "Pieces of fruit per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "221",
+    "text": "Servings of red meat/hamburger/sausages per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "222",
+    "text": "Servings of butter/margarine/cream per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "223",
+    "text": "Sweet/carbonated beverages per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "224",
+    "text": "Wine consumption per week (glasses)?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "225",
+    "text": "Servings of legumes per week?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "226",
+    "text": "Servings of fish/seafood per week?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "227",
+    "text": "Commercial pastries per week (times)?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "228",
+    "text": "Servings of nuts per week?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "229",
+    "text": "Prefer chicken/turkey/rabbit over beef/pork? Yes/No",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Yes/No",
+    "trigger": "Diet impact gateway = YES"
+  },
+  {
+    "id": "230",
+    "text": "Times per week: vegetables/pasta/rice with tomato sauce (sofrito)?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "scaleType": "Number",
+    "trigger": "Diet impact gateway = YES",
+    "notes": [
+      "---",
+      "## Questionnaire → Pillar Mapping",
+      "This table shows how validated clinical questionnaires map to the Sleep 360° pillars.",
+      "| Questionnaire | Primary Pillar(s) | Items | Tier | Trigger/Use |",
+      "|--------------|-------------------|-------|------|-------------|",
+      "| Demographics | Social | 6 | CORE | Always - Basic information |",
+      "| Core Sleep Questions | Sleep Quality, Sleep Quantity, Sleep Regularity, Sleep Timing | 37 | CORE/GATEWAY | Universal sleep assessment |",
+      "| PSQI | Sleep Quality | 19 | CORE/EXPANSION | Partial CORE, full EXPANSION |",
+      "| ISI | Sleep Quality | 8 | EXPANSION | Gateway: Sleep problem identified |",
+      "| DBAS-16 | Sleep Quality | 16 | EXPANSION | Gateway: Insomnia symptoms |",
+      "| ESS | Sleep Quality | 8 | EXPANSION | Gateway: Daytime sleepiness |",
+      "| MEQ | Sleep Timing | 19 | EXPANSION | Chronotype assessment |",
+      "| Berlin Questionnaire | Metabolic, Physical | 10 | EXPANSION | Gateway: Snoring/apnea risk |",
+      "| STOP-BANG | Metabolic, Physical | 8 | EXPANSION | Alternative OSA screening |",
+      "| PHQ-9 | Mental Health | 9 | EXPANSION | Gateway: Depression screening |",
+      "| GAD-7 | Mental Health | 7 | EXPANSION | Gateway: Anxiety screening |",
+      "| DASS-21 | Mental Health | 21 | EXPANSION | Comprehensive mental health |",
+      "| PROMIS-Cognitive | Cognitive | 8 | EXPANSION | Gateway: Cognitive concerns |",
+      "| FSS | Physical | 9 | EXPANSION | Gateway: Fatigue symptoms |",
+      "| BPI | Physical | 9 | EXPANSION | Gateway: Pain symptoms |",
+      "| FOSQ-10 | Physical | 10 | EXPANSION | Gateway: Functional impacts |",
+      "| PSAS | Mental Health | 15 | EXPANSION | Gateway: Pre-sleep arousal |",
+      "| MEDAS | Nutritional | 14 | EXPANSION | Mediterranean diet assessment |",
+      "| Sleep Hygiene | Sleep Quality, Nutritional | 13 | EXPANSION | Gateway: Poor sleep habits |",
+      "---",
+      "## Summary Statistics"
+    ]
+  }
+]
