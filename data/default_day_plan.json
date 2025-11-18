@@ -12,7 +12,7 @@
   {
     "dayNumber": 3,
     "moduleId": "core_sleep_quality",
-    "estimatedMinutes": 19
+    "estimatedMinutes": 19.5
   },
   {
     "dayNumber": 4,
@@ -27,66 +27,16 @@
   {
     "dayNumber": 6,
     "moduleId": "core_sleep_timing",
-    "estimatedMinutes": 2
+    "estimatedMinutes": 5.5
   },
   {
     "dayNumber": 7,
     "moduleId": "core_physical",
-    "estimatedMinutes": 2.5
+    "estimatedMinutes": 5.5
   },
   {
     "dayNumber": 8,
     "moduleId": "core_nutritional",
-    "estimatedMinutes": 5
-  },
-  {
-    "dayNumber": 9,
-    "moduleId": "gateway_sleep_quality",
-    "estimatedMinutes": 0.5
-  },
-  {
-    "dayNumber": 10,
-    "moduleId": "gateway_mental_health",
-    "estimatedMinutes": 1
-  },
-  {
-    "dayNumber": 11,
-    "moduleId": "gateway_cognitive",
-    "estimatedMinutes": 1
-  },
-  {
-    "dayNumber": 12,
-    "moduleId": "gateway_physical",
-    "estimatedMinutes": 3
-  },
-  {
-    "dayNumber": 13,
-    "moduleId": "expansion_sleep_quality",
-    "estimatedMinutes": 17
-  },
-  {
-    "dayNumber": 14,
-    "moduleId": "expansion_sleep_timing",
-    "estimatedMinutes": 9.5
-  },
-  {
-    "dayNumber": 15,
-    "moduleId": "expansion_mental_health",
-    "estimatedMinutes": 24
-  },
-  {
-    "dayNumber": 16,
-    "moduleId": "expansion_cognitive",
-    "estimatedMinutes": 16.5
-  },
-  {
-    "dayNumber": 17,
-    "moduleId": "expansion_physical",
-    "estimatedMinutes": 15.5
-  },
-  {
-    "dayNumber": 18,
-    "moduleId": "expansion_nutritional",
-    "estimatedMinutes": 7
+    "estimatedMinutes": 5.5
   }
 ]

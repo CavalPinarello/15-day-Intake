@@ -1,3 +1,7 @@
+// Load environment variables first
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -34,7 +38,7 @@ app.use(helmet({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // Limit each IP to 1000 requests per windowMs (increased for development)
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -43,15 +47,25 @@ const limiter = rateLimit({
 // Stricter rate limiting for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login attempts per windowMs
+  max: 10, // Limit each IP to 10 login attempts per windowMs
   message: 'Too many login attempts, please try again later.',
   skipSuccessfulRequests: true,
+});
+
+// Very lenient rate limiting for response saving (slider interactions)
+const responseLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 500, // Allow 500 response saves per minute (for slider interactions)
+  message: 'Too many requests, please slow down.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Apply rate limiting
 app.use('/api/', limiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/assessment/user/:userId/response', responseLimiter);
 
 // CORS middleware
 app.use(cors({
@@ -70,10 +84,18 @@ app.use((req, res, next) => {
 });
 
 // Initialize database
+// Always initialize SQLite for backward compatibility (some routes still use it)
+// Convex is used for new operations, but SQLite is still available
+const USE_CONVEX = process.env.USE_CONVEX === 'true' || process.env.NODE_ENV === 'production';
 initDatabase().then(() => {
-  console.log('Database initialized successfully');
+  if (USE_CONVEX) {
+    console.log('SQLite initialized (for backward compatibility)');
+    console.log('Using Convex database for new operations');
+  } else {
+    console.log('SQLite database initialized successfully');
+  }
 }).catch(err => {
-  console.error('Database initialization failed:', err);
+  console.error('SQLite database initialization failed:', err);
 });
 
 // Health check (before routes to avoid conflict)
@@ -94,6 +116,9 @@ app.use('/api', interventionRoutes);
 app.use('/api', coachRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`\n✅ Server running on http://localhost:${PORT}`);
+  console.log(`📡 API available at http://localhost:${PORT}/api`);
+  console.log(`\n💡 Make sure your client .env.local has:`);
+  console.log(`   NEXT_PUBLIC_API_URL=http://localhost:${PORT}/api\n`);
 });
 

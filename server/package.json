@@ -6,11 +6,15 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "seed": "node scripts/seed-questions.js"
+    "seed": "node scripts/seed-questions.js",
+    "reset-users": "node scripts/reset-test-users.js",
+    "setup-db": "node scripts/setup-complete-database.js",
+    "verify-db": "node -e \"const {verifyDatabaseIntegrity} = require('./database/schema_complete'); verifyDatabaseIntegrity().then(() => process.exit(0)).catch(e => {console.error(e); process.exit(1);})\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
+    "convex": "^1.29.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
@@ -18,6 +22,8 @@
     "express-validator": "^7.3.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "resend": "^6.4.2",
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {

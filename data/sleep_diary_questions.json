@@ -1,17 +1,19 @@
 [
   {
     "id": "SD_DATE",
-    "text": "What is today's date?",
-    "type": "date",
+    "text": "Date",
+    "type": "date_auto",
     "group": "metadata",
     "pillar": "Sleep Diary",
-    "estimatedMinutes": 0.3
+    "estimatedMinutes": 0.1,
+    "autoFill": true,
+    "helpText": "Tap to edit if logging a past day"
   },
   {
     "id": "SD_DAY_TYPE",
     "text": "What type of day is today?",
-    "type": "single_select",
-    "options": ["Work", "School", "Day Off", "Vacation"],
+    "type": "single_select_chips",
+    "options": ["Workday", "School Day", "Day Off", "Vacation", "Holiday"],
     "group": "metadata",
     "pillar": "Sleep Diary",
     "estimatedMinutes": 0.2
@@ -19,7 +21,7 @@
   {
     "id": "SD_MEDICATION_TAKEN",
     "text": "Did you take any sleep-related medication yesterday or last night?",
-    "type": "yes_no",
+    "type": "yes_no_chips",
     "group": "medication",
     "pillar": "Sleep Diary",
     "estimatedMinutes": 0.2
@@ -64,9 +66,12 @@
   {
     "id": "SD_SLEEP_LATENCY",
     "text": "How long did it take you to fall asleep? (minutes)",
-    "type": "number",
+    "type": "minutes_scroll",
     "min": 0,
-    "max": 240,
+    "max": 200,
+    "defaultValue": 15,
+    "specialValue": 201,
+    "specialLabel": "I couldn't fall asleep",
     "group": "bedtime",
     "pillar": "Sleep Diary",
     "estimatedMinutes": 0.2
@@ -74,9 +79,10 @@
   {
     "id": "SD_AWAKENINGS_COUNT",
     "text": "How many times did you wake up during the night?",
-    "type": "number",
+    "type": "number_scroll",
     "min": 0,
     "max": 20,
+    "defaultValue": 0,
     "group": "awakenings",
     "pillar": "Sleep Diary",
     "estimatedMinutes": 0.2
@@ -84,9 +90,10 @@
   {
     "id": "SD_AWAKENINGS_DURATION",
     "text": "Approximately how much total time were you awake during the night? (minutes)",
-    "type": "number",
+    "type": "minutes_scroll",
     "min": 0,
     "max": 480,
+    "defaultValue": 0,
     "group": "awakenings",
     "pillar": "Sleep Diary",
     "condition": {
@@ -114,14 +121,11 @@
   {
     "id": "SD_SLEEP_QUALITY",
     "text": "How would you rate the quality of your sleep last night?",
-    "type": "likert",
-    "options": [
-      { "value": "1", "label": "Very Poor" },
-      { "value": "2", "label": "Poor" },
-      { "value": "3", "label": "Fair" },
-      { "value": "4", "label": "Good" },
-      { "value": "5", "label": "Very Good" }
-    ],
+    "type": "scale",
+    "scaleMin": 1,
+    "scaleMax": 10,
+    "scaleMinLabel": "Worst",
+    "scaleMaxLabel": "Best",
     "group": "morning",
     "pillar": "Sleep Diary",
     "estimatedMinutes": 0.2
@@ -137,9 +141,10 @@
   {
     "id": "SD_NAPS_COUNT",
     "text": "How many naps did you take?",
-    "type": "number",
+    "type": "number_scroll",
     "min": 1,
     "max": 5,
+    "defaultValue": 1,
     "group": "naps",
     "pillar": "Sleep Diary",
     "condition": {

@@ -215,11 +215,13 @@ function initDatabase() {
                   database.run(`
                     CREATE TABLE IF NOT EXISTS module_gateways (
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      gateway_question_id TEXT NOT NULL,
-                      condition TEXT NOT NULL,
-                      target_module_id TEXT NOT NULL,
-                      FOREIGN KEY(gateway_question_id) REFERENCES assessment_questions(question_id),
-                      FOREIGN KEY(target_module_id) REFERENCES assessment_modules(module_id)
+                      gateway_id TEXT NOT NULL UNIQUE,
+                      name TEXT NOT NULL,
+                      description TEXT,
+                      condition_json TEXT NOT NULL,
+                      target_modules_json TEXT NOT NULL,
+                      trigger_question_ids_json TEXT NOT NULL,
+                      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     )
                   `, (err) => {
                     if (err) {
@@ -228,82 +230,128 @@ function initDatabase() {
                       return;
                     }
 
+                    // Create user_gateway_states table to track which gateways are triggered per user
                     database.run(`
-                      CREATE TABLE IF NOT EXISTS sleep_diary_questions (
-                        id TEXT PRIMARY KEY,
-                        question_text TEXT NOT NULL,
-                        question_type TEXT NOT NULL,
-                        options_json TEXT,
-                        group_key TEXT,
-                        help_text TEXT,
-                        condition_json TEXT,
-                        estimated_time REAL
+                      CREATE TABLE IF NOT EXISTS user_gateway_states (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        gateway_id TEXT NOT NULL,
+                        triggered BOOLEAN DEFAULT 0,
+                        triggered_at DATETIME,
+                        last_evaluated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        evaluation_data_json TEXT,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        UNIQUE(user_id, gateway_id)
                       )
                     `, (err) => {
                       if (err) {
-                        console.error('Error creating sleep_diary_questions table:', err);
+                        console.error('Error creating user_gateway_states table:', err);
                         reject(err);
                         return;
                       }
 
-                      // Create refresh_tokens table for JWT refresh token rotation
+                      // Create indexes for performance
                       database.run(`
-                        CREATE TABLE IF NOT EXISTS refresh_tokens (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          user_id INTEGER NOT NULL,
-                          token TEXT UNIQUE NOT NULL,
-                          expires_at DATETIME NOT NULL,
-                          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                          revoked BOOLEAN DEFAULT 0,
-                          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                        )
+                        CREATE INDEX IF NOT EXISTS idx_user_gateway_states_user_id ON user_gateway_states(user_id)
                       `, (err) => {
                         if (err) {
-                          console.error('Error creating refresh_tokens table:', err);
-                          reject(err);
-                          return;
+                          console.warn('Warning: Could not create index:', err.message);
                         }
-
-                        // Create index for faster lookups
+                        
                         database.run(`
-                          CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id)
+                          CREATE INDEX IF NOT EXISTS idx_user_gateway_states_gateway_id ON user_gateway_states(gateway_id)
                         `, (err) => {
                           if (err) {
-                            console.error('Error creating refresh_tokens index:', err);
+                            console.warn('Warning: Could not create index:', err.message);
                           }
 
-                          // Create health data tables
-                          createHealthDataTables(database, (err) => {
+                          database.run(`
+                            CREATE TABLE IF NOT EXISTS sleep_diary_questions (
+                              id TEXT PRIMARY KEY,
+                              question_text TEXT NOT NULL,
+                              question_type TEXT NOT NULL,
+                              options_json TEXT,
+                              group_key TEXT,
+                              help_text TEXT,
+                              condition_json TEXT,
+                              estimated_time REAL
+                            )
+                          `, (err) => {
                             if (err) {
+                              console.error('Error creating sleep_diary_questions table:', err);
                               reject(err);
                               return;
                             }
 
-                            // Create interventions tables
-                            createInterventionsTables(database, (err) => {
+                            // Create refresh_tokens table for JWT refresh token rotation
+                            database.run(`
+                              CREATE TABLE IF NOT EXISTS refresh_tokens (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL,
+                                token TEXT UNIQUE NOT NULL,
+                                expires_at DATETIME NOT NULL,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                revoked BOOLEAN DEFAULT 0,
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                              )
+                            `, (err) => {
                               if (err) {
+                                console.error('Error creating refresh_tokens table:', err);
                                 reject(err);
                                 return;
                               }
 
-                              // Create coach dashboard tables
-                              createCoachDashboardTables(database, (err) => {
+                              // Create index for faster lookups
+                              database.run(`
+                                CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id)
+                              `, (err) => {
                                 if (err) {
-                                  reject(err);
-                                  return;
+                                  console.error('Error creating refresh_tokens index:', err);
                                 }
 
-                                // Create sleep report tables
-                                createSleepReportTables(database, (err) => {
+                                // Create health data tables
+                                createHealthDataTables(database, (err) => {
                                   if (err) {
                                     reject(err);
                                     return;
                                   }
 
-                                  initializeAssessmentData(database)
-                                    .then(() => initializeDefaultData(database))
-                                    .then(resolve)
-                                    .catch(reject);
+                                  // Create interventions tables
+                                  createInterventionsTables(database, (err) => {
+                                    if (err) {
+                                      reject(err);
+                                      return;
+                                    }
+
+                                    // Create coach dashboard tables
+                                    createCoachDashboardTables(database, (err) => {
+                                      if (err) {
+                                        reject(err);
+                                        return;
+                                      }
+
+                                      // Create sleep report tables
+                                      createSleepReportTables(database, (err) => {
+                                        if (err) {
+                                          reject(err);
+                                          return;
+                                        }
+
+                                        initializeAssessmentData(database)
+                                          .then(() => {
+                                            // Initialize days (users are created via registration, not hardcoded)
+                                            return initializeDays(database);
+                                          })
+                                          .then(() => {
+                                            // Import and run complete schema setup
+                                            const { completeSchemaSetup } = require('./schema_complete');
+                                            return completeSchemaSetup();
+                                          })
+                                          .then(resolve)
+                                          .catch(reject);
+                                      });
+                                    });
+                                  });
                                 });
                               });
                             });
@@ -316,10 +364,10 @@ function initDatabase() {
               });
             });
           });
-            });
-          });
         });
       });
+    });
+  });
     });
   });
 }
@@ -746,42 +794,8 @@ function createSleepReportTables(database, callback) {
   });
 }
 
-async function initializeDefaultData(database) {
-  return new Promise((resolve, reject) => {
-    // Create hard-coded users (user1-user10 with password "1")
-    const bcrypt = require('bcryptjs');
-    const passwordHash = bcrypt.hashSync('1', 12); // Use 12 rounds for better security
-
-    database.run('DELETE FROM users', (err) => {
-      if (err) {
-        console.error('Error clearing users:', err);
-      }
-
-      const userPromises = [];
-      for (let i = 1; i <= 10; i++) {
-        userPromises.push(
-          new Promise((res, rej) => {
-            database.run(
-              'INSERT OR IGNORE INTO users (username, password_hash) VALUES (?, ?)',
-              [`user${i}`, passwordHash],
-              (err) => {
-                if (err) rej(err);
-                else res();
-              }
-            );
-          })
-        );
-      }
-
-      Promise.all(userPromises).then(() => {
-        console.log('Created 10 default users (user1-user10)');
-
-        // Initialize 14 days
-        initializeDays(database).then(resolve).catch(reject);
-      }).catch(reject);
-    });
-  });
-}
+// Removed initializeDefaultData - users are now created via registration in Convex
+// Days initialization moved to initializeDays call directly
 
 function initializeDays(database) {
   return new Promise((resolve, reject) => {
@@ -979,11 +993,28 @@ function initializeAssessmentData(database) {
           `);
 
           diaryQuestions.forEach((q) => {
+            // Bundle all options-related fields into options_json
+            const optionsObj = q.options || {};
+            // Add scale-related fields if they exist
+            if (q.scaleMin !== undefined) optionsObj.scaleMin = q.scaleMin;
+            if (q.scaleMax !== undefined) optionsObj.scaleMax = q.scaleMax;
+            if (q.scaleMinLabel !== undefined) optionsObj.scaleMinLabel = q.scaleMinLabel;
+            if (q.scaleMaxLabel !== undefined) optionsObj.scaleMaxLabel = q.scaleMaxLabel;
+            // Add other fields that might be used by different question types
+            if (q.min !== undefined) optionsObj.min = q.min;
+            if (q.max !== undefined) optionsObj.max = q.max;
+            if (q.unit !== undefined) optionsObj.unit = q.unit;
+            if (q.defaultValue !== undefined) optionsObj.defaultValue = q.defaultValue;
+            if (q.specialValue !== undefined) optionsObj.specialValue = q.specialValue;
+            if (q.specialLabel !== undefined) optionsObj.specialLabel = q.specialLabel;
+            
+            const optionsJson = Object.keys(optionsObj).length > 0 ? JSON.stringify(optionsObj) : null;
+            
             diaryStmt.run(
               q.id,
               q.text,
               q.type,
-              q.options ? JSON.stringify(q.options) : null,
+              optionsJson,
               q.group || null,
               q.helpText || null,
               q.condition ? JSON.stringify(q.condition) : null,

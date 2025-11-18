@@ -1,0 +1,330 @@
+[
+  {
+    "id": "SD_DATE",
+    "question_text": "Date",
+    "help_text": "Tap to edit if logging a past day",
+    "group_key": "metadata",
+    "pillar": "Sleep Diary",
+    "answer_format": "date_auto",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 1,
+    "estimated_time_seconds": 6,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_DAY_TYPE",
+    "question_text": "What type of day is today?",
+    "group_key": "metadata",
+    "pillar": "Sleep Diary",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "workday",
+          "label": "Workday"
+        },
+        {
+          "value": "school_day",
+          "label": "School Day"
+        },
+        {
+          "value": "day_off",
+          "label": "Day Off"
+        },
+        {
+          "value": "vacation",
+          "label": "Vacation"
+        },
+        {
+          "value": "holiday",
+          "label": "Holiday"
+        }
+      ],
+      "layout": "grid"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 2,
+    "estimated_time_seconds": 12,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_MEDICATION_TAKEN",
+    "question_text": "Did you take any sleep-related medication yesterday or last night?",
+    "group_key": "medication",
+    "pillar": "Sleep Diary",
+    "answer_format": "yes_no_chips",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 3,
+    "estimated_time_seconds": 12,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_MEDICATION_TIME",
+    "question_text": "If yes, what time did you take it?",
+    "group_key": "medication",
+    "pillar": "Sleep Diary",
+    "answer_format": "time",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "SD_MEDICATION_TAKEN",
+        "operator": "equals",
+        "value": "Yes"
+      }
+    },
+    "order_index": 4,
+    "estimated_time_seconds": 18,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_GOT_INTO_BED",
+    "question_text": "What time did you get into bed last night?",
+    "group_key": "bedtime",
+    "pillar": "Sleep Diary",
+    "answer_format": "time",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 5,
+    "estimated_time_seconds": 18,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_LIGHTS_OUT",
+    "question_text": "What time did you turn off the lights and try to sleep?",
+    "help_text": "When you started trying to fall asleep.",
+    "group_key": "bedtime",
+    "pillar": "Sleep Diary",
+    "answer_format": "time",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 6,
+    "estimated_time_seconds": 18,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_SLEEP_ONSET",
+    "question_text": "What time do you think you fell asleep?",
+    "group_key": "bedtime",
+    "pillar": "Sleep Diary",
+    "answer_format": "time",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 7,
+    "estimated_time_seconds": 18,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_SLEEP_LATENCY",
+    "question_text": "How long did it take you to fall asleep? (minutes)",
+    "group_key": "bedtime",
+    "pillar": "Sleep Diary",
+    "answer_format": "minutes_scroll",
+    "format_config": {
+      "min": 0,
+      "max": 200,
+      "defaultValue": 15,
+      "step": 5,
+      "specialValue": {
+        "value": 201,
+        "label": "I couldn't fall asleep"
+      }
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 200
+    },
+    "order_index": 8,
+    "estimated_time_seconds": 12,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_AWAKENINGS_COUNT",
+    "question_text": "How many times did you wake up during the night?",
+    "group_key": "awakenings",
+    "pillar": "Sleep Diary",
+    "answer_format": "number_scroll",
+    "format_config": {
+      "min": 0,
+      "max": 20,
+      "defaultValue": 0,
+      "unit": "times",
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 20
+    },
+    "order_index": 9,
+    "estimated_time_seconds": 12,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_AWAKENINGS_DURATION",
+    "question_text": "Approximately how much total time were you awake during the night? (minutes)",
+    "group_key": "awakenings",
+    "pillar": "Sleep Diary",
+    "answer_format": "minutes_scroll",
+    "format_config": {
+      "min": 0,
+      "max": 480,
+      "defaultValue": 0,
+      "step": 5
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 480
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "SD_AWAKENINGS_COUNT",
+        "operator": "greater_than",
+        "value": 0
+      }
+    },
+    "order_index": 10,
+    "estimated_time_seconds": 12,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_FINAL_WAKE",
+    "question_text": "What time did you wake up for the final time this morning?",
+    "group_key": "morning",
+    "pillar": "Sleep Diary",
+    "answer_format": "time",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 11,
+    "estimated_time_seconds": 18,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_OUT_OF_BED",
+    "question_text": "What time did you get out of bed this morning?",
+    "group_key": "morning",
+    "pillar": "Sleep Diary",
+    "answer_format": "time",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 12,
+    "estimated_time_seconds": 18,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_SLEEP_QUALITY",
+    "question_text": "How would you rate the quality of your sleep last night?",
+    "group_key": "morning",
+    "pillar": "Sleep Diary",
+    "answer_format": "scale",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 13,
+    "estimated_time_seconds": 12,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_NAPS_TAKEN",
+    "question_text": "Did you take any naps yesterday?",
+    "group_key": "naps",
+    "pillar": "Sleep Diary",
+    "answer_format": "yes_no",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "order_index": 14,
+    "estimated_time_seconds": 12,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_NAPS_COUNT",
+    "question_text": "How many naps did you take?",
+    "group_key": "naps",
+    "pillar": "Sleep Diary",
+    "answer_format": "number_scroll",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "defaultValue": 1,
+      "unit": "times",
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 5
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "SD_NAPS_TAKEN",
+        "operator": "equals",
+        "value": "Yes"
+      }
+    },
+    "order_index": 15,
+    "estimated_time_seconds": 12,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_NAP_DETAILS",
+    "question_text": "For each nap, record the start time and duration.",
+    "group_key": "naps",
+    "pillar": "Sleep Diary",
+    "answer_format": "repeating_group",
+    "format_config": {},
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "SD_NAPS_TAKEN",
+        "operator": "equals",
+        "value": "Yes"
+      }
+    },
+    "order_index": 16,
+    "estimated_time_seconds": 36,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  }
+]

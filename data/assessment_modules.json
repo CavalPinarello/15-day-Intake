@@ -56,13 +56,14 @@
   {
     "moduleId": "core_sleep_quality",
     "name": "Sleep Quality CORE",
-    "description": "CORE questions for Sleep Quality",
+    "description": "CORE questions for Sleep Quality (includes gateway questions)",
     "pillar": "Sleep Quality",
     "tier": "CORE",
     "moduleType": "core",
     "questionIds": [
       "1",
       "2",
+      "3",
       "12A",
       "12B",
       "12C",
@@ -84,7 +85,7 @@
       "57",
       "58"
     ],
-    "estimatedMinutes": 19
+    "estimatedMinutes": 19.5
   },
   {
     "moduleId": "gateway_sleep_quality",
@@ -175,7 +176,7 @@
   {
     "moduleId": "core_sleep_timing",
     "name": "Sleep Timing CORE",
-    "description": "CORE questions for Sleep Timing",
+    "description": "CORE questions for Sleep Timing (includes gateway questions for Mental Health and Cognitive)",
     "pillar": "Sleep Timing",
     "tier": "CORE",
     "moduleType": "core",
@@ -183,9 +184,13 @@
       "11",
       "12",
       "13",
-      "14"
+      "14",
+      "15",
+      "16",
+      "17",
+      "18"
     ],
-    "estimatedMinutes": 2
+    "estimatedMinutes": 5.5
   },
   {
     "moduleId": "expansion_sleep_timing",
@@ -349,18 +354,24 @@
   {
     "moduleId": "core_physical",
     "name": "Physical CORE",
-    "description": "CORE questions for Physical",
+    "description": "CORE questions for Physical (includes gateway questions)",
     "pillar": "Physical",
     "tier": "CORE",
     "moduleType": "core",
     "questionIds": [
+      "19",
+      "20",
       "21",
+      "22",
+      "23",
+      "24",
+      "25",
       "33A",
       "33B",
       "33C",
       "33D"
     ],
-    "estimatedMinutes": 2.5
+    "estimatedMinutes": 5.5
   },
   {
     "moduleId": "gateway_physical",
@@ -424,7 +435,7 @@
   {
     "moduleId": "core_nutritional",
     "name": "Nutritional CORE",
-    "description": "CORE questions for Nutritional",
+    "description": "CORE questions for Nutritional (includes gateway questions)",
     "pillar": "Nutritional",
     "tier": "CORE",
     "moduleType": "core",
@@ -434,13 +445,14 @@
       "31",
       "32",
       "33",
+      "34",
       "54A",
       "54B",
       "54C",
       "54D",
       "54E"
     ],
-    "estimatedMinutes": 5
+    "estimatedMinutes": 5.5
   },
   {
     "moduleId": "expansion_nutritional",

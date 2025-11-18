@@ -1,0 +1,207 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2025-11-12T13:07:44.893Z",
+  "gateways": [
+    {
+      "gatewayId": "insomnia",
+      "name": "Insomnia Gateway",
+      "triggerQuestionIds": [
+        "3"
+      ],
+      "condition": {
+        "type": "equals",
+        "questionId": "3",
+        "value": "Yes"
+      },
+      "targetModules": [
+        "expansion_sleep_quality"
+      ],
+      "description": "Do you have trouble falling asleep, staying asleep, or waking too early?"
+    },
+    {
+      "gatewayId": "depression",
+      "name": "Depression Gateway",
+      "triggerQuestionIds": [
+        "15"
+      ],
+      "condition": {
+        "type": "greaterThanOrEqual",
+        "questionId": "15",
+        "value": 2
+      },
+      "targetModules": [
+        "expansion_mental_health"
+      ],
+      "description": "In past 2 weeks, felt down, depressed, or hopeless?"
+    },
+    {
+      "gatewayId": "anxiety",
+      "name": "Anxiety Gateway",
+      "triggerQuestionIds": [
+        "16"
+      ],
+      "condition": {
+        "type": "greaterThanOrEqual",
+        "questionId": "16",
+        "value": 2
+      },
+      "targetModules": [
+        "expansion_mental_health"
+      ],
+      "description": "In past 2 weeks, felt nervous, anxious, or on edge?"
+    },
+    {
+      "gatewayId": "excessive_sleepiness",
+      "name": "Excessive Daytime Sleepiness",
+      "triggerQuestionIds": [
+        "17"
+      ],
+      "condition": {
+        "type": "greaterThanOrEqual",
+        "questionId": "17",
+        "value": 3
+      },
+      "targetModules": [
+        "expansion_cognitive"
+      ],
+      "description": "Do you feel excessively tired or sleepy during the day?"
+    },
+    {
+      "gatewayId": "cognitive",
+      "name": "Cognitive Gateway",
+      "triggerQuestionIds": [
+        "18"
+      ],
+      "condition": {
+        "type": "equals",
+        "questionId": "18",
+        "value": "Yes"
+      },
+      "targetModules": [
+        "expansion_cognitive"
+      ],
+      "description": "Memory problems, difficulty concentrating, or mental fog?"
+    },
+    {
+      "gatewayId": "osa",
+      "name": "OSA Gateway",
+      "triggerQuestionIds": [
+        "19",
+        "20"
+      ],
+      "condition": {
+        "type": "or",
+        "conditions": [
+          {
+            "type": "equals",
+            "questionId": "19",
+            "value": "Yes"
+          },
+          {
+            "type": "equals",
+            "questionId": "20",
+            "value": "Yes"
+          }
+        ]
+      },
+      "targetModules": [
+        "expansion_physical"
+      ],
+      "description": "Do you snore loudly OR has anyone observed you stop breathing during sleep?"
+    },
+    {
+      "gatewayId": "pain",
+      "name": "Pain Gateway",
+      "triggerQuestionIds": [
+        "22",
+        "23"
+      ],
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "equals",
+            "questionId": "22",
+            "value": "Yes"
+          },
+          {
+            "type": "greaterThanOrEqual",
+            "questionId": "23",
+            "value": 4
+          }
+        ]
+      },
+      "targetModules": [
+        "expansion_physical"
+      ],
+      "description": "Do you have pain that affects your sleep AND pain severity ≥ 4?"
+    },
+    {
+      "gatewayId": "sleep_timing",
+      "name": "Sleep Timing Gateway",
+      "triggerQuestionIds": [
+        "7",
+        "8",
+        "9",
+        "10"
+      ],
+      "condition": {
+        "type": "calculated",
+        "function": "weekdayWeekendDifference",
+        "threshold": 1
+      },
+      "targetModules": [
+        "expansion_sleep_timing"
+      ],
+      "description": "Weekday-weekend sleep time difference > 1 hour"
+    },
+    {
+      "gatewayId": "diet_impact",
+      "name": "Diet Impact Gateway",
+      "triggerQuestionIds": [
+        "34"
+      ],
+      "condition": {
+        "type": "equals",
+        "questionId": "34",
+        "value": "Yes"
+      },
+      "targetModules": [
+        "expansion_nutritional"
+      ],
+      "description": "Do you notice your diet affects your sleep quality?",
+      "optional": true
+    },
+    {
+      "gatewayId": "poor_sleep_quality",
+      "name": "Poor Sleep Quality",
+      "triggerQuestionIds": [
+        "1",
+        "3"
+      ],
+      "condition": {
+        "type": "or",
+        "conditions": [
+          {
+            "type": "lessThanOrEqual",
+            "questionId": "1",
+            "value": 5
+          },
+          {
+            "type": "equals",
+            "questionId": "3",
+            "value": "Yes"
+          }
+        ]
+      },
+      "targetModules": [
+        "expansion_sleep_quality"
+      ],
+      "description": "Overall sleep quality ≤ 5 OR insomnia gateway = Yes"
+    }
+  ],
+  "metadata": {
+    "totalGateways": 10,
+    "totalQuestions": 285
+  }
+}

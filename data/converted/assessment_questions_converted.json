@@ -1,0 +1,6444 @@
+[
+  {
+    "question_id": "D2",
+    "question_text": "Date of Birth",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "date_picker",
+    "format_config": {
+      "format": "YYYY-MM-DD",
+      "maxDate": "today",
+      "autoFill": false
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "35",
+    "question_text": "Do you share your bedroom with a partner?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "36",
+    "question_text": "If yes, do they snore or disturb your sleep?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "37",
+    "question_text": "Do you have young children or infants at home?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "38",
+    "question_text": "If yes, how often do they wake you up per night?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53A",
+    "question_text": "What is your current employment status?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "fulltime",
+          "label": "Full-time"
+        },
+        {
+          "value": "parttime",
+          "label": "Part-time"
+        },
+        {
+          "value": "shift_work",
+          "label": "Shift work"
+        },
+        {
+          "value": "unemployed",
+          "label": "Unemployed"
+        },
+        {
+          "value": "retired",
+          "label": "Retired"
+        },
+        {
+          "value": "student",
+          "label": "Student"
+        }
+      ],
+      "layout": "grid"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53B",
+    "question_text": "Do you work shifts or irregular hours?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53D",
+    "question_text": "How many hours per day do you spend looking at screens for work?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "number_scroll",
+    "format_config": {
+      "min": 0,
+      "max": 40,
+      "defaultValue": 0,
+      "unit": "hours",
+      "step": 0.5
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 40
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53E",
+    "question_text": "On a scale of 1-10, how would you rate your current work-related stress?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53F",
+    "question_text": "How many times per month do you travel for work or personal reasons?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53G",
+    "question_text": "Do you frequently cross time zones (>2 hours)?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "39",
+    "question_text": "Do you have caregiving responsibilities?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "59",
+    "question_text": "Do you have a bed partner or room mate?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "D4",
+    "question_text": "Sex",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "male",
+          "label": "Male"
+        },
+        {
+          "value": "female",
+          "label": "Female"
+        },
+        {
+          "value": "other",
+          "label": "Other"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "D5",
+    "question_text": "Height",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "unitOptions": [
+        {
+          "value": "cm",
+          "label": "cm"
+        },
+        {
+          "value": "in",
+          "label": "inches",
+          "conversionFactor": 2.54
+        }
+      ],
+      "min": 100,
+      "max": 250,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 100,
+      "max": 250
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "D6",
+    "question_text": "Weight",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "unitOptions": [
+        {
+          "value": "kg",
+          "label": "kg"
+        },
+        {
+          "value": "lbs",
+          "label": "lbs",
+          "conversionFactor": 0.453592
+        }
+      ],
+      "min": 30,
+      "max": 300,
+      "step": 0.1,
+      "decimalPlaces": 1,
+      "inputMode": "decimal"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 30,
+      "max": 300
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "26",
+    "question_text": "Do you have diabetes or pre-diabetes?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        },
+        {
+          "value": "don't_know",
+          "label": "Don't know"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "27",
+    "question_text": "Do you have high blood pressure?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        },
+        {
+          "value": "don't_know",
+          "label": "Don't know"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "28",
+    "question_text": "Waist circumference",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44A",
+    "question_text": "Are you currently taking any prescription medications?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44C",
+    "question_text": "Are you currently taking any supplements or vitamins?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44E",
+    "question_text": "Do you have any diagnosed chronic medical conditions?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44G",
+    "question_text": "Have you had any surgeries or medical procedures in the past 6 months?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44I",
+    "question_text": "For women: Are you currently pregnant?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        },
+        {
+          "value": "not_applicable",
+          "label": "Not applicable"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44J",
+    "question_text": "For women: Are you currently breastfeeding?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        },
+        {
+          "value": "not_applicable",
+          "label": "Not applicable"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44K",
+    "question_text": "Do you use recreational drugs or cannabis?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "1",
+    "question_text": "Overall sleep quality in past month",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "2",
+    "question_text": "How often do you feel refreshed after sleep?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "12A",
+    "question_text": "How many times do you typically wake up during the night?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "12B",
+    "question_text": "When you wake up at night, what is the MAIN reason?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "bathroom",
+          "label": "Bathroom"
+        },
+        {
+          "value": "pain",
+          "label": "Pain"
+        },
+        {
+          "value": "stressworry",
+          "label": "Stress-Worry"
+        },
+        {
+          "value": "temperature",
+          "label": "Temperature"
+        },
+        {
+          "value": "noise",
+          "label": "Noise"
+        },
+        {
+          "value": "unknown",
+          "label": "Unknown"
+        },
+        {
+          "value": "other",
+          "label": "Other"
+        }
+      ],
+      "layout": "grid"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "12C",
+    "question_text": "How long does it typically take you to fall back asleep after waking?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "minutes_scroll",
+    "format_config": {
+      "min": 0,
+      "max": 200,
+      "defaultValue": 0,
+      "step": 5
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 200
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "41",
+    "question_text": "When have you usually gone to bed at night?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "42",
+    "question_text": "How long to fall asleep each night?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "minutes",
+          "label": "minutes"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "43",
+    "question_text": "When have you usually gotten up in the morning?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44",
+    "question_text": "How many hours of actual sleep did you get?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "45",
+    "question_text": "Trouble sleeping: cannot get to sleep within 30 minutes",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "46",
+    "question_text": "Trouble sleeping: wake up in middle of night or early morning",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "47",
+    "question_text": "Trouble sleeping: have to get up to use bathroom",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "48",
+    "question_text": "Trouble sleeping: cannot breathe comfortably",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "49",
+    "question_text": "Trouble sleeping: cough or snore loudly",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "50",
+    "question_text": "Trouble sleeping: feel too cold",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "51",
+    "question_text": "Trouble sleeping: feel too hot",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "52",
+    "question_text": "Trouble sleeping: had bad dreams",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "53",
+    "question_text": "Trouble sleeping: have pain",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "55",
+    "question_text": "Rate your sleep quality overall",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "57",
+    "question_text": "Trouble staying awake while driving, eating, socializing",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "58",
+    "question_text": "Problem keeping up enthusiasm to get things done",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 60,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "3",
+    "question_text": "GATEWAY: Do you have trouble falling asleep, staying asleep, or waking too early?",
+    "pillar": "Sleep Quality",
+    "tier": "GATEWAY",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Always",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "60",
+    "question_text": "Difficulty falling asleep",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "61",
+    "question_text": "Difficulty staying asleep",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "62",
+    "question_text": "Problem waking up too early",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "63",
+    "question_text": "Satisfaction with current sleep pattern",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "64",
+    "question_text": "How noticeable is sleep problem to others?",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "65",
+    "question_text": "How worried are you about sleep problem?",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "66",
+    "question_text": "Interference with daily functioning",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "67",
+    "question_text": "I need 8 hours of sleep to feel refreshed",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "68",
+    "question_text": "Must catch up on sleep after poor night",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "69",
+    "question_text": "Concerned chronic insomnia affects physical health",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "71",
+    "question_text": "Poor sleep will interfere with next day activities",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "72",
+    "question_text": "Better to take sleeping pill than poor sleep",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "73",
+    "question_text": "Irritability/depression due to poor sleep night before",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "74",
+    "question_text": "Concerned poor sleep affects daytime productivity",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "75",
+    "question_text": "One night poor sleep → whole week ruined",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "76",
+    "question_text": "Cannot function after poor night of sleep",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "77",
+    "question_text": "Cannot predict sleep patterns, feel helpless",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "78",
+    "question_text": "Worried about long-term sleep medication effects",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "79",
+    "question_text": "Single night bad sleep ruins next day",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "80",
+    "question_text": "Would be happy if I could just fall asleep",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "81",
+    "question_text": "If don't sleep well, whole next day ruined",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "82",
+    "question_text": "Feel like victim of poor sleep",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "99",
+    "question_text": "Take daytime naps ≥2 hours",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "100",
+    "question_text": "Go to bed at different times daily",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "102",
+    "question_text": "Exercise to sweating within 1hr of bed",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "103",
+    "question_text": "Stay in bed longer than should 2-3x/week",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "104",
+    "question_text": "Use alcohol/tobacco/caffeine within 4hr of bed",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "105",
+    "question_text": "Do wake-up activities before bed (games/internet/clean)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "106",
+    "question_text": "Go to bed feeling hungry",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "107",
+    "question_text": "Sleep on uncomfortable bed",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "108",
+    "question_text": "Sleep in uncomfortable bedroom (too bright/noisy/hot/cold)",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "109",
+    "question_text": "Do important work before bed",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "110",
+    "question_text": "Think/worry/plan in bed",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "111",
+    "question_text": "Use bed for things other than sleep/sex",
+    "pillar": "Sleep Quality",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Poor sleep quality or insomnia gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "4",
+    "question_text": "Hours of sleep per night on WEEKDAYS",
+    "pillar": "Sleep Quantity",
+    "tier": "CORE",
+    "answer_format": "number_scroll",
+    "format_config": {
+      "min": 0,
+      "max": 40,
+      "defaultValue": 0,
+      "unit": "hours",
+      "step": 0.5
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 40
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "5",
+    "question_text": "Hours of sleep per night on WEEKENDS",
+    "pillar": "Sleep Quantity",
+    "tier": "CORE",
+    "answer_format": "number_scroll",
+    "format_config": {
+      "min": 0,
+      "max": 40,
+      "defaultValue": 0,
+      "unit": "hours",
+      "step": 0.5
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 40
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "6",
+    "question_text": "How long does it take you to fall asleep?",
+    "pillar": "Sleep Quantity",
+    "tier": "CORE",
+    "answer_format": "minutes_scroll",
+    "format_config": {
+      "min": 0,
+      "max": 200,
+      "defaultValue": 0,
+      "step": 5
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 200
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "7",
+    "question_text": "Typical BEDTIME on weekdays",
+    "pillar": "Sleep Regularity",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "8",
+    "question_text": "Typical WAKE TIME on weekdays",
+    "pillar": "Sleep Regularity",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "9",
+    "question_text": "Typical BEDTIME on weekends",
+    "pillar": "Sleep Regularity",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "10",
+    "question_text": "Typical WAKE TIME on weekends",
+    "pillar": "Sleep Regularity",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "11",
+    "question_text": "Do you use an alarm clock on weekdays?",
+    "pillar": "Sleep Timing",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "12",
+    "question_text": "How often do you get morning sunlight exposure?",
+    "pillar": "Sleep Timing",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "13",
+    "question_text": "What time do you usually turn off screens before bed?",
+    "pillar": "Sleep Timing",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "14",
+    "question_text": "Do you use blue light filters or glasses?",
+    "pillar": "Sleep Timing",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "231",
+    "question_text": "If entirely free, what time would you get up?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 18,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "232",
+    "question_text": "If entirely free, what time would you go to bed?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 18,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "233",
+    "question_text": "How dependent on alarm clock?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "234",
+    "question_text": "How easy to get up in morning?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "235",
+    "question_text": "How alert first 30min after waking?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "236",
+    "question_text": "Appetite first 30min after waking?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "237",
+    "question_text": "How tired first 30min after waking?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "238",
+    "question_text": "Bedtime when no commitments next day vs usual?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "239",
+    "question_text": "Physical exercise 7-8am: how would you perform?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "240",
+    "question_text": "What time in evening do you feel tired?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 18,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "241",
+    "question_text": "Best time for 2hr mentally exhausting test?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "14_options",
+          "label": "1-4 options"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "242",
+    "question_text": "If went to bed at 11pm, level of tiredness?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "243",
+    "question_text": "Went to bed late: most likely to experience?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "14_options",
+          "label": "1-4 options"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "244",
+    "question_text": "Night watch 4-6am: best alternative for you?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "14_options",
+          "label": "1-4 options"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "245",
+    "question_text": "2hrs hard physical work: best time?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "14_options",
+          "label": "1-4 options"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "246",
+    "question_text": "Hard physical exercise 10-11pm: how well perform?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "247",
+    "question_text": "Choose 5 consecutive work hours: which?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 18,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "248",
+    "question_text": "What time do you reach \"feeling best\" peak?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 18,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "249",
+    "question_text": "Morning or evening type person?",
+    "pillar": "Sleep Timing",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Weekday-weekend difference >1hr",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "15",
+    "question_text": "GATEWAY: In past 2 weeks, felt down, depressed, or hopeless?",
+    "pillar": "Mental Health",
+    "tier": "GATEWAY",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Always",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "16",
+    "question_text": "GATEWAY: In past 2 weeks, felt nervous, anxious, or on edge?",
+    "pillar": "Mental Health",
+    "tier": "GATEWAY",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Always",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "84",
+    "question_text": "Worry about falling asleep",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "85",
+    "question_text": "Review/ponder events of the day",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "86",
+    "question_text": "Depressing or anxious thoughts",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "87",
+    "question_text": "Worry about problems other than sleep",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "88",
+    "question_text": "Being mentally alert, active",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "89",
+    "question_text": "Unable to shut off thoughts",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "90",
+    "question_text": "Thoughts keep going through mind",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "91",
+    "question_text": "Heart racing or pounding",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "93",
+    "question_text": "Feeling tense",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "94",
+    "question_text": "Perspiring (not due to temperature)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "95",
+    "question_text": "Shortness of breath",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "96",
+    "question_text": "Dry mouth",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "97",
+    "question_text": "Stomach upset",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "98",
+    "question_text": "Trembling/shaking",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Insomnia gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "139",
+    "question_text": "Little interest or pleasure in doing things",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "140",
+    "question_text": "Feeling down, depressed, or hopeless",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "141",
+    "question_text": "Trouble falling/staying asleep, or sleeping too much",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "142",
+    "question_text": "Feeling tired or having little energy",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "143",
+    "question_text": "Poor appetite or overeating",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "144",
+    "question_text": "Feeling bad about yourself or that you're a failure",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "145",
+    "question_text": "Trouble concentrating on things",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "146",
+    "question_text": "Moving/speaking slowly or being fidgety/restless",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "147",
+    "question_text": "Thoughts of being better off dead or hurting yourself",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "148",
+    "question_text": "Feeling nervous, anxious, or on edge",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Anxiety gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "149",
+    "question_text": "Not being able to stop or control worrying",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Anxiety gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "150",
+    "question_text": "Worrying too much about different things",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Anxiety gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "151",
+    "question_text": "Trouble relaxing",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Anxiety gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "152",
+    "question_text": "Being so restless it's hard to sit still",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Anxiety gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "153",
+    "question_text": "Becoming easily annoyed or irritable",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Anxiety gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "154",
+    "question_text": "Feeling afraid as if something awful might happen",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Anxiety gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "156",
+    "question_text": "Aware of dryness of mouth",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "157",
+    "question_text": "Couldn't experience any positive feeling",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "158",
+    "question_text": "Breathing difficulty/rapid breathing",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "159",
+    "question_text": "Difficult to work up initiative to do things",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "160",
+    "question_text": "Tended to over-react to situations",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "161",
+    "question_text": "Experienced trembling (e.g., hands)",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "162",
+    "question_text": "Felt using a lot of nervous energy",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "163",
+    "question_text": "Worried about situations panicking/making fool of self",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "165",
+    "question_text": "Found myself getting agitated",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "166",
+    "question_text": "Found it difficult to relax",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "167",
+    "question_text": "Felt down-hearted and blue",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "168",
+    "question_text": "Intolerant of anything keeping me from what I was doing",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "169",
+    "question_text": "Felt close to panic",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "170",
+    "question_text": "Unable to become enthusiastic about anything",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "171",
+    "question_text": "Felt I wasn't worth much as a person",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "172",
+    "question_text": "Felt rather touchy",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "173",
+    "question_text": "Aware of action of heart without physical exertion",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "174",
+    "question_text": "Felt scared without good reason",
+    "pillar": "Mental Health",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Depression OR anxiety gateway",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "17",
+    "question_text": "GATEWAY: Do you feel excessively tired or sleepy during the day?",
+    "pillar": "Cognitive",
+    "tier": "GATEWAY",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Always",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "18",
+    "question_text": "GATEWAY: Memory problems, difficulty concentrating, or mental fog?",
+    "pillar": "Cognitive",
+    "tier": "GATEWAY",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Always",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "112",
+    "question_text": "Chance of dozing: Sitting and reading",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "113",
+    "question_text": "Chance of dozing: Watching TV",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "114",
+    "question_text": "Chance of dozing: Sitting inactive in public",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "115",
+    "question_text": "Chance of dozing: As car passenger for 1hr",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "116",
+    "question_text": "Chance of dozing: Lying down to rest in afternoon",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "117",
+    "question_text": "Chance of dozing: Sitting and talking to someone",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "118",
+    "question_text": "Chance of dozing: Sitting quietly after lunch (no alcohol)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "119",
+    "question_text": "Chance of dozing: In car stopped in traffic",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 3,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 3
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "121",
+    "question_text": "Exercise brings on my fatigue",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 7,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 4,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 7
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "122",
+    "question_text": "I am easily fatigued",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 7,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 4,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 7
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "123",
+    "question_text": "Fatigue interferes with physical functioning",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 7,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 4,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 7
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "124",
+    "question_text": "Fatigue causes frequent problems for me",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 7,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 4,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 7
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "125",
+    "question_text": "Fatigue prevents sustained physical functioning",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 7,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 4,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 7
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "126",
+    "question_text": "Fatigue interferes with duties and responsibilities",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 7,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 4,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 7
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "127",
+    "question_text": "Fatigue is among my three most disabling symptoms",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 7,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 4,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 7
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "129",
+    "question_text": "Difficulty concentrating on things you read or do",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "130",
+    "question_text": "Difficulty remembering things",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "131",
+    "question_text": "Difficulty with hobbies (sewing/collecting/gardening)",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "132",
+    "question_text": "Difficulty getting things done due to tiredness",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "133",
+    "question_text": "Difficulty being active in evening",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "134",
+    "question_text": "Difficulty maintaining telephone conversation",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "135",
+    "question_text": "Difficulty maintaining intimacy with partner",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "136",
+    "question_text": "Difficulty visiting family or friends",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "137",
+    "question_text": "Difficulty doing things for family",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "138",
+    "question_text": "Difficulty keeping up with work responsibilities",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Excessive daytime sleepiness",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "176",
+    "question_text": "My thinking has been slow",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Cognitive gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "177",
+    "question_text": "Had to work hard to pay attention",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Cognitive gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "178",
+    "question_text": "My thinking has been fuzzy",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Cognitive gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "179",
+    "question_text": "Had trouble forming thoughts",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Cognitive gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "180",
+    "question_text": "Had trouble concentrating",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Cognitive gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "181",
+    "question_text": "Had to work to keep track of what I was doing",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Cognitive gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "182",
+    "question_text": "Trouble planning out steps of a task",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Cognitive gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "183",
+    "question_text": "Difficulty doing more than one thing at a time",
+    "pillar": "Cognitive",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Cognitive gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "21",
+    "question_text": "Neck circumference",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "33A",
+    "question_text": "What is the typical temperature in your bedroom at night?",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "unitOptions": [
+        {
+          "value": "c",
+          "label": "°C"
+        },
+        {
+          "value": "f",
+          "label": "°F"
+        }
+      ],
+      "min": 10,
+      "max": 35,
+      "step": 0.5,
+      "decimalPlaces": 1,
+      "inputMode": "decimal"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 10,
+      "max": 35
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "33B",
+    "question_text": "How would you rate the noise level in your sleep environment?",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "33C",
+    "question_text": "How dark is your bedroom at night?",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "33D",
+    "question_text": "Do you use any sleep aids?",
+    "pillar": "Physical",
+    "tier": "CORE",
+    "answer_format": "multi_select_chips",
+    "format_config": {
+      "options": [],
+      "layout": "grid",
+      "minSelections": 0,
+      "maxSelections": 10
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "19",
+    "question_text": "GATEWAY: Do you snore loudly?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Always",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "20",
+    "question_text": "GATEWAY: Has anyone observed you stop breathing during sleep?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Always",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "22",
+    "question_text": "GATEWAY: Do you have pain that affects your sleep?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Always",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "23",
+    "question_text": "If yes, pain severity",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "If pain present",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "24",
+    "question_text": "GATEWAY: Do you exercise regularly?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Always",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "25",
+    "question_text": "If yes, hours per week?",
+    "pillar": "Physical",
+    "tier": "GATEWAY",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "If exercise",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "184",
+    "question_text": "Snore loudly (louder than talking)? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "185",
+    "question_text": "Often feel Tired/fatigued/sleepy during day? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "186",
+    "question_text": "Anyone Observed you stop breathing during sleep? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "187",
+    "question_text": "Have or treated for high blood Pressure? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "188",
+    "question_text": "BMI more than 35? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "190",
+    "question_text": "Neck circumference >40cm (15.75\")? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "191",
+    "question_text": "Gender = Male? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "192",
+    "question_text": "Do you snore? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "193",
+    "question_text": "Your snoring is:",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 4,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 2,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 4
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "194",
+    "question_text": "How often do you snore?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "195",
+    "question_text": "Has your snoring bothered other people? Yes/No",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "196",
+    "question_text": "Anyone noticed you stop breathing during sleep?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no_+_freq",
+          "label": "No + freq"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "197",
+    "question_text": "How often feel tired/fatigued after sleep?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "198",
+    "question_text": "During waking, feel tired/fatigued/not up to par?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 5,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 3,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 5
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "199",
+    "question_text": "Ever nodded off/fallen asleep while driving?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "200",
+    "question_text": "Do you have high blood pressure?",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        },
+        {
+          "value": "don't_know",
+          "label": "Don't know"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "OSA gateway positive",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "203",
+    "question_text": "Shade areas where you feel pain",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "body_diagram",
+          "label": "body diagram"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "204",
+    "question_text": "Pain at its WORST in last 24 hours",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "205",
+    "question_text": "Pain at its LEAST in last 24 hours",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "206",
+    "question_text": "Pain on AVERAGE",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "207",
+    "question_text": "Pain RIGHT NOW",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "209",
+    "question_text": "Relief from pain treatments",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "0100",
+          "label": "0-100%"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "210",
+    "question_text": "Pain interference: General Activity",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "211",
+    "question_text": "Pain interference: Mood",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "212",
+    "question_text": "Pain interference: Walking Ability",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "213",
+    "question_text": "Pain interference: Normal Work",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "214",
+    "question_text": "Pain interference: Relations with others",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "215",
+    "question_text": "Pain interference: Sleep",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "216",
+    "question_text": "Pain interference: Enjoyment of life",
+    "pillar": "Physical",
+    "tier": "EXPANSION",
+    "answer_format": "slider_scale",
+    "format_config": {
+      "min": 1,
+      "max": 10,
+      "minLabel": "Minimum",
+      "maxLabel": "Maximum",
+      "defaultValue": 5,
+      "showNumberLabel": true,
+      "step": 1
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 1,
+      "max": 10
+    },
+    "estimated_time_seconds": 10,
+    "trigger": "Pain ≥4/10 affecting sleep",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "29",
+    "question_text": "Do you consume caffeine?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "30",
+    "question_text": "If yes, how many cups per day?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "31",
+    "question_text": "If yes, time of LAST caffeinated beverage",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "32",
+    "question_text": "Do you consume alcohol?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "33",
+    "question_text": "If yes, drinks per week?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "54A",
+    "question_text": "What time do you typically eat your last meal of the day?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "54B",
+    "question_text": "How many hours before bed do you typically finish eating?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "number_scroll",
+    "format_config": {
+      "min": 0,
+      "max": 40,
+      "defaultValue": 0,
+      "unit": "hours",
+      "step": 0.5
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 40
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "54C",
+    "question_text": "What time do you typically have your last caffeinated beverage?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "time_picker",
+    "format_config": {
+      "format": "HH:MM",
+      "allowCrossMidnight": true
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "54D",
+    "question_text": "How many servings of fruits and vegetables do you eat per day on average?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": true,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "54E",
+    "question_text": "Do you skip breakfast regularly?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "217",
+    "question_text": "Use olive oil as principal source of fat? Yes/No",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "218",
+    "question_text": "How much olive oil per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "219",
+    "question_text": "Servings of vegetables per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "220",
+    "question_text": "Pieces of fruit per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "221",
+    "question_text": "Servings of red meat/hamburger/sausages per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "222",
+    "question_text": "Servings of butter/margarine/cream per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "223",
+    "question_text": "Sweet/carbonated beverages per day?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "224",
+    "question_text": "Wine consumption per week (glasses)?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "225",
+    "question_text": "Servings of legumes per week?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "226",
+    "question_text": "Servings of fish/seafood per week?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "227",
+    "question_text": "Commercial pastries per week (times)?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "228",
+    "question_text": "Servings of nuts per week?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "229",
+    "question_text": "Prefer chicken/turkey/rabbit over beef/pork? Yes/No",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "estimated_time_seconds": 8,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "230",
+    "question_text": "Times per week: vegetables/pasta/rice with tomato sauce (sofrito)?",
+    "pillar": "Nutritional",
+    "tier": "EXPANSION",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "decimalPlaces": 0,
+      "inputMode": "numeric"
+    },
+    "validation_rules": {
+      "required": false,
+      "min": 0,
+      "max": 1000
+    },
+    "estimated_time_seconds": 15,
+    "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  }
+]

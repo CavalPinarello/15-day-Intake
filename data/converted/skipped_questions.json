@@ -1,0 +1,47 @@
+[
+  {
+    "id": "D1",
+    "text": "Full Name",
+    "reason": "SKIP_TEXT_INPUT"
+  },
+  {
+    "id": "D3",
+    "text": "Email",
+    "reason": "SKIP_TEXT_INPUT"
+  },
+  {
+    "id": "44B",
+    "text": "If yes, please list all medications and dosages:",
+    "reason": "SKIP_TEXT_INPUT"
+  },
+  {
+    "id": "44D",
+    "text": "If yes, please list all supplements:",
+    "reason": "SKIP_TEXT_INPUT"
+  },
+  {
+    "id": "44F",
+    "text": "If yes, please list your chronic conditions:",
+    "reason": "SKIP_TEXT_INPUT"
+  },
+  {
+    "id": "44H",
+    "text": "If yes, please describe:",
+    "reason": "SKIP_TEXT_INPUT"
+  },
+  {
+    "id": "54",
+    "text": "Trouble sleeping: other reason (describe)",
+    "reason": "SKIP_TEXT_INPUT"
+  },
+  {
+    "id": "201",
+    "text": "BMI calculation",
+    "reason": "SKIP_CALCULATED"
+  },
+  {
+    "id": "208",
+    "text": "Treatments/medications for pain (open text)",
+    "reason": "SKIP_TEXT_INPUT"
+  }
+]
