@@ -8,24 +8,27 @@ Complete reference for all development commands in this project.
 # Install all dependencies for all components
 npm run install:all
 
-# Run both server and client concurrently
+# Run both Convex and client concurrently
 npm run dev
 
-# Server only
-npm run server
+# Convex only
+npx convex dev
 
 # Client only (when client directory exists)
 npm run client
 ```
 
-## Server Commands (run from `/server` directory)
+## Convex Commands
 
 ```bash
-# Development server with hot reload
-npm run dev
+# Start Convex development environment
+npx convex dev
 
-# Production server
-npm start
+# Deploy Convex functions
+npx convex deploy
+
+# Setup Convex project
+npx convex init
 
 # Database commands
 npm run seed                    # Initialize database and seed with sample data

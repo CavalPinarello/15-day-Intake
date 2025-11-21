@@ -4,10 +4,12 @@ This file provides essential guidance to Claude Code when working with this slee
 
 ## Platform Architecture
 
-**Hybrid Application Design:**
-- **iOS Application**: 15-day intake journey with native Swift/SwiftUI implementation
+**Multi-Platform Application Design:**
+- **iOS Application**: 15-day intake journey with comprehensive Swift/SwiftUI implementation
+- **Apple Watch Application**: Alternative questionnaire experience with watch-optimized UI
+- **Cross-device Sync**: WatchConnectivity for seamless iPhone-Watch integration
 - **Web Application**: Physician dashboard and administrative interface using Next.js  
-- **Convex Backend**: Serverless backend providing real-time data synchronization
+- **Convex Backend**: Serverless backend providing real-time data synchronization across all platforms
 
 ## Quick Start Commands
 
@@ -33,6 +35,13 @@ npx convex dev && ./setup-convex.sh
 **iOS Application:**
 - **iOS Files:** `/ios/` (Swift configuration and HealthKit integration)
 - **API Config:** `/ios/Config.swift` (API endpoints for iOS)
+- **Watch Sync:** `/ios/WatchConnectivityManager.swift` (iPhone-Watch communication)
+
+**Apple Watch Application:**
+- **Watch Files:** `/watchos/` (watchOS-optimized questionnaire and recommendations)
+- **Main App:** `/watchos/WatchApp.swift` (Watch app interface)
+- **Questionnaire:** `/watchos/QuestionnaireView.swift` (Watch-optimized UI)
+- **Recommendations:** `/watchos/RecommendationsView.swift` (Physician recommendations)
 
 **Web Application:**
 - **Physician Dashboard:** `/client/app/physician-dashboard/`
@@ -40,16 +49,20 @@ npx convex dev && ./setup-convex.sh
 
 **Convex Backend:**
 - **Schema:** `/convex/schema.ts` (30+ tables with real-time sync)
-- **Functions:** `/convex/` (queries, mutations, actions for both platforms)
+- **Functions:** `/convex/` (queries, mutations, actions for all platforms)
+- **Watch Functions:** `/convex/watch.ts` (watch connectivity and sync)
+- **Recommendations:** `/convex/recommendations.ts` (physician recommendations for watch)
 - **Auth:** Clerk authentication integration
 - **Documentation:** `/docs/` (organized by category)
 
 ## Development Patterns
 
-**Cross-Platform Development:**
-- iOS app handles patient intake journey and HealthKit integration
+**Multi-Platform Development:**
+- iOS app provides comprehensive patient intake journey and HealthKit integration
+- Apple Watch app offers alternative questionnaire interface and receives physician recommendations
+- WatchConnectivity enables seamless sync between iPhone and Apple Watch
 - Web app handles physician dashboard and administrative functions
-- Both platforms consume Convex functions with real-time sync
+- All platforms consume Convex functions with real-time synchronization
 
 **Common Patterns:**
 - Convex provides real-time data synchronization across platforms
@@ -98,9 +111,19 @@ For detailed architecture, setup instructions, and API documentation, see README
 - **Repository:** Successfully pushed to https://github.com/CavalPinarello/15-day-Intake.git
 - **Session Log:** `/docs/sessions/clerk-authentication-2025-11-21.md`
 
-**Previous Optimization Session:**
-- Reduced file size from 213 lines (8KB) to 64 lines (4KB) - 75% reduction
-- Moved detailed documentation to organized `/docs/` structure  
-- Enhanced README.md with comprehensive architecture details
-- Created `/docs/development/` for patterns and command reference
-- **Commit Hash:** `79f0032` - "Optimize CLAUDE.md for improved Claude Code performance"
+**Apple Watch Integration Session (2025-11-21):**
+- **Platform Expansion:** Extended architecture to include Apple Watch as alternative questionnaire interface
+- **Multi-Platform Design:** iOS + Apple Watch + Web applications with shared Convex backend
+- **Watch Features:** 
+  - Alternative questionnaire experience optimized for watch interactions
+  - Post-intake physician recommendations delivered to Apple Watch
+  - Real-time sync between iPhone and Apple Watch via WatchConnectivity
+  - Watch-specific HealthKit integration for comprehensive health data
+- **Cross-Device Sync:** Seamless questionnaire progress sync between iPhone and Apple Watch
+- **New watchOS Files:** Created complete Apple Watch application structure
+- **Documentation Updates:** Updated all architecture docs to reflect multi-platform design
+- **Session Goal:** Enable 15-day intake completion on Apple Watch with physician recommendations
+
+**Previous Sessions:**
+- Clerk Authentication Integration (commit `1ded787`)
+- Optimization Session (commit `79f0032`) - 75% CLAUDE.md reduction

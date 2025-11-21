@@ -4,10 +4,12 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 
 ## Platform Architecture
 
-**Hybrid Application Design:**
-- **iOS Application**: 15-day intake journey with native Swift/SwiftUI implementation
+**Multi-Platform Application Design:**
+- **iOS Application**: 15-day intake journey with comprehensive Swift/SwiftUI interface
+- **Apple Watch Application**: Alternative questionnaire experience with watch-optimized UI
+- **Cross-device Synchronization**: WatchConnectivity for seamless iPhone-Watch integration
 - **Web Application**: Physician dashboard and administrative interface using Next.js
-- **Convex Backend**: Serverless backend providing real-time data synchronization
+- **Convex Backend**: Serverless backend providing real-time data synchronization across all platforms
 
 ## Convex Backend Pattern
 
@@ -41,6 +43,14 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 - `/ios/Config.swift` - API endpoints and authentication configuration
 - `/ios/HealthKitManager.swift` - HealthKit integration for sleep/activity data
 - `/ios/AuthenticationManager.swift` - Authentication handling for iOS
+- `/ios/WatchConnectivityManager.swift` - iPhone-Watch synchronization
+
+**Apple Watch Application:**
+- `/watchos/WatchApp.swift` - Main watch app interface
+- `/watchos/QuestionnaireView.swift` - Watch-optimized questionnaire UI
+- `/watchos/RecommendationsView.swift` - Physician recommendations display
+- `/watchos/HealthKitWatchManager.swift` - HealthKit for watchOS
+- `/watchos/WatchConnectivityManager.swift` - Watch-iPhone synchronization
 
 **Web Application:**
 - `/client/` - Next.js physician dashboard and admin interface
@@ -52,7 +62,9 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 - `/convex/questions.ts` - Question management queries and mutations
 - `/convex/responses.ts` - Response handling functions
 - `/convex/physician.ts` - Physician dashboard functions
-- `/convex/health.ts` - HealthKit data sync actions
+- `/convex/health.ts` - HealthKit data sync actions (iOS + watchOS)
+- `/convex/watch.ts` - Watch connectivity and sync functions
+- `/convex/recommendations.ts` - Physician recommendations management
 
 **Scripts & Utilities:**
 - `/server/scripts/` - Database seeding and management scripts
@@ -98,9 +110,16 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 
 **iOS Application:**
 - Native Swift/SwiftUI implementation
-- HealthKit integration for sleep and activity data
-- RESTful API consumption
-- Native iOS UI patterns and components
+- HealthKit integration for comprehensive health data
+- Convex function integration for real-time sync
+- WatchConnectivity for iPhone-Watch communication
+
+**Apple Watch Application:**
+- watchOS-optimized SwiftUI interface  
+- Quick questionnaire completion interface
+- Physician recommendations display
+- HealthKit integration for watch-based health data
+- WatchConnectivity for real-time sync with iPhone
 
 **Web Application:**
 - Next.js 14 with App Router

@@ -4,17 +4,21 @@
 
 This is a sleep coaching platform implementing a 15-day intake journey with a **hybrid architecture**:
 
-- **iOS Application**: 15-day question journey and intake experience
+- **iOS & Apple Watch Applications**: 15-day question journey with alternative watch-based interaction
 - **Web Application**: Physician dashboard and patient review modules
+- **Convex Backend**: Serverless backend providing real-time data synchronization
 
-Built for rapid prototyping and testing with dual database support (SQLite/Convex) and comprehensive admin management features.
+Built for rapid prototyping and testing with comprehensive admin management features and cross-device synchronization.
 
 ## Features
 
-### iOS Application
+### iOS & Apple Watch Applications
 - ✅ 15-day intake journey with daily question sets
-- ✅ HealthKit integration for sleep and activity data
-- ✅ Native iOS experience optimized for mobile interaction
+- ✅ **Apple Watch Alternative**: Complete questionnaire experience on watch
+- ✅ **Cross-device sync**: Start on iPhone, complete on watch (or vice versa)
+- ✅ HealthKit integration for sleep and activity data from both devices
+- ✅ Native iOS/watchOS experience optimized for each platform
+- ✅ **Post-intake recommendations**: Physician recommendations delivered to watch
 - ✅ **Clerk Authentication**: Secure user authentication with JWT tokens
 - ✅ **Authenticated HealthKit Sync**: Protected health data synchronization
 
@@ -39,11 +43,12 @@ Built for rapid prototyping and testing with dual database support (SQLite/Conve
 
 ## Tech Stack
 
-### iOS Application
-- Swift/SwiftUI
-- HealthKit integration
-- RESTful API consumption
-- Native iOS UI components
+### iOS & Apple Watch Applications
+- **iOS**: Swift/SwiftUI with comprehensive UI for detailed interactions
+- **watchOS**: SwiftUI optimized for quick watch-based questionnaire completion
+- **HealthKit**: Integrated across both iOS and watchOS for comprehensive health data
+- **WatchConnectivity**: Real-time sync between iPhone and Apple Watch
+- **Convex Integration**: Direct function calls for real-time data synchronization
 
 ### Web Application  
 - Next.js 14 (App Router)
@@ -146,13 +151,16 @@ This will start both Convex and the client concurrently.
 
 ### Mutations (Write Operations)
 - `api.auth.signUp` - Create new user
-- `api.responses.saveResponse` - Save user response
+- `api.responses.saveResponse` - Save user response (iOS/watchOS)
 - `api.users.advanceDay` - Advance user to next day
 - `api.questions.create` - Create new question
 - `api.physician.updatePatientReviewStatus` - Update review status
+- `api.recommendations.createForPatient` - Create physician recommendations for watch
 
 ### Actions (External Operations)
-- `api.health.syncHealthKitData` - Sync HealthKit data from iOS
+- `api.health.syncHealthKitData` - Sync HealthKit data from iOS and watchOS
+- `api.watch.syncQuestionnaireProgress` - Sync questionnaire state between devices
+- `api.recommendations.pushToWatch` - Push recommendations to Apple Watch
 - `api.llm.generateInsights` - Generate AI insights from responses
 
 ## Database Schema
@@ -160,9 +168,11 @@ This will start both Convex and the client concurrently.
 The Convex backend includes the following tables:
 - `users` - User accounts and authentication
 - `days` - 15-day intake journey structure
-- `assessment_questions` - Questions for each day
-- `user_assessment_responses` - User responses to questions
-- `user_sleep_data` - HealthKit sleep data from iOS
+- `assessment_questions` - Questions for each day (optimized for iOS/watchOS)
+- `user_assessment_responses` - User responses from iOS and Apple Watch
+- `user_sleep_data` - HealthKit sleep data from iOS and watchOS
+- `questionnaire_sync_state` - Cross-device progress synchronization
+- `physician_recommendations` - Post-intake recommendations for watch delivery
 - `patient_review_status` - Physician review tracking
 - `physician_notes` - Physician annotations
 
@@ -231,15 +241,24 @@ docs/
 ├── client/            # Next.js web application (physician dashboard)
 ├── ios/               # iOS application files (15-day intake journey)
 │   ├── Config.swift           # API endpoints and configuration
-│   ├── HealthKitManager.swift # HealthKit integration
-│   └── AuthenticationManager.swift # Authentication handling
+│   ├── HealthKitManager.swift # HealthKit integration for iOS
+│   ├── AuthenticationManager.swift # Authentication handling
+│   └── WatchConnectivityManager.swift # iPhone-Watch synchronization
+├── watchos/           # Apple Watch application files
+│   ├── WatchApp.swift         # Main watch app interface
+│   ├── QuestionnaireView.swift # Watch-optimized questionnaire UI
+│   ├── RecommendationsView.swift # Physician recommendations display
+│   ├── HealthKitWatchManager.swift # HealthKit for watchOS
+│   └── WatchConnectivityManager.swift # Watch-iPhone synchronization
 ├── convex/            # Convex backend (queries, mutations, actions)
 │   ├── schema.ts      # Database schema definition
 │   ├── auth.ts        # Authentication functions  
 │   ├── questions.ts   # Question management functions
 │   ├── responses.ts   # Response handling functions
 │   ├── physician.ts   # Physician dashboard functions
-│   └── health.ts      # HealthKit data sync functions
+│   ├── health.ts      # HealthKit data sync functions
+│   ├── watch.ts       # Watch connectivity and sync functions
+│   └── recommendations.ts # Physician recommendations management
 ├── data/              # Sample data and question definitions
 ├── docs/              # All project documentation (organized by category)
 │   ├── api/           # API documentation and specifications
@@ -259,21 +278,26 @@ docs/
 ## Development Notes
 
 **Platform-Specific Implementation:**
-- **iOS App**: Handles 15-day intake journey with native UI and HealthKit integration
-- **Web App**: Focuses on physician dashboard and administrative functions
-- **Convex Backend**: Both platforms consume Convex functions for real-time data sync
+- **iOS App**: Comprehensive 15-day intake journey with full UI and HealthKit integration
+- **Apple Watch App**: Alternative questionnaire interface with quick interactions and physician recommendations
+- **Cross-device Sync**: WatchConnectivity ensures seamless experience between iPhone and Watch
+- **Web App**: Focuses on physician dashboard and administrative functions  
+- **Convex Backend**: All platforms consume Convex functions for real-time data sync
 
 **Important Implementation Details:**
 - Test users (user1-user10) are hard-coded with password "1" for rapid prototyping
 - Day advancement button (web) allows rapid testing of multi-day journey
 - Admin interface (web) supports drag-and-drop question reordering
 - Physician dashboard (web) for patient review workflow
-- iOS app integrates with HealthKit for sleep and activity data
+- iOS and Apple Watch apps integrate with HealthKit for comprehensive health data
+- Apple Watch optimized for quick questionnaire completion and recommendation viewing
+- WatchConnectivity enables real-time sync between iPhone and Apple Watch
 - Assessment system supports complex conditional logic and gateway triggers
-- Convex provides real-time data synchronization across all platforms
+- Convex provides real-time data synchronization across all platforms (iOS, watchOS, web)
 - All timestamps are stored as Unix timestamps (numbers)
 - Strongly typed schema with automatic TypeScript generation
 - Cross-platform authentication uses Clerk with JWT tokens
+- Physician recommendations automatically pushed to Apple Watch post-intake
 
 ## Validation & Testing
 

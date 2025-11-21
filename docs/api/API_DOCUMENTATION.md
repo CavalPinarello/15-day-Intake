@@ -2,10 +2,12 @@
 
 ## Overview
 
-This Convex backend serves both the **iOS application** (15-day intake journey) and **web application** (physician dashboard) with real-time data synchronization.
+This Convex backend serves the **iOS application**, **Apple Watch application** (15-day intake journey), and **web application** (physician dashboard) with real-time data synchronization across all platforms.
 
 ## Platform Usage
 - **iOS Application**: Consumes Convex functions for 15-day intake journey, HealthKit data sync, and authentication
+- **Apple Watch Application**: Uses Convex functions for questionnaire completion, recommendations delivery, and watchOS HealthKit sync
+- **Cross-device Sync**: WatchConnectivity ensures real-time synchronization between iPhone and Apple Watch
 - **Web Application**: Uses Convex functions for physician dashboard, patient management, and administrative functions
 
 ## Table of Contents
@@ -581,19 +583,22 @@ Assign intervention to user.
 ## Cross-Platform Considerations
 
 ### Authentication
-- **iOS**: Uses JWT tokens stored securely in iOS Keychain
-- **Web**: Uses JWT tokens stored in secure HTTP-only cookies
-- Both platforms share the same authentication endpoints
+- **iOS**: Uses Clerk authentication with secure token storage in iOS Keychain
+- **Web**: Uses Clerk authentication with secure cookie-based sessions
+- Both platforms share the same Clerk authentication system
 
 ### Data Synchronization
-- **iOS**: Primarily creates data (intake responses, HealthKit data)
-- **Web**: Primarily reads data (physician dashboard, analytics)
-- Real-time sync supported via Convex backend option
+- **iOS**: Creates data (intake responses, comprehensive HealthKit data)
+- **Apple Watch**: Creates data (questionnaire responses, watch-specific HealthKit data) and receives data (physician recommendations)
+- **Cross-device**: WatchConnectivity ensures iPhone-Watch sync for questionnaire state
+- **Web**: Primarily reads data (physician dashboard, analytics) and creates recommendations
+- Real-time sync provided by Convex with automatic updates across all platforms
 
-### API Consumption Patterns
-- **iOS**: Uses native URLSession for HTTP requests
-- **Web**: Uses fetch API or HTTP client libraries
-- Both consume identical REST endpoints
+### Function Consumption Patterns
+- **iOS**: Uses Convex iOS client for direct function calls and WatchConnectivity for watch sync
+- **Apple Watch**: Uses Convex watchOS client for direct function calls and receives updates via WatchConnectivity
+- **Web**: Uses Convex React hooks for reactive queries and mutations
+- All platforms get real-time updates and automatic revalidation
 
 ---
 
