@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is the implementation of Component 1: 14-Day Onboarding Journey (SLE-130) from the ZOE Sleep Coaching Platform. It's built for rapid prototyping with features for testing and admin management.
+This is a sleep coaching platform implementing a 14-day onboarding journey, built for rapid prototyping and testing with dual database support (SQLite/Convex) and comprehensive admin management features.
 
 ## Features
 
@@ -157,6 +157,41 @@ The backend uses SQLite with the following tables:
 - `responses` - User responses to questions
 - `user_progress` - User progress tracking
 
+## Architecture Details
+
+### Database Architecture
+The platform supports dual database backends for flexible deployment:
+
+**SQLite (Local Development):**
+- Fast local development
+- No external dependencies
+- File-based storage in `/server/`
+
+**Convex (Cloud Deployment):**
+- Real-time synchronization
+- Serverless scaling
+- Built-in authentication integration
+- Set `USE_CONVEX=true` in `/server/.env` to enable
+
+### Key Architectural Patterns
+
+**Database Abstraction:**
+- Environment variable `USE_CONVEX=true` switches between SQLite and Convex
+- Convex functions in `/convex/` directory provide queries, mutations, and actions
+- Server routes in `/server/routes/` provide REST API endpoints
+
+**Question System:**
+- Flexible question types: text, textarea, number, select, radio, checkbox, scale, date, time
+- Conditional logic support via JSON configuration
+- Gateway system for dynamic module triggering
+- Assessment questions with 9 different answer formats
+
+**Security Features:**
+- Rate limiting on all endpoints (stricter for auth)
+- Helmet for security headers
+- CORS configuration
+- JWT token authentication
+
 ## Documentation
 
 All project documentation has been organized in the `/docs` directory:
@@ -164,10 +199,12 @@ All project documentation has been organized in the `/docs` directory:
 ```
 docs/
 ├── api/               # API documentation and specifications
-├── database/          # Database schemas and data specifications  
+├── database/          # Database schemas and data specifications
 ├── deployment/        # Deployment guides and infrastructure
+├── development/       # Development patterns and command reference
 ├── features/          # Feature implementations and integrations
 ├── guides/            # User guides and troubleshooting
+├── sessions/          # Development session logs
 ├── setup/             # Setup and configuration instructions
 └── status/            # Project status and completion tracking
 ```
@@ -179,6 +216,8 @@ docs/
 - [`/docs/setup/SETUP_ENVIRONMENT.md`](docs/setup/SETUP_ENVIRONMENT.md) - Environment setup
 - [`/docs/database/DATABASE_SCHEMA.md`](docs/database/DATABASE_SCHEMA.md) - Complete database schema
 - [`/docs/deployment/DEPLOYMENT_GUIDE.md`](docs/deployment/DEPLOYMENT_GUIDE.md) - Deployment instructions
+- [`/docs/development/command-reference.md`](docs/development/command-reference.md) - Complete command reference
+- [`/docs/development/architecture-patterns.md`](docs/development/architecture-patterns.md) - Detailed architecture patterns
 
 ## Project Structure
 
@@ -187,12 +226,45 @@ docs/
 ├── convex/            # Convex database functions and schema
 ├── data/              # Sample data and question definitions
 ├── docs/              # All project documentation (organized by category)
+│   ├── api/           # API documentation and specifications
+│   ├── database/      # Database schemas and data specifications
+│   ├── deployment/    # Deployment guides and infrastructure
+│   ├── development/   # Development patterns and command reference
+│   ├── features/      # Feature implementations and integrations
+│   ├── guides/        # User guides and troubleshooting
+│   ├── sessions/      # Development session logs
+│   ├── setup/         # Setup and configuration instructions
+│   └── status/        # Project status and completion tracking
 ├── ios/               # iOS-specific components and setup
 ├── scripts/           # Utility scripts for data conversion and testing
 ├── server/            # Express.js backend API
-├── CLAUDE.md          # Claude Code assistant guidance
+│   ├── database/      # SQLite database adapters and initialization
+│   ├── routes/        # REST API endpoints
+│   ├── scripts/       # Database seeding and management
+│   └── server.js      # Main Express server configuration
+├── CLAUDE.md          # Essential Claude Code guidance (optimized)
 └── README.md          # This file
 ```
+
+## Development Notes
+
+**Important Implementation Details:**
+- Test users (user1-user10) are hard-coded with password "1" for rapid prototyping
+- Day advancement button allows rapid testing of multi-day journey
+- Admin interface supports drag-and-drop question reordering
+- Physician dashboard integration for patient review workflow
+- Assessment system supports complex conditional logic and gateway triggers
+- The codebase expects both SQLite and Convex to have identical schemas
+- All timestamps are stored as Unix timestamps (numbers)
+- JSON fields are stored as strings and require parsing
+
+## Validation & Testing
+
+The system includes comprehensive validation:
+- Database integrity checking via `npm run verify-db`
+- Question format validation for 9 different answer types
+- User progress tracking and completion validation
+- Gateway condition evaluation for dynamic module triggering
 
 ## Next Steps
 
