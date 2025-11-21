@@ -2,12 +2,20 @@
 
 Key architectural patterns and conventions used in this sleep coaching platform.
 
-## Database Abstraction Pattern
+## Platform Architecture
 
-**Dual Database Support:**
-- Environment variable `USE_CONVEX=true` switches between SQLite and Convex
-- Convex functions in `/convex/` directory provide queries, mutations, and actions
-- Server routes in `/server/routes/` provide REST API endpoints
+**Hybrid Application Design:**
+- **iOS Application**: 15-day intake journey with native Swift/SwiftUI implementation
+- **Web Application**: Physician dashboard and administrative interface using Next.js
+- **Convex Backend**: Serverless backend providing real-time data synchronization
+
+## Convex Backend Pattern
+
+**Serverless Architecture:**
+- Convex functions provide queries, mutations, and actions
+- Real-time data synchronization between iOS and web platforms
+- Built-in authentication integration with Clerk
+- TypeScript-first development with automatic type generation
 
 ## Question System Architecture
 
@@ -29,14 +37,22 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 
 **Critical File Locations:**
 
-**Schema & Database:**
-- `/convex/schema.ts` - Complete database schema (30+ tables)
-- `/server/database/` - SQLite database adapters and initialization
-- `/convex/*.ts` - Convex database functions (queries, mutations)
+**iOS Application:**
+- `/ios/Config.swift` - API endpoints and authentication configuration
+- `/ios/HealthKitManager.swift` - HealthKit integration for sleep/activity data
+- `/ios/AuthenticationManager.swift` - Authentication handling for iOS
 
-**API Routes:**
-- `/server/routes/` - All REST API endpoints
-- `/server/server.js` - Main Express server configuration
+**Web Application:**
+- `/client/` - Next.js physician dashboard and admin interface
+- `/client/app/physician-dashboard/` - Physician dashboard components
+
+**Convex Backend:**
+- `/convex/schema.ts` - Complete database schema (30+ tables) 
+- `/convex/auth.ts` - Authentication functions with Clerk
+- `/convex/questions.ts` - Question management queries and mutations
+- `/convex/responses.ts` - Response handling functions
+- `/convex/physician.ts` - Physician dashboard functions
+- `/convex/health.ts` - HealthKit data sync actions
 
 **Scripts & Utilities:**
 - `/server/scripts/` - Database seeding and management scripts
@@ -61,11 +77,11 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 
 ## Technology Stack Architecture
 
-**Backend:**
-- Node.js + Express.js REST API
-- Dual database support: SQLite (local) / Convex (cloud)
-- JWT authentication with hard-coded test users (user1-user10, password: "1")
-- Security middleware: Helmet, CORS, rate limiting
+**Convex Backend:**
+- Serverless Convex backend with real-time sync
+- Built-in authentication integration with Clerk
+- Automatic TypeScript type generation
+- Row-level security and real-time subscriptions
 
 **Database Schema:**
 - Comprehensive schema supporting 5 major components:
@@ -79,6 +95,15 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 - Physician dashboard integration
 
 **Frontend Architecture:**
-- Next.js 14 with App Router (when client exists)
+
+**iOS Application:**
+- Native Swift/SwiftUI implementation
+- HealthKit integration for sleep and activity data
+- RESTful API consumption
+- Native iOS UI patterns and components
+
+**Web Application:**
+- Next.js 14 with App Router
 - TypeScript support
 - Tailwind CSS for styling
+- Focused on physician dashboard and administrative functions

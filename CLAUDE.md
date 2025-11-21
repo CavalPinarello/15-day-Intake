@@ -2,6 +2,13 @@
 
 This file provides essential guidance to Claude Code when working with this sleep coaching platform repository.
 
+## Platform Architecture
+
+**Hybrid Application Design:**
+- **iOS Application**: 15-day intake journey with native Swift/SwiftUI implementation
+- **Web Application**: Physician dashboard and administrative interface using Next.js  
+- **Shared Backend**: Express.js API server supporting both iOS and web clients
+
 ## Quick Start Commands
 
 ```bash
@@ -23,17 +30,33 @@ npx convex dev && ./setup-convex.sh
 
 ## Key File Locations
 
+**iOS Application:**
+- **iOS Files:** `/ios/` (Swift configuration and HealthKit integration)
+- **API Config:** `/ios/Config.swift` (API endpoints for iOS)
+
+**Web Application:**
+- **Physician Dashboard:** `/client/app/physician-dashboard/`
+- **Admin Interface:** `/client/` (Next.js web application)
+
+**Shared Backend:**
+- **API Routes:** `/server/routes/` (consumed by both iOS and web)
 - **Schema:** `/convex/schema.ts` (30+ tables)
-- **API Routes:** `/server/routes/`
 - **Database:** `/server/database/` (SQLite) | `/convex/` (Convex)
 - **Documentation:** `/docs/` (organized by category)
 
 ## Development Patterns
 
+**Cross-Platform Development:**
+- iOS app handles patient intake journey and HealthKit integration
+- Web app handles physician dashboard and administrative functions
+- Both platforms consume shared REST API from `/server/`
+
+**Common Patterns:**
 - Always run `npm run verify-db` after database changes
 - Use test users for rapid development/testing
-- Day advancement button available for journey testing
+- Day advancement button (web) available for journey testing
 - Dual database support: SQLite (local) / Convex (cloud)
+- Cross-platform authentication uses shared JWT tokens
 
 ## Important Notes
 
@@ -55,10 +78,26 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Recent Changes (2025-11-21)
 
-**CLAUDE.md Optimization Session:**
-- Reduced file size from 213 lines (8KB) to 53 lines (4KB) - 75% reduction
+**Clerk Authentication Integration Session:**
+- Implemented comprehensive authentication system using Clerk
+- **Web App Features:**
+  - Added Clerk environment variables and provider configuration
+  - Created protected routes with middleware (`/journey`, `/sleep-diary`)
+  - Built sign-in/sign-up pages with styled components
+  - Added authentication UI with user menu and modal sign-in
+- **iOS App Features:**  
+  - Created complete iOS authentication system with Swift/SwiftUI
+  - Built AuthenticationManager for Clerk integration
+  - Added APIService for authenticated requests
+  - Updated HealthKitManager to require authentication
+  - Created comprehensive authentication UI views
+- **Security:** JWT token-based authentication shared between platforms
+- **Files Added:** 4 new iOS authentication files, 2 new web auth routes
+- **Session Goal:** Enable secure user authentication across both platforms
+
+**Previous Optimization Session:**
+- Reduced file size from 213 lines (8KB) to 64 lines (4KB) - 75% reduction
 - Moved detailed documentation to organized `/docs/` structure  
 - Enhanced README.md with comprehensive architecture details
 - Created `/docs/development/` for patterns and command reference
-- Improved Claude Code performance and maintainability
-- **Session Log:** `/docs/sessions/optimization-2025-11-21.md`
+- **Commit Hash:** `79f0032` - "Optimize CLAUDE.md for improved Claude Code performance"

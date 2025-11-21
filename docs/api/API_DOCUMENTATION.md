@@ -1,11 +1,20 @@
-# ZOE Sleep Platform - Complete API & Database Documentation
+# ZOE Sleep Platform - Convex Backend Documentation
+
+## Overview
+
+This Convex backend serves both the **iOS application** (15-day intake journey) and **web application** (physician dashboard) with real-time data synchronization.
+
+## Platform Usage
+- **iOS Application**: Consumes Convex functions for 15-day intake journey, HealthKit data sync, and authentication
+- **Web Application**: Uses Convex functions for physician dashboard, patient management, and administrative functions
 
 ## Table of Contents
 1. [Database Schema](#database-schema)
-2. [API Endpoints](#api-endpoints)
+2. [Convex Functions](#convex-functions)
 3. [Authentication](#authentication)
 4. [HealthKit Integration](#healthkit-integration)
-5. [Examples](#examples)
+5. [Cross-Platform Considerations](#cross-platform-considerations)
+6. [Examples](#examples)
 
 ---
 
@@ -566,6 +575,25 @@ Assign intervention to user.
   "custom_instructions": "Focus on deep breathing"
 }
 ```
+
+---
+
+## Cross-Platform Considerations
+
+### Authentication
+- **iOS**: Uses JWT tokens stored securely in iOS Keychain
+- **Web**: Uses JWT tokens stored in secure HTTP-only cookies
+- Both platforms share the same authentication endpoints
+
+### Data Synchronization
+- **iOS**: Primarily creates data (intake responses, HealthKit data)
+- **Web**: Primarily reads data (physician dashboard, analytics)
+- Real-time sync supported via Convex backend option
+
+### API Consumption Patterns
+- **iOS**: Uses native URLSession for HTTP requests
+- **Web**: Uses fetch API or HTTP client libraries
+- Both consume identical REST endpoints
 
 ---
 

@@ -12,9 +12,11 @@ class HealthKitManager: ObservableObject {
     let healthStore = HKHealthStore()
     
     // API Configuration
-    private let apiBaseURL = "http://localhost:3001/api"
-    private var accessToken: String? {
-        UserDefaults.standard.string(forKey: "accessToken")
+    private let apiService = APIService.shared
+    private var authManager: AuthenticationManager?
+    
+    init(authManager: AuthenticationManager? = nil) {
+        self.authManager = authManager
     }
     
     // Check if HealthKit is available
@@ -528,8 +530,8 @@ class HealthKitManager: ObservableObject {
     // MARK: - API Sync
     
     func syncAllHealthData(completion: @escaping (Result<[String: Any], Error>) -> Void) {
-        guard let token = accessToken else {
-            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No access token found. Please login first."])))
+        guard let token = authManager?.getAuthToken() else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated. Please sign in first."])))
             return
         }
         
@@ -612,39 +614,26 @@ class HealthKitManager: ObservableObject {
                 }
             }
             
-            // Sync to API
-            self.syncToAPI(
+            // Sync to API using new authentication system
+            self.syncToAPIWithAuth(
                 sleepData: sleepData,
                 sleepStages: sleepStages,
                 heartRateData: mergedHeartRateData,
                 activityData: activityData,
+                token: token,
                 completion: completion
             )
         }
     }
     
-    private func syncToAPI(
+    private func syncToAPIWithAuth(
         sleepData: [[String: Any]],
         sleepStages: [[String: Any]],
         heartRateData: [[String: Any]],
         activityData: [[String: Any]],
+        token: String,
         completion: @escaping (Result<[String: Any], Error>) -> Void
     ) {
-        guard let token = accessToken else {
-            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No access token"])))
-            return
-        }
-        
-        guard let url = URL(string: "\(apiBaseURL)/health/sync") else {
-            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid API URL"])))
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
         let payload: [String: Any] = [
             "sleepData": sleepData,
             "sleepStages": sleepStages,
@@ -652,45 +641,14 @@ class HealthKitManager: ObservableObject {
             "activityData": activityData
         ]
         
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
-        } catch {
-            completion(.failure(error))
-            return
-        }
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])))
-                return
-            }
-            
-            guard (200...299).contains(httpResponse.statusCode) else {
-                let errorMessage = String(data: data ?? Data(), encoding: .utf8) ?? "Unknown error"
-                completion(.failure(NSError(domain: "HealthKitManager", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
-                return
-            }
-            
+        Task {
             do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    completion(.success(json))
-                } else {
-                    completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON response"])))
-                }
+                let result = try await apiService.syncHealthData(payload, token: token)
+                completion(.success(result))
             } catch {
                 completion(.failure(error))
             }
-        }.resume()
+        }
     }
 }
 

@@ -1,31 +1,61 @@
-# ZOE Sleep Coaching Platform - 14-Day Onboarding Journey
+# ZOE Sleep Coaching Platform - 15-Day Intake Journey
 
 ## Project Overview
 
-This is a sleep coaching platform implementing a 14-day onboarding journey, built for rapid prototyping and testing with dual database support (SQLite/Convex) and comprehensive admin management features.
+This is a sleep coaching platform implementing a 15-day intake journey with a **hybrid architecture**:
+
+- **iOS Application**: 15-day question journey and intake experience
+- **Web Application**: Physician dashboard and patient review modules
+
+Built for rapid prototyping and testing with dual database support (SQLite/Convex) and comprehensive admin management features.
 
 ## Features
 
-- ✅ 14-day onboarding journey with themed daily experiences
+### iOS Application
+- ✅ 15-day intake journey with daily question sets
+- ✅ HealthKit integration for sleep and activity data
+- ✅ Native iOS experience optimized for mobile interaction
+- ✅ **Clerk Authentication**: Secure user authentication with JWT tokens
+- ✅ **Authenticated HealthKit Sync**: Protected health data synchronization
+
+### Web Application  
+- ✅ Physician dashboard for patient review
+- ✅ Patient progress tracking and management
 - ✅ 9 different question input types (text, textarea, number, select, radio, checkbox, scale, date, time)
 - ✅ Day advance feature for rapid testing
 - ✅ Admin interface for managing and rearranging questions
 - ✅ Progress tracking
 - ✅ Hard-coded users (user1-user10) with password "1"
+- ✅ **Clerk Authentication**: Protected routes with middleware
+- ✅ **Sign-in/Sign-up Pages**: Modal and dedicated authentication flows
 - ✅ Reusable backend architecture for other components
+
+### Shared Backend
+- ✅ RESTful API supporting both iOS and web clients
+- ✅ Dual database support (SQLite/Convex)
+- ✅ Cross-platform authentication and data synchronization
+- ✅ **JWT Token Authentication**: Shared authentication between iOS and web
+- ✅ **Clerk Integration**: Enterprise-grade authentication service
 
 ## Tech Stack
 
-### Backend
-- Node.js + Express
-- SQLite (easily migratable to PostgreSQL)
-- RESTful API
+### iOS Application
+- Swift/SwiftUI
+- HealthKit integration
+- RESTful API consumption
+- Native iOS UI components
 
-### Frontend
+### Web Application  
 - Next.js 14 (App Router)
 - TypeScript
 - Tailwind CSS
 - React
+
+### Convex Backend
+- Convex serverless backend
+- Real-time data synchronization
+- Built-in authentication with Clerk
+- Queries, mutations, and actions
 
 ## Setup Instructions
 
@@ -39,31 +69,22 @@ npm install
 npm run install:all
 ```
 
-### 2. Initialize Database and Seed Sample Questions
+### 2. Setup Convex Backend
 
 ```bash
-cd server
-npm run seed
+# Install Convex CLI globally
+npm install -g convex
+
+# Setup Convex project
+npx convex dev
 ```
 
 This will:
-- Create the SQLite database
-- Initialize 14 days
-- Create 10 test users (user1-user10)
-- Add sample questions for Day 1 and Day 2
+- Setup Convex project and database
+- Initialize schema and functions
+- Configure authentication with Clerk
 
-### 3. Start the Backend Server
-
-```bash
-cd server
-npm run dev
-```
-
-The server will run on http://localhost:3001
-
-### 4. Start the Frontend
-
-In a new terminal:
+### 3. Start the Frontend
 
 ```bash
 cd client
@@ -72,7 +93,7 @@ npm run dev
 
 The client will run on http://localhost:3000
 
-### 5. Or Run Both Simultaneously
+### 4. Or Run Both Simultaneously
 
 From the root directory:
 
@@ -80,7 +101,7 @@ From the root directory:
 npm run dev
 ```
 
-This will start both the server and client concurrently.
+This will start both Convex and the client concurrently.
 
 ## Usage
 
@@ -114,71 +135,56 @@ This will start both the server and client concurrently.
 8. **Date** - Date picker
 9. **Time** - Time picker
 
-## API Endpoints
+## Convex Functions
 
-### Auth
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/me` - Get current user
+### Queries (Read Operations)
+- `api.users.get` - Get user information
+- `api.days.list` - Get all days
+- `api.questions.getByDay` - Get questions for a day
+- `api.responses.getUserResponses` - Get user responses
+- `api.physician.getAllPatientsWithProgress` - Get patients with progress
 
-### Days
-- `GET /api/days` - Get all days
-- `GET /api/days/:dayNumber` - Get specific day
-- `GET /api/days/user/:userId/current` - Get user's current day
+### Mutations (Write Operations)
+- `api.auth.signUp` - Create new user
+- `api.responses.saveResponse` - Save user response
+- `api.users.advanceDay` - Advance user to next day
+- `api.questions.create` - Create new question
+- `api.physician.updatePatientReviewStatus` - Update review status
 
-### Questions
-- `GET /api/questions/day/:dayId` - Get questions for a day
-- `POST /api/questions` - Create question
-- `PUT /api/questions/:questionId` - Update question
-- `DELETE /api/questions/:questionId` - Delete question
-
-### Responses
-- `POST /api/responses` - Save response
-- `GET /api/responses/user/:userId/day/:dayId` - Get user responses for a day
-- `POST /api/responses/user/:userId/day/:dayId/complete` - Mark day as completed
-
-### Users
-- `GET /api/users/:userId/progress` - Get user progress
-- `POST /api/users/:userId/advance-day` - Advance to next day
-- `POST /api/users/:userId/set-day` - Set user to specific day
-
-### Admin
-- `GET /api/admin/days/:dayId/questions` - Get questions for admin
-- `POST /api/admin/days/:dayId/questions/reorder` - Reorder questions
-- `POST /api/admin/days/:dayId/questions` - Create question
-- `PUT /api/admin/questions/:questionId` - Update question
-- `DELETE /api/admin/questions/:questionId` - Delete question
+### Actions (External Operations)
+- `api.health.syncHealthKitData` - Sync HealthKit data from iOS
+- `api.llm.generateInsights` - Generate AI insights from responses
 
 ## Database Schema
 
-The backend uses SQLite with the following tables:
-- `users` - User accounts
-- `days` - 14 days of the journey
-- `questions` - Questions for each day
-- `responses` - User responses to questions
-- `user_progress` - User progress tracking
+The Convex backend includes the following tables:
+- `users` - User accounts and authentication
+- `days` - 15-day intake journey structure
+- `assessment_questions` - Questions for each day
+- `user_assessment_responses` - User responses to questions
+- `user_sleep_data` - HealthKit sleep data from iOS
+- `patient_review_status` - Physician review tracking
+- `physician_notes` - Physician annotations
 
 ## Architecture Details
 
-### Database Architecture
-The platform supports dual database backends for flexible deployment:
+### Convex Backend Architecture
+The platform uses Convex as the primary backend:
 
-**SQLite (Local Development):**
-- Fast local development
-- No external dependencies
-- File-based storage in `/server/`
-
-**Convex (Cloud Deployment):**
-- Real-time synchronization
-- Serverless scaling
-- Built-in authentication integration
-- Set `USE_CONVEX=true` in `/server/.env` to enable
+**Convex Features:**
+- Real-time data synchronization between iOS and web
+- Serverless scaling with automatic load balancing  
+- Built-in authentication integration with Clerk
+- TypeScript-first development with type safety
+- Automatic schema management and migrations
 
 ### Key Architectural Patterns
 
-**Database Abstraction:**
-- Environment variable `USE_CONVEX=true` switches between SQLite and Convex
-- Convex functions in `/convex/` directory provide queries, mutations, and actions
-- Server routes in `/server/routes/` provide REST API endpoints
+**Convex Functions:**
+- Queries for read operations (real-time subscriptions)
+- Mutations for write operations (transactional updates)
+- Actions for external integrations (HealthKit, AI services)
+- All functions are strongly typed with TypeScript
 
 **Question System:**
 - Flexible question types: text, textarea, number, select, radio, checkbox, scale, date, time
@@ -187,10 +193,10 @@ The platform supports dual database backends for flexible deployment:
 - Assessment questions with 9 different answer formats
 
 **Security Features:**
-- Rate limiting on all endpoints (stricter for auth)
-- Helmet for security headers
-- CORS configuration
-- JWT token authentication
+- Clerk authentication with JWT tokens
+- Row-level security with Convex functions
+- Real-time authorization checks
+- Secure HealthKit data handling
 
 ## Documentation
 
@@ -222,8 +228,18 @@ docs/
 ## Project Structure
 
 ```
-├── client/            # Next.js frontend application
-├── convex/            # Convex database functions and schema
+├── client/            # Next.js web application (physician dashboard)
+├── ios/               # iOS application files (15-day intake journey)
+│   ├── Config.swift           # API endpoints and configuration
+│   ├── HealthKitManager.swift # HealthKit integration
+│   └── AuthenticationManager.swift # Authentication handling
+├── convex/            # Convex backend (queries, mutations, actions)
+│   ├── schema.ts      # Database schema definition
+│   ├── auth.ts        # Authentication functions  
+│   ├── questions.ts   # Question management functions
+│   ├── responses.ts   # Response handling functions
+│   ├── physician.ts   # Physician dashboard functions
+│   └── health.ts      # HealthKit data sync functions
 ├── data/              # Sample data and question definitions
 ├── docs/              # All project documentation (organized by category)
 │   ├── api/           # API documentation and specifications
@@ -235,36 +251,38 @@ docs/
 │   ├── sessions/      # Development session logs
 │   ├── setup/         # Setup and configuration instructions
 │   └── status/        # Project status and completion tracking
-├── ios/               # iOS-specific components and setup
 ├── scripts/           # Utility scripts for data conversion and testing
-├── server/            # Express.js backend API
-│   ├── database/      # SQLite database adapters and initialization
-│   ├── routes/        # REST API endpoints
-│   ├── scripts/       # Database seeding and management
-│   └── server.js      # Main Express server configuration
 ├── CLAUDE.md          # Essential Claude Code guidance (optimized)
 └── README.md          # This file
 ```
 
 ## Development Notes
 
+**Platform-Specific Implementation:**
+- **iOS App**: Handles 15-day intake journey with native UI and HealthKit integration
+- **Web App**: Focuses on physician dashboard and administrative functions
+- **Convex Backend**: Both platforms consume Convex functions for real-time data sync
+
 **Important Implementation Details:**
 - Test users (user1-user10) are hard-coded with password "1" for rapid prototyping
-- Day advancement button allows rapid testing of multi-day journey
-- Admin interface supports drag-and-drop question reordering
-- Physician dashboard integration for patient review workflow
+- Day advancement button (web) allows rapid testing of multi-day journey
+- Admin interface (web) supports drag-and-drop question reordering
+- Physician dashboard (web) for patient review workflow
+- iOS app integrates with HealthKit for sleep and activity data
 - Assessment system supports complex conditional logic and gateway triggers
-- The codebase expects both SQLite and Convex to have identical schemas
+- Convex provides real-time data synchronization across all platforms
 - All timestamps are stored as Unix timestamps (numbers)
-- JSON fields are stored as strings and require parsing
+- Strongly typed schema with automatic TypeScript generation
+- Cross-platform authentication uses Clerk with JWT tokens
 
 ## Validation & Testing
 
 The system includes comprehensive validation:
-- Database integrity checking via `npm run verify-db`
+- Real-time schema validation with Convex
 - Question format validation for 9 different answer types
 - User progress tracking and completion validation
 - Gateway condition evaluation for dynamic module triggering
+- Type-safe function calls with automatic validation
 
 ## Next Steps
 

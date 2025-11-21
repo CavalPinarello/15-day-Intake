@@ -9,11 +9,19 @@ import SwiftUI
 import HealthKit
 
 struct HealthKitIntegrationView: View {
-    @StateObject private var healthKitManager = HealthKitManager()
+    @StateObject private var authManager = AuthenticationManager()
+    @StateObject private var healthKitManager: HealthKitManager
     @State private var isAuthorized = false
     @State private var isSyncing = false
     @State private var syncStatus: String = ""
     @State private var lastSyncDate: Date?
+    
+    init() {
+        let authManager = AuthenticationManager()
+        let healthManager = HealthKitManager(authManager: authManager)
+        self._authManager = StateObject(wrappedValue: authManager)
+        self._healthKitManager = StateObject(wrappedValue: healthManager)
+    }
     
     var body: some View {
         VStack(spacing: 20) {
@@ -22,6 +30,28 @@ struct HealthKitIntegrationView: View {
                 .font(.largeTitle)
                 .bold()
                 .padding()
+            
+            // Authentication Status
+            if !authManager.isAuthenticated {
+                VStack(spacing: 15) {
+                    Text("Sign in required to sync health data")
+                        .font(.headline)
+                        .foregroundColor(.orange)
+                        .multilineTextAlignment(.center)
+                    
+                    Text("Please sign in to your Sleep 360° account to enable health data synchronization with our platform.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .padding()
+                .background(Color.orange.opacity(0.1))
+                .cornerRadius(10)
+                
+                Spacer()
+                return AnyView(VStack{})
+            }
             
             // HealthKit Availability
             if healthKitManager.isHealthKitAvailable {
