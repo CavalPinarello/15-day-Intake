@@ -49,6 +49,7 @@ Built for rapid prototyping and testing with comprehensive admin management feat
 - **HealthKit**: Integrated across both iOS and watchOS for comprehensive health data
 - **WatchConnectivity**: Real-time sync between iPhone and Apple Watch
 - **Convex Integration**: Direct function calls for real-time data synchronization
+- **Xcode Project**: Complete project structure at `/Sleep360/Sleep360.xcodeproj`
 
 ### Web Application  
 - Next.js 14 (App Router)
@@ -107,6 +108,22 @@ npm run dev
 ```
 
 This will start both Convex and the client concurrently.
+
+### 5. iOS App Setup (Optional)
+
+```bash
+# Open Xcode project
+open Sleep360/Sleep360.xcodeproj
+
+# Or navigate to the project in Finder
+# Location: /Sleep360/Sleep360.xcodeproj
+```
+
+**iOS Setup Requirements:**
+- Xcode 15.0 or later
+- iOS 17.0+ deployment target
+- Apple Developer account (for device testing)
+- Enable HealthKit capability in project settings
 
 ## Usage
 
