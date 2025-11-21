@@ -7,7 +7,7 @@ This file provides essential guidance to Claude Code when working with this slee
 **Hybrid Application Design:**
 - **iOS Application**: 15-day intake journey with native Swift/SwiftUI implementation
 - **Web Application**: Physician dashboard and administrative interface using Next.js  
-- **Shared Backend**: Express.js API server supporting both iOS and web clients
+- **Convex Backend**: Serverless backend providing real-time data synchronization
 
 ## Quick Start Commands
 
@@ -38,10 +38,10 @@ npx convex dev && ./setup-convex.sh
 - **Physician Dashboard:** `/client/app/physician-dashboard/`
 - **Admin Interface:** `/client/` (Next.js web application)
 
-**Shared Backend:**
-- **API Routes:** `/server/routes/` (consumed by both iOS and web)
-- **Schema:** `/convex/schema.ts` (30+ tables)
-- **Database:** `/server/database/` (SQLite) | `/convex/` (Convex)
+**Convex Backend:**
+- **Schema:** `/convex/schema.ts` (30+ tables with real-time sync)
+- **Functions:** `/convex/` (queries, mutations, actions for both platforms)
+- **Auth:** Clerk authentication integration
 - **Documentation:** `/docs/` (organized by category)
 
 ## Development Patterns
@@ -49,14 +49,14 @@ npx convex dev && ./setup-convex.sh
 **Cross-Platform Development:**
 - iOS app handles patient intake journey and HealthKit integration
 - Web app handles physician dashboard and administrative functions
-- Both platforms consume shared REST API from `/server/`
+- Both platforms consume Convex functions with real-time sync
 
 **Common Patterns:**
-- Always run `npm run verify-db` after database changes
+- Convex provides real-time data synchronization across platforms
 - Use test users for rapid development/testing
 - Day advancement button (web) available for journey testing
-- Dual database support: SQLite (local) / Convex (cloud)
-- Cross-platform authentication uses shared JWT tokens
+- Clerk authentication shared between iOS and web
+- TypeScript-first development with automatic type generation
 
 ## Important Notes
 
@@ -94,6 +94,9 @@ For detailed architecture, setup instructions, and API documentation, see README
 - **Security:** JWT token-based authentication shared between platforms
 - **Files Added:** 4 new iOS authentication files, 2 new web auth routes
 - **Session Goal:** Enable secure user authentication across both platforms
+- **Commit Hash:** `1ded787` - "Implement comprehensive Clerk authentication for iOS and web platforms"
+- **Repository:** Successfully pushed to https://github.com/CavalPinarello/15-day-Intake.git
+- **Session Log:** `/docs/sessions/clerk-authentication-2025-11-21.md`
 
 **Previous Optimization Session:**
 - Reduced file size from 213 lines (8KB) to 64 lines (4KB) - 75% reduction
