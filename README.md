@@ -157,6 +157,43 @@ The backend uses SQLite with the following tables:
 - `responses` - User responses to questions
 - `user_progress` - User progress tracking
 
+## Documentation
+
+All project documentation has been organized in the `/docs` directory:
+
+```
+docs/
+├── api/               # API documentation and specifications
+├── database/          # Database schemas and data specifications  
+├── deployment/        # Deployment guides and infrastructure
+├── features/          # Feature implementations and integrations
+├── guides/            # User guides and troubleshooting
+├── setup/             # Setup and configuration instructions
+└── status/            # Project status and completion tracking
+```
+
+### Key Documentation Files:
+- [`/docs/api/API_DOCUMENTATION.md`](docs/api/API_DOCUMENTATION.md) - Complete API reference
+- [`/docs/guides/QUICKSTART.md`](docs/guides/QUICKSTART.md) - Quick start guide
+- [`/docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md) - Common issues and solutions
+- [`/docs/setup/SETUP_ENVIRONMENT.md`](docs/setup/SETUP_ENVIRONMENT.md) - Environment setup
+- [`/docs/database/DATABASE_SCHEMA.md`](docs/database/DATABASE_SCHEMA.md) - Complete database schema
+- [`/docs/deployment/DEPLOYMENT_GUIDE.md`](docs/deployment/DEPLOYMENT_GUIDE.md) - Deployment instructions
+
+## Project Structure
+
+```
+├── client/            # Next.js frontend application
+├── convex/            # Convex database functions and schema
+├── data/              # Sample data and question definitions
+├── docs/              # All project documentation (organized by category)
+├── ios/               # iOS-specific components and setup
+├── scripts/           # Utility scripts for data conversion and testing
+├── server/            # Express.js backend API
+├── CLAUDE.md          # Claude Code assistant guidance
+└── README.md          # This file
+```
+
 ## Next Steps
 
 This is a rapid prototyping version. For production, consider:
