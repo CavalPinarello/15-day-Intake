@@ -1,0 +1,331 @@
+[
+  {
+    "id": "35",
+    "text": "Do you share your bedroom with a partner?",
+    "pillar": "Social",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "36",
+    "text": "If yes, do they snore or disturb your sleep?",
+    "pillar": "Social",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "37",
+    "text": "Do you have young children or infants at home?",
+    "pillar": "Social",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "38",
+    "text": "If yes, how often do they wake you up per night?",
+    "pillar": "Social",
+    "scale_type": "Number",
+    "is_gateway": false
+  },
+  {
+    "id": "53A",
+    "text": "What is your current employment status? (Full-time/Part-time/Shift work/Unemployed/Retired/Student)",
+    "pillar": "Social",
+    "scale_type": "Multiple choice",
+    "is_gateway": false
+  },
+  {
+    "id": "53B",
+    "text": "Do you work shifts or irregular hours? (Yes/No)",
+    "pillar": "Social",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "53D",
+    "text": "How many hours per day do you spend looking at screens for work?",
+    "pillar": "Social",
+    "scale_type": "Number (hours)",
+    "is_gateway": false
+  },
+  {
+    "id": "53E",
+    "text": "On a scale of 1-10, how would you rate your current work-related stress?",
+    "pillar": "Social",
+    "scale_type": "1-10 scale",
+    "is_gateway": false
+  },
+  {
+    "id": "53F",
+    "text": "How many times per month do you travel for work or personal reasons?",
+    "pillar": "Social",
+    "scale_type": "Number",
+    "is_gateway": false
+  },
+  {
+    "id": "53G",
+    "text": "Do you frequently cross time zones (>2 hours)? (Never/Rarely/Sometimes/Often)",
+    "pillar": "Social",
+    "scale_type": "4-point scale",
+    "is_gateway": false
+  },
+  {
+    "id": "39",
+    "text": "Do you have caregiving responsibilities?",
+    "pillar": "Social",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "59",
+    "text": "Do you have a bed partner or room mate?",
+    "pillar": "Social",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "26",
+    "text": "Do you have diabetes or pre-diabetes?",
+    "pillar": "Metabolic",
+    "scale_type": "Yes/No/Don't know",
+    "is_gateway": false
+  },
+  {
+    "id": "27",
+    "text": "Do you have high blood pressure?",
+    "pillar": "Metabolic",
+    "scale_type": "Yes/No/Don't know",
+    "is_gateway": false
+  },
+  {
+    "id": "44A",
+    "text": "Are you currently taking any prescription medications? (Yes/No)",
+    "pillar": "Metabolic",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "44C",
+    "text": "Are you currently taking any supplements or vitamins? (Yes/No)",
+    "pillar": "Metabolic",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "44E",
+    "text": "Do you have any diagnosed chronic medical conditions? (Yes/No)",
+    "pillar": "Metabolic",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "44G",
+    "text": "Have you had any surgeries or medical procedures in the past 6 months? (Yes/No)",
+    "pillar": "Metabolic",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "44I",
+    "text": "For women: Are you currently pregnant? (Yes/No/Not applicable)",
+    "pillar": "Metabolic",
+    "scale_type": "Multiple choice",
+    "is_gateway": false
+  },
+  {
+    "id": "44J",
+    "text": "For women: Are you currently breastfeeding? (Yes/No/Not applicable)",
+    "pillar": "Metabolic",
+    "scale_type": "Multiple choice",
+    "is_gateway": false
+  },
+  {
+    "id": "44K",
+    "text": "Do you use recreational drugs or cannabis? (Never/Rarely/Sometimes/Regularly/Prefer not to answer)",
+    "pillar": "Metabolic",
+    "scale_type": "5-point scale",
+    "is_gateway": false
+  },
+  {
+    "id": "2",
+    "text": "How often do you feel refreshed after sleep? (Never/Rarely/Sometimes/Often/Always)",
+    "pillar": "Sleep Quality",
+    "scale_type": "5-point scale",
+    "is_gateway": false
+  },
+  {
+    "id": "12A",
+    "text": "How many times do you typically wake up during the night?",
+    "pillar": "Sleep Quality",
+    "scale_type": "Number",
+    "is_gateway": false
+  },
+  {
+    "id": "12B",
+    "text": "When you wake up at night, what is the MAIN reason? (Bathroom/Pain/Stress-Worry/Temperature/Noise/Unknown/Other)",
+    "pillar": "Sleep Quality",
+    "scale_type": "Multiple choice",
+    "is_gateway": false
+  },
+  {
+    "id": "12C",
+    "text": "How long does it typically take you to fall back asleep after waking? (minutes)",
+    "pillar": "Sleep Quality",
+    "scale_type": "Number (minutes)",
+    "is_gateway": false
+  },
+  {
+    "id": "41",
+    "text": "When have you usually gone to bed at night?",
+    "pillar": "Sleep Quality",
+    "scale_type": "Time",
+    "is_gateway": false
+  },
+  {
+    "id": "42",
+    "text": "How long to fall asleep each night? (minutes)",
+    "pillar": "Sleep Quality",
+    "scale_type": "Minutes",
+    "is_gateway": false
+  },
+  {
+    "id": "43",
+    "text": "When have you usually gotten up in the morning?",
+    "pillar": "Sleep Quality",
+    "scale_type": "Time",
+    "is_gateway": false
+  },
+  {
+    "id": "44",
+    "text": "How many hours of actual sleep did you get?",
+    "pillar": "Sleep Quality",
+    "scale_type": "Hours",
+    "is_gateway": false
+  },
+  {
+    "id": "6",
+    "text": "How long does it take you to fall asleep? (minutes)",
+    "pillar": "Sleep Quantity",
+    "scale_type": "Number (minutes)",
+    "is_gateway": false
+  },
+  {
+    "id": "11",
+    "text": "Do you use an alarm clock on weekdays?",
+    "pillar": "Sleep Timing",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "12",
+    "text": "How often do you get morning sunlight exposure?",
+    "pillar": "Sleep Timing",
+    "scale_type": "5-point scale",
+    "is_gateway": false
+  },
+  {
+    "id": "13",
+    "text": "What time do you usually turn off screens before bed? (HH:MM)",
+    "pillar": "Sleep Timing",
+    "scale_type": "Time",
+    "is_gateway": false
+  },
+  {
+    "id": "14",
+    "text": "Do you use blue light filters or glasses?",
+    "pillar": "Sleep Timing",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "33A",
+    "text": "What is the typical temperature in your bedroom at night?",
+    "pillar": "Physical",
+    "scale_type": "Number (temp)",
+    "is_gateway": false
+  },
+  {
+    "id": "33B",
+    "text": "How would you rate the noise level in your sleep environment? (1=Very quiet, 5=Very noisy)",
+    "pillar": "Physical",
+    "scale_type": "1-5 scale",
+    "is_gateway": false
+  },
+  {
+    "id": "33C",
+    "text": "How dark is your bedroom at night? (1=Completely dark, 5=Very bright)",
+    "pillar": "Physical",
+    "scale_type": "1-5 scale",
+    "is_gateway": false
+  },
+  {
+    "id": "33D",
+    "text": "Do you use any sleep aids? (White noise, fan, humidifier, air purifier, blackout curtains, etc.)",
+    "pillar": "Physical",
+    "scale_type": "Multiple select",
+    "is_gateway": false
+  },
+  {
+    "id": "29",
+    "text": "Do you consume caffeine?",
+    "pillar": "Nutritional",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "30",
+    "text": "If yes, how many cups per day?",
+    "pillar": "Nutritional",
+    "scale_type": "Number",
+    "is_gateway": false
+  },
+  {
+    "id": "32",
+    "text": "Do you consume alcohol?",
+    "pillar": "Nutritional",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  },
+  {
+    "id": "33",
+    "text": "If yes, drinks per week?",
+    "pillar": "Nutritional",
+    "scale_type": "Number",
+    "is_gateway": false
+  },
+  {
+    "id": "54A",
+    "text": "What time do you typically eat your last meal of the day?",
+    "pillar": "Nutritional",
+    "scale_type": "Time (HH:MM)",
+    "is_gateway": false
+  },
+  {
+    "id": "54B",
+    "text": "How many hours before bed do you typically finish eating?",
+    "pillar": "Nutritional",
+    "scale_type": "Number (hours)",
+    "is_gateway": false
+  },
+  {
+    "id": "54C",
+    "text": "What time do you typically have your last caffeinated beverage?",
+    "pillar": "Nutritional",
+    "scale_type": "Time (HH:MM)",
+    "is_gateway": false
+  },
+  {
+    "id": "54D",
+    "text": "How many servings of fruits and vegetables do you eat per day on average? (one serving is one apple or a cup of berries, etc.)",
+    "pillar": "Nutritional",
+    "scale_type": "Number",
+    "is_gateway": false
+  },
+  {
+    "id": "54E",
+    "text": "Do you skip breakfast regularly? (Yes/No)",
+    "pillar": "Nutritional",
+    "scale_type": "Yes/No",
+    "is_gateway": false
+  }
+]

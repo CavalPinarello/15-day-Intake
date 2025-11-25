@@ -1,0 +1,534 @@
+{
+  "expansion_questions": {
+    "DBAS-16": [],
+    "FSS": [],
+    "PSAS": [],
+    "FOSQ-10": [],
+    "Sleep Hygiene": [],
+    "DASS-21": [],
+    "PSQI": [
+      {
+        "id": "1",
+        "text": "During the past month, when have you usually gone to bed at night? (Usual bed time)"
+      },
+      {
+        "id": "2",
+        "text": "During the past month, how long (in minutes) has it usually taken you to fall asleep each night? (Sl..."
+      },
+      {
+        "id": "3",
+        "text": "During the past month, when have you usually gotten up in the morning? (Usual getting up time)"
+      },
+      {
+        "id": "4",
+        "text": "During the past month, how many hours of actual sleep did you get at night? (This may be different t..."
+      },
+      {
+        "id": "5a",
+        "text": "During the past month, how often have you had trouble sleeping because you cannot get to sleep withi..."
+      },
+      {
+        "id": "5b",
+        "text": "During the past month, how often have you had trouble sleeping because you wake up in the middle of ..."
+      },
+      {
+        "id": "5c",
+        "text": "During the past month, how often have you had trouble sleeping because you have to get up to use the..."
+      },
+      {
+        "id": "5d",
+        "text": "During the past month, how often have you had trouble sleeping because you cannot breathe comfortabl..."
+      },
+      {
+        "id": "5e",
+        "text": "During the past month, how often have you had trouble sleeping because you cough or snore loudly?"
+      },
+      {
+        "id": "5f",
+        "text": "During the past month, how often have you had trouble sleeping because you feel too cold?"
+      },
+      {
+        "id": "5g",
+        "text": "During the past month, how often have you had trouble sleeping because you feel too hot?"
+      },
+      {
+        "id": "5h",
+        "text": "During the past month, how often have you had trouble sleeping because you had bad dreams?"
+      },
+      {
+        "id": "5i",
+        "text": "During the past month, how often have you had trouble sleeping because you have pain?"
+      },
+      {
+        "id": "5j",
+        "text": "During the past month, how often have you had trouble sleeping because of other reason(s)? Please de..."
+      },
+      {
+        "id": "6",
+        "text": "During the past month, how would you rate your sleep quality overall? (0=Very good, 1=Fairly good, 2..."
+      },
+      {
+        "id": "7",
+        "text": "During the past month, how often have you taken medicine (prescribed or over the counter) to help yo..."
+      },
+      {
+        "id": "8",
+        "text": "During the past month, how often have you had trouble staying awake while driving, eating meals, or ..."
+      },
+      {
+        "id": "9",
+        "text": "During the past month, how much of a problem has it been for you to keep up enthusiasm to get things..."
+      },
+      {
+        "id": "10",
+        "text": "Do you have a bed partner or room mate? (If yes, ask additional questions about partner observations..."
+      }
+    ],
+    "ISI": [
+      {
+        "id": "4",
+        "text": "How SATISFIED/dissatisfied are you with your current sleep pattern? (0=Very satisfied, 4=Very dissat..."
+      },
+      {
+        "id": "5",
+        "text": "How NOTICEABLE to others do you think your sleeping problem is in terms of impairing the quality of ..."
+      },
+      {
+        "id": "6",
+        "text": "How WORRIED/distressed are you about your current sleep problem? (0=Not at all worried, 4=Very much ..."
+      },
+      {
+        "id": "7",
+        "text": "To what extent do you consider your sleep problem to INTERFERE with your daily functioning (e.g., da..."
+      }
+    ],
+    "PHQ-9": [
+      {
+        "id": "1",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Little interest or pleasure in doing thi..."
+      },
+      {
+        "id": "2",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Feeling down, depressed, or hopeless?"
+      },
+      {
+        "id": "3",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Trouble falling or staying asleep, or sl..."
+      },
+      {
+        "id": "4",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Feeling tired or having little energy?"
+      },
+      {
+        "id": "5",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Poor appetite or overeating?"
+      },
+      {
+        "id": "6",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Feeling bad about yourself - or that you..."
+      },
+      {
+        "id": "7",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Trouble concentrating on things, such as..."
+      },
+      {
+        "id": "8",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Moving or speaking so slowly that other ..."
+      },
+      {
+        "id": "9",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Thoughts that you would be better off de..."
+      }
+    ],
+    "GAD-7": [
+      {
+        "id": "1",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Feeling nervous, anxious, or on edge? (0..."
+      },
+      {
+        "id": "2",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Not being able to stop or control worryi..."
+      },
+      {
+        "id": "3",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Worrying too much about different things..."
+      },
+      {
+        "id": "4",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Trouble relaxing?"
+      },
+      {
+        "id": "5",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Being so restless that it is hard to sit..."
+      },
+      {
+        "id": "6",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Becoming easily annoyed or irritable?"
+      },
+      {
+        "id": "7",
+        "text": "Over the last 2 weeks, how often have you been bothered by: Feeling afraid, as if something awful mi..."
+      }
+    ],
+    "ESS": [
+      {
+        "id": "1",
+        "text": "How likely are you to doze off or fall asleep in the following situations: Sitting and reading? (0=W..."
+      },
+      {
+        "id": "2",
+        "text": "How likely are you to doze off or fall asleep in the following situations: Watching TV?"
+      },
+      {
+        "id": "3",
+        "text": "How likely are you to doze off or fall asleep in the following situations: Sitting inactive in a pub..."
+      },
+      {
+        "id": "4",
+        "text": "How likely are you to doze off or fall asleep in the following situations: As a passenger in a car f..."
+      },
+      {
+        "id": "5",
+        "text": "How likely are you to doze off or fall asleep in the following situations: Lying down to rest in the..."
+      },
+      {
+        "id": "6",
+        "text": "How likely are you to doze off or fall asleep in the following situations: Sitting and talking to so..."
+      },
+      {
+        "id": "7",
+        "text": "How likely are you to doze off or fall asleep in the following situations: Sitting quietly after a l..."
+      },
+      {
+        "id": "8",
+        "text": "How likely are you to doze off or fall asleep in the following situations: In a car, while stopped f..."
+      }
+    ],
+    "MEQ": [
+      {
+        "id": "1",
+        "text": "Considering only your own \"feeling best\" rhythm, at what time would you get up if you were entirely ..."
+      },
+      {
+        "id": "2",
+        "text": "Considering only your own \"feeling best\" rhythm, at what time would you go to bed if you were entire..."
+      },
+      {
+        "id": "3",
+        "text": "If there is a specific time at which you have to get up in the morning, to what extent are you depen..."
+      },
+      {
+        "id": "4",
+        "text": "Assuming adequate environmental conditions, how easy do you find getting up in the morning?"
+      },
+      {
+        "id": "5",
+        "text": "How alert do you feel during the first half hour after having woken in the morning?"
+      },
+      {
+        "id": "6",
+        "text": "How is your appetite during the first half hour after having woken in the morning?"
+      },
+      {
+        "id": "7",
+        "text": "During the first half hour after having woken in the morning, how tired do you feel?"
+      },
+      {
+        "id": "8",
+        "text": "When you have no commitments the next day, at what time do you go to bed compared to your usual bedt..."
+      },
+      {
+        "id": "9",
+        "text": "You have decided to engage in some physical exercise. A friend suggests that you do this one hour tw..."
+      },
+      {
+        "id": "10",
+        "text": "At what time in the evening do you feel tired and as a result in need of sleep?"
+      },
+      {
+        "id": "11",
+        "text": "You wish to be at your peak performance for a test which you know is going to be mentally exhausting..."
+      },
+      {
+        "id": "12",
+        "text": "If you went to bed at 11pm at what level of tiredness would you be?"
+      },
+      {
+        "id": "13",
+        "text": "For some reason you have gone to bed several hours later than usual, but there is no need to get up ..."
+      },
+      {
+        "id": "14",
+        "text": "One night you have to remain awake between 4-6am in order to carry out a night watch. You have no co..."
+      },
+      {
+        "id": "15",
+        "text": "You have to do two hours of hard physical work. You are entirely free to plan your day and consideri..."
+      },
+      {
+        "id": "16",
+        "text": "You have decided to engage in hard physical exercise. A friend suggests that you do this for one hou..."
+      },
+      {
+        "id": "17",
+        "text": "Suppose that you can choose your own work hours. Assume that you worked a FIVE hour day (including b..."
+      },
+      {
+        "id": "18",
+        "text": "At what time of the day do you think that you reach your \"feeling best\" peak?"
+      },
+      {
+        "id": "19",
+        "text": "One hears about \"morning\" and \"evening\" types of people. Which ONE of these types do you consider yo..."
+      }
+    ],
+    "PROMIS-Cognitive": [],
+    "STOP-BANG": [
+      {
+        "id": "1",
+        "text": "Do you Snore loudly (louder than talking or loud enough to be heard through closed doors)?"
+      },
+      {
+        "id": "2",
+        "text": "Do you often feel Tired, fatigued, or sleepy during daytime?"
+      },
+      {
+        "id": "3",
+        "text": "Has anyone Observed you stop breathing during your sleep?"
+      },
+      {
+        "id": "4",
+        "text": "Do you have or are you being treated for high blood Pressure?"
+      },
+      {
+        "id": "5",
+        "text": "BMI more than 35 kg/m\u00b2?"
+      },
+      {
+        "id": "6",
+        "text": "Age over 50 years old?"
+      },
+      {
+        "id": "7",
+        "text": "Neck circumference greater than 40cm (15.75 inches)?"
+      },
+      {
+        "id": "8",
+        "text": "Gender = Male?"
+      }
+    ],
+    "Berlin": [
+      {
+        "id": "1",
+        "text": "Do you snore? (Yes/No)"
+      },
+      {
+        "id": "3",
+        "text": "How often do you snore? (Nearly every day / 3-4 times a week / 1-2 times a week / 1-2 times a month ..."
+      },
+      {
+        "id": "4",
+        "text": "Has your snoring ever bothered other people?"
+      },
+      {
+        "id": "5",
+        "text": "Has anyone noticed that you stop breathing during your sleep?"
+      },
+      {
+        "id": "6",
+        "text": "How often do you feel tired or fatigued after your sleep?"
+      },
+      {
+        "id": "7",
+        "text": "During your waking time, do you feel tired, fatigued or not up to par?"
+      },
+      {
+        "id": "8",
+        "text": "Have you ever nodded off or fallen asleep while driving a vehicle?"
+      },
+      {
+        "id": "9",
+        "text": "Do you have high blood pressure?"
+      }
+    ],
+    "BPI": [
+      {
+        "id": "1",
+        "text": "Throughout our lives, most of us have had pain from time to time (such as minor headaches, sprains, ..."
+      },
+      {
+        "id": "7",
+        "text": "What treatments or medications are you receiving for your pain?"
+      },
+      {
+        "id": "8",
+        "text": "In the last 24 hours, how much RELIEF have pain treatments or medications provided? (0%=No relief, 1..."
+      }
+    ],
+    "MEDAS": [
+      {
+        "id": "1",
+        "text": "Do you use olive oil as the principal source of fat for cooking? (Yes=1, No=0)"
+      },
+      {
+        "id": "2",
+        "text": "How much olive oil do you consume per day (including that used in cooking, salads, meals eaten away ..."
+      },
+      {
+        "id": "3",
+        "text": "How many servings of vegetables do you consume per day? (1 serving = 200g)"
+      },
+      {
+        "id": "4",
+        "text": "How many pieces of fruit (including fresh-squeezed juice) do you consume per day?"
+      },
+      {
+        "id": "5",
+        "text": "How many servings of red meat, hamburger, or sausages do you consume per day? (1 serving = 100-150g)"
+      },
+      {
+        "id": "6",
+        "text": "How many servings of butter, margarine, or cream do you consume per day? (1 serving = 12g)"
+      },
+      {
+        "id": "7",
+        "text": "How many sweet/carbonated beverages do you consume per day?"
+      },
+      {
+        "id": "8",
+        "text": "How much wine do you consume per week?"
+      },
+      {
+        "id": "9",
+        "text": "How many servings of legumes do you consume per week? (1 serving = 150g)"
+      },
+      {
+        "id": "10",
+        "text": "How many servings of fish/seafood do you consume per week? (1 serving = 100-150g)"
+      },
+      {
+        "id": "11",
+        "text": "How many times per week do you consume commercial (not homemade) pastries such as cookies or cake?"
+      },
+      {
+        "id": "12",
+        "text": "How many servings of nuts do you consume per week? (1 serving = 30g)"
+      },
+      {
+        "id": "13",
+        "text": "Do you prefer to eat chicken, turkey, or rabbit instead of beef, pork, hamburgers, or sausages?"
+      },
+      {
+        "id": "14",
+        "text": "How many times per week do you consume saut\u00e9ed vegetables, pasta, or rice with a sauce of tomato, ga..."
+      }
+    ]
+  },
+  "day_plan": {
+    "Day 1": {
+      "topics": "Static Demographics + Sleep Quality Core + PSQI (Part 1)",
+      "num_questions": "15",
+      "time_min": "12",
+      "question_range": "Demo 1-6, Q1-9",
+      "notes": "Foundation: Basic demographics & sleep quality overview. Gateway questions included."
+    },
+    "Day 2": {
+      "topics": "PSQI (Part 2) + Sleep Quantity + Sleep Regularity",
+      "num_questions": "14",
+      "time_min": "11",
+      "question_range": "Q10-23",
+      "notes": "PSQI completion + sleep patterns (weekday vs weekend, bedtimes, wake times)"
+    },
+    "Day 3": {
+      "topics": "Sleep Timing + Mental Health + Cognitive Gateways",
+      "num_questions": "10",
+      "time_min": "8",
+      "question_range": "Q24-33",
+      "notes": "Light exposure, screens, mental health & cognitive function gateways"
+    },
+    "Day 4": {
+      "topics": "Physical Health Gateways + Metabolic Core",
+      "num_questions": "11",
+      "time_min": "9",
+      "question_range": "Q34-44",
+      "notes": "OSA screening, pain assessment, exercise habits, metabolic health basics"
+    },
+    "Day 5": {
+      "topics": "Nutritional Core + Social Factors",
+      "num_questions": "9",
+      "time_min": "7",
+      "question_range": "Q45-53",
+      "notes": "Caffeine, alcohol, diet impacts, social sleep factors, stress level. CORE COMPLETE."
+    },
+    "Day 6": {
+      "topics": "EXPANSION: ISI (Insomnia Severity)",
+      "num_questions": "7",
+      "time_min": "8",
+      "question_range": "Q54-60",
+      "notes": "If insomnia gateway = YES"
+    },
+    "Day 7": {
+      "topics": "EXPANSION: DBAS-16 (Part 1 - Beliefs about Sleep)",
+      "num_questions": "8",
+      "time_min": "8",
+      "question_range": "Q61-68",
+      "notes": "If insomnia gateway = YES. Dysfunctional beliefs assessment (first half)"
+    },
+    "Day 8": {
+      "topics": "EXPANSION: DBAS-16 (Part 2) + Sleep Hygiene (Part 1)",
+      "num_questions": "14",
+      "time_min": "14",
+      "question_range": "Q69-82",
+      "notes": "If insomnia gateway = YES. Complete beliefs + start sleep hygiene habits"
+    },
+    "Day 9": {
+      "topics": "EXPANSION: Sleep Hygiene (Part 2) + PSAS (Part 1)",
+      "num_questions": "13",
+      "time_min": "13",
+      "question_range": "Q83-95",
+      "notes": "If insomnia gateway = YES. Complete hygiene + start pre-sleep arousal"
+    },
+    "Day 10": {
+      "topics": "EXPANSION: PSAS (Part 2) + ESS",
+      "num_questions": "16",
+      "time_min": "16",
+      "question_range": "Q96-111",
+      "notes": "Complete pre-sleep arousal. ESS if daytime sleepiness gateway triggered"
+    },
+    "Day 11": {
+      "topics": "EXPANSION: FSS + FOSQ-10 (Part 1)",
+      "num_questions": "14",
+      "time_min": "14",
+      "question_range": "Q112-125",
+      "notes": "If daytime sleepiness gateway = YES. Fatigue scale + functional outcomes"
+    },
+    "Day 12": {
+      "topics": "EXPANSION: FOSQ-10 (Part 2) + PHQ-9 + GAD-7 (Part 1)",
+      "num_questions": "14",
+      "time_min": "14",
+      "question_range": "Q126-139",
+      "notes": "Complete functional outcomes. Start mental health if gateways triggered"
+    },
+    "Day 13": {
+      "topics": "EXPANSION: GAD-7 (Part 2) + DASS-21 (Part 1) + PROMIS Cognitive",
+      "num_questions": "16",
+      "time_min": "16",
+      "question_range": "Q140-155",
+      "notes": "Complete anxiety screen. Start comprehensive mental health + cognitive function"
+    },
+    "Day 14": {
+      "topics": "EXPANSION: DASS-21 (Part 2) + STOP-BANG + Berlin",
+      "num_questions": "24",
+      "time_min": "21",
+      "question_range": "Q156-179",
+      "notes": "Complete DASS-21. OSA screening if gateway triggered (snoring/apnea observed)"
+    },
+    "Day 15": {
+      "topics": "EXPANSION: Brief Pain Inventory + MEDAS + MEQ (as needed)",
+      "num_questions": "29",
+      "time_min": "29",
+      "question_range": "Q180-208+",
+      "notes": "Pain (if \u22654/10), diet (if impacts sleep), chronotype (if >1hr variability). Flexible completion day."
+    }
+  }
+}

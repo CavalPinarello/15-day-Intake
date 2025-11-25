@@ -7,6 +7,7 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "seed": "node scripts/seed-questions.js",
+    "seed-adaptive": "node scripts/seed-adaptive-questions.js",
     "reset-users": "node scripts/reset-test-users.js",
     "setup-db": "node scripts/setup-complete-database.js",
     "verify-db": "node -e \"const {verifyDatabaseIntegrity} = require('./database/schema_complete'); verifyDatabaseIntegrity().then(() => process.exit(0)).catch(e => {console.error(e); process.exit(1);})\""

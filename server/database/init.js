@@ -816,6 +816,7 @@ function initializeDays(database) {
       { number: 12, title: 'Long-term Habits', description: 'Building sustainability', theme: '#14B8A6' },
       { number: 13, title: 'Reflection & Insights', description: 'What you\'ve learned', theme: '#6366F1' },
       { number: 14, title: 'Your Sleep Transformation', description: 'Celebrating your journey', theme: '#A855F7' },
+      { number: 15, title: 'Completion & Future Goals', description: 'Your journey continues', theme: '#059669' },
     ];
 
     const dayPromises = days.map(day =>

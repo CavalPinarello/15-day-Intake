@@ -1,0 +1,112 @@
+{
+  "sleep_log_questions": [
+    {
+      "id": "1",
+      "text": "Overall sleep quality in past month (1=Very poor, 10=Excellent)",
+      "pillar": "Sleep Quality",
+      "tier": "CORE"
+    },
+    {
+      "id": "34",
+      "text": "GATEWAY: Do you notice your diet affects your sleep quality?",
+      "pillar": "",
+      "tier": ""
+    },
+    {
+      "id": "",
+      "text": "--- PSQI (Pittsburgh Sleep Quality Index) - CORE/EXPANSION ---",
+      "pillar": "",
+      "tier": ""
+    },
+    {
+      "id": "55",
+      "text": "Rate your sleep quality overall",
+      "pillar": "Sleep Quality",
+      "tier": "CORE"
+    },
+    {
+      "id": "202",
+      "text": "Had pain other than everyday pain today? Yes/No",
+      "pillar": "",
+      "tier": ""
+    }
+  ],
+  "psqi_questions": [
+    {
+      "id": "1",
+      "text": "During the past month, when have you usually gone to bed at night? (Usual bed time)"
+    },
+    {
+      "id": "2",
+      "text": "During the past month, how long (in minutes) has it usually taken you to fall asleep each night? (Sleep latency)"
+    },
+    {
+      "id": "3",
+      "text": "During the past month, when have you usually gotten up in the morning? (Usual getting up time)"
+    },
+    {
+      "id": "4",
+      "text": "During the past month, how many hours of actual sleep did you get at night? (This may be different than the number of hours you spend in bed)"
+    },
+    {
+      "id": "5a",
+      "text": "During the past month, how often have you had trouble sleeping because you cannot get to sleep within 30 minutes? (0=Not during past month, 1=Less than once/week, 2=Once or twice/week, 3=Three or more times/week)"
+    },
+    {
+      "id": "5b",
+      "text": "During the past month, how often have you had trouble sleeping because you wake up in the middle of the night or early morning?"
+    },
+    {
+      "id": "5c",
+      "text": "During the past month, how often have you had trouble sleeping because you have to get up to use the bathroom?"
+    },
+    {
+      "id": "5d",
+      "text": "During the past month, how often have you had trouble sleeping because you cannot breathe comfortably?"
+    },
+    {
+      "id": "5e",
+      "text": "During the past month, how often have you had trouble sleeping because you cough or snore loudly?"
+    },
+    {
+      "id": "5f",
+      "text": "During the past month, how often have you had trouble sleeping because you feel too cold?"
+    },
+    {
+      "id": "5g",
+      "text": "During the past month, how often have you had trouble sleeping because you feel too hot?"
+    },
+    {
+      "id": "5h",
+      "text": "During the past month, how often have you had trouble sleeping because you had bad dreams?"
+    },
+    {
+      "id": "5i",
+      "text": "During the past month, how often have you had trouble sleeping because you have pain?"
+    },
+    {
+      "id": "5j",
+      "text": "During the past month, how often have you had trouble sleeping because of other reason(s)? Please describe:"
+    },
+    {
+      "id": "6",
+      "text": "During the past month, how would you rate your sleep quality overall? (0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad)"
+    },
+    {
+      "id": "7",
+      "text": "During the past month, how often have you taken medicine (prescribed or over the counter) to help you sleep?"
+    },
+    {
+      "id": "8",
+      "text": "During the past month, how often have you had trouble staying awake while driving, eating meals, or engaging in social activity?"
+    },
+    {
+      "id": "9",
+      "text": "During the past month, how much of a problem has it been for you to keep up enthusiasm to get things done?"
+    },
+    {
+      "id": "10",
+      "text": "Do you have a bed partner or room mate? (If yes, ask additional questions about partner observations)"
+    }
+  ]
+}

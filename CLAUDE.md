@@ -17,12 +17,31 @@ This file provides essential guidance to Claude Code when working with this slee
 # Install and run everything
 npm run install:all && npm run dev
 
-# Database setup (SQLite mode)
+# Database setup (Adaptive Questionnaire System - RECOMMENDED)
+cd server && npm run seed-adaptive
+
+# Database setup (Legacy SQLite mode)
 cd server && npm run seed
 
 # Database setup (Convex mode) 
 npx convex dev && ./setup-convex.sh
 ```
+
+## ⚡ NEW: Smart Adaptive Questionnaire System
+
+**Revolutionary Intelligence for Sleep Assessment:**
+- **Smart Gateway Logic**: Questions adapt based on user responses - no overwhelming 300+ question dumps
+- **15-Day Distribution**: Core foundation (Days 1-5) + conditional expansion (Days 6-15)
+- **Stanford Sleep Log**: Daily parallel tracking for subjective vs objective data analysis
+- **Clinical Methodology**: Based on validated sleep assessment instruments (PSQI, ISI, DBAS-16, etc.)
+- **Load Balancing**: Light days (7-9 questions) vs Heavy expansion days (13-29 questions) only when needed
+
+**Gateway Triggers:**
+- **Insomnia Gateway** → ISI, DBAS-16, Sleep Hygiene, PSAS questionnaires
+- **Daytime Sleepiness** → ESS, FSS, FOSQ-10 assessments  
+- **Mental Health** → PHQ-9, GAD-7, DASS-21, PROMIS-Cognitive screening
+- **Sleep Apnea** → STOP-BANG, Berlin questionnaires
+- **Pain/Diet/Chronotype** → Targeted assessments only if relevant
 
 ## Critical Settings
 
