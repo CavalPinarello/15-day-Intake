@@ -14,10 +14,13 @@ This is a sleep coaching platform implementing a 15-day intake journey with **iO
 ## Features
 
 ### iOS & Apple Watch Applications
-- ✅ 15-day intake journey with daily question sets
+- ✅ **15-Day Adaptive Questionnaire**: Smart gateway logic adapts questions based on responses
+- ✅ **Stanford Sleep Log**: Daily subjective sleep perception tracking
+- ✅ **Gateway System**: 10 gateway types trigger personalized expansion assessments
+- ✅ **Clinical Instruments**: ISI, DBAS-16, ESS, PHQ-9, GAD-7, STOP-BANG, Berlin, MEDAS, MEQ
+- ✅ **HealthKit Integration**: Compare subjective perception vs Apple Health data
 - ✅ **Apple Watch Alternative**: Complete questionnaire experience on watch
 - ✅ **Cross-device sync**: Start on iPhone, complete on watch (or vice versa)
-- ✅ HealthKit integration for sleep and activity data from both devices
 - ✅ Native iOS/watchOS experience optimized for each platform
 - ✅ **Post-intake recommendations**: Physician recommendations delivered to watch
 - ✅ **Clerk Authentication**: Secure user authentication with JWT tokens

@@ -58,9 +58,10 @@ npx convex dev && ./setup-convex.sh
 **iOS Application (Xcode Project):**
 - **Xcode Project:** `/Sleep360/Sleep360.xcodeproj` (Main iOS project)
 - **iOS Target:** `/Sleep360/Sleep360/` (Swift/SwiftUI iOS app implementation)
-- **Managers:** `/Sleep360/Sleep360/Managers/` (HealthKitManager, AuthenticationManager)
-- **Views:** `/Sleep360/Sleep360/Views/` (SwiftUI views and interfaces)
-- **Services:** `/Sleep360/Sleep360/Services/` (APIService for backend integration)
+- **Models:** `/Sleep360/Sleep360/Models/` (QuestionModels for questionnaire system)
+- **Managers:** `/Sleep360/Sleep360/Managers/` (HealthKitManager, AuthenticationManager, QuestionnaireManager)
+- **Views:** `/Sleep360/Sleep360/Views/` (QuestionnaireView, QuestionComponents, ContentView)
+- **Services:** `/Sleep360/Sleep360/Services/` (APIService, ConvexService for backend integration)
 
 **Apple Watch Application (Xcode Project):**
 - **Watch Target:** `/Sleep360/Sleep360 Watch App/` (watchOS app in Xcode project)
@@ -165,7 +166,42 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-11-25)
 
-**iOS Authentication & Networking Fixes Session (Current):**
+**iOS 15-Day Adaptive Questionnaire Implementation (Current):**
+- **Complete Questionnaire System:** Implemented full 15-day adaptive questionnaire in iOS app
+- **New iOS Files Created:**
+  - `/Sleep360/Sleep360/Models/QuestionModels.swift` - Data models for questions, responses, gateways
+  - `/Sleep360/Sleep360/Managers/QuestionnaireManager.swift` - Questionnaire logic with gateway evaluation
+  - `/Sleep360/Sleep360/Views/QuestionComponents.swift` - Reusable UI components for 12 question types
+  - `/Sleep360/Sleep360/Views/QuestionnaireView.swift` - Complete questionnaire interface
+- **Gateway System Implementation:**
+  - 10 gateway types: insomnia, depression, anxiety, excessive sleepiness, cognitive, OSA, pain, sleep timing, diet impact, poor sleep quality
+  - Dynamic expansion: Days 6-15 questions load based on gateway triggers from Days 1-5
+  - Validated instruments: ISI, DBAS-16, ESS, PHQ-9, GAD-7, STOP-BANG, Berlin, BPI, MEDAS, MEQ
+- **Stanford Sleep Log:** 5 daily questions capturing subjective sleep perception (asked every day)
+- **HealthKit Integration:**
+  - Shows Apple Health sleep data for comparison with user's subjective perception
+  - Auto-fetches previous night's sleep metrics (total sleep, efficiency, awakenings)
+- **Core Foundation (Days 1-5):**
+  - Demographics, PSQI, sleep patterns, mental health screening, physical health, nutrition
+  - Gateway questions embedded to trigger personalized expansion
+- **UI Components:**
+  - ScaleInput, YesNoInput, SingleSelectInput, MultiSelectInput, NumberInput, TimeInput
+  - QuestionCard with pillar color coding and help text
+  - Progress header with day/question tracking
+  - Gateway alert banners showing triggered assessments
+- **Updated Dashboard:**
+  - Journey progress visualization with 15-day circular indicator
+  - Today's tasks card showing Stanford Sleep Log + Day assessment
+  - Gateway status card displaying triggered personalized assessments
+  - Journey overview sheet with all 15 days and estimated times
+- **Convex Integration:** Uses existing iOS Convex functions for response syncing
+- **Key Files Modified:**
+  - `/Sleep360/Sleep360/ContentView.swift` - Complete dashboard redesign
+- **Session Goal:** Port web questionnaire system to iOS with full gateway logic
+- **Session Log:** `/docs/sessions/ios-questionnaire-implementation-2025-11-25.md`
+
+**Previous Session (2025-11-25):**
+**iOS Authentication & Networking Fixes Session:**
 - **Fixed iOS Simulator Connection Issues:** Resolved NSURLError -1005 "network connection was lost" errors
   - Changed URLSession configuration from `.default` to `.ephemeral` to avoid connection caching
   - Added retry logic (3 attempts with 500ms delay) for transient connection errors
