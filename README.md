@@ -2,13 +2,14 @@
 
 ## Project Overview
 
-This is a sleep coaching platform implementing a 15-day intake journey with a **hybrid architecture**:
+This is a sleep coaching platform implementing a 15-day intake journey with **iOS and watchOS as the primary user-facing applications**:
 
-- **iOS & Apple Watch Applications**: 15-day question journey with alternative watch-based interaction
-- **Web Application**: Physician dashboard and patient review modules
+- **iOS Application** (PRIMARY): Main user-facing app for the 15-day intake journey
+- **Apple Watch Application**: Companion app with watch-optimized questionnaire experience
+- **Web Application** (DEV/DEBUG ONLY): Used for debugging questionnaires and development testing
 - **Convex Backend**: Serverless backend providing real-time data synchronization
 
-Built for rapid prototyping and testing with comprehensive admin management features and cross-device synchronization.
+**Development Focus:** iOS and watchOS applications are the priority. The web version exists solely for questionnaire debugging and is NOT intended for end users.
 
 ## Features
 
@@ -22,17 +23,14 @@ Built for rapid prototyping and testing with comprehensive admin management feat
 - ✅ **Clerk Authentication**: Secure user authentication with JWT tokens
 - ✅ **Authenticated HealthKit Sync**: Protected health data synchronization
 
-### Web Application  
-- ✅ Physician dashboard for patient review
-- ✅ Patient progress tracking and management
-- ✅ 9 different question input types (text, textarea, number, select, radio, checkbox, scale, date, time)
-- ✅ Day advance feature for rapid testing
+### Web Application (Development/Debug Only)
+- ✅ **Questionnaire debugging**: Test and iterate on question flows without rebuilding iOS app
+- ✅ Day advance feature for rapid journey testing
 - ✅ Admin interface for managing and rearranging questions
-- ✅ Progress tracking
+- ✅ 9 different question input types (text, textarea, number, select, radio, checkbox, scale, date, time)
 - ✅ Hard-coded users (user1-user10) with password "1"
-- ✅ **Clerk Authentication**: Protected routes with middleware
-- ✅ **Sign-in/Sign-up Pages**: Modal and dedicated authentication flows
-- ✅ Reusable backend architecture for other components
+- ✅ Physician dashboard reference implementation
+- ⚠️ **NOT for end users** - all user interaction happens on iOS/watchOS
 
 ### Shared Backend
 - ✅ RESTful API supporting both iOS and web clients
@@ -51,7 +49,7 @@ Built for rapid prototyping and testing with comprehensive admin management feat
 - **Convex Integration**: Direct function calls for real-time data synchronization
 - **Xcode Project**: Complete project structure at `/Sleep360/Sleep360.xcodeproj`
 
-### Web Application  
+### Web Application (Debug/Dev Only)
 - Next.js 14 (App Router)
 - TypeScript
 - Tailwind CSS
@@ -295,10 +293,10 @@ docs/
 ## Development Notes
 
 **Platform-Specific Implementation:**
-- **iOS App**: Comprehensive 15-day intake journey with full UI and HealthKit integration
-- **Apple Watch App**: Alternative questionnaire interface with quick interactions and physician recommendations
+- **iOS App** (PRIMARY): Main user-facing app - comprehensive 15-day intake journey with full UI and HealthKit integration
+- **Apple Watch App**: Companion questionnaire interface with quick interactions and physician recommendations
 - **Cross-device Sync**: WatchConnectivity ensures seamless experience between iPhone and Watch
-- **Web App**: Focuses on physician dashboard and administrative functions  
+- **Web App** (DEV ONLY): For debugging questionnaires and development testing - NOT for end users
 - **Convex Backend**: All platforms consume Convex functions for real-time data sync
 
 **Important Implementation Details:**

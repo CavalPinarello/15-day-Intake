@@ -4,12 +4,16 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 
 ## Platform Architecture
 
-**Multi-Platform Application Design:**
-- **iOS Application**: 15-day intake journey with comprehensive Swift/SwiftUI interface
-- **Apple Watch Application**: Alternative questionnaire experience with watch-optimized UI
+**Primary User Applications (iOS & watchOS):**
+- **iOS Application** (PRIMARY): Main user-facing app for the 15-day intake journey with Swift/SwiftUI
+- **Apple Watch Application**: Companion app with watch-optimized questionnaire experience
 - **Cross-device Synchronization**: WatchConnectivity for seamless iPhone-Watch integration
-- **Web Application**: Physician dashboard and administrative interface using Next.js
-- **Convex Backend**: Serverless backend providing real-time data synchronization across all platforms
+
+**Development & Backend:**
+- **Web Application** (DEV/DEBUG ONLY): Used for debugging questionnaires and development testing - NOT for end users
+- **Convex Backend**: Serverless backend providing real-time data synchronization
+
+**Development Focus:** iOS and watchOS applications are the priority. Web exists solely for questionnaire debugging.
 
 ## Convex Backend Pattern
 
@@ -63,9 +67,9 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 - `/watchos/HealthKitWatchManager.swift` - HealthKit for watchOS
 - `/watchos/WatchConnectivityManager.swift` - Watch-iPhone synchronization
 
-**Web Application:**
-- `/client/` - Next.js physician dashboard and admin interface
-- `/client/app/physician-dashboard/` - Physician dashboard components
+**Web Application (Development/Debug Only):**
+- `/client/` - Next.js for questionnaire debugging and development testing
+- `/client/app/physician-dashboard/` - Physician dashboard reference implementation
 
 **Convex Backend:**
 - `/convex/schema.ts` - Complete database schema (30+ tables) 
@@ -132,8 +136,8 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 - HealthKit integration for watch-based health data
 - WatchConnectivity for real-time sync with iPhone
 
-**Web Application:**
+**Web Application (Debug/Dev Only):**
 - Next.js 14 with App Router
 - TypeScript support
 - Tailwind CSS for styling
-- Focused on physician dashboard and administrative functions
+- Used for questionnaire debugging and development testing - NOT for end users

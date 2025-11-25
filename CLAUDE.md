@@ -4,12 +4,16 @@ This file provides essential guidance to Claude Code when working with this slee
 
 ## Platform Architecture
 
-**Multi-Platform Application Design:**
-- **iOS Application**: 15-day intake journey with comprehensive Swift/SwiftUI implementation
-- **Apple Watch Application**: Alternative questionnaire experience with watch-optimized UI
+**Primary User Applications (iOS & watchOS):**
+- **iOS Application** (PRIMARY): Main user-facing app for the 15-day intake journey with Swift/SwiftUI
+- **Apple Watch Application**: Companion app with watch-optimized questionnaire experience
 - **Cross-device Sync**: WatchConnectivity for seamless iPhone-Watch integration
-- **Web Application**: Physician dashboard and administrative interface using Next.js  
-- **Convex Backend**: Serverless backend providing real-time data synchronization across all platforms
+
+**Development & Backend:**
+- **Web Application** (DEV/DEBUG ONLY): Used for debugging questionnaires and development testing - NOT for end users
+- **Convex Backend**: Serverless backend providing real-time data synchronization
+
+**Development Focus:** iOS and watchOS applications are the priority. Web exists solely for questionnaire debugging.
 
 ## Quick Start Commands
 
@@ -70,9 +74,9 @@ npx convex dev && ./setup-convex.sh
 - **iOS Reference:** `/ios/` (Original Swift files, now integrated in Xcode project)
 - **watchOS Reference:** `/watchos/` (Original watch files, now in Xcode project)
 
-**Web Application:**
-- **Physician Dashboard:** `/client/app/physician-dashboard/`
-- **Admin Interface:** `/client/` (Next.js web application)
+**Web Application (Development/Debug Only):**
+- **Question Debug Interface:** `/client/` (Next.js - for questionnaire testing only)
+- **Physician Dashboard:** `/client/app/physician-dashboard/` (development reference)
 
 **Convex Backend:**
 - **Schema:** `/convex/schema.ts` (30+ tables with real-time sync)
@@ -84,19 +88,24 @@ npx convex dev && ./setup-convex.sh
 
 ## Development Patterns
 
-**Multi-Platform Development:**
-- iOS app provides comprehensive patient intake journey and HealthKit integration
-- Apple Watch app offers alternative questionnaire interface and receives physician recommendations
+**iOS & watchOS Development (Primary Focus):**
+- iOS app is the PRIMARY user-facing application for the 15-day intake journey
+- Apple Watch app provides companion questionnaire interface and receives physician recommendations
 - WatchConnectivity enables seamless sync between iPhone and Apple Watch
-- Web app handles physician dashboard and administrative functions
-- All platforms consume Convex functions with real-time synchronization
+- HealthKit integration for comprehensive sleep and health data collection
+- Swift/SwiftUI development with Xcode project at `/Sleep360/Sleep360.xcodeproj`
+
+**Web Application (Debug/Development Only):**
+- Web version exists ONLY for debugging questionnaire logic and development testing
+- NOT intended for end users - all user interaction happens on iOS/watchOS
+- Day advancement button available for journey testing
+- Useful for rapid questionnaire iteration without rebuilding iOS app
 
 **Common Patterns:**
 - Convex provides real-time data synchronization across platforms
-- Use test users for rapid development/testing
-- Day advancement button (web) available for journey testing
-- Clerk authentication shared between iOS and web
-- TypeScript-first development with automatic type generation
+- Use test users (user1-user10, password: "1") for rapid development/testing
+- Clerk authentication for iOS app
+- TypeScript backend with Swift/SwiftUI frontend
 
 ## Important Notes
 
@@ -156,6 +165,20 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-11-25)
 
+**Platform Focus Clarification Session:**
+- **Clarified Development Priorities:** iOS and watchOS are the PRIMARY user-facing applications
+- **Web App Role Defined:** Web version exists ONLY for debugging questionnaires and development testing
+- **Documentation Updates:**
+  - Updated Platform Architecture to clearly distinguish primary apps from dev tools
+  - Reorganized Development Patterns to emphasize iOS/watchOS focus
+  - Clarified that web is NOT for end users
+- **Key Changes:**
+  - iOS Application marked as PRIMARY user-facing app
+  - Apple Watch described as companion app
+  - Web explicitly labeled as DEV/DEBUG ONLY throughout documentation
+- **Session Goal:** Align documentation with actual platform priorities
+
+**Previous Session (2025-11-25 - Earlier):**
 **Xcode watchOS Target Configuration:**
 - **Added watchOS Target:** Successfully configured Apple Watch target in existing Xcode project
   - Created `Sleep360 Watch App` target with proper bundle ID `com.sleep360.app.watchkitapp`
