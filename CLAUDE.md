@@ -32,16 +32,24 @@ npx convex dev && ./setup-convex.sh
 
 ## Key File Locations
 
-**iOS Application:**
-- **iOS Files:** `/ios/` (Swift configuration and HealthKit integration)
-- **API Config:** `/ios/Config.swift` (API endpoints for iOS)
-- **Watch Sync:** `/ios/WatchConnectivityManager.swift` (iPhone-Watch communication)
+**iOS Application (Xcode Project):**
+- **Xcode Project:** `/Sleep360/Sleep360.xcodeproj` (Main iOS project)
+- **iOS Target:** `/Sleep360/Sleep360/` (Swift/SwiftUI iOS app implementation)
+- **Managers:** `/Sleep360/Sleep360/Managers/` (HealthKitManager, AuthenticationManager)
+- **Views:** `/Sleep360/Sleep360/Views/` (SwiftUI views and interfaces)
+- **Services:** `/Sleep360/Sleep360/Services/` (APIService for backend integration)
 
-**Apple Watch Application:**
-- **Watch Files:** `/watchos/` (watchOS-optimized questionnaire and recommendations)
-- **Main App:** `/watchos/WatchApp.swift` (Watch app interface)
-- **Questionnaire:** `/watchos/QuestionnaireView.swift` (Watch-optimized UI)
-- **Recommendations:** `/watchos/RecommendationsView.swift` (Physician recommendations)
+**Apple Watch Application (Xcode Project):**
+- **Watch Target:** `/Sleep360/Sleep360 Watch App/` (watchOS app in Xcode project)
+- **Main App:** `/Sleep360/Sleep360 Watch App/Sleep360_Watch_AppApp.swift` (Watch app entry point)
+- **Questionnaire:** `/Sleep360/Sleep360 Watch App/QuestionnaireView.swift` (Watch-optimized UI)
+- **Recommendations:** `/Sleep360/Sleep360 Watch App/RecommendationsView.swift` (Physician recommendations)
+- **Watch HealthKit:** `/Sleep360/Sleep360 Watch App/HealthKitWatchManager.swift` (Watch health data)
+- **Watch Connectivity:** `/Sleep360/Sleep360 Watch App/WatchConnectivityManager.swift` (iPhone-Watch sync)
+
+**Legacy Files (Reference):**
+- **iOS Reference:** `/ios/` (Original Swift files, now integrated in Xcode project)
+- **watchOS Reference:** `/watchos/` (Original watch files, now in Xcode project)
 
 **Web Application:**
 - **Physician Dashboard:** `/client/app/physician-dashboard/`
@@ -127,8 +135,28 @@ For detailed architecture, setup instructions, and API documentation, see README
 - **Repository:** Successfully pushed to https://github.com/CavalPinarello/15-day-Intake.git
 - **Session Log:** `/docs/sessions/apple-watch-integration-2025-11-21.md`
 
-## Latest Session Context (2025-11-21 - Afternoon)
+## Latest Session Context (2025-11-25)
 
+**Xcode watchOS Target Configuration:**
+- **Added watchOS Target:** Successfully configured Apple Watch target in existing Xcode project
+  - Created `Sleep360 Watch App` target with proper bundle ID `com.sleep360.app.watchkitapp`
+  - Integrated all watchOS Swift files from `/Sleep360 Watch App/` directory into Xcode project structure
+  - Fixed Xcode project.pbxproj configuration for dual iOS/watchOS targets
+  - Resolved build conflicts and duplicate file reference errors
+  - **Both Targets Available:** iOS (Sleep360) and watchOS (Sleep360 Watch App)
+- **Build Configuration Fixes:**
+  - Fixed "Multiple commands produce" build errors
+  - Resolved CopyAndPreserveArchs configuration issues  
+  - Cleaned up scheme configuration for both targets
+  - Optimized architecture settings (arm64 for watchOS)
+- **Project Status:** 
+  - ✅ iOS target builds successfully
+  - ⚠️ watchOS target configured but may need Xcode IDE for final build resolution
+  - Both targets visible in Xcode with proper scheme selection
+- **Files Integrated:** All 5 watchOS Swift files properly linked to watchOS target
+- **Next Steps:** Open in Xcode IDE to resolve any remaining watchOS build system conflicts
+
+**Previous Session (2025-11-21 - Afternoon):**
 **Xcode Project Creation:**
 - **Created iOS App Structure:** Complete Xcode project at `/Sleep360/Sleep360.xcodeproj`
   - Project.pbxproj with proper build settings and targets

@@ -13,8 +13,10 @@ struct Sleep360App: App {
                 .onAppear {
                     // Request HealthKit authorization on app launch
                     if authManager.isAuthenticated {
-                        Task {
-                            await healthKitManager.requestAuthorization()
+                        healthKitManager.requestAuthorization { success, error in
+                            if let error = error {
+                                print("HealthKit authorization error: \(error)")
+                            }
                         }
                     }
                 }

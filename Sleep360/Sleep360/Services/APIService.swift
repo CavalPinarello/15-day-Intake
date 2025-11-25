@@ -16,13 +16,14 @@ class APIService {
     // MARK: - Authentication
     
     func signIn(email: String, password: String) async throws -> [String: Any] {
-        let url = URL(string: "\(Config.authEndpoint)/sign-in")!
+        let url = URL(string: "\(Config.authEndpoint)/login")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // The server expects 'username' field which can be email or username
         let body = [
-            "email": email,
+            "username": email,
             "password": password
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -45,7 +46,7 @@ class APIService {
     }
     
     func signUp(email: String, password: String, firstName: String?, lastName: String?) async throws -> [String: Any] {
-        let url = URL(string: "\(Config.authEndpoint)/sign-up")!
+        let url = URL(string: "\(Config.authEndpoint)/register")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

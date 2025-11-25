@@ -1,0 +1,69 @@
+{
+  "" : {
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360 Watch App-primary.dia",
+    "emit-module-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360 Watch App-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360 Watch App-primary-emit-module.dia",
+    "pch" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360 Watch App-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360 Watch App-primary.swiftdeps"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360 Watch App/HealthKitWatchManager.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/HealthKitWatchManager.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/HealthKitWatchManager.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/HealthKitWatchManager.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/HealthKitWatchManager.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/HealthKitWatchManager.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/HealthKitWatchManager.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/HealthKitWatchManager.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/HealthKitWatchManager~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360 Watch App/QuestionnaireView.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/QuestionnaireView.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/QuestionnaireView.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/QuestionnaireView.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/QuestionnaireView.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/QuestionnaireView.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/QuestionnaireView.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/QuestionnaireView.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/QuestionnaireView~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360 Watch App/RecommendationsView.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/RecommendationsView.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/RecommendationsView.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/RecommendationsView.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/RecommendationsView.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/RecommendationsView.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/RecommendationsView.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/RecommendationsView.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/RecommendationsView~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360 Watch App/Sleep360_Watch_AppApp.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360_Watch_AppApp.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360_Watch_AppApp.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360_Watch_AppApp.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360_Watch_AppApp.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360_Watch_AppApp.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360_Watch_AppApp.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360_Watch_AppApp.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/Sleep360_Watch_AppApp~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360 Watch App/WatchConnectivityManager.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/WatchConnectivityManager.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/WatchConnectivityManager.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/WatchConnectivityManager.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/WatchConnectivityManager.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/WatchConnectivityManager.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/WatchConnectivityManager.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/WatchConnectivityManager.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/WatchConnectivityManager~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-watchos/Sleep360 Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

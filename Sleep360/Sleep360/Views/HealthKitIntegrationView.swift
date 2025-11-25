@@ -50,7 +50,6 @@ struct HealthKitIntegrationView: View {
                 .cornerRadius(10)
                 
                 Spacer()
-                return AnyView(VStack{})
             }
             
             // HealthKit Availability

@@ -8,8 +8,10 @@
 import Foundation
 import HealthKit
 
+@MainActor
 class HealthKitManager: ObservableObject {
     let healthStore = HKHealthStore()
+    @Published var isAuthorized = false
     
     // API Configuration
     private let apiService = APIService.shared
@@ -85,6 +87,7 @@ class HealthKitManager: ObservableObject {
         // Request authorization
         healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, error in
             DispatchQueue.main.async {
+                self.isAuthorized = success
                 completion(success, error)
             }
         }
@@ -203,8 +206,8 @@ class HealthKitManager: ObservableObject {
             // Calculate sleep latency (time from in-bed to asleep)
             var sleepLatencyMins: Int? = nil
             if let inBedStr = inBedTime, let asleepStr = asleepTime {
-                let inBedDate = dateFormatter.date(from: inBedStr) ?? sample.startDate
-                let asleepDate = dateFormatter.date(from: asleepStr) ?? sample.startDate
+                let inBedDate = dateFormatter.date(from: inBedStr) ?? Date()
+                let asleepDate = dateFormatter.date(from: asleepStr) ?? Date()
                 sleepLatencyMins = Int(asleepDate.timeIntervalSince(inBedDate) / 60)
             }
             
@@ -446,7 +449,7 @@ class HealthKitManager: ObservableObject {
         query.initialResultsHandler = { query, results, error in
             var stepsData: [String: Int] = [:]
             let dateFormatter = ISO8601DateFormatter()
-            dateFormatter.formatOptions = [.withDate]
+            dateFormatter.formatOptions = [.withFullDate]
             
             results?.enumerateStatistics(from: startDate, to: endDate) { statistics, _ in
                 if let quantity = statistics.sumQuantity() {
@@ -479,7 +482,7 @@ class HealthKitManager: ObservableObject {
         query.initialResultsHandler = { query, results, error in
             var energyData: [String: Double] = [:]
             let dateFormatter = ISO8601DateFormatter()
-            dateFormatter.formatOptions = [.withDate]
+            dateFormatter.formatOptions = [.withFullDate]
             
             results?.enumerateStatistics(from: startDate, to: endDate) { statistics, _ in
                 if let quantity = statistics.sumQuantity() {
@@ -512,7 +515,7 @@ class HealthKitManager: ObservableObject {
         query.initialResultsHandler = { query, results, error in
             var exerciseData: [String: Int] = [:]
             let dateFormatter = ISO8601DateFormatter()
-            dateFormatter.formatOptions = [.withDate]
+            dateFormatter.formatOptions = [.withFullDate]
             
             results?.enumerateStatistics(from: startDate, to: endDate) { statistics, _ in
                 if let quantity = statistics.sumQuantity() {
@@ -530,7 +533,8 @@ class HealthKitManager: ObservableObject {
     // MARK: - API Sync
     
     func syncAllHealthData(completion: @escaping (Result<[String: Any], Error>) -> Void) {
-        guard let token = authManager?.getAuthToken() else {
+        Task { @MainActor in
+            guard let authManager = authManager, let token = await authManager.getAuthToken() else {
             completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated. Please sign in first."])))
             return
         }
@@ -549,7 +553,7 @@ class HealthKitManager: ObservableObject {
             switch result {
             case .success(let data):
                 // Separate sleep data and stages
-                let stages = data.flatMap { sleepDay -> [[String: Any]] in
+                let _ = data.flatMap { sleepDay -> [[String: Any]] in
                     // Extract stages from sleep data processing
                     return []
                 }
@@ -623,6 +627,7 @@ class HealthKitManager: ObservableObject {
                 token: token,
                 completion: completion
             )
+        }
         }
     }
     

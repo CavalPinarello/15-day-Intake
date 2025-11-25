@@ -6,37 +6,20 @@
 	objectVersion = 56;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		4B1234561234567890123456 /* Sleep360App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1234551234567890123456 /* Sleep360App.swift */; };
-		4B1234581234567890123456 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1234571234567890123456 /* ContentView.swift */; };
-		4B12345A1234567890123456 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B1234591234567890123456 /* Assets.xcassets */; };
-		4B12345D1234567890123456 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B12345C1234567890123456 /* Preview Assets.xcassets */; };
-		4B1234641234567890123457 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1234631234567890123457 /* AuthenticationManager.swift */; };
-		4B1234661234567890123458 /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1234651234567890123458 /* HealthKitManager.swift */; };
-		4B1234681234567890123459 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1234671234567890123459 /* APIService.swift */; };
-		4B12346A123456789012345A /* AuthenticationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1234691234567890123459 /* AuthenticationView.swift */; };
-		4B12346C123456789012345B /* HealthKitIntegrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B12346B123456789012345A /* HealthKitIntegrationView.swift */; };
-		4B12346E123456789012345C /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B12346D123456789012345B /* Config.swift */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		4B1234521234567890123456 /* Sleep360.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sleep360.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		4B1234551234567890123456 /* Sleep360App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sleep360App.swift; sourceTree = "<group>"; };
-		4B1234571234567890123456 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		4B1234591234567890123456 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		4B12345C1234567890123456 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		4B1234631234567890123457 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
-		4B1234651234567890123458 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
-		4B1234671234567890123459 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
-		4B1234691234567890123459 /* AuthenticationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationView.swift; sourceTree = "<group>"; };
-		4B12346B123456789012345A /* HealthKitIntegrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitIntegrationView.swift; sourceTree = "<group>"; };
-		4B12346D123456789012345B /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
-		4B12346F123456789012345C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		4B123470123456789012345D /* Sleep360.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Sleep360.entitlements; sourceTree = "<group>"; };
+		51C2657311E94FEFA07C785F /* Sleep360 Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Sleep360 Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		4B12344F1234567890123456 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BF330997101B448399C28124 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -49,7 +32,6 @@
 		4B1234491234567890123456 = {
 			isa = PBXGroup;
 			children = (
-				4B1234541234567890123456 /* Sleep360 */,
 				4B1234531234567890123456 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -58,59 +40,9 @@
 			isa = PBXGroup;
 			children = (
 				4B1234521234567890123456 /* Sleep360.app */,
+				51C2657311E94FEFA07C785F /* Sleep360 Watch App.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		4B1234541234567890123456 /* Sleep360 */ = {
-			isa = PBXGroup;
-			children = (
-				4B1234551234567890123456 /* Sleep360App.swift */,
-				4B1234571234567890123456 /* ContentView.swift */,
-				4B12346D123456789012345B /* Config.swift */,
-				4B1234721234567890123460 /* Views */,
-				4B1234711234567890123460 /* Managers */,
-				4B1234731234567890123460 /* Services */,
-				4B1234591234567890123456 /* Assets.xcassets */,
-				4B12346F123456789012345C /* Info.plist */,
-				4B123470123456789012345D /* Sleep360.entitlements */,
-				4B12345B1234567890123456 /* Preview Content */,
-			);
-			path = Sleep360;
-			sourceTree = "<group>";
-		};
-		4B12345B1234567890123456 /* Preview Content */ = {
-			isa = PBXGroup;
-			children = (
-				4B12345C1234567890123456 /* Preview Assets.xcassets */,
-			);
-			path = "Preview Content";
-			sourceTree = "<group>";
-		};
-		4B1234711234567890123460 /* Managers */ = {
-			isa = PBXGroup;
-			children = (
-				4B1234631234567890123457 /* AuthenticationManager.swift */,
-				4B1234651234567890123458 /* HealthKitManager.swift */,
-			);
-			path = Managers;
-			sourceTree = "<group>";
-		};
-		4B1234721234567890123460 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				4B1234691234567890123459 /* AuthenticationView.swift */,
-				4B12346B123456789012345A /* HealthKitIntegrationView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		4B1234731234567890123460 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				4B1234671234567890123459 /* APIService.swift */,
-			);
-			path = Services;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -133,6 +65,23 @@
 			productReference = 4B1234521234567890123456 /* Sleep360.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A36975D0A85A4C59BFC79C6D /* Sleep360 Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EDBD7DE2825C4BD69F21EF2E /* Build configuration list for PBXNativeTarget "Sleep360 Watch App" */;
+			buildPhases = (
+				049EBACE1637420E8E835FE4 /* Sources */,
+				BF330997101B448399C28124 /* Frameworks */,
+				AD77CC2B44B945E4AFE23561 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Sleep360 Watch App";
+			productName = "Sleep360 Watch App";
+			productReference = 51C2657311E94FEFA07C785F /* Sleep360 Watch App.app */;
+			productType = "com.apple.product-type.application.watchapp2";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -145,6 +94,13 @@
 				TargetAttributes = {
 					4B1234511234567890123456 = {
 						CreatedOnToolsVersion = 15.0;
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					A36975D0A85A4C59BFC79C6D = {
+						CreatedOnToolsVersion = 15.0;
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -162,6 +118,7 @@
 			projectRoot = "";
 			targets = (
 				4B1234511234567890123456 /* Sleep360 */,
+				A36975D0A85A4C59BFC79C6D /* Sleep360 Watch App */,
 			);
 		};
 /* End PBXProject section */
@@ -171,32 +128,75 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B12345D1234567890123456 /* Preview Assets.xcassets in Resources */,
-				4B12345A1234567890123456 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AD77CC2B44B945E4AFE23561 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		049EBACE1637420E8E835FE4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4B12344E1234567890123456 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B1234581234567890123456 /* ContentView.swift in Sources */,
-				4B1234561234567890123456 /* Sleep360App.swift in Sources */,
-				4B1234641234567890123457 /* AuthenticationManager.swift in Sources */,
-				4B1234661234567890123458 /* HealthKitManager.swift in Sources */,
-				4B1234681234567890123459 /* APIService.swift in Sources */,
-				4B12346A123456789012345A /* AuthenticationView.swift in Sources */,
-				4B12346C123456789012345B /* HealthKitIntegrationView.swift in Sources */,
-				4B12346E123456789012345C /* Config.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		2B829B66BFC142D9828BD44B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Sleep360 Watch App/Sleep360 Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Sleep360 Watch App/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sleep 360°";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Sleep 360° needs access to your health data to provide personalized sleep insights and track your progress throughout the 15-day intake journey.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Sleep 360° would like to save your sleep and activity data to track your progress and share with your physician.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.sleep360.app;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sleep360.app.watchkitapp;
+				PRODUCT_NAME = "Sleep360 Watch App";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = arm64;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+			};
+			name = Release;
+		};
 		4B12345E1234567890123456 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -342,7 +342,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sleep360.app;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Sleep360;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -375,12 +375,51 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sleep360.app;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Sleep360;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		A121525802574A9AA0AE4C71 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Sleep360 Watch App/Sleep360 Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Sleep360 Watch App/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sleep 360°";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Sleep 360° needs access to your health data to provide personalized sleep insights and track your progress throughout the 15-day intake journey.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Sleep 360° would like to save your sleep and activity data to track your progress and share with your physician.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.sleep360.app;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sleep360.app.watchkitapp;
+				PRODUCT_NAME = "Sleep360 Watch App";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = arm64;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
@@ -399,6 +438,15 @@
 			buildConfigurations = (
 				4B1234611234567890123456 /* Debug */,
 				4B1234621234567890123456 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EDBD7DE2825C4BD69F21EF2E /* Build configuration list for PBXNativeTarget "Sleep360 Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A121525802574A9AA0AE4C71 /* Debug */,
+				2B829B66BFC142D9828BD44B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

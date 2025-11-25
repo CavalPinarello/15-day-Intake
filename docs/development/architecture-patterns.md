@@ -39,15 +39,26 @@ Key architectural patterns and conventions used in this sleep coaching platform.
 
 **Critical File Locations:**
 
-**iOS Application:**
-- `/ios/Config.swift` - API endpoints and authentication configuration
-- `/ios/HealthKitManager.swift` - HealthKit integration for sleep/activity data
-- `/ios/AuthenticationManager.swift` - Authentication handling for iOS
-- `/ios/WatchConnectivityManager.swift` - iPhone-Watch synchronization
+**Xcode Project Structure:**
+- `/Sleep360/Sleep360.xcodeproj` - Main Xcode project with dual iOS/watchOS targets
 
-**Apple Watch Application:**
-- `/watchos/WatchApp.swift` - Main watch app interface
-- `/watchos/QuestionnaireView.swift` - Watch-optimized questionnaire UI
+**iOS Application (Xcode Target):**
+- `/Sleep360/Sleep360/` - Main iOS app target
+- `/Sleep360/Sleep360/Managers/HealthKitManager.swift` - HealthKit integration
+- `/Sleep360/Sleep360/Managers/AuthenticationManager.swift` - Authentication handling
+- `/Sleep360/Sleep360/Services/APIService.swift` - Backend API integration
+- `/Sleep360/Sleep360/Views/` - SwiftUI views and interfaces
+
+**Apple Watch Application (Xcode Target):**
+- `/Sleep360/Sleep360 Watch App/` - Main watchOS app target  
+- `/Sleep360/Sleep360 Watch App/Sleep360_Watch_AppApp.swift` - Watch app entry point
+- `/Sleep360/Sleep360 Watch App/QuestionnaireView.swift` - Watch-optimized UI
+- `/Sleep360/Sleep360 Watch App/HealthKitWatchManager.swift` - Watch health data
+- `/Sleep360/Sleep360 Watch App/WatchConnectivityManager.swift` - iPhone-Watch sync
+
+**Legacy Reference Files:**
+- `/ios/` - Original iOS Swift files (reference, now integrated in Xcode)
+- `/watchos/` - Original watch files (reference, now integrated in Xcode)
 - `/watchos/RecommendationsView.swift` - Physician recommendations display
 - `/watchos/HealthKitWatchManager.swift` - HealthKit for watchOS
 - `/watchos/WatchConnectivityManager.swift` - Watch-iPhone synchronization
