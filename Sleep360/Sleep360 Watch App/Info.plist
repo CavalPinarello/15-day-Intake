@@ -22,15 +22,9 @@
 	<string>Sleep 360° needs access to your health data to provide personalized sleep insights and track your progress throughout the 15-day intake journey.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Sleep 360° would like to save your sleep and activity data to track your progress and share with your physician.</string>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-	</array>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.sleep360.app</string>
 	<key>WKWatchOnly</key>
-	<false/>
+	<true/>
 </dict>
 </plist>
