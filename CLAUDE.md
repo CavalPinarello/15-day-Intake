@@ -165,6 +165,37 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-11-25)
 
+**iOS Authentication & Networking Fixes Session (Current):**
+- **Fixed iOS Simulator Connection Issues:** Resolved NSURLError -1005 "network connection was lost" errors
+  - Changed URLSession configuration from `.default` to `.ephemeral` to avoid connection caching
+  - Added retry logic (3 attempts with 500ms delay) for transient connection errors
+  - Set `httpMaximumConnectionsPerHost = 1` to prevent connection reuse issues
+  - Added `Connection: close` header to force fresh connections
+- **Fixed Authentication State Sharing:**
+  - Changed `HealthKitIntegrationView` from `@StateObject` to `@EnvironmentObject` for `authManager`
+  - This ensures the view shares the same auth state as the rest of the app
+  - Fixed "Not authenticated" error when syncing health data
+- **Fixed Server Response Parsing:**
+  - Server returns `"success": 1` (integer) but code expected `Bool`
+  - Updated `AuthenticationManager.signIn()` to handle both `Int` and `Bool` success values
+- **Fixed HealthKitManager Auth Token Access:**
+  - Updated `Sleep360App.swift` to pass `authManager` to `HealthKitManager` during initialization
+  - `HealthKitManager` can now retrieve auth tokens for API sync calls
+- **iOS Simulator Networking Notes:**
+  - Use `127.0.0.1` instead of `localhost` for simulator
+  - ATS exceptions configured for local development in Info.plist
+  - Server must be running on port 3001 for authentication
+- **Test Credentials:** user1-user10, password: "1" (verified working)
+- **Key Files Modified:**
+  - `/Sleep360/Sleep360/Services/APIService.swift` - Ephemeral session, retry logic
+  - `/Sleep360/Sleep360/Managers/AuthenticationManager.swift` - Success field parsing
+  - `/Sleep360/Sleep360/Views/HealthKitIntegrationView.swift` - EnvironmentObject usage
+  - `/Sleep360/Sleep360/Sleep360App.swift` - AuthManager injection
+  - `/Sleep360/Sleep360/ContentView.swift` - Preview updates
+- **Commit Hash:** `6ea312b` - Changes included in iOS-dedicated Convex integration commit
+- **Repository:** https://github.com/CavalPinarello/15-day-Intake.git
+
+**Previous Session (2025-11-25):**
 **iOS-Dedicated Convex Database Integration:**
 - **New iOS Backend:** Created dedicated Convex database infrastructure for iOS app
 - **Schema Updates:** Added 7 new iOS-specific tables to `convex/schema.ts`:
