@@ -12,6 +12,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 const emailService = require('../utils/emailService');
 const ConvexAdapter = require('../database/convexAdapter');
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
@@ -482,6 +483,119 @@ router.post('/reset-password', [
   } catch (err) {
     console.error('Password reset error:', err);
     res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// Apple Sign In endpoint
+router.post('/apple', async (req, res) => {
+  try {
+    const { idToken, nonce, firstName, lastName, email, userIdentifier } = req.body;
+
+    if (!idToken || !nonce || !userIdentifier) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required Apple Sign In parameters' 
+      });
+    }
+
+    console.log('Apple Sign In request:', { userIdentifier, email, firstName, lastName });
+
+    // In a production app, you would verify the Apple ID token here
+    // For now, we'll create/get the user based on Apple ID
+    
+    const db = await getUnifiedDatabase();
+    
+    // Check if user exists with Apple ID (using username field to store apple ID)
+    let user = null;
+    const appleUsername = `apple_${userIdentifier.substring(0, 10)}`;
+    
+    // Try to find existing user by username
+    try {
+      if (db.getUserByUsernameOrEmail) {
+        user = await db.getUserByUsernameOrEmail(appleUsername);
+      }
+    } catch (e) {
+      console.log('User not found, will create new one');
+    }
+    
+    // Create new user if none exists
+    if (!user) {
+      console.log('Creating new Apple user:', appleUsername);
+      const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+      
+      // Insert new user
+      const result = db.run(`
+        INSERT INTO users (
+          username, password, email, first_name, last_name, 
+          current_day, role, apple_health_connected, onboarding_completed,
+          created_at, started_at, last_accessed
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'))
+      `, [
+        appleUsername,
+        hashedPassword,
+        email || null,
+        firstName || null,
+        lastName || null,
+        1,
+        'patient',
+        0,
+        0
+      ]);
+      
+      user = {
+        id: result.lastID,
+        username: appleUsername,
+        email: email || null,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        current_day: 1,
+        role: 'patient',
+        apple_health_connected: 0,
+        onboarding_completed: 0,
+        created_at: new Date().toISOString(),
+        started_at: new Date().toISOString(),
+        last_accessed: new Date().toISOString()
+      };
+      
+      console.log('Created Apple user with ID:', user.id);
+    } else {
+      console.log('Found existing Apple user:', user.id);
+      // Update last accessed time
+      db.run(`UPDATE users SET last_accessed = datetime('now') WHERE id = ?`, [user.id]);
+    }
+
+    // Generate tokens
+    const accessToken = generateAccessToken(user.id, user.username);
+    const refreshToken = generateRefreshToken(user.id, user.username);
+
+    console.log('Apple Sign In successful for user:', user.id);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName || user.first_name,
+        lastName: user.lastName || user.last_name,
+        current_day: user.current_day,
+        started_at: user.started_at,
+        last_accessed: user.last_accessed,
+        created_at: user.created_at,
+        apple_health_connected: user.apple_health_connected,
+        onboarding_completed: user.onboarding_completed,
+        role: user.role || 'patient'
+      },
+      accessToken,
+      refreshToken
+    });
+
+  } catch (error) {
+    console.error('Apple Sign In error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Apple Sign In failed: ' + error.message 
+    });
   }
 });
 

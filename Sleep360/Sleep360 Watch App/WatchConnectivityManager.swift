@@ -276,7 +276,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
 // MARK: - WCSessionDelegate
 
 extension WatchConnectivityManager: WCSessionDelegate {
-    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         DispatchQueue.main.async {
             self.isConnected = activationState == .activated
             
@@ -289,13 +289,13 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
     }
     
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
         DispatchQueue.main.async {
             self.handleIncomingMessage(message, replyHandler: replyHandler)
         }
     }
     
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         DispatchQueue.main.async {
             self.handleIncomingMessage(message, replyHandler: nil)
         }

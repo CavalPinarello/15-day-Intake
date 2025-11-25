@@ -165,22 +165,42 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-11-25)
 
+**iOS-Dedicated Convex Database Integration:**
+- **New iOS Backend:** Created dedicated Convex database infrastructure for iOS app
+- **Schema Updates:** Added 7 new iOS-specific tables to `convex/schema.ts`:
+  - `ios_devices` - Device registration for APNs push notifications
+  - `ios_sessions` - Session management with device linking
+  - `apple_sign_in` - Apple Sign-In data storage
+  - `ios_app_events` - App analytics and event tracking
+  - `ios_healthkit_sync` - HealthKit sync status tracking
+  - `ios_notifications` - Push notification history
+  - `ios_watch_sync` - iPhone-Watch sync state
+- **New Convex Functions:** Created `convex/ios.ts` with 19 iOS-specific functions:
+  - Authentication: `signIn`, `signInWithApple`, `register`, `validateSession`, `signOut`, `refreshSession`
+  - User Profile: `getUserProfile`, `updateUserProfile`, `updateUserPreferences`
+  - HealthKit: `syncSleepData`, `syncHeartRateData`, `syncActivityData`, `getRecentSleepData`
+  - Journey: `getDayQuestionnaire`, `submitQuestionnaireResponse`, `completeDay`, `getJourneyProgress`
+  - Device/Analytics: `registerPushToken`, `trackEvent`
+- **iOS Swift Integration:** Created `ConvexService.swift` using official ConvexMobile SDK
+  - Real-time subscriptions via Combine publishers
+  - Keychain-based secure session storage
+  - Type-safe Codable data models
+- **Convex Swift Package:** Installed `convex-swift` v0.6.1+ in Xcode project
+- **Configuration:** Updated `Config.swift` with Convex deployment URL
+- **Deployment URL:** `https://enchanted-terrier-633.convex.cloud`
+- **Key Files:**
+  - `/convex/schema.ts` - Updated with iOS tables
+  - `/convex/ios.ts` - New iOS-specific Convex functions
+  - `/Sleep360/Sleep360/Services/ConvexService.swift` - New Swift service
+  - `/Sleep360/Sleep360/Config.swift` - Updated with Convex config
+
+**Previous Session (2025-11-25 - Earlier):**
 **Platform Focus Clarification Session:**
 - **Clarified Development Priorities:** iOS and watchOS are the PRIMARY user-facing applications
 - **Web App Role Defined:** Web version exists ONLY for debugging questionnaires and development testing
-- **Documentation Updates:**
-  - Updated Platform Architecture to clearly distinguish primary apps from dev tools
-  - Reorganized Development Patterns to emphasize iOS/watchOS focus
-  - Clarified that web is NOT for end users
-- **Key Changes:**
-  - iOS Application marked as PRIMARY user-facing app
-  - Apple Watch described as companion app
-  - Web explicitly labeled as DEV/DEBUG ONLY throughout documentation
-- **Session Goal:** Align documentation with actual platform priorities
 - **Commit Hash:** `776d896` - "Clarify platform focus: iOS/watchOS primary, web for debug only"
-- **Repository:** Successfully pushed to https://github.com/CavalPinarello/15-day-Intake.git
 
-**Previous Session (2025-11-25 - Earlier):**
+**Previous Session (2025-11-25 - Even Earlier):**
 **Xcode watchOS Target Configuration:**
 - **Added watchOS Target:** Successfully configured Apple Watch target in existing Xcode project
   - Created `Sleep360 Watch App` target with proper bundle ID `com.sleep360.app.watchkitapp`

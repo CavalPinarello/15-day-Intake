@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
+import AuthenticationServices
 
 struct AuthenticationView: View {
-    @StateObject private var authManager = AuthenticationManager()
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var email = ""
     @State private var password = ""
     @State private var firstName = ""
@@ -16,48 +17,48 @@ struct AuthenticationView: View {
     @State private var isSignUp = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
                 // App Logo/Title
                 VStack(spacing: 8) {
-                    Text("Sleep 360°")
+                    Text("Zoé Sleep")
                         .font(.largeTitle)
                         .bold()
                         .foregroundColor(.blue)
-                    
+
                     Text("Your comprehensive sleep journey")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                 }
                 .padding(.top, 40)
-                
+
                 Spacer()
-                
+
                 // Authentication Form
                 VStack(spacing: 16) {
                     if isSignUp {
                         // First Name
                         TextField("First Name (Optional)", text: $firstName)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
-                        
+
                         // Last Name
                         TextField("Last Name (Optional)", text: $lastName)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                     }
-                    
+
                     // Email
                     TextField("Email", text: $email)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                    
+
                     // Password
                     SecureField("Password", text: $password)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
+
                     // Sign In/Up Button
                     Button(action: {
                         Task {
@@ -71,7 +72,7 @@ struct AuthenticationView: View {
                             } else {
                                 await authManager.signIn(email: email, password: password)
                             }
-                            
+
                             if let errorMessage = authManager.errorMessage {
                                 self.alertMessage = errorMessage
                                 self.showingAlert = true
@@ -94,7 +95,80 @@ struct AuthenticationView: View {
                         .cornerRadius(10)
                     }
                     .disabled(email.isEmpty || password.isEmpty || authManager.isLoading)
-                    
+
+                    // Divider
+                    HStack {
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(.gray.opacity(0.3))
+                        Text("OR")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .padding(.horizontal, 8)
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(.gray.opacity(0.3))
+                    }
+                    .padding(.vertical, 8)
+
+                    // Social Login Buttons
+                    VStack(spacing: 12) {
+                        // Sign in with Apple
+                        SignInWithAppleButton(
+                            onRequest: { request in
+                                request.requestedScopes = [.fullName, .email]
+                                request.nonce = authManager.generateNonce()
+                            },
+                            onCompletion: { result in
+                                Task {
+                                    await authManager.handleSignInWithApple(result)
+                                    if let errorMessage = authManager.errorMessage {
+                                        self.alertMessage = errorMessage
+                                        self.showingAlert = true
+                                    }
+                                }
+                            }
+                        )
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 50)
+                        .cornerRadius(10)
+                        .disabled(authManager.isLoading)
+
+                        // Sign in with Google
+                        Button(action: {
+                            Task {
+                                await authManager.signInWithGoogle()
+                                if let errorMessage = authManager.errorMessage {
+                                    self.alertMessage = errorMessage
+                                    self.showingAlert = true
+                                }
+                            }
+                        }) {
+                            HStack {
+                                // Google logo placeholder
+                                Circle()
+                                    .fill(LinearGradient(
+                                        gradient: Gradient(colors: [.red, .blue, .green, .yellow]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ))
+                                    .frame(width: 20, height: 20)
+                                Text("Continue with Google")
+                                    .fontWeight(.medium)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                            .cornerRadius(10)
+                        }
+                        .disabled(authManager.isLoading)
+                    }
+
                     // Toggle Sign In/Up
                     Button(action: {
                         isSignUp.toggle()
@@ -109,15 +183,15 @@ struct AuthenticationView: View {
                     }
                 }
                 .padding(.horizontal, 32)
-                
+
                 Spacer()
-                
+
                 // App Info
                 VStack(spacing: 4) {
                     Text("Secure authentication powered by Clerk")
                         .font(.caption2)
                         .foregroundColor(.gray)
-                    
+
                     Text("Your health data is protected and encrypted")
                         .font(.caption2)
                         .foregroundColor(.gray)
@@ -132,20 +206,14 @@ struct AuthenticationView: View {
         } message: {
             Text(alertMessage)
         }
-        .onReceive(authManager.$isAuthenticated) { isAuthenticated in
-            if isAuthenticated {
-                // Authentication successful - this view should be dismissed
-                // In a real app, you'd handle navigation here
-            }
-        }
     }
 }
 
 // MARK: - Main App View
 
 struct MainAppView: View {
-    @StateObject private var authManager = AuthenticationManager()
-    
+    @EnvironmentObject var authManager: AuthenticationManager
+
     var body: some View {
         Group {
             if authManager.isAuthenticated {
@@ -157,9 +225,9 @@ struct MainAppView: View {
                             Image(systemName: "heart.fill")
                             Text("Health Sync")
                         }
-                    
+
                     // Profile Tab
-                    ProfileView(authManager: authManager)
+                    ProfileView()
                         .tabItem {
                             Image(systemName: "person.circle.fill")
                             Text("Profile")
@@ -169,15 +237,14 @@ struct MainAppView: View {
                 AuthenticationView()
             }
         }
-        .environmentObject(authManager)
     }
 }
 
 // MARK: - Profile View
 
 struct ProfileView: View {
-    @ObservedObject var authManager: AuthenticationManager
-    
+    @EnvironmentObject var authManager: AuthenticationManager
+
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -196,12 +263,12 @@ struct ProfileView: View {
                         }
                         .frame(width: 80, height: 80)
                         .clipShape(Circle())
-                        
+
                         // User Name
                         Text("\(user.firstName ?? "") \(user.lastName ?? "")".trimmingCharacters(in: .whitespaces))
                             .font(.title2)
                             .bold()
-                        
+
                         // Email
                         Text(user.email)
                             .font(.subheadline)
@@ -209,9 +276,9 @@ struct ProfileView: View {
                     }
                     .padding()
                 }
-                
+
                 Spacer()
-                
+
                 // Sign Out Button
                 Button(action: {
                     authManager.signOut()
@@ -234,5 +301,6 @@ struct ProfileView: View {
 struct AuthenticationView_Previews: PreviewProvider {
     static var previews: some View {
         AuthenticationView()
+            .environmentObject(AuthenticationManager())
     }
 }

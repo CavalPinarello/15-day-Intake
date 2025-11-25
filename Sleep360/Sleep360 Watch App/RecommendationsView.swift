@@ -33,7 +33,7 @@ struct RecommendationsView: View {
         }
     }
     
-    private var emptyStateView: View {
+    private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "heart.circle")
                 .font(.system(size: 40))
@@ -51,7 +51,7 @@ struct RecommendationsView: View {
         .padding()
     }
     
-    private var recommendationsList: View {
+    private var recommendationsList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(recommendations) { recommendation in
@@ -139,7 +139,7 @@ struct RecommendationCard: View {
             }
         }
         .padding(12)
-        .background(Color(.systemGray6))
+        .background(Color.gray.opacity(0.2))
         .cornerRadius(12)
         .onAppear {
             isCompleted = recommendation.isCompleted

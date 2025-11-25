@@ -35,7 +35,7 @@ struct QuestionnaireView: View {
         }
     }
     
-    private var questionnaireContent: View {
+    private var questionnaireContent: some View {
         VStack(spacing: 12) {
             // Progress indicator
             ProgressView(value: Double(currentQuestionIndex), total: Double(questions.count))
@@ -88,7 +88,7 @@ struct QuestionnaireView: View {
         .padding(.vertical)
     }
     
-    private var completedView: View {
+    private var completedView: some View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 40))
@@ -175,7 +175,7 @@ struct QuestionnaireView: View {
                 get: { responses[question.id] as? String ?? "" },
                 set: { responses[question.id] = $0 }
             ))
-            .textFieldStyle(.roundedBorder)
+            .textFieldStyle(.automatic)
             
         default:
             Text("Question type not supported on Watch")

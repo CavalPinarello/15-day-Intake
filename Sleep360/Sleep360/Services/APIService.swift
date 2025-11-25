@@ -9,46 +9,90 @@ import Foundation
 
 class APIService {
     static let shared = APIService()
-    private let session = URLSession.shared
-    
-    private init() {}
+    private let session: URLSession
+
+    private init() {
+        // Use ephemeral configuration to avoid connection caching issues on iOS Simulator
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 60
+        config.waitsForConnectivity = false
+        // Prevent connection reuse which causes -1005 errors on simulator
+        config.httpMaximumConnectionsPerHost = 1
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.urlCache = nil
+        self.session = URLSession(configuration: config)
+    }
+
+    // Helper to create fresh URLRequest with proper headers
+    private func createRequest(url: URL, method: String = "GET") -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = 30
+        // Force HTTP/1.1 by not using multiplexing
+        request.setValue("close", forHTTPHeaderField: "Connection")
+        return request
+    }
     
     // MARK: - Authentication
-    
+
     func signIn(email: String, password: String) async throws -> [String: Any] {
         let url = URL(string: "\(Config.authEndpoint)/login")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
+        var request = createRequest(url: url, method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         // The server expects 'username' field which can be email or username
         let body = [
             "username": email,
             "password": password
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
+
+        // Retry logic for connection reset errors (-1005)
+        var lastError: Error?
+        for attempt in 1...3 {
+            do {
+                print("Sign in attempt \(attempt) to \(url)")
+                let (data, response) = try await session.data(for: request)
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+
+                print("Sign in response status: \(httpResponse.statusCode)")
+
+                if httpResponse.statusCode != 200 {
+                    // Try to parse error message
+                    if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let errorMessage = errorJson["error"] as? String {
+                        print("Server error: \(errorMessage)")
+                    }
+                    throw APIError.authenticationFailed
+                }
+
+                guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    throw APIError.invalidData
+                }
+
+                return json
+            } catch let error as NSError where error.code == -1005 {
+                // Connection was lost - retry after brief delay
+                print("Connection lost (attempt \(attempt)), retrying...")
+                lastError = error
+                try await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
+                continue
+            } catch {
+                throw error
+            }
         }
-        
-        if httpResponse.statusCode != 200 {
-            throw APIError.authenticationFailed
-        }
-        
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw APIError.invalidData
-        }
-        
-        return json
+
+        throw lastError ?? APIError.networkError(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed after 3 retries"]))
     }
     
     func signUp(email: String, password: String, firstName: String?, lastName: String?) async throws -> [String: Any] {
         let url = URL(string: "\(Config.authEndpoint)/register")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
+        var request = createRequest(url: url, method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         var body: [String: Any] = [
@@ -84,8 +128,7 @@ class APIService {
     
     func validateToken(_ token: String) async throws -> [String: Any] {
         let url = URL(string: "\(Config.authEndpoint)/validate")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        var request = createRequest(url: url, method: "GET")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
         let (data, response) = try await session.data(for: request)
@@ -105,12 +148,55 @@ class APIService {
         return json
     }
     
+    func signInWithApple(idToken: String, nonce: String, firstName: String?, lastName: String?, email: String?, userIdentifier: String) async throws -> [String: Any] {
+        let url = URL(string: "\(Config.authEndpoint)/apple")!
+        var request = createRequest(url: url, method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "idToken": idToken,
+            "nonce": nonce,
+            "firstName": firstName ?? "",
+            "lastName": lastName ?? "",
+            "email": email ?? "",
+            "userIdentifier": userIdentifier
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        if httpResponse.statusCode != 200 {
+            throw APIError.authenticationFailed
+        }
+        
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw APIError.invalidData
+        }
+        
+        return json
+    }
+    
+    func signInWithApple() async throws -> [String: Any] {
+        // Placeholder for basic Apple authentication flow
+        // In a real implementation, this would be called from a native Apple Sign In button
+        throw APIError.authenticationFailed
+    }
+
+    func signInWithGoogle() async throws -> [String: Any] {
+        // In a real implementation, this would handle Google authentication
+        // For now, return a simulated response
+        throw APIError.authenticationFailed
+    }
+    
     // MARK: - HealthKit Data Sync
     
     func syncHealthData(_ healthData: [String: Any], token: String) async throws -> [String: Any] {
         let url = URL(string: Config.healthKitSyncEndpoint)!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
+        var request = createRequest(url: url, method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
@@ -137,8 +223,7 @@ class APIService {
     
     func getUserProfile(token: String) async throws -> [String: Any] {
         let url = URL(string: Config.userProfileEndpoint)!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        var request = createRequest(url: url, method: "GET")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
         let (data, response) = try await session.data(for: request)

@@ -225,7 +225,7 @@ class HealthKitWatchManager: ObservableObject {
                 
                 let heartRateReadings = heartRateSamples.map { sample in
                     HeartRateReading(
-                        value: sample.quantity.doubleValue(for: HKUnit.beatsPerMinute()),
+                        value: sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute())),
                         timestamp: sample.startDate
                     )
                 }

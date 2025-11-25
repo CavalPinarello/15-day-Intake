@@ -24,7 +24,5 @@
 	<string>Sleep 360° would like to save your sleep and activity data to track your progress and share with your physician.</string>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.sleep360.app</string>
-	<key>WKWatchOnly</key>
-	<true/>
 </dict>
 </plist>

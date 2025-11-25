@@ -203,7 +203,8 @@ struct SleepDiaryView: View {
 }
 
 #Preview {
+    let authManager = AuthenticationManager()
     ContentView()
-        .environmentObject(AuthenticationManager())
-        .environmentObject(HealthKitManager())
+        .environmentObject(authManager)
+        .environmentObject(HealthKitManager(authManager: authManager))
 }

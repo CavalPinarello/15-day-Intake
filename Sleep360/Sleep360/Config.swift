@@ -8,26 +8,58 @@
 import Foundation
 
 struct Config {
-    // Clerk Configuration
+    // ============================================
+    // Backend Mode Configuration
+    // ============================================
+    // Set to true to use Convex directly (recommended)
+    // Set to false to use the legacy REST API server
+    static let useConvex = true
+
+    // ============================================
+    // Convex Configuration (Primary Backend)
+    // ============================================
+    // Get your deployment URL from: https://dashboard.convex.dev
+    // Or run: cat .env.local | grep CONVEX_URL
+    static let convexDeploymentURL = "https://enchanted-terrier-633.convex.cloud"
+
+    // ============================================
+    // Clerk Configuration (Authentication)
+    // ============================================
     static let clerkPublishableKey = "pk_test_a25vd2luZy1pbnNlY3QtMTAuY2xlcmsuYWNjb3VudHMuZGV2JA"
-    
-    // API Base URLs
-    static let apiBaseURL = "http://localhost:3001" // Server URL
-    static let webAppURL = "http://localhost:3000"  // Next.js client URL
-    
-    // HealthKit API Endpoints
+
+    // ============================================
+    // Legacy REST API Configuration
+    // ============================================
+    // Note: iOS Simulator uses 127.0.0.1 to reach Mac's localhost
+    // Physical devices need the Mac's actual IP address on the local network
+    #if targetEnvironment(simulator)
+    static let apiBaseURL = "http://127.0.0.1:3001" // Simulator uses 127.0.0.1
+    static let webAppURL = "http://127.0.0.1:3000"
+    #else
+    static let apiBaseURL = "http://10.0.0.136:3001" // Mac's local IP for physical device
+    static let webAppURL = "http://10.0.0.136:3000"
+    #endif
+
+    // Legacy HealthKit API Endpoints (when useConvex = false)
     static let healthKitSyncEndpoint = "\(apiBaseURL)/api/health/sync"
     static let sleepDataEndpoint = "\(apiBaseURL)/api/health/sleep"
     static let activityDataEndpoint = "\(apiBaseURL)/api/health/activity"
-    
-    // Authentication Endpoints  
+
+    // Legacy Authentication Endpoints (when useConvex = false)
     static let authEndpoint = "\(apiBaseURL)/api/auth"
     static let userProfileEndpoint = "\(apiBaseURL)/api/users/profile"
-    
+
+    // ============================================
     // App Configuration
+    // ============================================
     static let appName = "Sleep 360°"
     static let appVersion = "1.0.0"
-    
+    static let appBundleId = "com.sleep360.app"
+
+    // Journey Configuration
+    static let totalJourneyDays = 15
+    static let sessionExpirationDays = 30
+
     #if DEBUG
     static let isDebugMode = true
     #else

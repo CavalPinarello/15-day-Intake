@@ -28,6 +28,23 @@ client/.vercel
 .DS_Store
 Thumbs.db
 
+# Xcode
+Sleep360/build/
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# SQLite databases (local development)
+server/*.db
+server/zoe_sleep.db
+server/database.db
+
 # Logs
 *.log
 npm-debug.log*

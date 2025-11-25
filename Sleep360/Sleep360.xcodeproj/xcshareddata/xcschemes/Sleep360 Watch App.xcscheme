@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1500"
+   LastUpgradeVersion = "2610"
    version = "1.8">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -15,7 +15,7 @@
             buildForCleaning = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "A36975D0A85A4C59BFC79C6D"
+               BlueprintIdentifier = "4A5E3BA42C8E123456789A15"
                BuildableName = "Sleep360 Watch App.app"
                BlueprintName = "Sleep360 Watch App"
                ReferencedContainer = "container:Sleep360.xcodeproj">
@@ -45,7 +45,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "A36975D0A85A4C59BFC79C6D"
+            BlueprintIdentifier = "4A5E3BA42C8E123456789A15"
             BuildableName = "Sleep360 Watch App.app"
             BlueprintName = "Sleep360 Watch App"
             ReferencedContainer = "container:Sleep360.xcodeproj">
@@ -62,7 +62,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "A36975D0A85A4C59BFC79C6D"
+            BlueprintIdentifier = "4A5E3BA42C8E123456789A15"
             BuildableName = "Sleep360 Watch App.app"
             BlueprintName = "Sleep360 Watch App"
             ReferencedContainer = "container:Sleep360.xcodeproj">

@@ -618,5 +618,119 @@ export default defineSchema({
     updated_by_physician_id: v.optional(v.string()),
   })
     .index("by_user", ["user_id"]),
+
+  // ============================================
+  // iOS App Tables
+  // ============================================
+
+  // iOS Device Registration (for push notifications)
+  ios_devices: defineTable({
+    user_id: v.id("users"),
+    device_token: v.string(), // APNs device token
+    device_id: v.string(), // Unique device identifier
+    device_name: v.optional(v.string()), // e.g., "Martin's iPhone"
+    device_model: v.optional(v.string()), // e.g., "iPhone 15 Pro"
+    os_version: v.optional(v.string()), // e.g., "17.1"
+    app_version: v.optional(v.string()), // e.g., "1.0.0"
+    push_enabled: v.boolean(),
+    last_active_at: v.number(),
+    created_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_device_token", ["device_token"])
+    .index("by_device_id", ["device_id"]),
+
+  // iOS Sessions (for session management)
+  ios_sessions: defineTable({
+    user_id: v.id("users"),
+    session_token: v.string(), // JWT or session identifier
+    device_id: v.string(), // Links to ios_devices
+    expires_at: v.number(),
+    created_at: v.number(),
+    last_refreshed_at: v.number(),
+    is_active: v.boolean(),
+    ip_address: v.optional(v.string()),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_session_token", ["session_token"])
+    .index("by_device", ["device_id"])
+    .index("by_user_active", ["user_id", "is_active"]),
+
+  // Apple Sign-In Data
+  apple_sign_in: defineTable({
+    user_id: v.id("users"),
+    apple_user_id: v.string(), // Apple's unique user identifier
+    email: v.optional(v.string()), // Only provided on first sign-in
+    full_name: v.optional(v.string()), // Only provided on first sign-in
+    identity_token_hash: v.optional(v.string()), // Hash of last identity token
+    authorization_code_hash: v.optional(v.string()), // Hash of auth code
+    real_user_status: v.optional(v.string()), // "likelyReal", "unknown", "unsupported"
+    created_at: v.number(),
+    last_sign_in_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_apple_user_id", ["apple_user_id"]),
+
+  // iOS App Analytics/Events
+  ios_app_events: defineTable({
+    user_id: v.optional(v.id("users")), // Optional for pre-auth events
+    device_id: v.string(),
+    event_type: v.string(), // "app_open", "screen_view", "questionnaire_start", etc.
+    event_data: v.optional(v.string()), // JSON string with event-specific data
+    screen_name: v.optional(v.string()),
+    session_id: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_device", ["device_id"])
+    .index("by_event_type", ["event_type"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // iOS HealthKit Sync Status
+  ios_healthkit_sync: defineTable({
+    user_id: v.id("users"),
+    device_id: v.string(),
+    last_sync_at: v.number(),
+    sync_status: v.string(), // "success", "partial", "failed", "pending"
+    data_types_synced: v.string(), // JSON array of synced HK types
+    records_synced: v.number(), // Count of records synced
+    error_message: v.optional(v.string()),
+    next_sync_scheduled: v.optional(v.number()),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_device", ["device_id"])
+    .index("by_user_device", ["user_id", "device_id"]),
+
+  // iOS Notification History
+  ios_notifications: defineTable({
+    user_id: v.id("users"),
+    device_id: v.optional(v.string()),
+    notification_type: v.string(), // "reminder", "questionnaire", "insight", "message"
+    title: v.string(),
+    body: v.string(),
+    data_json: v.optional(v.string()), // Additional payload data
+    sent_at: v.number(),
+    delivered_at: v.optional(v.number()),
+    opened_at: v.optional(v.number()),
+    status: v.string(), // "pending", "sent", "delivered", "opened", "failed"
+  })
+    .index("by_user", ["user_id"])
+    .index("by_device", ["device_id"])
+    .index("by_status", ["status"])
+    .index("by_sent_at", ["sent_at"]),
+
+  // iOS Watch Sync State (for watchOS companion app)
+  ios_watch_sync: defineTable({
+    user_id: v.id("users"),
+    watch_device_id: v.string(),
+    phone_device_id: v.string(),
+    last_sync_at: v.number(),
+    questionnaire_progress_json: v.optional(v.string()), // Synced questionnaire state
+    health_data_synced: v.boolean(),
+    recommendations_synced: v.boolean(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_watch", ["watch_device_id"])
+    .index("by_phone", ["phone_device_id"]),
 });
 

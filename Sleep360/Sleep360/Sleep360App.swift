@@ -2,16 +2,23 @@ import SwiftUI
 
 @main
 struct Sleep360App: App {
-    @StateObject private var authManager = AuthenticationManager()
-    @StateObject private var healthKitManager = HealthKitManager()
-    
+    @StateObject private var authManager: AuthenticationManager
+    @StateObject private var healthKitManager: HealthKitManager
+
+    init() {
+        // Create authManager first, then pass it to healthKitManager
+        let auth = AuthenticationManager()
+        _authManager = StateObject(wrappedValue: auth)
+        _healthKitManager = StateObject(wrappedValue: HealthKitManager(authManager: auth))
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(authManager)
                 .environmentObject(healthKitManager)
                 .onAppear {
-                    // Request HealthKit authorization on app launch
+                    // Request HealthKit authorization when authenticated
                     if authManager.isAuthenticated {
                         healthKitManager.requestAuthorization { success, error in
                             if let error = error {

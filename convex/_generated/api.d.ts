@@ -13,6 +13,7 @@ import type * as assessmentMutations from "../assessmentMutations.js";
 import type * as assessmentQueries from "../assessmentQueries.js";
 import type * as auth from "../auth.js";
 import type * as days from "../days.js";
+import type * as ios from "../ios.js";
 import type * as llm from "../llm.js";
 import type * as physician from "../physician.js";
 import type * as questions from "../questions.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   assessmentQueries: typeof assessmentQueries;
   auth: typeof auth;
   days: typeof days;
+  ios: typeof ios;
   llm: typeof llm;
   physician: typeof physician;
   questions: typeof questions;

@@ -9,19 +9,12 @@ import SwiftUI
 import HealthKit
 
 struct HealthKitIntegrationView: View {
-    @StateObject private var authManager = AuthenticationManager()
-    @StateObject private var healthKitManager: HealthKitManager
+    @EnvironmentObject var authManager: AuthenticationManager
+    @EnvironmentObject var healthKitManager: HealthKitManager
     @State private var isAuthorized = false
     @State private var isSyncing = false
     @State private var syncStatus: String = ""
     @State private var lastSyncDate: Date?
-    
-    init() {
-        let authManager = AuthenticationManager()
-        let healthManager = HealthKitManager(authManager: authManager)
-        self._authManager = StateObject(wrappedValue: authManager)
-        self._healthKitManager = StateObject(wrappedValue: healthManager)
-    }
     
     var body: some View {
         VStack(spacing: 20) {
@@ -219,7 +212,10 @@ struct HealthKitIntegrationView: View {
 
 struct HealthKitIntegrationView_Previews: PreviewProvider {
     static var previews: some View {
+        let authManager = AuthenticationManager()
         HealthKitIntegrationView()
+            .environmentObject(authManager)
+            .environmentObject(HealthKitManager(authManager: authManager))
     }
 }
 
