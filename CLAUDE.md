@@ -192,7 +192,7 @@ For detailed architecture, setup instructions, and API documentation, see README
   - `/Sleep360/Sleep360/Views/HealthKitIntegrationView.swift` - EnvironmentObject usage
   - `/Sleep360/Sleep360/Sleep360App.swift` - AuthManager injection
   - `/Sleep360/Sleep360/ContentView.swift` - Preview updates
-- **Commit Hash:** `6ea312b` - Changes included in iOS-dedicated Convex integration commit
+- **Commit Hash:** `800b71a` - "Document iOS authentication and networking fixes in CLAUDE.md"
 - **Repository:** https://github.com/CavalPinarello/15-day-Intake.git
 
 **Previous Session (2025-11-25):**
