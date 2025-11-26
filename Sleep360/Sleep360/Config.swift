@@ -26,6 +26,11 @@ struct Config {
     // Clerk Configuration (Authentication)
     // ============================================
     static let clerkPublishableKey = "pk_test_a25vd2luZy1pbnNlY3QtMTAuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    static let clerkDomain = "knowing-insect-10.clerk.accounts.dev"
+    // Sign-in URL uses your web app (which has Clerk integrated)
+    // For production, replace with your deployed web app URL
+    static let clerkSignInURL = "\(webAppURL)/sign-in"
+    static let clerkSignUpURL = "\(webAppURL)/sign-up"
 
     // ============================================
     // Legacy REST API Configuration

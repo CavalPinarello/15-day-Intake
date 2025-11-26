@@ -359,8 +359,8 @@ struct HealthKitSleepSummary: Codable {
 // MARK: - Journey Progress
 
 struct JourneyProgressData: Codable {
-    let currentDay: Int
-    let completedDays: [Int]
+    var currentDay: Int
+    var completedDays: [Int]
     let totalDays: Int
     let startedAt: Date
     var gatewayStates: [GatewayState]

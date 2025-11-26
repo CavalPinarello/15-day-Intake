@@ -12,8 +12,7 @@ struct AuthenticationView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @State private var email = ""
     @State private var password = ""
-    @State private var firstName = ""
-    @State private var lastName = ""
+    @State private var username = ""
     @State private var isSignUp = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -38,22 +37,20 @@ struct AuthenticationView: View {
 
                 // Authentication Form
                 VStack(spacing: 16) {
-                    if isSignUp {
-                        // First Name
-                        TextField("First Name (Optional)", text: $firstName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-
-                        // Last Name
-                        TextField("Last Name (Optional)", text: $lastName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-
-                    // Email
-                    TextField("Email", text: $email)
+                    // Username/Email field
+                    TextField(isSignUp ? "Username" : "Username or Email", text: $email)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+
+                    if isSignUp {
+                        // Email for sign up
+                        TextField("Email", text: $username)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                    }
 
                     // Password
                     SecureField("Password", text: $password)
@@ -64,10 +61,9 @@ struct AuthenticationView: View {
                         Task {
                             if isSignUp {
                                 await authManager.signUp(
-                                    email: email,
+                                    email: username,
                                     password: password,
-                                    firstName: firstName.isEmpty ? nil : firstName,
-                                    lastName: lastName.isEmpty ? nil : lastName
+                                    username: email
                                 )
                             } else {
                                 await authManager.signIn(email: email, password: password)
@@ -134,47 +130,13 @@ struct AuthenticationView: View {
                         .cornerRadius(10)
                         .disabled(authManager.isLoading)
 
-                        // Sign in with Google
-                        Button(action: {
-                            Task {
-                                await authManager.signInWithGoogle()
-                                if let errorMessage = authManager.errorMessage {
-                                    self.alertMessage = errorMessage
-                                    self.showingAlert = true
-                                }
-                            }
-                        }) {
-                            HStack {
-                                // Google logo placeholder
-                                Circle()
-                                    .fill(LinearGradient(
-                                        gradient: Gradient(colors: [.red, .blue, .green, .yellow]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ))
-                                    .frame(width: 20, height: 20)
-                                Text("Continue with Google")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.white)
-                            .foregroundColor(.black)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                            )
-                            .cornerRadius(10)
-                        }
-                        .disabled(authManager.isLoading)
                     }
 
                     // Toggle Sign In/Up
                     Button(action: {
                         isSignUp.toggle()
                         // Clear fields when switching
-                        firstName = ""
-                        lastName = ""
+                        username = ""
                         authManager.errorMessage = nil
                     }) {
                         Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
@@ -251,28 +213,28 @@ struct ProfileView: View {
                 // User Info
                 if let user = authManager.user {
                     VStack(spacing: 8) {
-                        // Profile Image
-                        AsyncImage(url: URL(string: user.profileImageUrl ?? "")) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.gray)
-                        }
-                        .frame(width: 80, height: 80)
-                        .clipShape(Circle())
+                        // Profile Image placeholder
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.blue)
+                            .frame(width: 80, height: 80)
 
-                        // User Name
-                        Text("\(user.firstName ?? "") \(user.lastName ?? "")".trimmingCharacters(in: .whitespaces))
+                        // Username
+                        Text(user.username)
                             .font(.title2)
                             .bold()
 
                         // Email
-                        Text(user.email)
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
+                        if let email = user.email {
+                            Text(email)
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+
+                        // Current Day
+                        Text("Day \(user.currentDay) of 15")
+                            .font(.caption)
+                            .foregroundColor(.blue)
                     }
                     .padding()
                 }
@@ -304,3 +266,4 @@ struct AuthenticationView_Previews: PreviewProvider {
             .environmentObject(AuthenticationManager())
     }
 }
+

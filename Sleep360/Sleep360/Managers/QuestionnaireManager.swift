@@ -116,8 +116,8 @@ class QuestionnaireManager: ObservableObject {
             Question(id: "D1", text: "What is your full name?", pillar: .social, questionType: .text),
             Question(id: "D2", text: "What is your date of birth?", pillar: .social, questionType: .date),
             Question(id: "D4", text: "What is your sex assigned at birth?", pillar: .metabolic, questionType: .singleSelect, options: ["Male", "Female", "Other"]),
-            Question(id: "D5", text: "What is your height?", pillar: .metabolic, questionType: .number, unit: "cm", minValue: 100, maxValue: 250),
-            Question(id: "D6", text: "What is your weight?", pillar: .metabolic, questionType: .number, unit: "kg", minValue: 30, maxValue: 300),
+            Question(id: "D5", text: "What is your height?", pillar: .metabolic, questionType: .number, minValue: 100, maxValue: 250, unit: "cm"),
+            Question(id: "D6", text: "What is your weight?", pillar: .metabolic, questionType: .number, minValue: 30, maxValue: 300, unit: "kg"),
 
             // Sleep Quality Core (Gateway Questions)
             Question(
@@ -153,6 +153,7 @@ class QuestionnaireManager: ObservableObject {
                 minValue: 0,
                 maxValue: 180,
                 unit: "minutes",
+                helpText: nil,
                 isGateway: true,
                 gatewayType: .insomnia,
                 gatewayThreshold: 30
@@ -208,7 +209,7 @@ class QuestionnaireManager: ObservableObject {
         // DAY 3: Sleep Timing + Mental Health Gateways
         3: [
             Question(id: "11", text: "How often do you get morning sunlight exposure within 1 hour of waking?", pillar: .sleepTiming, questionType: .singleSelect, options: ["Never", "Rarely", "Sometimes", "Often", "Daily"]),
-            Question(id: "12", text: "How many hours per day do you spend looking at screens for work?", pillar: .social, questionType: .number, minValue: 0, maxValue: 18, unit: "hours"),
+            Question(id: "12", text: "How many hours per day do you spend looking at screens for work?", pillar: .social, questionType: .number, minValue: 0, maxValue: 18, step: nil, unit: "hours"),
             Question(id: "13", text: "How often do you use electronic devices within 1 hour of bedtime?", pillar: .sleepTiming, questionType: .singleSelect, options: ["Never", "Rarely", "Sometimes", "Often", "Always"]),
             Question(id: "14", text: "On a scale of 1-10, how would you rate your current stress level?", pillar: .mentalHealth, questionType: .scale, scaleMin: 1, scaleMax: 10, scaleMinLabel: "No stress", scaleMaxLabel: "Extremely stressed"),
             Question(
@@ -301,8 +302,8 @@ class QuestionnaireManager: ObservableObject {
         // DAY 5: Nutritional Core + Social Factors
         5: [
             Question(id: "29", text: "Do you consume caffeine (coffee, tea, energy drinks)?", pillar: .nutritional, questionType: .singleSelect, options: ["Never", "Rarely", "Sometimes", "Often", "Daily"]),
-            Question(id: "30", text: "If you consume caffeine, how many cups/servings per day?", pillar: .nutritional, questionType: .number, minValue: 0, maxValue: 20, required: false, conditionalLogic: ConditionalLogic(questionId: "29", equals: "Never")),
-            Question(id: "31", text: "What time is your last caffeine intake typically?", pillar: .nutritional, questionType: .time, required: false),
+            Question(id: "30", text: "If you consume caffeine, how many cups/servings per day?", pillar: .nutritional, questionType: .number, required: false, minValue: 0, maxValue: 20, conditionalLogic: ConditionalLogic(questionId: "29", equals: "Never")),
+            Question(id: "31", text: "What time is your last caffeine intake typically?", pillar: .nutritional, questionType: .time, required: false, helpText: nil),
             Question(id: "32", text: "How often do you consume alcohol?", pillar: .nutritional, questionType: .singleSelect, options: ["Never", "Less than monthly", "Monthly", "Weekly", "Daily"]),
             Question(id: "33", text: "If you drink alcohol, when is it typically in relation to bedtime?", pillar: .nutritional, questionType: .singleSelect, options: ["More than 4 hours before bed", "2-4 hours before bed", "Within 2 hours of bed", "I don't drink alcohol"]),
             Question(
@@ -316,7 +317,7 @@ class QuestionnaireManager: ObservableObject {
                 gatewayThreshold: 2
             ),
             Question(id: "35", text: "Do you share your bedroom with a partner?", pillar: .social, questionType: .yesNo),
-            Question(id: "36", text: "If yes, do they snore or disturb your sleep?", pillar: .social, questionType: .yesNo, required: false, conditionalLogic: ConditionalLogic(questionId: "35", equals: "Yes")),
+            Question(id: "36", text: "If yes, do they snore or disturb your sleep?", pillar: .social, questionType: .yesNo, required: false, helpText: nil, conditionalLogic: ConditionalLogic(questionId: "35", equals: "Yes")),
             Question(id: "37", text: "Do you have young children or infants at home?", pillar: .social, questionType: .yesNo),
             Question(id: "53E", text: "On a scale of 1-10, how would you rate your current work-related stress?", pillar: .social, questionType: .scale, scaleMin: 1, scaleMax: 10, scaleMinLabel: "No stress", scaleMaxLabel: "Extreme stress")
         ]

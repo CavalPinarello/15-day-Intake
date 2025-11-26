@@ -139,8 +139,8 @@ class HealthKitManager: ObservableObject {
         healthStore.execute(query)
     }
     
-    private func processSleepSamples(_ samples: [HKCategorySample]) -> [[String: Any]] {
-        var sleepStages: [[String: Any]] = []
+    private nonisolated func processSleepSamples(_ samples: [HKCategorySample]) -> [[String: Any]] {
+        var processedStages: [[String: Any]] = []
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         
@@ -168,7 +168,7 @@ class HealthKitManager: ObservableObject {
             
             let duration = Int(sample.endDate.timeIntervalSince(sample.startDate) / 60) // minutes
             
-            sleepStages.append([
+            processedStages.append([
                 "date": String(dateKey),
                 "start_time": dateFormatter.string(from: sample.startDate),
                 "end_time": dateFormatter.string(from: sample.endDate),
@@ -178,7 +178,7 @@ class HealthKitManager: ObservableObject {
         }
         
         // Group by date and calculate totals
-        let grouped = Dictionary(grouping: sleepStages) { $0["date"] as! String }
+        let grouped = Dictionary(grouping: processedStages) { $0["date"] as! String }
         var sleepData: [[String: Any]] = []
         
         for (date, stages) in grouped {
@@ -276,7 +276,7 @@ class HealthKitManager: ObservableObject {
         healthStore.execute(query)
     }
     
-    private func processHeartRateSamples(_ samples: [HKQuantitySample]) -> [[String: Any]] {
+    private nonisolated func processHeartRateSamples(_ samples: [HKQuantitySample]) -> [[String: Any]] {
         var heartRateData: [String: [Double]] = [:]
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -355,7 +355,7 @@ class HealthKitManager: ObservableObject {
         healthStore.execute(query)
     }
     
-    private func processHRVSamples(_ samples: [HKQuantitySample]) -> [[String: Any]] {
+    private nonisolated func processHRVSamples(_ samples: [HKQuantitySample]) -> [[String: Any]] {
         var hrvData: [String: [Double]] = [:]
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -534,7 +534,7 @@ class HealthKitManager: ObservableObject {
     
     func syncAllHealthData(completion: @escaping (Result<[String: Any], Error>) -> Void) {
         Task { @MainActor in
-            guard let authManager = authManager, let token = await authManager.getAuthToken() else {
+            guard let authManager = authManager, let token = authManager.getAuthToken() else {
             completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated. Please sign in first."])))
             return
         }

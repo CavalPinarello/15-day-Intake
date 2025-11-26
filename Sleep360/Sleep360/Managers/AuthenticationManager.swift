@@ -2,13 +2,14 @@
 //  AuthenticationManager.swift
 //  Sleep 360 Platform
 //
-//  Authentication manager for server-based authentication
+//  Authentication manager using Convex backend directly
 //
 
 import Foundation
 import Combine
 import AuthenticationServices
 import CryptoKit
+import UIKit
 
 @MainActor
 class AuthenticationManager: ObservableObject {
@@ -17,15 +18,15 @@ class AuthenticationManager: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    private let apiService = APIService.shared
+    private let convexService = ConvexService.shared
     private var currentNonce: String?
 
     struct User {
         let id: String
-        let email: String
-        let firstName: String?
-        let lastName: String?
-        let profileImageUrl: String?
+        let username: String
+        let email: String?
+        let currentDay: Int
+        let role: String?
     }
 
     init() {
@@ -33,9 +34,39 @@ class AuthenticationManager: ObservableObject {
     }
 
     func checkAuthenticationStatus() {
-        // Check if user has valid session token stored locally
-        if let token = getStoredToken(), !token.isEmpty {
-            validateToken(token)
+        // Check if user has valid session stored in Convex service
+        if let session = convexService.loadSavedSession() {
+            // Validate the session with Convex
+            Task {
+                await validateStoredSession()
+            }
+        }
+    }
+
+    private func validateStoredSession() async {
+        do {
+            let response = try await convexService.validateSession()
+            if response.valid, let user = response.user, let userId = response.userId {
+                self.user = User(
+                    id: userId,
+                    username: user.username,
+                    email: user.email,
+                    currentDay: user.currentDayInt,
+                    role: user.role
+                )
+                self.isAuthenticated = true
+                print("✅ Session restored for user: \(user.username)")
+            } else {
+                // Session invalid, clear it
+                convexService.clearSession()
+                self.isAuthenticated = false
+                self.user = nil
+            }
+        } catch {
+            print("Session validation failed: \(error)")
+            convexService.clearSession()
+            self.isAuthenticated = false
+            self.user = nil
         }
     }
 
@@ -46,41 +77,44 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
 
         do {
-            print("Attempting to sign in with email/username: \(email)")
-            let result = try await apiService.signIn(email: email, password: password)
-            print("Sign in response: \(result)")
+            print("Attempting to sign in with: \(email)")
 
-            // Handle the actual server response format
-            // Server returns success as Int (1) or Bool (true)
-            let isSuccess = (result["success"] as? Bool == true) || (result["success"] as? Int == 1)
-            if isSuccess,
-               let token = result["accessToken"] as? String,
-               let userData = result["user"] as? [String: Any] {
+            // Hash the password (simple hash for demo - in production use proper hashing)
+            let passwordHash = hashPassword(password)
+            let deviceId = getDeviceId()
 
-                // Store token securely
-                storeToken(token)
+            let response = try await convexService.signIn(
+                identifier: email,
+                passwordHash: passwordHash,
+                deviceId: deviceId,
+                deviceInfo: DeviceInfo.current
+            )
 
-                // Update user data - handle both id formats (Int or String)
-                let userId: String
-                if let intId = userData["id"] as? Int {
-                    userId = String(intId)
+            // Update user state
+            self.user = User(
+                id: response.userId,
+                username: response.user.username,
+                email: response.user.email,
+                currentDay: response.user.currentDayInt,
+                role: response.user.role
+            )
+
+            self.isAuthenticated = true
+            print("✅ Sign in successful for user: \(response.user.username)")
+
+        } catch let error as ConvexError {
+            print("Sign in error: \(error)")
+            switch error {
+            case .serverError(let message):
+                self.errorMessage = message
+            case .httpError(let code):
+                if code == 401 {
+                    self.errorMessage = "Invalid credentials. Please try again."
                 } else {
-                    userId = userData["id"] as? String ?? ""
+                    self.errorMessage = "Server error (\(code)). Please try again."
                 }
-
-                self.user = User(
-                    id: userId,
-                    email: userData["email"] as? String ?? email,
-                    firstName: userData["firstName"] as? String,
-                    lastName: userData["lastName"] as? String,
-                    profileImageUrl: userData["profileImageUrl"] as? String
-                )
-
-                self.isAuthenticated = true
-                print("✅ Sign in successful for user: \(userId)")
-            } else {
-                print("Sign in failed - unexpected response format or success=false")
-                self.errorMessage = "Invalid credentials. Please try again."
+            default:
+                self.errorMessage = "Could not connect to the server. Please check your connection."
             }
         } catch {
             print("Sign in error: \(error)")
@@ -92,46 +126,45 @@ class AuthenticationManager: ObservableObject {
 
     // MARK: - Email/Password Sign Up
 
-    func signUp(email: String, password: String, firstName: String?, lastName: String?) async {
+    func signUp(email: String, password: String, username: String) async {
         isLoading = true
         errorMessage = nil
 
         do {
-            let result = try await apiService.signUp(
+            let passwordHash = hashPassword(password)
+            let deviceId = getDeviceId()
+
+            let response = try await convexService.register(
                 email: email,
-                password: password,
-                firstName: firstName,
-                lastName: lastName
+                username: username,
+                passwordHash: passwordHash,
+                deviceId: deviceId,
+                deviceInfo: DeviceInfo.current
             )
 
-            if let token = result["accessToken"] as? String ?? result["token"] as? String,
-               let userData = result["user"] as? [String: Any] {
+            // Update user state
+            self.user = User(
+                id: response.userId,
+                username: response.user.username,
+                email: response.user.email,
+                currentDay: response.user.currentDayInt,
+                role: response.user.role
+            )
 
-                // Store token securely
-                storeToken(token)
+            self.isAuthenticated = true
+            print("✅ Registration successful for user: \(response.user.username)")
 
-                // Update user data
-                let userId: String
-                if let intId = userData["id"] as? Int {
-                    userId = String(intId)
-                } else {
-                    userId = userData["id"] as? String ?? ""
-                }
-
-                self.user = User(
-                    id: userId,
-                    email: userData["email"] as? String ?? "",
-                    firstName: userData["firstName"] as? String,
-                    lastName: userData["lastName"] as? String,
-                    profileImageUrl: userData["profileImageUrl"] as? String
-                )
-
-                self.isAuthenticated = true
-            } else {
-                self.errorMessage = result["message"] as? String ?? "Registration failed. Please try again."
+        } catch let error as ConvexError {
+            print("Sign up error: \(error)")
+            switch error {
+            case .serverError(let message):
+                self.errorMessage = message
+            default:
+                self.errorMessage = "Registration failed. Please try again."
             }
         } catch {
-            self.errorMessage = error.localizedDescription
+            print("Sign up error: \(error)")
+            self.errorMessage = "Could not connect to the server. Please try again."
         }
 
         isLoading = false
@@ -145,14 +178,13 @@ class AuthenticationManager: ObservableObject {
         return nonce
     }
 
-    func signInWithApple() async {
-        isLoading = true
-        errorMessage = nil
-
-        // Note: Apple Sign In requires ASAuthorizationController which needs to be triggered from UI
-        // This is a placeholder - the actual flow uses handleSignInWithApple
-        self.errorMessage = "Please use the Apple Sign In button to authenticate."
-        isLoading = false
+    func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        let hashString = hashedData.compactMap {
+            String(format: "%02x", $0)
+        }.joined()
+        return hashString
     }
 
     func handleSignInWithApple(_ result: Result<ASAuthorization, Error>) async {
@@ -183,50 +215,44 @@ class AuthenticationManager: ObservableObject {
                 // Extract user information
                 let firstName = appleIDCredential.fullName?.givenName
                 let lastName = appleIDCredential.fullName?.familyName
+                let fullName = [firstName, lastName].compactMap { $0 }.joined(separator: " ")
                 let email = appleIDCredential.email
                 let userIdentifier = appleIDCredential.user
 
                 do {
-                    // Send the Apple ID token to your backend
-                    let result = try await apiService.signInWithApple(
-                        idToken: idTokenString,
-                        nonce: nonce,
-                        firstName: firstName,
-                        lastName: lastName,
+                    let deviceId = getDeviceId()
+
+                    let response = try await convexService.signInWithApple(
+                        appleUserId: userIdentifier,
+                        identityToken: idTokenString,
                         email: email,
-                        userIdentifier: userIdentifier
+                        fullName: fullName.isEmpty ? nil : fullName,
+                        deviceId: deviceId,
+                        deviceInfo: DeviceInfo.current
                     )
 
-                    let isSuccess = (result["success"] as? Bool == true) || (result["success"] as? Int == 1)
-                    if isSuccess,
-                       let token = result["accessToken"] as? String,
-                       let userData = result["user"] as? [String: Any] {
+                    // Update user state
+                    self.user = User(
+                        id: response.userId,
+                        username: response.user.username,
+                        email: response.user.email,
+                        currentDay: response.user.currentDayInt,
+                        role: response.user.role
+                    )
 
-                        // Store token securely
-                        storeToken(token)
+                    self.isAuthenticated = true
 
-                        // Update user data
-                        let userId: String
-                        if let intId = userData["id"] as? Int {
-                            userId = String(intId)
-                        } else {
-                            userId = userData["id"] as? String ?? ""
-                        }
-
-                        self.user = User(
-                            id: userId,
-                            email: userData["email"] as? String ?? email ?? "",
-                            firstName: userData["firstName"] as? String ?? firstName,
-                            lastName: userData["lastName"] as? String ?? lastName,
-                            profileImageUrl: userData["profileImageUrl"] as? String
-                        )
-
-                        self.isAuthenticated = true
+                    if response.isNewUser {
+                        print("✅ New user created via Apple Sign In: \(response.user.username)")
                     } else {
-                        self.errorMessage = "Failed to authenticate with Apple Sign In"
+                        print("✅ Existing user signed in via Apple: \(response.user.username)")
                     }
 
+                } catch let error as ConvexError {
+                    print("Apple Sign In error: \(error)")
+                    self.errorMessage = "Apple Sign In failed. Please try again."
                 } catch {
+                    print("Apple Sign In error: \(error)")
                     self.errorMessage = "Apple Sign In failed: \(error.localizedDescription)"
                 }
             }
@@ -266,9 +292,14 @@ class AuthenticationManager: ObservableObject {
         isLoading = true
         errorMessage = nil
 
-        // Google Sign In requires the Google Sign-In SDK
-        // For now, show a message that it's not configured
-        self.errorMessage = "Google Sign In is not fully configured. Please use email/password or Apple Sign In."
+        // Google Sign In requires the Google Sign-In SDK to be integrated
+        // This would typically:
+        // 1. Use GIDSignIn to get the user's Google credentials
+        // 2. Send the ID token to Convex for verification
+        // 3. Create/update user in the database
+
+        // For now, show a message - Google Sign In SDK needs to be added
+        self.errorMessage = "Google Sign In requires additional SDK setup. Please use email/password or Apple Sign In."
 
         isLoading = false
     }
@@ -276,68 +307,49 @@ class AuthenticationManager: ObservableObject {
     // MARK: - Sign Out
 
     func signOut() {
-        // Clear stored token
-        clearStoredToken()
-
-        // Reset state
-        isAuthenticated = false
-        user = nil
-        errorMessage = nil
-    }
-
-    // MARK: - Token Validation
-
-    private func validateToken(_ token: String) {
         Task {
             do {
-                let result = try await apiService.validateToken(token)
-
-                if let userData = result["user"] as? [String: Any] {
-                    // Handle both id formats (Int or String)
-                    let userId: String
-                    if let intId = userData["id"] as? Int {
-                        userId = String(intId)
-                    } else {
-                        userId = userData["id"] as? String ?? ""
-                    }
-
-                    self.user = User(
-                        id: userId,
-                        email: userData["email"] as? String ?? userData["username"] as? String ?? "",
-                        firstName: userData["firstName"] as? String,
-                        lastName: userData["lastName"] as? String,
-                        profileImageUrl: userData["profileImageUrl"] as? String
-                    )
-
-                    self.isAuthenticated = true
-                } else {
-                    // Token is invalid, clear it
-                    clearStoredToken()
-                }
+                try await convexService.signOut()
             } catch {
-                // Token validation failed, clear it
-                clearStoredToken()
+                print("Sign out error: \(error)")
             }
+
+            // Clear local state regardless of server response
+            convexService.clearSession()
+            self.isAuthenticated = false
+            self.user = nil
+            self.errorMessage = nil
         }
     }
 
-    // MARK: - Token Storage
+    // MARK: - Helper Methods
 
-    private func storeToken(_ token: String) {
-        UserDefaults.standard.set(token, forKey: "auth_token")
+    private func hashPassword(_ password: String) -> String {
+        // Simple SHA256 hash for demo purposes
+        // In production, use proper password hashing (bcrypt, argon2, etc.) on the server
+        let inputData = Data(password.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        return hashedData.compactMap { String(format: "%02x", $0) }.joined()
     }
 
-    private func getStoredToken() -> String? {
-        return UserDefaults.standard.string(forKey: "auth_token")
+    private func getDeviceId() -> String {
+        // Get or create a unique device identifier
+        let key = "device_uuid"
+        if let existingId = UserDefaults.standard.string(forKey: key) {
+            return existingId
+        }
+
+        let newId = UUID().uuidString
+        UserDefaults.standard.set(newId, forKey: key)
+        return newId
     }
 
-    private func clearStoredToken() {
-        UserDefaults.standard.removeObject(forKey: "auth_token")
-    }
-
-    // MARK: - Token for API calls
+    // MARK: - Token for API calls (compatibility)
 
     func getAuthToken() -> String? {
-        return getStoredToken()
+        if let session = convexService.loadSavedSession() {
+            return session.token
+        }
+        return nil
     }
 }

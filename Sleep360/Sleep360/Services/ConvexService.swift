@@ -3,17 +3,16 @@
 //  Sleep 360 Platform
 //
 //  Convex backend service for direct iOS integration
-//  Uses the official Convex Swift SDK for real-time sync
+//  Uses URLSession for HTTP calls to Convex backend
 //
 
 import Foundation
 import Combine
-import ConvexMobile
+import UIKit
 
 // MARK: - Convex Configuration
 
 struct ConvexConfig {
-    // Uses the deployment URL from Config.swift
     static var deploymentUrl: String {
         return Config.convexDeploymentURL
     }
@@ -23,33 +22,38 @@ struct ConvexConfig {
     }
 }
 
-// MARK: - Global Convex Client
-// Single instance for the app lifecycle - used for real-time subscriptions
-let convex = ConvexClient(deploymentUrl: Config.convexDeploymentURL)
-
 // MARK: - Data Models
 
 struct ConvexUser: Codable {
-    let userId: String
     let username: String
     let email: String?
-    let currentDay: Int
+    let currentDay: Double  // Convex returns as Double
     let role: String?
     let onboardingCompleted: Bool?
     let appleHealthConnected: Bool?
+
+    // Computed property to get currentDay as Int
+    var currentDayInt: Int {
+        return Int(currentDay)
+    }
 }
 
 struct SignInResponse: Codable {
     let userId: String
     let sessionToken: String
-    let expiresAt: Int
+    let expiresAt: Double  // Convex returns as Double
     let user: ConvexUser
+
+    // Computed property to get expiresAt as Int
+    var expiresAtInt: Int {
+        return Int(expiresAt)
+    }
 }
 
 struct SignInWithAppleResponse: Codable {
     let userId: String
     let sessionToken: String
-    let expiresAt: Int
+    let expiresAt: Double
     let isNewUser: Bool
     let user: ConvexUser
 }
@@ -57,7 +61,7 @@ struct SignInWithAppleResponse: Codable {
 struct RegisterResponse: Codable {
     let userId: String
     let sessionToken: String
-    let expiresAt: Int
+    let expiresAt: Double
     let user: ConvexUser
 }
 
@@ -82,47 +86,20 @@ struct UserProfile: Codable {
 }
 
 struct UserPreferences: Codable {
-    let notificationEnabled: Bool
-    let notificationTime: String
-    let quietHoursStart: String
-    let quietHoursEnd: String
-    let timezone: String
-    let appleHealthSyncEnabled: Bool
-    let dailyReminderEnabled: Bool
-}
-
-struct QuestionnaireQuestion: Codable {
-    let questionId: String
-    let questionText: String
-    let helpText: String?
-    let pillar: String
-    let answerFormat: String
-    let formatConfig: [String: AnyCodable]
-    let validationRules: [String: AnyCodable]?
-    let conditionalLogic: [String: AnyCodable]?
-    let estimatedTimeSeconds: Int
-    let moduleName: String
-    let existingResponse: QuestionResponse?
-}
-
-struct QuestionResponse: Codable {
-    let value: String?
-    let number: Double?
-    let array: [String]?
-    let object: [String: AnyCodable]?
-}
-
-struct DayQuestionnaire: Codable {
-    let dayNumber: Int
-    let questions: [QuestionnaireQuestion]
-    let totalQuestions: Int
+    let notificationEnabled: Bool?
+    let notificationTime: String?
+    let quietHoursStart: String?
+    let quietHoursEnd: String?
+    let timezone: String?
+    let appleHealthSyncEnabled: Bool?
+    let dailyReminderEnabled: Bool?
 }
 
 struct JourneyProgress: Codable {
     let currentDay: Int
     let completedDays: [Int]
     let totalDays: Int
-    let journeyComplete: Bool
+    let journeyComplete: Bool?
     let startedAt: Int
 }
 
@@ -144,7 +121,7 @@ struct SleepDataRecord: Codable {
 struct CompleteDayResponse: Codable {
     let success: Bool
     let newDay: Int
-    let journeyComplete: Bool
+    let journeyComplete: Bool?
 }
 
 struct SuccessResponse: Codable {
@@ -158,97 +135,112 @@ struct RefreshSessionResponse: Codable {
 
 struct SyncResponse: Codable {
     let success: Bool
-    let recordsSynced: Int
+    let recordsSynced: Int?
 }
 
-// Helper for handling arbitrary JSON values
-struct AnyCodable: Codable {
-    let value: Any
+// MARK: - Convex HTTP Client
 
-    init(_ value: Any) {
-        self.value = value
+/// HTTP client for making requests to Convex backend
+private class ConvexHTTPClient {
+    let baseURL: String
+    private let session: URLSession
+    private let decoder: JSONDecoder
+    private let encoder: JSONEncoder
+
+    init(deploymentUrl: String) {
+        // Convert deployment URL to HTTP endpoint
+        // Convex URLs like "https://xxx.convex.cloud" need /api/query or /api/mutation
+        self.baseURL = deploymentUrl
+
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 60
+        self.session = URLSession(configuration: config)
+
+        self.decoder = JSONDecoder()
+        self.encoder = JSONEncoder()
     }
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-
-        if container.decodeNil() {
-            self.value = NSNull()
-        } else if let bool = try? container.decode(Bool.self) {
-            self.value = bool
-        } else if let int = try? container.decode(Int.self) {
-            self.value = int
-        } else if let double = try? container.decode(Double.self) {
-            self.value = double
-        } else if let string = try? container.decode(String.self) {
-            self.value = string
-        } else if let array = try? container.decode([AnyCodable].self) {
-            self.value = array.map { $0.value }
-        } else if let dict = try? container.decode([String: AnyCodable].self) {
-            self.value = dict.mapValues { $0.value }
-        } else {
-            self.value = NSNull()
-        }
+    func query<T: Decodable>(_ functionName: String, args: [String: Any] = [:]) async throws -> T {
+        return try await request(path: "/api/query", functionName: functionName, args: args)
     }
 
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
+    func mutation<T: Decodable>(_ functionName: String, args: [String: Any] = [:]) async throws -> T {
+        return try await request(path: "/api/mutation", functionName: functionName, args: args)
+    }
 
-        switch value {
-        case is NSNull:
-            try container.encodeNil()
-        case let bool as Bool:
-            try container.encode(bool)
-        case let int as Int:
-            try container.encode(int)
-        case let double as Double:
-            try container.encode(double)
-        case let string as String:
-            try container.encode(string)
-        case let array as [Any]:
-            try container.encode(array.map { AnyCodable($0) })
-        case let dict as [String: Any]:
-            try container.encode(dict.mapValues { AnyCodable($0) })
-        default:
-            try container.encodeNil()
+    private func request<T: Decodable>(path: String, functionName: String, args: [String: Any]) async throws -> T {
+        guard let url = URL(string: baseURL + path) else {
+            throw ConvexError.invalidURL
         }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Convex expects { "path": "functionName", "args": {...} }
+        let body: [String: Any] = [
+            "path": functionName,
+            "args": args
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        if ConvexConfig.isDebugMode {
+            print("Convex Request: \(functionName)")
+            print("Args: \(args)")
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ConvexError.invalidResponse
+        }
+
+        if ConvexConfig.isDebugMode {
+            print("Convex Response Status: \(httpResponse.statusCode)")
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("Response: \(responseString.prefix(500))")
+            }
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            // Try to parse error message
+            if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = errorResponse["error"] as? String {
+                throw ConvexError.serverError(errorMessage)
+            }
+            throw ConvexError.httpError(httpResponse.statusCode)
+        }
+
+        // Convex wraps response in { "value": ... } or { "status": "success", "value": ... }
+        if let wrapper = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let value = wrapper["value"] {
+                // Re-encode the value and decode to target type
+                let valueData = try JSONSerialization.data(withJSONObject: value)
+                return try decoder.decode(T.self, from: valueData)
+            }
+        }
+
+        // Try direct decode
+        return try decoder.decode(T.self, from: data)
     }
 }
 
 // MARK: - Convex Service
 
 /// ConvexService provides direct integration with the Convex backend
-/// Uses the official ConvexMobile SDK for queries, mutations, and real-time subscriptions
 class ConvexService {
     static let shared = ConvexService()
 
-    private let client: ConvexClient
-    private let decoder = JSONDecoder()
+    private let client: ConvexHTTPClient
 
     // Session management
     private var sessionToken: String?
     private var currentUserId: String?
 
     private init() {
-        self.client = convex
-    }
-
-    // MARK: - ConvexMobile SDK Methods
-
-    /// Execute a mutation using ConvexMobile SDK
-    func mutation<T: Decodable>(_ name: String, args: [String: Any] = [:]) async throws -> T {
-        return try await client.mutation(name, args: args)
-    }
-
-    /// Execute a query using ConvexMobile SDK
-    func query<T: Decodable>(_ name: String, args: [String: Any] = [:]) async throws -> T {
-        return try await client.query(name, args: args)
-    }
-
-    /// Subscribe to a query for real-time updates
-    func subscribe<T: Decodable>(to name: String, args: [String: Any] = [:]) -> AnyPublisher<T, Error> {
-        return client.subscribe(to: name, args: args)
-            .eraseToAnyPublisher()
+        self.client = ConvexHTTPClient(deploymentUrl: Config.convexDeploymentURL)
     }
 
     // MARK: - Session Management
@@ -256,7 +248,6 @@ class ConvexService {
     func setSession(token: String, userId: String) {
         self.sessionToken = token
         self.currentUserId = userId
-        // Store in Keychain for persistence
         KeychainHelper.save(token, forKey: "convex_session_token")
         KeychainHelper.save(userId, forKey: "convex_user_id")
     }
@@ -495,17 +486,23 @@ class ConvexService {
 
     // MARK: - Questionnaire/Journey
 
-    func getDayQuestionnaire(dayNumber: Int? = nil) async throws -> DayQuestionnaire {
+    func getJourneyProgress() async throws -> JourneyProgress {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
-        var args: [String: Any] = ["userId": userId]
-        if let day = dayNumber {
-            args["dayNumber"] = day
+        return try await client.query("ios:getJourneyProgress", args: ["userId": userId])
+    }
+
+    func completeDay(dayNumber: Int) async throws -> CompleteDayResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
         }
 
-        return try await client.query("ios:getDayQuestionnaire", args: args)
+        return try await client.mutation("ios:completeDay", args: [
+            "userId": userId,
+            "dayNumber": dayNumber
+        ])
     }
 
     func submitQuestionnaireResponse(
@@ -542,49 +539,6 @@ class ConvexService {
         }
 
         return try await client.mutation("ios:submitQuestionnaireResponse", args: args)
-    }
-
-    func completeDay(dayNumber: Int) async throws -> CompleteDayResponse {
-        guard let userId = currentUserId else {
-            throw ConvexError.notAuthenticated
-        }
-
-        return try await client.mutation("ios:completeDay", args: [
-            "userId": userId,
-            "dayNumber": dayNumber
-        ])
-    }
-
-    func getJourneyProgress() async throws -> JourneyProgress {
-        guard let userId = currentUserId else {
-            throw ConvexError.notAuthenticated
-        }
-
-        return try await client.query("ios:getJourneyProgress", args: ["userId": userId])
-    }
-
-    // MARK: - Real-time Subscriptions
-
-    /// Subscribe to journey progress updates in real-time
-    func subscribeToJourneyProgress() -> AnyPublisher<JourneyProgress, Error> {
-        guard let userId = currentUserId else {
-            return Fail(error: ConvexError.notAuthenticated).eraseToAnyPublisher()
-        }
-
-        return client.subscribe(to: "ios:getJourneyProgress", args: ["userId": userId])
-            .eraseToAnyPublisher()
-    }
-
-    /// Subscribe to sleep data updates in real-time
-    func subscribeToSleepData(days: Int = 7) -> AnyPublisher<[SleepDataRecord], Error> {
-        guard let userId = currentUserId else {
-            return Fail(error: ConvexError.notAuthenticated).eraseToAnyPublisher()
-        }
-
-        return client.subscribe(to: "ios:getRecentSleepData", args: [
-            "userId": userId,
-            "days": days
-        ]).eraseToAnyPublisher()
     }
 
     // MARK: - Analytics

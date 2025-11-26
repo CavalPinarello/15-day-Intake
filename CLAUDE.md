@@ -164,9 +164,50 @@ For detailed architecture, setup instructions, and API documentation, see README
 - **Repository:** Successfully pushed to https://github.com/CavalPinarello/15-day-Intake.git
 - **Session Log:** `/docs/sessions/apple-watch-integration-2025-11-21.md`
 
-## Latest Session Context (2025-11-25)
+## Latest Session Context (2025-11-26)
 
-**iOS 15-Day Adaptive Questionnaire Implementation (Current):**
+**iOS Convex Direct Integration Refactor (Current):**
+- **Major Architecture Change:** Refactored iOS app to use direct Convex HTTP API calls
+- **ConvexService.swift Overhaul:**
+  - Replaced ConvexMobile SDK with custom `ConvexHTTPClient` using URLSession
+  - HTTP-based communication with Convex backend via `/api/query` and `/api/mutation` endpoints
+  - Simplified session management with Keychain storage
+  - Removed external SDK dependency for more control over API calls
+- **AuthenticationManager Refactor:**
+  - Converted from REST API to direct Convex mutations (`ios:signIn`, `ios:signInWithApple`, `ios:register`)
+  - Simplified Apple Sign-In flow with Convex backend validation
+  - Removed legacy REST API fallback code
+  - Cleaner error handling with `ConvexError` types
+- **AuthenticationView Simplification:**
+  - Streamlined UI with focus on email/password and Apple Sign-In
+  - Removed Google Sign-In (requires separate SDK integration)
+  - Cleaner form handling and error display
+- **QuestionModels.swift Updates:**
+  - Minor refinements to data model structures
+  - Improved type safety for questionnaire system
+- **HealthKitManager Updates:**
+  - Minor adjustments to work with new authentication flow
+- **Build Cleanup:**
+  - Removed Xcode build cache files (XCBuildData attachments)
+  - Cleaned up Swift Package Manager resolved file
+  - Project structure optimized
+- **Key Technical Changes:**
+  - Convex HTTP endpoint format: `POST {deploymentUrl}/api/mutation` or `/api/query`
+  - Request body: `{ "path": "ios:functionName", "args": {...} }`
+  - Response parsing handles Convex's `{ "value": ... }` wrapper
+  - Ephemeral URLSession configuration for clean connection handling
+- **Key Files Modified:**
+  - `/Sleep360/Sleep360/Services/ConvexService.swift` - Complete rewrite
+  - `/Sleep360/Sleep360/Managers/AuthenticationManager.swift` - Convex integration
+  - `/Sleep360/Sleep360/Views/AuthenticationView.swift` - Simplified UI
+  - `/Sleep360/Sleep360/Config.swift` - Added Clerk configuration
+- **Session Goal:** Simplify iOS-Convex integration by using direct HTTP calls
+- **Commit Hash:** `4a1307d` - "Refactor iOS to use direct Convex HTTP API calls"
+- **Repository:** https://github.com/CavalPinarello/15-day-Intake.git
+
+**Previous Session (2025-11-25):**
+
+**iOS 15-Day Adaptive Questionnaire Implementation:**
 - **Complete Questionnaire System:** Implemented full 15-day adaptive questionnaire in iOS app
 - **New iOS Files Created:**
   - `/Sleep360/Sleep360/Models/QuestionModels.swift` - Data models for questions, responses, gateways

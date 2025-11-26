@@ -49,8 +49,8 @@ This is a sleep coaching platform implementing a 15-day intake journey with **iO
 - **watchOS**: SwiftUI optimized for quick watch-based questionnaire completion
 - **HealthKit**: Integrated across both iOS and watchOS for comprehensive health data
 - **WatchConnectivity**: Real-time sync between iPhone and Apple Watch
-- **Convex Swift SDK**: Direct Convex calls via `ConvexMobile` for real-time sync
-- **ConvexService.swift**: Type-safe Swift service with Combine publishers
+- **Convex HTTP Integration**: Direct HTTP calls to Convex backend via `/api/query` and `/api/mutation`
+- **ConvexService.swift**: Type-safe Swift service with Keychain-based session management
 - **Xcode Project**: Complete project structure at `/Sleep360/Sleep360.xcodeproj`
 
 ### Web Application (Debug/Dev Only)

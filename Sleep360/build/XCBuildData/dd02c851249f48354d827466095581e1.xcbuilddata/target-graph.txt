@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-Target 'Sleep360 Watch App' in project 'Sleep360' (no dependencies)
