@@ -202,7 +202,7 @@ For detailed architecture, setup instructions, and API documentation, see README
   - `/Sleep360/Sleep360/Views/AuthenticationView.swift` - Simplified UI
   - `/Sleep360/Sleep360/Config.swift` - Added Clerk configuration
 - **Session Goal:** Simplify iOS-Convex integration by using direct HTTP calls
-- **Commit Hash:** `4a1307d` - "Refactor iOS to use direct Convex HTTP API calls"
+- **Commit Hash:** `ad74265` - "Refactor iOS to use direct Convex HTTP API calls"
 - **Repository:** https://github.com/CavalPinarello/15-day-Intake.git
 
 **Previous Session (2025-11-25):**
