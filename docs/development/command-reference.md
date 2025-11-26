@@ -70,6 +70,26 @@ npx convex deploy
 - API routes: `/api/*` → server
 - Static routes: `/*` → client
 
+## App Icon Generation
+
+```bash
+# Generate/regenerate all iOS and watchOS app icons
+# First time setup (creates virtual environment):
+cd /path/to/project
+python3 -m venv .venv
+source .venv/bin/activate
+pip install Pillow
+
+# Generate icons (after setup):
+source .venv/bin/activate
+python3 scripts/generate_app_icons.py
+```
+
+Icon files are generated to:
+- **iOS:** `/Sleep360/Sleep360/Assets.xcassets/AppIcon.appiconset/`
+- **watchOS:** `/Sleep360/Sleep360 Watch App/Assets.xcassets/AppIcon.appiconset/`
+- **Preview:** `/docs/zoe-sleep-icon-preview.png`
+
 ## Validation Commands
 
 ```bash
