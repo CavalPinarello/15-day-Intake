@@ -1,3 +1,10 @@
+//
+//  Sleep360App.swift
+//  Zoe Sleep for Longevity System
+//
+//  Main app entry point for iOS
+//
+
 import SwiftUI
 
 @main

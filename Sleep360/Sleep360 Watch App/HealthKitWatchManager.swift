@@ -1,6 +1,6 @@
 //
 //  HealthKitWatchManager.swift
-//  Sleep 360 Platform - watchOS
+//  Zoe Sleep for Longevity System - watchOS
 //
 //  HealthKit integration specifically for Apple Watch
 //

@@ -1,6 +1,6 @@
 //
 //  AuthenticationManager.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  Authentication manager using Convex backend directly
 //

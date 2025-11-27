@@ -1,6 +1,6 @@
 //
 //  AuthenticationView.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  SwiftUI view for user authentication
 //
@@ -10,12 +10,15 @@ import AuthenticationServices
 
 struct AuthenticationView: View {
     @EnvironmentObject var authManager: AuthenticationManager
+    @EnvironmentObject var themeManager: ThemeManager
     @State private var email = ""
     @State private var password = ""
     @State private var username = ""
     @State private var isSignUp = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
+
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         NavigationView {
@@ -25,11 +28,11 @@ struct AuthenticationView: View {
                     Text("Zoé Sleep")
                         .font(.largeTitle)
                         .bold()
-                        .foregroundColor(.blue)
+                        .foregroundColor(theme.primary)
 
                     Text("Your comprehensive sleep journey")
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
                 .padding(.top, 40)
 
@@ -86,7 +89,7 @@ struct AuthenticationView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.blue)
+                        .background(theme.primary)
                         .foregroundColor(.white)
                         .cornerRadius(10)
                     }
@@ -141,7 +144,7 @@ struct AuthenticationView: View {
                     }) {
                         Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
                             .font(.footnote)
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.primary)
                     }
                 }
                 .padding(.horizontal, 32)
@@ -152,11 +155,11 @@ struct AuthenticationView: View {
                 VStack(spacing: 4) {
                     Text("Secure authentication powered by Clerk")
                         .font(.caption2)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
 
                     Text("Your health data is protected and encrypted")
                         .font(.caption2)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
                 .padding(.bottom, 20)
             }
@@ -206,6 +209,7 @@ struct MainAppView: View {
 
 struct ProfileView: View {
     @EnvironmentObject var authManager: AuthenticationManager
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         NavigationView {
@@ -216,7 +220,7 @@ struct ProfileView: View {
                         // Profile Image placeholder
                         Image(systemName: "person.circle.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.primary)
                             .frame(width: 80, height: 80)
 
                         // Username
@@ -228,13 +232,13 @@ struct ProfileView: View {
                         if let email = user.email {
                             Text(email)
                                 .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                         }
 
                         // Current Day
                         Text("Day \(user.currentDay) of 15")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.primary)
                     }
                     .padding()
                 }
@@ -248,7 +252,7 @@ struct ProfileView: View {
                     Text("Sign Out")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.red)
+                        .background(theme.error)
                         .foregroundColor(.white)
                         .cornerRadius(10)
                 }
@@ -264,6 +268,7 @@ struct AuthenticationView_Previews: PreviewProvider {
     static var previews: some View {
         AuthenticationView()
             .environmentObject(AuthenticationManager())
+            .environmentObject(ThemeManager())
     }
 }
 

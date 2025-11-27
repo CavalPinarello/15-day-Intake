@@ -1,6 +1,6 @@
 //
 //  RecommendationsView.swift
-//  Sleep 360 Platform - watchOS
+//  Zoe Sleep for Longevity System - watchOS
 //
 //  Display physician recommendations on Apple Watch post-intake
 //
@@ -13,12 +13,15 @@ struct RecommendationsView: View {
     @State private var recommendations: [PhysicianRecommendation] = []
     @State private var isLoading = true
     @State private var selectedRecommendation: PhysicianRecommendation?
-    
+
+    private var theme: WatchColorTheme { WatchColorTheme.shared }
+
     var body: some View {
         NavigationView {
             VStack {
                 if isLoading {
                     ProgressView("Loading recommendations...")
+                        .tint(theme.primary)
                         .onAppear {
                             loadRecommendations()
                         }
@@ -32,17 +35,17 @@ struct RecommendationsView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
     }
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "heart.circle")
                 .font(.system(size: 40))
-                .foregroundColor(.gray)
-            
+                .foregroundColor(theme.secondary)
+
             Text("No Recommendations Yet")
                 .font(.headline)
                 .multilineTextAlignment(.center)
-            
+
             Text("Complete your 15-day intake to receive personalized recommendations from your physician.")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -50,12 +53,12 @@ struct RecommendationsView: View {
         }
         .padding()
     }
-    
+
     private var recommendationsList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(recommendations) { recommendation in
-                    RecommendationCard(recommendation: recommendation)
+                    RecommendationCard(recommendation: recommendation, theme: theme)
                         .onTapGesture {
                             selectedRecommendation = recommendation
                         }
@@ -64,10 +67,10 @@ struct RecommendationsView: View {
             .padding()
         }
         .sheet(item: $selectedRecommendation) { recommendation in
-            RecommendationDetailView(recommendation: recommendation)
+            RecommendationDetailView(recommendation: recommendation, theme: theme)
         }
     }
-    
+
     private func loadRecommendations() {
         // Request recommendations from iPhone/Convex
         watchConnectivity.requestRecommendations { recommendationsList in
@@ -81,43 +84,44 @@ struct RecommendationsView: View {
 
 struct RecommendationCard: View {
     let recommendation: PhysicianRecommendation
+    var theme: WatchColorTheme = WatchColorTheme.shared
     @State private var isCompleted = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: iconForCategory(recommendation.category))
                     .foregroundColor(colorForCategory(recommendation.category))
-                
+
                 Text(recommendation.title)
                     .font(.headline)
                     .lineLimit(2)
-                
+
                 Spacer()
-                
+
                 if isCompleted {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(theme.success)
                 }
             }
-            
+
             Text(recommendation.summary)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(3)
-            
+
             if let schedule = recommendation.schedule {
                 HStack {
                     Image(systemName: "clock")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Text(schedule)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             HStack {
                 Text(recommendation.category.rawValue.capitalized)
                     .font(.caption2)
@@ -126,9 +130,9 @@ struct RecommendationCard: View {
                     .background(colorForCategory(recommendation.category).opacity(0.2))
                     .foregroundColor(colorForCategory(recommendation.category))
                     .cornerRadius(8)
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     toggleCompletion()
                 }) {
@@ -136,6 +140,7 @@ struct RecommendationCard: View {
                         .font(.caption2)
                 }
                 .buttonStyle(.bordered)
+                .tint(theme.primary)
             }
         }
         .padding(12)
@@ -145,7 +150,7 @@ struct RecommendationCard: View {
             isCompleted = recommendation.isCompleted
         }
     }
-    
+
     private func iconForCategory(_ category: RecommendationCategory) -> String {
         switch category {
         case .sleep:
@@ -162,24 +167,11 @@ struct RecommendationCard: View {
             return "pills.fill"
         }
     }
-    
+
     private func colorForCategory(_ category: RecommendationCategory) -> Color {
-        switch category {
-        case .sleep:
-            return .blue
-        case .exercise:
-            return .green
-        case .nutrition:
-            return .orange
-        case .stress:
-            return .purple
-        case .environment:
-            return .teal
-        case .medication:
-            return .red
-        }
+        theme.colorForCategory(category.rawValue)
     }
-    
+
     private func toggleCompletion() {
         isCompleted.toggle()
         // Send completion status to Convex via WatchConnectivity
@@ -189,53 +181,58 @@ struct RecommendationCard: View {
 
 struct RecommendationDetailView: View {
     let recommendation: PhysicianRecommendation
+    var theme: WatchColorTheme = WatchColorTheme.shared
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Text(recommendation.title)
                         .font(.headline)
-                    
+
                     Spacer()
-                    
+
                     Button("Close") {
                         dismiss()
                     }
                     .buttonStyle(.bordered)
+                    .tint(theme.primary)
                 }
-                
+
                 if let details = recommendation.details {
                     Text("Details")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                    
+                        .foregroundColor(theme.primary)
+
                     Text(details)
                         .font(.caption)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                
+
                 if let instructions = recommendation.instructions {
                     Text("Instructions")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                    
+                        .foregroundColor(theme.primary)
+
                     Text(instructions)
                         .font(.caption)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                
+
                 if let schedule = recommendation.schedule {
                     Text("Schedule")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                    
+                        .foregroundColor(theme.primary)
+
                     Text(schedule)
                         .font(.caption)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                
+
                 Spacer()
             }
             .padding()

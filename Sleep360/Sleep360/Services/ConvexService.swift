@@ -1,6 +1,6 @@
 //
 //  ConvexService.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  Convex backend service for direct iOS integration
 //  Uses URLSession for HTTP calls to Convex backend
@@ -539,6 +539,55 @@ class ConvexService {
         }
 
         return try await client.mutation("ios:submitQuestionnaireResponse", args: args)
+    }
+
+    // MARK: - Debug / Day Advancement
+
+    struct AdvanceDayResponse: Codable {
+        let success: Bool
+        let newDay: Int
+        let previousDay: Int
+        let message: String
+    }
+
+    struct ResetProgressResponse: Codable {
+        let success: Bool
+        let message: String
+    }
+
+    struct JourneyDebugInfo: Codable {
+        let currentDay: Int
+        let completedDays: [Int]
+        let responsesCount: Int
+        let gateways: [String]
+        let journeyComplete: Bool
+    }
+
+    /// Advance user to the next day (Debug Mode only)
+    func advanceToNextDay() async throws -> AdvanceDayResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:advanceToNextDay", args: ["userId": userId])
+    }
+
+    /// Reset journey progress to Day 1 (Debug Mode only)
+    func resetJourneyProgress() async throws -> ResetProgressResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:resetJourneyProgress", args: ["userId": userId])
+    }
+
+    /// Get debug information about the user's journey
+    func getJourneyDebugInfo() async throws -> JourneyDebugInfo {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("ios:getJourneyDebugInfo", args: ["userId": userId])
     }
 
     // MARK: - Analytics

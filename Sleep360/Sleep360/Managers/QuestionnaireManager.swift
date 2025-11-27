@@ -1,6 +1,6 @@
 //
 //  QuestionnaireManager.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  Manages the 15-day adaptive questionnaire system with gateway logic
 //

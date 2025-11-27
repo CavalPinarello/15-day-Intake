@@ -1,6 +1,6 @@
 //
 //  Config.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  Configuration file for API endpoints and authentication
 //
@@ -57,7 +57,7 @@ struct Config {
     // ============================================
     // App Configuration
     // ============================================
-    static let appName = "Sleep 360°"
+    static let appName = "Zoe Sleep"
     static let appVersion = "1.0.0"
     static let appBundleId = "com.sleep360.app"
 

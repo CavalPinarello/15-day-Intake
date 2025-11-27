@@ -21,9 +21,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Sleep360 needs access to your health data to track sleep patterns and provide personalized recommendations.</string>
+	<string>Zoe Sleep needs access to your health data to track sleep patterns and provide personalized recommendations.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Sleep360 needs permission to save sleep data to your Health app.</string>
+	<string>Zoe Sleep needs permission to save sleep data to your Health app.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -41,8 +41,15 @@
 			</array>
 		</dict>
 	</dict>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchIcon</string>
+		<key>UIImageRespectsSafeAreaInsets</key>
+		<true/>
+	</dict>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>

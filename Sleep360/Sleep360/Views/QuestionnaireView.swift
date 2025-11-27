@@ -1,8 +1,9 @@
 //
 //  QuestionnaireView.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  Complete 15-day adaptive questionnaire interface with HealthKit integration
+//  Features distinct Sleep Log and Assessment sections
 //
 
 import SwiftUI
@@ -11,68 +12,132 @@ import Combine
 struct QuestionnaireView: View {
     @Binding var currentDay: Int
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var questionnaireManager = QuestionnaireManager.shared
 
-    @State private var questions: [Question] = []
-    @State private var currentQuestionIndex: Int = 0
-    @State private var responses: [String: Any] = [:]
+    // Section State
+    @State private var currentSection: QuestionnaireSection = .sleepLog
+    @State private var showingTransition: Bool = false
+    @State private var showingCompletion: Bool = false
+
+    // Sleep Log State
+    @State private var sleepLogQuestions: [Question] = []
+    @State private var sleepLogIndex: Int = 0
+    @State private var sleepLogResponses: [String: Any] = [:]
+
+    // Assessment State
+    @State private var assessmentQuestions: [Question] = []
+    @State private var assessmentIndex: Int = 0
+    @State private var assessmentResponses: [String: Any] = [:]
+
+    // HealthKit
     @State private var healthKitSleepSummary: HealthKitSleepSummary?
     @State private var isLoadingHealthKit: Bool = false
-    @State private var showingCompletionAlert: Bool = false
-    @State private var showingSleepComparison: Bool = false
+
+    // Timing
     @State private var startTime: Date = Date()
     @State private var questionStartTime: Date = Date()
 
     @Environment(\.presentationMode) var presentationMode
 
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    // Current section questions and index
+    private var currentQuestions: [Question] {
+        currentSection == .sleepLog ? sleepLogQuestions : assessmentQuestions
+    }
+
+    private var currentIndex: Int {
+        currentSection == .sleepLog ? sleepLogIndex : assessmentIndex
+    }
+
+    private var currentResponses: [String: Any] {
+        currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Progress Header
-            if !questions.isEmpty {
-                QuestionnaireProgressHeader(
-                    currentIndex: currentQuestionIndex,
-                    totalQuestions: questions.count,
-                    dayNumber: currentDay,
-                    pillarColor: Color(hex: questions[currentQuestionIndex].pillar.color) ?? .blue
+        Group {
+            if showingTransition {
+                SectionTransitionView(
+                    fromSection: .sleepLog,
+                    toSection: .assessment,
+                    onContinue: {
+                        withAnimation {
+                            showingTransition = false
+                            currentSection = .assessment
+                        }
+                    }
                 )
+            } else if showingCompletion {
+                DayCompletionView(
+                    dayNumber: currentDay,
+                    sleepLogQuestionsCount: sleepLogQuestions.count,
+                    assessmentQuestionsCount: assessmentQuestions.count,
+                    triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
+                    onDone: {
+                        completeDay()
+                    }
+                )
+            } else {
+                mainQuestionnaireView
             }
-
-            // Main Content
-            ScrollView {
-                VStack(spacing: 20) {
-                    // HealthKit Sleep Summary (show at start of day)
-                    if currentQuestionIndex == 0 && healthKitSleepSummary != nil {
-                        HealthKitSleepCard(summary: healthKitSleepSummary!)
-                    }
-
-                    // Current Question
-                    if !questions.isEmpty && currentQuestionIndex < questions.count {
-                        questionView(for: questions[currentQuestionIndex])
-                    }
-
-                    // Gateway alerts
-                    ForEach(questionnaireManager.gatewayStates.filter { $0.triggered }, id: \.id) { gateway in
-                        GatewayAlertBanner(gatewayType: gateway.gatewayType, isTriggered: true)
-                    }
-                }
-                .padding()
-            }
-
-            // Navigation Buttons
-            navigationButtons
         }
-        .navigationTitle("Day \(currentDay) Questionnaire")
+        .navigationTitle(currentSection == .sleepLog ? "Sleep Log" : "Day \(currentDay)")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             loadQuestions()
             fetchHealthKitSleepData()
         }
-        .alert("Day Complete!", isPresented: $showingCompletionAlert) {
-            Button("Continue") {
-                completeDay()
+    }
+
+    // MARK: - Main Questionnaire View
+
+    private var mainQuestionnaireView: some View {
+        VStack(spacing: 0) {
+            // Section Header
+            SectionHeaderView(
+                section: currentSection,
+                currentQuestion: currentIndex + 1,
+                totalQuestions: currentQuestions.count
+            )
+
+            // Progress
+            SectionProgressView(
+                section: currentSection,
+                currentIndex: currentIndex,
+                totalQuestions: currentQuestions.count
+            )
+            .padding(.vertical, 8)
+
+            // Main Content
+            ScrollView {
+                VStack(spacing: 20) {
+                    // HealthKit Sleep Summary (show at start of sleep log)
+                    if currentSection == .sleepLog && currentIndex == 0 && healthKitSleepSummary != nil {
+                        HealthKitSleepCard(summary: healthKitSleepSummary!, theme: theme)
+                            .padding(.horizontal)
+                    }
+
+                    // Current Question
+                    if !currentQuestions.isEmpty && currentIndex < currentQuestions.count {
+                        questionView(for: currentQuestions[currentIndex])
+                            .padding(.horizontal)
+                    }
+
+                    // Gateway alerts (only show in assessment section)
+                    if currentSection == .assessment {
+                        ForEach(questionnaireManager.gatewayStates.filter { $0.triggered }, id: \.id) { gateway in
+                            GatewayAlertBanner(gatewayType: gateway.gatewayType, isTriggered: true, theme: theme)
+                                .padding(.horizontal)
+                        }
+                    }
+                }
+                .padding(.vertical)
             }
-        } message: {
-            Text("Great job! You've completed Day \(currentDay).\(getCompletionMessage())")
+            .background(currentSection.backgroundColor.opacity(0.3))
+
+            // Navigation Buttons
+            navigationButtons
         }
     }
 
@@ -80,98 +145,173 @@ struct QuestionnaireView: View {
 
     @ViewBuilder
     private func questionView(for question: Question) -> some View {
-        QuestionCard(question: question) {
+        SectionQuestionCard(section: currentSection, question: question) {
             switch question.questionType {
             case .scale:
                 ScaleInput(
                     question: question,
-                    value: Binding(
-                        get: { (responses[question.id] as? Double) ?? Double(question.scaleMin ?? 1) },
-                        set: { responses[question.id] = $0 }
-                    )
+                    value: binding(for: question.id, default: Double(question.scaleMin ?? 1)),
+                    theme: theme
                 )
 
             case .yesNo, .yesNoDontKnow:
                 YesNoInput(
                     question: question,
-                    value: Binding(
-                        get: { (responses[question.id] as? String) ?? "" },
-                        set: { responses[question.id] = $0 }
-                    )
+                    value: stringBinding(for: question.id),
+                    theme: theme
                 )
 
             case .singleSelect:
                 SingleSelectInput(
                     question: question,
-                    value: Binding(
-                        get: { (responses[question.id] as? String) ?? "" },
-                        set: { responses[question.id] = $0 }
-                    )
+                    value: stringBinding(for: question.id),
+                    theme: theme
                 )
 
             case .multiSelect:
                 MultiSelectInput(
                     question: question,
-                    values: Binding(
-                        get: { (responses[question.id] as? [String]) ?? [] },
-                        set: { responses[question.id] = $0 }
-                    )
+                    values: arrayBinding(for: question.id),
+                    theme: theme
                 )
 
             case .number, .numberScroll:
                 NumberInput(
                     question: question,
-                    value: Binding(
-                        get: { (responses[question.id] as? Double) ?? Double(question.defaultValue ?? question.minValue ?? 0) },
-                        set: { responses[question.id] = $0 }
-                    )
+                    value: binding(for: question.id, default: Double(question.defaultValue ?? question.minValue ?? 0)),
+                    theme: theme
                 )
 
             case .time:
                 TimeInput(
                     question: question,
-                    value: Binding(
-                        get: { (responses[question.id] as? Date) ?? Date() },
-                        set: { responses[question.id] = $0 }
-                    )
+                    value: dateBinding(for: question.id)
                 )
 
             case .date:
                 DateInputView(
                     question: question,
-                    value: Binding(
-                        get: { (responses[question.id] as? Date) ?? Date() },
-                        set: { responses[question.id] = $0 }
-                    )
+                    value: dateBinding(for: question.id)
                 )
 
             case .text, .email:
                 TextInputView(
                     question: question,
-                    value: Binding(
-                        get: { (responses[question.id] as? String) ?? "" },
-                        set: { responses[question.id] = $0 }
-                    ),
+                    value: stringBinding(for: question.id),
                     placeholder: question.questionType == .email ? "email@example.com" : "Enter your answer"
                 )
 
             case .minutesScroll:
                 MinutesScrollPicker(
                     question: question,
-                    value: Binding(
-                        get: { (responses[question.id] as? Int) ?? (question.defaultValue ?? 0) },
-                        set: { responses[question.id] = $0 }
-                    )
+                    value: intBinding(for: question.id, default: question.defaultValue ?? 0)
                 )
 
             case .info:
-                InfoCard(question: question)
+                InfoCard(question: question, theme: theme)
 
             case .repeatingGroup:
                 Text("Repeating group input (coming soon)")
                     .foregroundColor(.secondary)
             }
         }
+    }
+
+    // MARK: - Binding Helpers
+
+    private func binding(for questionId: String, default defaultValue: Double) -> Binding<Double> {
+        Binding(
+            get: {
+                if currentSection == .sleepLog {
+                    return (sleepLogResponses[questionId] as? Double) ?? defaultValue
+                } else {
+                    return (assessmentResponses[questionId] as? Double) ?? defaultValue
+                }
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                } else {
+                    assessmentResponses[questionId] = newValue
+                }
+            }
+        )
+    }
+
+    private func stringBinding(for questionId: String) -> Binding<String> {
+        Binding(
+            get: {
+                if currentSection == .sleepLog {
+                    return (sleepLogResponses[questionId] as? String) ?? ""
+                } else {
+                    return (assessmentResponses[questionId] as? String) ?? ""
+                }
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                } else {
+                    assessmentResponses[questionId] = newValue
+                }
+            }
+        )
+    }
+
+    private func arrayBinding(for questionId: String) -> Binding<[String]> {
+        Binding(
+            get: {
+                if currentSection == .sleepLog {
+                    return (sleepLogResponses[questionId] as? [String]) ?? []
+                } else {
+                    return (assessmentResponses[questionId] as? [String]) ?? []
+                }
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                } else {
+                    assessmentResponses[questionId] = newValue
+                }
+            }
+        )
+    }
+
+    private func dateBinding(for questionId: String) -> Binding<Date> {
+        Binding(
+            get: {
+                if currentSection == .sleepLog {
+                    return (sleepLogResponses[questionId] as? Date) ?? Date()
+                } else {
+                    return (assessmentResponses[questionId] as? Date) ?? Date()
+                }
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                } else {
+                    assessmentResponses[questionId] = newValue
+                }
+            }
+        )
+    }
+
+    private func intBinding(for questionId: String, default defaultValue: Int) -> Binding<Int> {
+        Binding(
+            get: {
+                if currentSection == .sleepLog {
+                    return (sleepLogResponses[questionId] as? Int) ?? defaultValue
+                } else {
+                    return (assessmentResponses[questionId] as? Int) ?? defaultValue
+                }
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                } else {
+                    assessmentResponses[questionId] = newValue
+                }
+            }
+        )
     }
 
     // MARK: - Navigation Buttons
@@ -190,18 +330,18 @@ struct QuestionnaireView: View {
                 .foregroundColor(.primary)
                 .cornerRadius(12)
             }
-            .disabled(currentQuestionIndex == 0)
-            .opacity(currentQuestionIndex == 0 ? 0.5 : 1)
+            .disabled(currentIndex == 0 && currentSection == .sleepLog)
+            .opacity((currentIndex == 0 && currentSection == .sleepLog) ? 0.5 : 1)
 
             // Next/Submit button
             Button(action: nextQuestion) {
                 HStack {
-                    Text(isLastQuestion ? "Submit" : "Next")
-                    Image(systemName: isLastQuestion ? "checkmark.circle.fill" : "chevron.right")
+                    Text(buttonText)
+                    Image(systemName: buttonIcon)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(canProceed ? Color.blue : Color.gray)
+                .background(canProceed ? currentSection.accentColor : Color.gray)
                 .foregroundColor(.white)
                 .cornerRadius(12)
             }
@@ -211,15 +351,31 @@ struct QuestionnaireView: View {
         .background(Color(.systemBackground))
     }
 
+    private var buttonText: String {
+        if currentSection == .sleepLog && isLastQuestionInSection {
+            return assessmentQuestions.isEmpty ? "Complete" : "Continue"
+        } else if currentSection == .assessment && isLastQuestionInSection {
+            return "Complete Day"
+        }
+        return "Next"
+    }
+
+    private var buttonIcon: String {
+        if isLastQuestionInSection {
+            return currentSection == .sleepLog && !assessmentQuestions.isEmpty ? "arrow.right.circle.fill" : "checkmark.circle.fill"
+        }
+        return "chevron.right"
+    }
+
     // MARK: - Properties
 
-    private var isLastQuestion: Bool {
-        currentQuestionIndex == questions.count - 1
+    private var isLastQuestionInSection: Bool {
+        currentIndex == currentQuestions.count - 1
     }
 
     private var canProceed: Bool {
-        guard !questions.isEmpty && currentQuestionIndex < questions.count else { return false }
-        let question = questions[currentQuestionIndex]
+        guard !currentQuestions.isEmpty && currentIndex < currentQuestions.count else { return false }
+        let question = currentQuestions[currentIndex]
 
         // Info questions don't require response
         if question.questionType == .info { return true }
@@ -228,6 +384,7 @@ struct QuestionnaireView: View {
         if !question.required { return true }
 
         // Check if response exists
+        let responses = currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
         guard let response = responses[question.id] else { return false }
 
         // Validate based on type
@@ -246,8 +403,16 @@ struct QuestionnaireView: View {
     // MARK: - Actions
 
     private func loadQuestions() {
-        questions = questionnaireManager.getQuestionsForDay(currentDay)
-        currentQuestionIndex = 0
+        let allQuestions = questionnaireManager.getQuestionsForDay(currentDay)
+
+        // Separate sleep log from assessment questions
+        sleepLogQuestions = allQuestions.filter { $0.group == "sleep_log" || $0.pillar == .sleepLog }
+        assessmentQuestions = allQuestions.filter { $0.group != "sleep_log" && $0.pillar != .sleepLog }
+
+        // Start with sleep log
+        currentSection = .sleepLog
+        sleepLogIndex = 0
+        assessmentIndex = 0
         startTime = Date()
         questionStartTime = Date()
     }
@@ -290,9 +455,22 @@ struct QuestionnaireView: View {
     }
 
     private func previousQuestion() {
-        if currentQuestionIndex > 0 {
-            currentQuestionIndex -= 1
-            questionStartTime = Date()
+        if currentSection == .sleepLog {
+            if sleepLogIndex > 0 {
+                sleepLogIndex -= 1
+                questionStartTime = Date()
+            }
+        } else {
+            if assessmentIndex > 0 {
+                assessmentIndex -= 1
+                questionStartTime = Date()
+            } else {
+                // Go back to sleep log
+                withAnimation {
+                    currentSection = .sleepLog
+                    sleepLogIndex = sleepLogQuestions.count - 1
+                }
+            }
         }
     }
 
@@ -300,17 +478,44 @@ struct QuestionnaireView: View {
         // Save current response
         saveCurrentResponse()
 
-        if isLastQuestion {
-            showingCompletionAlert = true
+        if currentSection == .sleepLog {
+            if isLastQuestionInSection {
+                // Finished sleep log
+                if assessmentQuestions.isEmpty {
+                    // No assessment questions - complete day
+                    withAnimation {
+                        showingCompletion = true
+                    }
+                } else {
+                    // Show transition to assessment
+                    withAnimation {
+                        showingTransition = true
+                    }
+                }
+            } else {
+                sleepLogIndex += 1
+                questionStartTime = Date()
+            }
         } else {
-            currentQuestionIndex += 1
-            questionStartTime = Date()
+            if isLastQuestionInSection {
+                // Finished assessment - show completion
+                withAnimation {
+                    showingCompletion = true
+                }
+            } else {
+                assessmentIndex += 1
+                questionStartTime = Date()
+            }
         }
     }
 
     private func saveCurrentResponse() {
-        guard !questions.isEmpty && currentQuestionIndex < questions.count else { return }
-        let question = questions[currentQuestionIndex]
+        let questions = currentSection == .sleepLog ? sleepLogQuestions : assessmentQuestions
+        let index = currentSection == .sleepLog ? sleepLogIndex : assessmentIndex
+        let responses = currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
+
+        guard !questions.isEmpty && index < questions.count else { return }
+        let question = questions[index]
 
         guard let responseValue = responses[question.id] else { return }
 
@@ -345,6 +550,14 @@ struct QuestionnaireView: View {
     }
 
     private func completeDay() {
+        // Save all remaining responses
+        for (questionId, value) in sleepLogResponses {
+            saveResponseFromDictionary(questionId: questionId, value: value, questions: sleepLogQuestions)
+        }
+        for (questionId, value) in assessmentResponses {
+            saveResponseFromDictionary(questionId: questionId, value: value, questions: assessmentQuestions)
+        }
+
         Task {
             do {
                 try await questionnaireManager.completeDay(currentDay)
@@ -359,13 +572,34 @@ struct QuestionnaireView: View {
         }
     }
 
-    private func getCompletionMessage() -> String {
-        let triggeredGateways = questionnaireManager.gatewayStates.filter { $0.triggered }
-        if triggeredGateways.isEmpty {
-            return ""
+    private func saveResponseFromDictionary(questionId: String, value: Any, questions: [Question]) {
+        guard let question = questions.first(where: { $0.id == questionId }) else { return }
+
+        var response = QuestionResponse(
+            questionId: questionId,
+            dayNumber: currentDay,
+            answeredAt: Date(),
+            answeredInSeconds: 0
+        )
+
+        switch value {
+        case let str as String:
+            response.stringValue = str
+        case let num as Double:
+            response.numberValue = num
+        case let num as Int:
+            response.numberValue = Double(num)
+        case let date as Date:
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            response.stringValue = formatter.string(from: date)
+        case let arr as [String]:
+            response.arrayValue = arr
+        default:
+            break
         }
-        let names = triggeredGateways.map { $0.gatewayType.displayName }.joined(separator: ", ")
-        return "\n\nBased on your responses, additional assessments have been added: \(names)"
+
+        questionnaireManager.saveResponse(response)
     }
 }
 
@@ -373,12 +607,13 @@ struct QuestionnaireView: View {
 
 struct HealthKitSleepCard: View {
     let summary: HealthKitSleepSummary
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "heart.fill")
-                    .foregroundColor(.red)
+                    .foregroundColor(theme.health)
                 Text("Last Night's Sleep (Apple Health)")
                     .font(.headline)
                 Spacer()
@@ -389,7 +624,7 @@ struct HealthKitSleepCard: View {
                 VStack {
                     Image(systemName: "moon.zzz.fill")
                         .font(.title2)
-                        .foregroundColor(.purple)
+                        .foregroundColor(QuestionnaireSection.sleepLog.accentColor)
                     if let mins = summary.totalSleepMinutes {
                         Text("\(mins / 60)h \(mins % 60)m")
                             .font(.subheadline)
@@ -405,7 +640,7 @@ struct HealthKitSleepCard: View {
                 VStack {
                     Image(systemName: "percent")
                         .font(.title2)
-                        .foregroundColor(.green)
+                        .foregroundColor(theme.success)
                     if let eff = summary.sleepEfficiency {
                         Text("\(Int(eff))%")
                             .font(.subheadline)
@@ -421,7 +656,7 @@ struct HealthKitSleepCard: View {
                 VStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.title2)
-                        .foregroundColor(.orange)
+                        .foregroundColor(theme.warning)
                     if let count = summary.awakeningsCount {
                         Text("\(count)")
                             .font(.subheadline)
@@ -454,11 +689,11 @@ struct HealthKitSleepCard: View {
 
             Text("Now tell us your subjective experience - how YOU perceived your sleep")
                 .font(.caption)
-                .foregroundColor(.blue)
+                .foregroundColor(QuestionnaireSection.sleepLog.accentColor)
                 .padding(.top, 4)
         }
         .padding(16)
-        .background(Color.purple.opacity(0.1))
+        .background(QuestionnaireSection.sleepLog.backgroundColor)
         .cornerRadius(12)
     }
 }
@@ -469,5 +704,6 @@ struct HealthKitSleepCard: View {
     NavigationView {
         QuestionnaireView(currentDay: .constant(1))
             .environmentObject(HealthKitManager(authManager: AuthenticationManager()))
+            .environmentObject(ThemeManager())
     }
 }

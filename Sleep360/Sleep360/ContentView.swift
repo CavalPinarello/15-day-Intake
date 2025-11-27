@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  Main app content with dashboard and navigation
 //
@@ -10,15 +10,20 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             if authManager.isAuthenticated {
                 MainDashboardView()
+                    .environmentObject(themeManager)
             } else {
                 AuthenticationView()
+                    .environmentObject(themeManager)
             }
         }
+        .preferredColorScheme(themeManager.currentColorScheme)
+        .tint(themeManager.accentColor)
         .onAppear {
             authManager.checkAuthenticationStatus()
         }
@@ -28,11 +33,14 @@ struct ContentView: View {
 struct MainDashboardView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var questionnaireManager = QuestionnaireManager.shared
 
     @State private var currentDay: Int = 1
     @State private var showingHealthKit = false
     @State private var showingJourneyOverview = false
+
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         ScrollView {
@@ -63,6 +71,7 @@ struct MainDashboardView: View {
         }
         .sheet(isPresented: $showingJourneyOverview) {
             JourneyOverviewView(currentDay: $currentDay)
+                .environmentObject(themeManager)
         }
         .onAppear {
             loadProgress()
@@ -74,10 +83,10 @@ struct MainDashboardView: View {
     private var headerView: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Sleep 360")
+                Text("Zoe Sleep")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.blue)
+                    .foregroundColor(theme.primary)
 
                 Text(getGreeting())
                     .font(.subheadline)
@@ -85,6 +94,19 @@ struct MainDashboardView: View {
             }
 
             Spacer()
+
+            // Settings gear icon
+            NavigationLink {
+                SettingsView()
+                    .environmentObject(themeManager)
+                    .environmentObject(authManager)
+                    .environmentObject(questionnaireManager)
+            } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.title2)
+                    .foregroundColor(theme.primary)
+            }
+            .padding(.trailing, 8)
 
             Menu {
                 Button(action: { showingJourneyOverview = true }) {
@@ -100,7 +122,7 @@ struct MainDashboardView: View {
             } label: {
                 Image(systemName: "person.circle.fill")
                     .font(.title)
-                    .foregroundColor(.blue)
+                    .foregroundColor(theme.primary)
             }
         }
     }
@@ -116,7 +138,7 @@ struct MainDashboardView: View {
                     Text("Day \(currentDay) of 15")
                         .font(.title2)
                         .fontWeight(.bold)
-                        .foregroundColor(.blue)
+                        .foregroundColor(theme.primary)
                 }
 
                 Spacer()
@@ -124,12 +146,12 @@ struct MainDashboardView: View {
                 // Circular progress
                 ZStack {
                     Circle()
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                        .stroke(theme.inactive, lineWidth: 8)
                         .frame(width: 60, height: 60)
 
                     Circle()
                         .trim(from: 0, to: CGFloat(currentDay) / 15.0)
-                        .stroke(Color.blue, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                        .stroke(theme.primary, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                         .frame(width: 60, height: 60)
                         .rotationEffect(.degrees(-90))
 
@@ -158,7 +180,7 @@ struct MainDashboardView: View {
             if currentDay <= 5 {
                 HStack {
                     Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
+                        .foregroundColor(theme.corePhase)
                     Text("Core Assessment Phase (Days 1-5)")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -166,7 +188,7 @@ struct MainDashboardView: View {
             } else {
                 HStack {
                     Image(systemName: "arrow.up.right.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(theme.expansionPhase)
                     Text("Personalized Expansion Phase")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -174,17 +196,17 @@ struct MainDashboardView: View {
             }
         }
         .padding()
-        .background(Color.blue.opacity(0.1))
+        .background(theme.backgroundTint)
         .cornerRadius(16)
     }
 
     private func dayColor(for day: Int) -> Color {
         if day < currentDay {
-            return .green
+            return theme.completed
         } else if day == currentDay {
-            return .blue
+            return theme.active
         } else {
-            return .gray.opacity(0.3)
+            return theme.inactive
         }
     }
 
@@ -195,7 +217,7 @@ struct MainDashboardView: View {
             HStack {
                 Image(systemName: healthKitManager.isAuthorized ? "heart.fill" : "heart")
                     .font(.title2)
-                    .foregroundColor(healthKitManager.isAuthorized ? .red : .gray)
+                    .foregroundColor(healthKitManager.isAuthorized ? theme.health : .gray)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(healthKitManager.isAuthorized ? "Apple Health Connected" : "Connect Apple Health")
@@ -213,10 +235,11 @@ struct MainDashboardView: View {
                         showingHealthKit = true
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(theme.primary)
                     .controlSize(.small)
                 } else {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(theme.success)
                 }
             }
         }
@@ -234,34 +257,34 @@ struct MainDashboardView: View {
                     .font(.headline)
                 Spacer()
                 if let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) {
-                    Text("~\(config.estimatedMinutes) min")
+                    Text("~\(config.estimatedMinutes + 2) min total")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.blue.opacity(0.1))
+                        .background(theme.backgroundTint)
                         .cornerRadius(8)
                 }
             }
 
-            // Stanford Sleep Log
-            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay).environmentObject(healthKitManager)) {
-                TaskRow(
-                    icon: "moon.zzz.fill",
-                    iconColor: .purple,
-                    title: "Stanford Sleep Log",
-                    subtitle: "Record last night's sleep (your perception)",
+            // Sleep Log Section Card (Blue)
+            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                SectionTaskCard(
+                    section: .sleepLog,
+                    questionCount: 5,
+                    estimatedMinutes: 2,
                     isCompleted: false
                 )
             }
 
-            // Day's Assessment
-            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay).environmentObject(healthKitManager)) {
-                TaskRow(
-                    icon: "list.clipboard.fill",
-                    iconColor: .blue,
+            // Day Assessment Section Card (Purple)
+            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                SectionTaskCard(
+                    section: .assessment,
                     title: getDayTitle(),
                     subtitle: getDayDescription(),
+                    questionCount: getAssessmentQuestionCount(),
+                    estimatedMinutes: getAssessmentMinutes(),
                     isCompleted: false
                 )
             }
@@ -270,6 +293,28 @@ struct MainDashboardView: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+    }
+
+    private func getAssessmentQuestionCount() -> Int {
+        guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
+            return 10
+        }
+        // Rough estimate based on day
+        switch currentDay {
+        case 1: return 12
+        case 2: return 12
+        case 3: return 8
+        case 4: return 9
+        case 5: return 10
+        default: return config.estimatedMinutes / 2 // Expansion days vary
+        }
+    }
+
+    private func getAssessmentMinutes() -> Int {
+        guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
+            return 10
+        }
+        return config.estimatedMinutes
     }
 
     // MARK: - Gateway Status Card
@@ -282,7 +327,7 @@ struct MainDashboardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
+                        .foregroundColor(theme.warning)
                     Text("Personalized Assessments Triggered")
                         .font(.headline)
                 }
@@ -294,7 +339,7 @@ struct MainDashboardView: View {
                 ForEach(triggeredGateways, id: \.id) { gateway in
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundColor(theme.success)
                             .font(.caption)
                         Text(gateway.gatewayType.displayName)
                             .font(.subheadline)
@@ -303,7 +348,7 @@ struct MainDashboardView: View {
                 }
             }
             .padding()
-            .background(Color.orange.opacity(0.1))
+            .background(theme.warning.opacity(0.1))
             .cornerRadius(12)
         }
     }
@@ -312,21 +357,36 @@ struct MainDashboardView: View {
 
     private var quickActionsCard: some View {
         VStack(spacing: 12) {
+            // Treatment Mode (visible after Day 15 or with active interventions)
+            if currentDay > 15 {
+                NavigationLink(destination: TreatmentView().environmentObject(themeManager)) {
+                    QuickActionRow(
+                        icon: "list.bullet.clipboard.fill",
+                        iconColor: theme.accent,
+                        title: "Treatment Tasks",
+                        subtitle: "Daily tasks from your physician",
+                        theme: theme
+                    )
+                }
+            }
+
             NavigationLink(destination: SleepDiaryHistoryView()) {
                 QuickActionRow(
                     icon: "calendar",
-                    iconColor: .purple,
+                    iconColor: theme.sleepDiary,
                     title: "Sleep Diary History",
-                    subtitle: "View your sleep log entries"
+                    subtitle: "View your sleep log entries",
+                    theme: theme
                 )
             }
 
             NavigationLink(destination: InsightsView()) {
                 QuickActionRow(
                     icon: "chart.line.uptrend.xyaxis",
-                    iconColor: .green,
+                    iconColor: theme.insights,
                     title: "Sleep Insights",
-                    subtitle: "View patterns and recommendations"
+                    subtitle: "View patterns and recommendations",
+                    theme: theme
                 )
             }
         }
@@ -377,6 +437,7 @@ struct TaskRow: View {
     let title: String
     let subtitle: String
     let isCompleted: Bool
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         HStack(spacing: 12) {
@@ -402,7 +463,7 @@ struct TaskRow: View {
 
             if isCompleted {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(theme.success)
             } else {
                 Image(systemName: "chevron.right")
                     .foregroundColor(.secondary)
@@ -421,6 +482,7 @@ struct QuickActionRow: View {
     let iconColor: Color
     let title: String
     let subtitle: String
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         HStack(spacing: 12) {
@@ -452,18 +514,104 @@ struct QuickActionRow: View {
     }
 }
 
+// MARK: - Section Task Card
+
+struct SectionTaskCard: View {
+    let section: QuestionnaireSection
+    var title: String? = nil
+    var subtitle: String? = nil
+    let questionCount: Int
+    let estimatedMinutes: Int
+    let isCompleted: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header with section badge
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: section.icon)
+                        .font(.caption)
+                    Text(section == .sleepLog ? "SLEEP LOG" : "ASSESSMENT")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .tracking(0.5)
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(section.accentColor)
+                .cornerRadius(6)
+
+                Spacer()
+
+                if isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                } else {
+                    HStack(spacing: 4) {
+                        Text("\(questionCount) Q")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                        Text("•")
+                            .font(.caption)
+                        Text("~\(estimatedMinutes) min")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary)
+                }
+            }
+
+            // Title
+            Text(title ?? section.title)
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            // Subtitle/Description
+            Text(subtitle ?? section.description)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+
+            // Action indicator
+            HStack {
+                Spacer()
+                HStack(spacing: 4) {
+                    Text(isCompleted ? "Completed" : "Start")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Image(systemName: isCompleted ? "checkmark" : "arrow.right")
+                        .font(.caption)
+                }
+                .foregroundColor(isCompleted ? .green : section.accentColor)
+            }
+        }
+        .padding(16)
+        .background(section.backgroundColor)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(section.accentColor.opacity(0.3), lineWidth: 1)
+        )
+        .opacity(isCompleted ? 0.7 : 1.0)
+    }
+}
+
 // MARK: - Placeholder Views
 
 struct JourneyOverviewView: View {
     @Binding var currentDay: Int
+    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
+
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 16) {
                     ForEach(QuestionnaireManager.dayConfigurations, id: \.id) { config in
-                        DayOverviewCard(config: config, currentDay: currentDay)
+                        DayOverviewCard(config: config, currentDay: currentDay, theme: theme)
                     }
                 }
                 .padding()
@@ -473,6 +621,7 @@ struct JourneyOverviewView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
+                        .foregroundColor(theme.primary)
                 }
             }
         }
@@ -482,6 +631,7 @@ struct JourneyOverviewView: View {
 struct DayOverviewCard: View {
     let config: DayConfiguration
     let currentDay: Int
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         HStack(spacing: 12) {
@@ -511,7 +661,7 @@ struct DayOverviewCard: View {
                         Text("Expansion Day")
                             .font(.caption2)
                     }
-                    .foregroundColor(.orange)
+                    .foregroundColor(theme.secondary)
                 }
             }
 
@@ -528,17 +678,17 @@ struct DayOverviewCard: View {
 
     private var circleColor: Color {
         if config.dayNumber < currentDay {
-            return .green
+            return theme.completed
         } else if config.dayNumber == currentDay {
-            return .blue
+            return theme.active
         } else {
-            return .gray
+            return Color.gray
         }
     }
 
     private var backgroundColor: Color {
         if config.dayNumber == currentDay {
-            return Color.blue.opacity(0.1)
+            return theme.backgroundTint
         }
         return Color(.secondarySystemBackground)
     }

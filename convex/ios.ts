@@ -1086,6 +1086,193 @@ export const trackEvent = mutation({
 });
 
 // ============================================
+// Debug/Testing Functions
+// ============================================
+
+/**
+ * Advance to next day (DEBUG MODE ONLY)
+ * Used for testing the 15-day journey without waiting
+ */
+export const advanceToNextDay = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const currentDay = user.current_day || 1;
+    const nextDay = Math.min(currentDay + 1, 15);
+
+    // Update user's current day
+    await ctx.db.patch(args.userId, {
+      current_day: nextDay,
+    });
+
+    // Mark current day as completed in user_progress
+    const existingProgress = await ctx.db
+      .query("user_progress")
+      .withIndex("by_user_day", (q) =>
+        q.eq("user_id", args.userId).eq("day_number", currentDay)
+      )
+      .first();
+
+    if (existingProgress) {
+      await ctx.db.patch(existingProgress._id, {
+        completed: true,
+        completed_at: Date.now(),
+      });
+    } else {
+      // Create progress entry for the day being completed
+      const day = await ctx.db
+        .query("days")
+        .withIndex("by_day_number", (q) => q.eq("day_number", currentDay))
+        .first();
+
+      if (day) {
+        await ctx.db.insert("user_progress", {
+          user_id: args.userId,
+          day_id: day._id,
+          day_number: currentDay,
+          completed: true,
+          started_at: Date.now(),
+          completed_at: Date.now(),
+        });
+      }
+    }
+
+    // Log the debug action
+    await ctx.db.insert("ios_app_events", {
+      user_id: args.userId,
+      device_id: "debug",
+      event_type: "debug_advance_day",
+      event_data: JSON.stringify({ from: currentDay, to: nextDay }),
+      timestamp: Date.now(),
+    });
+
+    return {
+      success: true,
+      previousDay: currentDay,
+      newDay: nextDay,
+    };
+  },
+});
+
+/**
+ * Reset journey progress (DEBUG MODE ONLY)
+ * Resets user to Day 1 and clears all responses
+ */
+export const resetJourneyProgress = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Reset user's current day
+    await ctx.db.patch(args.userId, {
+      current_day: 1,
+      onboarding_completed: false,
+    });
+
+    // Delete all user progress entries
+    const progressEntries = await ctx.db
+      .query("user_progress")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    for (const entry of progressEntries) {
+      await ctx.db.delete(entry._id);
+    }
+
+    // Delete all responses
+    const responses = await ctx.db
+      .query("responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    for (const response of responses) {
+      await ctx.db.delete(response._id);
+    }
+
+    // Reset gateway states
+    const gatewayStates = await ctx.db
+      .query("gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    for (const state of gatewayStates) {
+      await ctx.db.patch(state._id, {
+        triggered: false,
+        triggered_at: undefined,
+        trigger_value: undefined,
+      });
+    }
+
+    // Log the debug action
+    await ctx.db.insert("ios_app_events", {
+      user_id: args.userId,
+      device_id: "debug",
+      event_type: "debug_reset_journey",
+      event_data: JSON.stringify({ reset_at: Date.now() }),
+      timestamp: Date.now(),
+    });
+
+    return {
+      success: true,
+      newDay: 1,
+    };
+  },
+});
+
+/**
+ * Get current journey state (for debugging)
+ */
+export const getJourneyDebugInfo = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const progress = await ctx.db
+      .query("user_progress")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    const responses = await ctx.db
+      .query("responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    const gatewayStates = await ctx.db
+      .query("gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    return {
+      currentDay: user.current_day || 1,
+      onboardingCompleted: user.onboarding_completed || false,
+      progressCount: progress.length,
+      responsesCount: responses.length,
+      triggeredGateways: gatewayStates.filter(g => g.triggered).map(g => g.gateway_type),
+      progressByDay: progress.map(p => ({
+        day: p.day_number,
+        completed: p.completed,
+      })),
+    };
+  },
+});
+
+// ============================================
 // Helper Functions
 // ============================================
 

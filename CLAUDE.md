@@ -1,19 +1,35 @@
 # CLAUDE.md
 
-This file provides essential guidance to Claude Code when working with this sleep coaching platform repository.
+This file provides essential guidance to Claude Code when working with the **Zoe Sleep for Longevity System** repository.
+
+## Brand & Product
+
+**Product Name:** Zoe Sleep for Longevity System
+**Tagline:** "The best sleep of your life and maximum daily energy while protecting your health"
+**Design Theme:** Elegant circadian waves (NO moon/stars clichés) - abstract waveforms, gradient flows
 
 ## Platform Architecture
 
-**Primary User Applications (iOS & watchOS):**
-- **iOS Application** (PRIMARY): Main user-facing app for the 15-day intake journey with Swift/SwiftUI
-- **Apple Watch Application**: Companion app with watch-optimized questionnaire experience
-- **Cross-device Sync**: WatchConnectivity for seamless iPhone-Watch integration
+**Patient-Facing Applications (Cross-Platform):**
+- **Apple Watch App** (PRIMARY for morning logs): 60-second Stanford Sleep Log completion
+- **iOS Application**: Full 15-day intake journey with comprehensive questionnaire
+- **Web Application**: Patient access via browser (also used for debugging)
+- **Cross-device Sync**: Real-time Convex sync - start on Watch, continue on iPhone, finish on Web
+
+**Physician/Admin Dashboard:**
+- **Web Dashboard** (`/physician`): Patient review, questionnaire scores, treatment prescriptions
+- **Question Manager**: Drag-and-drop question assignment, add new questions with 9 answer types
+
+**Supported Apple Watch Models (ALL sizes):**
+| Model | Case Size | Adaptive UI |
+|-------|-----------|-------------|
+| SE (2nd gen) | 40mm/44mm | Compact layout |
+| Series 7/8/9/10 | 41mm/45mm | Standard layout |
+| **Ultra/Ultra 2** | **49mm** | **Spacious layout, 5-column grids** |
 
 **Development & Backend:**
-- **Web Application** (DEV/DEBUG ONLY): Used for debugging questionnaires and development testing - NOT for end users
-- **Convex Backend**: Serverless backend providing real-time data synchronization
-
-**Development Focus:** iOS and watchOS applications are the priority. Web exists solely for questionnaire debugging.
+- **Convex Backend**: Serverless with real-time data synchronization across all platforms
+- **Clerk Authentication**: JWT-based auth shared across iOS, Watch, and Web
 
 ## Quick Start Commands
 
@@ -67,6 +83,9 @@ npx convex dev && ./setup-convex.sh
 - **Watch Target:** `/Sleep360/Sleep360 Watch App/` (watchOS app in Xcode project)
 - **Main App:** `/Sleep360/Sleep360 Watch App/Sleep360_Watch_AppApp.swift` (Watch app entry point)
 - **Questionnaire:** `/Sleep360/Sleep360 Watch App/QuestionnaireView.swift` (Watch-optimized UI)
+- **Sleep Log:** `/Sleep360/Sleep360 Watch App/SleepLogView.swift` (60-second morning flow)
+- **Settings:** `/Sleep360/Sleep360 Watch App/SettingsView.swift` (Large text, debug mode)
+- **Question Components:** `/Sleep360/Sleep360 Watch App/WatchQuestionComponents.swift` (Adaptive UI for all watch sizes)
 - **Recommendations:** `/Sleep360/Sleep360 Watch App/RecommendationsView.swift` (Physician recommendations)
 - **Watch HealthKit:** `/Sleep360/Sleep360 Watch App/HealthKitWatchManager.swift` (Watch health data)
 - **Watch Connectivity:** `/Sleep360/Sleep360 Watch App/WatchConnectivityManager.swift` (iPhone-Watch sync)
@@ -75,9 +94,14 @@ npx convex dev && ./setup-convex.sh
 - **iOS Reference:** `/ios/` (Original Swift files, now integrated in Xcode project)
 - **watchOS Reference:** `/watchos/` (Original watch files, now in Xcode project)
 
-**Web Application (Development/Debug Only):**
-- **Question Debug Interface:** `/client/` (Next.js - for questionnaire testing only)
-- **Physician Dashboard:** `/client/app/physician-dashboard/` (development reference)
+**Web Application (Patient + Physician):**
+- **Patient Journey:** `/client/src/app/journey/` (Next.js - 15-day questionnaire)
+- **Patient Treatment:** `/client/src/app/treatment/` (Post-intake daily tasks)
+- **Physician Dashboard:** `/client/src/app/physician-dashboard/` (Patient list, scores, prescriptions)
+- **Physician Patient View:** `/client/src/app/physician-dashboard/patient/[id]/` (Day-by-day responses, AI analysis)
+- **Physician Prescription:** `/client/src/app/physician-dashboard/patient/[id]/prescription/` (Treatment plans builder)
+- **Question Manager:** `/client/src/app/physician-dashboard/questions/` (Day/Module/Question views)
+- **Physician Settings:** `/client/src/app/physician-dashboard/settings/` (Profile, notifications)
 
 **Convex Backend:**
 - **Schema:** `/convex/schema.ts` (30+ tables with real-time sync)
@@ -89,18 +113,34 @@ npx convex dev && ./setup-convex.sh
 
 ## Development Patterns
 
-**iOS & watchOS Development (Primary Focus):**
-- iOS app is the PRIMARY user-facing application for the 15-day intake journey
-- Apple Watch app provides companion questionnaire interface and receives physician recommendations
-- WatchConnectivity enables seamless sync between iPhone and Apple Watch
-- HealthKit integration for comprehensive sleep and health data collection
-- Swift/SwiftUI development with Xcode project at `/Sleep360/Sleep360.xcodeproj`
+**Watch-First Design Philosophy:**
+- Design for 41mm Apple Watch FIRST, then scale up to larger screens
+- Stanford Sleep Log completable in **under 60 seconds** on any watch
+- Digital Crown for time pickers and sliders (with haptic feedback)
+- Adaptive layouts: UI automatically adjusts to watch size (40mm → 49mm Ultra)
+- Large tap targets: 44pt minimum, 60pt on Ultra
 
-**Web Application (Debug/Development Only):**
-- Web version exists ONLY for debugging questionnaire logic and development testing
-- NOT intended for end users - all user interaction happens on iOS/watchOS
-- Day advancement button available for journey testing
-- Useful for rapid questionnaire iteration without rebuilding iOS app
+**Cross-Platform Sync:**
+- Real-time Convex sync across Watch, iPhone, and Web
+- Start questionnaire on Watch → Continue on iPhone → Finish on Web
+- Progress saved instantly to cloud
+
+**Accessibility Features:**
+- **Large Icons Mode**: 30% bigger buttons/text for poor eyesight
+- **High Contrast**: Bolder colors, clearer borders
+- **Reduce Motion**: Minimize animations
+- **Text Size Slider**: Scalable from 0.8x to 1.4x
+
+**iOS & watchOS Development:**
+- Swift/SwiftUI with Xcode project at `/Sleep360/Sleep360.xcodeproj`
+- HealthKit integration for comprehensive sleep and health data
+- WatchConnectivity for iPhone-Watch sync
+
+**Web Application (Patient + Physician):**
+- Next.js 14 with App Router
+- Patients can complete questionnaire on web (interchangeable with iOS/Watch)
+- Physicians access dashboard at `/physician`
+- Day advancement button in Settings > Debug Mode for testing
 
 **Common Patterns:**
 - Convex provides real-time data synchronization across platforms
@@ -166,7 +206,85 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-11-26)
 
-**Zoé Sleep App Icon Design (Current):**
+**MAJOR UPDATE: Complete Physician Dashboard & Treatment Mode Implementation**
+
+This session completed Phases 3-6 of the Zoe Sleep system, implementing:
+
+### Phase 3: Consumer App Clarity (Sleep Log vs Assessment)
+- **Section Differentiation:** Clear visual separation between Stanford Sleep Log (blue #2196F3) and Day Assessment (purple #9C27B0)
+- **iOS Files:**
+  - `/Sleep360/Sleep360/Views/QuestionnaireSections.swift` - QuestionnaireSection enum, SectionHeaderView, SectionProgressView
+  - Updated QuestionnaireView.swift with section-based flow
+- **watchOS Files:**
+  - `/Sleep360/Sleep360 Watch App/SleepLogView.swift` - WatchSectionColors enum, SleepLogCard, DayAssessmentCard
+
+### Phase 4: Full Rebranding (Circadian Wave Icons - NO moon/stars)
+- **New Icon Design:** Elegant circadian wave theme replacing previous moon/stars
+  - Deep navy (#0F172A) to teal (#145360) gradient background
+  - Flowing sine waves representing circadian rhythms
+  - Teal (#14B8A6) with glowing wave effects
+  - Subtle amber energy orb for vitality
+- **Icons Generated:** 15 iOS sizes + 17 watchOS sizes + 3 launch screen sizes
+- **Launch Screen:** UILaunchScreen with LaunchBackground.colorset and LaunchIcon.imageset
+- **Files:**
+  - `/scripts/generate_app_icons.py` - Rewritten with circadian wave design
+  - `/Sleep360/Sleep360/Assets.xcassets/LaunchBackground.colorset/`
+  - `/Sleep360/Sleep360/Assets.xcassets/LaunchIcon.imageset/`
+
+### Phase 5: Physician Dashboard (Complete Web Implementation)
+- **Main Dashboard** (`/client/src/app/physician-dashboard/page.tsx`):
+  - Patient list with status badges (In Progress, Pending Review, Under Review, Interventions Ready, Active Treatment)
+  - Status filter chips with counts, search functionality
+  - Progress bars and last activity timestamps
+- **Patient Detail** (`/client/src/app/physician-dashboard/patient/[id]/page.tsx`):
+  - Overview tab with AI analysis (GPT-4o integration), demographics
+  - Responses tab with day-by-day viewer
+  - Scores tab for questionnaire scores (ISI, PSQI, ESS)
+  - Interventions tab for active treatments
+  - Notes tab for physician annotations
+- **Prescription Builder** (`/client/src/app/physician-dashboard/patient/[id]/prescription/page.tsx`):
+  - Intervention library with search and categories
+  - Configure start/end dates, frequency, timing
+  - Custom instructions per intervention
+  - Save as draft or activate immediately
+- **Question Manager** (`/client/src/app/physician-dashboard/questions/page.tsx`):
+  - Three views: By Day, By Module, All Questions
+  - Search and filter, expandable sections, inline editing
+- **Settings** (`/client/src/app/physician-dashboard/settings/page.tsx`):
+  - Profile, notifications, appearance, security
+
+### Phase 6: Treatment Mode (Post-Intake Tasks)
+- **Convex Backend** (`/convex/treatment.ts`):
+  - `getActiveInterventions`, `getTodayTasksSummary`, `getComplianceHistory`
+  - `getTreatmentPhase`, `getWatchTasks`, `getTaskNotes`
+  - `completeTask`, `uncompleteTask`, `addTaskNote`, `watchCompleteTask`
+- **Web Treatment** (`/client/src/app/treatment/page.tsx`):
+  - Progress card with percentage and celebration animation
+  - Tasks grouped by time of day with checkboxes
+  - 7-day streak chart visualization
+  - Note modal for reflections
+- **iOS Treatment** (`/Sleep360/Sleep360/Views/TreatmentView.swift`):
+  - Native SwiftUI with progress bar animation
+  - Tasks organized by timing with color-coded icons
+  - Weekly streak visualization, note sheet
+- **watchOS Treatment** (`/Sleep360/Sleep360 Watch App/TreatmentTasksView.swift`):
+  - Optimized for all watch sizes (40mm-49mm Ultra)
+  - Compact progress header, simplified task rows
+  - Quick tap completion with haptic feedback
+  - Treatment tab in main navigation
+
+### Key Files Summary:
+- **Convex:** `/convex/treatment.ts` (NEW)
+- **Web:** 6 new pages in `/client/src/app/physician-dashboard/` and `/client/src/app/treatment/`
+- **iOS:** `/Sleep360/Sleep360/Views/TreatmentView.swift`, `QuestionnaireSections.swift`, `SettingsView.swift`, `ThemeManager.swift`
+- **watchOS:** `/Sleep360/Sleep360 Watch App/TreatmentTasksView.swift`, `SleepLogView.swift`, `WatchQuestionComponents.swift`, `SettingsView.swift`
+- **Icons:** Updated all app icons with circadian wave design
+
+---
+
+**Previous Session (2025-11-26):**
+
+**Zoé Sleep App Icon Design:**
 - **App Branding:** Designed and implemented professional app icons for "Zoé Sleep" brand
 - **Icon Design Elements:**
   - Deep indigo (#2D1B5C) to rich purple (#58378F) vertical gradient background

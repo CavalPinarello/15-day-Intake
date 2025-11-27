@@ -1,188 +1,217 @@
 #!/usr/bin/env python3
 """
-Zoé Sleep App Icon Generator
+Zoe Sleep App Icon Generator - Circadian Wave Design
 
 Generates all required icon sizes for iOS and watchOS apps.
-Design: Deep indigo/purple gradient with stylized crescent moon and "Z" accent.
+Design: Elegant circadian wave theme with flowing gradients (NO moon/stars).
+
+Theme: Abstract flowing waves representing the natural rhythm of sleep cycles,
+using a sophisticated teal-to-deep-blue gradient palette.
 """
 
 import math
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
-# Color palette - calming sleep-themed colors
+# Color palette - elegant circadian/longevity theme
 COLORS = {
-    'gradient_top': (45, 27, 92),      # Deep indigo
-    'gradient_bottom': (88, 55, 143),   # Rich purple
-    'moon': (255, 255, 255),            # White moon
-    'moon_shadow': (200, 190, 230),     # Soft lavender shadow
-    'accent': (147, 197, 253),          # Soft blue accent
-    'stars': (255, 255, 255),           # White stars
+    # Background gradient (deep indigo to rich teal)
+    'gradient_top': (15, 23, 42),       # Deep navy #0F172A
+    'gradient_mid': (30, 41, 59),       # Slate #1E293B
+    'gradient_bottom': (20, 83, 96),    # Deep teal #145360
+
+    # Wave colors (flowing circadian rhythm)
+    'wave_primary': (20, 184, 166),     # Teal #14B8A6
+    'wave_secondary': (45, 212, 191),   # Light teal #2DD4BF
+    'wave_accent': (94, 234, 212),      # Bright teal #5EEAD4
+    'wave_glow': (153, 246, 228),       # Glow teal #99F6E4
+
+    # Energy accent (representing vitality/longevity)
+    'energy_warm': (251, 191, 36),      # Warm amber #FBBF24
+    'energy_soft': (254, 240, 138),     # Soft gold #FEF08A
 }
 
-def create_gradient(size, color1, color2):
-    """Create a vertical gradient background."""
-    img = Image.new('RGBA', (size, size), color1)
-    draw = ImageDraw.Draw(img)
+
+def create_gradient(size):
+    """Create a sophisticated three-point vertical gradient background."""
+    img = Image.new('RGBA', (size, size))
 
     for y in range(size):
         ratio = y / size
-        r = int(color1[0] * (1 - ratio) + color2[0] * ratio)
-        g = int(color1[1] * (1 - ratio) + color2[1] * ratio)
-        b = int(color1[2] * (1 - ratio) + color2[2] * ratio)
-        draw.line([(0, y), (size, y)], fill=(r, g, b))
+
+        if ratio < 0.5:
+            # Top to middle
+            r = ratio * 2
+            c1, c2 = COLORS['gradient_top'], COLORS['gradient_mid']
+        else:
+            # Middle to bottom
+            r = (ratio - 0.5) * 2
+            c1, c2 = COLORS['gradient_mid'], COLORS['gradient_bottom']
+
+        red = int(c1[0] * (1 - r) + c2[0] * r)
+        green = int(c1[1] * (1 - r) + c2[1] * r)
+        blue = int(c1[2] * (1 - r) + c2[2] * r)
+
+        for x in range(size):
+            img.putpixel((x, y), (red, green, blue, 255))
 
     return img
 
 
-def draw_crescent_moon(draw, size, center_x, center_y, radius):
-    """Draw a crescent moon shape."""
-    # Main moon circle
-    moon_bbox = [
-        center_x - radius,
-        center_y - radius,
-        center_x + radius,
-        center_y + radius
+def draw_circadian_wave(draw, size, y_offset, amplitude, wavelength, color, thickness, phase=0):
+    """Draw a flowing sine wave representing circadian rhythm."""
+    points = []
+
+    for x in range(size + 10):
+        # Sine wave with phase offset
+        y = y_offset + amplitude * math.sin(2 * math.pi * (x / wavelength) + phase)
+        points.append((x, y))
+
+    # Draw thick smooth wave
+    if len(points) > 1:
+        for i in range(len(points) - 1):
+            draw.line([points[i], points[i + 1]], fill=color, width=thickness)
+
+
+def draw_wave_with_gradient(img, size, y_base, amplitude, wavelength, thickness, phase=0, alpha_start=200, alpha_end=80):
+    """Draw a wave with gradient alpha for a glowing effect."""
+    draw = ImageDraw.Draw(img, 'RGBA')
+
+    for offset in range(thickness, 0, -1):
+        alpha = int(alpha_start - (alpha_start - alpha_end) * (thickness - offset) / thickness)
+
+        # Color interpolation from primary to accent
+        ratio = offset / thickness
+        r = int(COLORS['wave_primary'][0] * ratio + COLORS['wave_accent'][0] * (1 - ratio))
+        g = int(COLORS['wave_primary'][1] * ratio + COLORS['wave_accent'][1] * (1 - ratio))
+        b = int(COLORS['wave_primary'][2] * ratio + COLORS['wave_accent'][2] * (1 - ratio))
+
+        color = (r, g, b, alpha)
+
+        for x in range(size):
+            y = y_base + amplitude * math.sin(2 * math.pi * (x / wavelength) + phase)
+
+            # Draw vertical gradient line at this x position
+            for dy in range(-offset, offset + 1):
+                py = int(y + dy)
+                if 0 <= py < size:
+                    existing = img.getpixel((x, py))
+                    # Alpha blend
+                    blend_alpha = alpha / 255
+                    new_r = int(existing[0] * (1 - blend_alpha) + r * blend_alpha)
+                    new_g = int(existing[1] * (1 - blend_alpha) + g * blend_alpha)
+                    new_b = int(existing[2] * (1 - blend_alpha) + b * blend_alpha)
+                    img.putpixel((x, py), (new_r, new_g, new_b, 255))
+
+
+def draw_energy_orb(img, size, center_x, center_y, radius):
+    """Draw a subtle energy orb representing vitality/longevity."""
+    draw = ImageDraw.Draw(img, 'RGBA')
+
+    # Draw concentric circles with decreasing alpha
+    for r in range(int(radius), 0, -1):
+        alpha = int(60 * (r / radius))
+
+        # Interpolate color from warm to soft
+        ratio = r / radius
+        red = int(COLORS['energy_warm'][0] * ratio + COLORS['energy_soft'][0] * (1 - ratio))
+        green = int(COLORS['energy_warm'][1] * ratio + COLORS['energy_soft'][1] * (1 - ratio))
+        blue = int(COLORS['energy_warm'][2] * ratio + COLORS['energy_soft'][2] * (1 - ratio))
+
+        bbox = [center_x - r, center_y - r, center_x + r, center_y + r]
+        draw.ellipse(bbox, fill=(red, green, blue, alpha))
+
+
+def draw_flow_lines(img, size):
+    """Draw subtle flowing lines representing sleep cycle transitions."""
+    draw = ImageDraw.Draw(img, 'RGBA')
+
+    # Multiple subtle flow lines
+    line_configs = [
+        {'y': size * 0.25, 'amp': size * 0.03, 'wl': size * 0.8, 'phase': 0, 'alpha': 30},
+        {'y': size * 0.45, 'amp': size * 0.05, 'wl': size * 0.6, 'phase': 1.5, 'alpha': 40},
+        {'y': size * 0.65, 'amp': size * 0.04, 'wl': size * 0.7, 'phase': 3.0, 'alpha': 35},
+        {'y': size * 0.85, 'amp': size * 0.03, 'wl': size * 0.9, 'phase': 4.5, 'alpha': 25},
     ]
-    draw.ellipse(moon_bbox, fill=COLORS['moon'])
 
-    # Shadow circle to create crescent effect (offset to upper-right)
-    shadow_offset = radius * 0.35
-    shadow_radius = radius * 0.85
-    shadow_bbox = [
-        center_x - shadow_radius + shadow_offset,
-        center_y - shadow_radius - shadow_offset * 0.5,
-        center_x + shadow_radius + shadow_offset,
-        center_y + shadow_radius - shadow_offset * 0.5
-    ]
-
-    return shadow_bbox
-
-
-def draw_z_accent(draw, size, x, y, z_size):
-    """Draw a stylized 'Z' representing Zoé and sleep (zzz)."""
-    # Z dimensions
-    stroke_width = max(2, int(z_size * 0.15))
-
-    # Top horizontal line
-    draw.line(
-        [(x, y), (x + z_size, y)],
-        fill=COLORS['accent'],
-        width=stroke_width
-    )
-
-    # Diagonal line
-    draw.line(
-        [(x + z_size, y), (x, y + z_size)],
-        fill=COLORS['accent'],
-        width=stroke_width
-    )
-
-    # Bottom horizontal line
-    draw.line(
-        [(x, y + z_size), (x + z_size, y + z_size)],
-        fill=COLORS['accent'],
-        width=stroke_width
-    )
-
-
-def add_stars(draw, size, num_stars=5):
-    """Add small twinkling stars."""
-    import random
-    random.seed(42)  # Consistent star positions
-
-    star_positions = [
-        (0.15, 0.2),
-        (0.82, 0.15),
-        (0.1, 0.55),
-        (0.85, 0.45),
-        (0.75, 0.7),
-    ]
-
-    for px, py in star_positions[:num_stars]:
-        x = int(size * px)
-        y = int(size * py)
-        star_size = max(1, int(size * 0.015))
-
-        # Draw small star (cross pattern)
-        for i in range(-star_size, star_size + 1):
-            alpha = int(255 * (1 - abs(i) / (star_size + 1)))
-            # Horizontal
-            if 0 <= x + i < size:
-                draw.point((x + i, y), fill=(*COLORS['stars'], alpha))
-            # Vertical
-            if 0 <= y + i < size:
-                draw.point((x, y + i), fill=(*COLORS['stars'], alpha))
+    for cfg in line_configs:
+        color = (*COLORS['wave_glow'][:3], cfg['alpha'])
+        draw_circadian_wave(
+            draw, size,
+            y_offset=cfg['y'],
+            amplitude=cfg['amp'],
+            wavelength=cfg['wl'],
+            color=color,
+            thickness=max(1, int(size * 0.005)),
+            phase=cfg['phase']
+        )
 
 
 def create_zoe_sleep_icon(size):
-    """Create the Zoé Sleep app icon at the specified size."""
+    """Create the Zoe Sleep app icon with circadian wave design."""
     # Start with gradient background
-    img = create_gradient(size, COLORS['gradient_top'], COLORS['gradient_bottom'])
-    draw = ImageDraw.Draw(img, 'RGBA')
+    img = create_gradient(size)
 
-    # Add subtle stars for larger sizes
-    if size >= 80:
-        add_stars(draw, size, num_stars=5)
-    elif size >= 40:
-        add_stars(draw, size, num_stars=3)
+    # Add subtle flow lines for texture (only on larger icons)
+    if size >= 60:
+        draw_flow_lines(img, size)
 
-    # Moon parameters - positioned left-center
-    moon_radius = size * 0.32
-    moon_center_x = size * 0.42
-    moon_center_y = size * 0.48
+    # Main wave parameters - the primary visual element
+    wave_y = size * 0.55
+    wave_amplitude = size * 0.12
+    wave_wavelength = size * 0.5
+    wave_thickness = max(3, int(size * 0.06))
 
-    # Draw moon
-    shadow_bbox = draw_crescent_moon(draw, size, moon_center_x, moon_center_y, moon_radius)
-
-    # Create mask for crescent effect
-    mask = Image.new('L', (size, size), 255)
-    mask_draw = ImageDraw.Draw(mask)
-    mask_draw.ellipse(shadow_bbox, fill=0)
-
-    # Apply gradient over shadow area to create crescent
-    for y in range(int(shadow_bbox[1]), min(size, int(shadow_bbox[3]) + 1)):
-        for x in range(int(shadow_bbox[0]), min(size, int(shadow_bbox[2]) + 1)):
-            if x < 0 or y < 0:
-                continue
-            # Check if point is in shadow ellipse
-            cx = (shadow_bbox[0] + shadow_bbox[2]) / 2
-            cy = (shadow_bbox[1] + shadow_bbox[3]) / 2
-            rx = (shadow_bbox[2] - shadow_bbox[0]) / 2
-            ry = (shadow_bbox[3] - shadow_bbox[1]) / 2
-
-            if rx > 0 and ry > 0:
-                dist = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2
-                if dist <= 1:
-                    # Get gradient color at this position
-                    ratio = y / size
-                    r = int(COLORS['gradient_top'][0] * (1 - ratio) + COLORS['gradient_bottom'][0] * ratio)
-                    g = int(COLORS['gradient_top'][1] * (1 - ratio) + COLORS['gradient_bottom'][1] * ratio)
-                    b = int(COLORS['gradient_top'][2] * (1 - ratio) + COLORS['gradient_bottom'][2] * ratio)
-                    img.putpixel((x, y), (r, g, b, 255))
-
-    # Draw Z accent - positioned near the moon
-    z_size = size * 0.18
-    z_x = moon_center_x + moon_radius * 0.5
-    z_y = moon_center_y - moon_radius * 0.6
-
-    # Only draw Z for sizes >= 40 for clarity
+    # Draw main glowing wave
     if size >= 40:
-        draw_z_accent(draw, size, z_x, z_y, z_size)
+        draw_wave_with_gradient(
+            img, size,
+            y_base=wave_y,
+            amplitude=wave_amplitude,
+            wavelength=wave_wavelength,
+            thickness=wave_thickness,
+            phase=0.5,
+            alpha_start=220,
+            alpha_end=60
+        )
 
-        # Add smaller zzz trail for larger icons
-        if size >= 100:
-            # Second smaller z
-            z2_size = z_size * 0.65
-            z2_x = z_x + z_size * 0.9
-            z2_y = z_y - z_size * 0.4
-            draw_z_accent(draw, size, z2_x, z2_y, z2_size)
+    # Draw secondary wave (offset and smaller)
+    if size >= 60:
+        draw = ImageDraw.Draw(img, 'RGBA')
+        secondary_color = (*COLORS['wave_secondary'][:3], 120)
+        draw_circadian_wave(
+            draw, size,
+            y_offset=wave_y - size * 0.08,
+            amplitude=wave_amplitude * 0.7,
+            wavelength=wave_wavelength * 1.2,
+            color=secondary_color,
+            thickness=max(2, int(wave_thickness * 0.5)),
+            phase=2.0
+        )
 
-            # Third even smaller z
-            if size >= 180:
-                z3_size = z_size * 0.4
-                z3_x = z2_x + z2_size * 0.8
-                z3_y = z2_y - z2_size * 0.4
-                draw_z_accent(draw, size, z3_x, z3_y, z3_size)
+    # Add subtle energy orb (representing vitality) - only on larger icons
+    if size >= 100:
+        orb_x = size * 0.75
+        orb_y = size * 0.35
+        orb_radius = size * 0.12
+        draw_energy_orb(img, size, orb_x, orb_y, orb_radius)
+
+    # Add a subtle highlight wave on top
+    if size >= 80:
+        draw = ImageDraw.Draw(img, 'RGBA')
+        highlight_color = (*COLORS['wave_glow'][:3], 100)
+        draw_circadian_wave(
+            draw, size,
+            y_offset=wave_y + size * 0.06,
+            amplitude=wave_amplitude * 0.5,
+            wavelength=wave_wavelength * 0.8,
+            color=highlight_color,
+            thickness=max(1, int(size * 0.015)),
+            phase=1.0
+        )
+
+    # Apply subtle blur for smoothness on larger icons
+    if size >= 120:
+        img = img.filter(ImageFilter.GaussianBlur(radius=0.5))
 
     return img.convert('RGB')
 
@@ -261,26 +290,62 @@ def main():
     ios_icon_path = os.path.join(project_root, 'Sleep360', 'Sleep360', 'Assets.xcassets', 'AppIcon.appiconset')
     watch_icon_path = os.path.join(project_root, 'Sleep360', 'Sleep360 Watch App', 'Assets.xcassets', 'AppIcon.appiconset')
 
-    print("=" * 50)
-    print("Zoé Sleep App Icon Generator")
-    print("=" * 50)
-    print(f"\niOS path: {ios_icon_path}")
+    print("=" * 60)
+    print("Zoe Sleep App Icon Generator - Circadian Wave Design")
+    print("=" * 60)
+    print("\nDesign: Elegant flowing waves representing circadian rhythms")
+    print("Colors: Deep navy to teal gradient with glowing wave accents")
+    print("Theme: Sleep cycles, longevity, natural rhythm (NO moon/stars)")
+    print()
+    print(f"iOS path: {ios_icon_path}")
     print(f"watchOS path: {watch_icon_path}")
     print()
+
+    # Ensure directories exist
+    os.makedirs(ios_icon_path, exist_ok=True)
+    os.makedirs(watch_icon_path, exist_ok=True)
 
     # Generate icons
     generate_ios_icons(ios_icon_path)
     generate_watchos_icons(watch_icon_path)
 
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print("Icon generation complete!")
-    print("=" * 50)
+    print("=" * 60)
 
     # Also save a preview at 512x512 for easy viewing
-    preview_path = os.path.join(project_root, 'docs', 'zoe-sleep-icon-preview.png')
+    docs_path = os.path.join(project_root, 'docs')
+    os.makedirs(docs_path, exist_ok=True)
+
+    preview_path = os.path.join(docs_path, 'zoe-sleep-icon-preview.png')
     preview = create_zoe_sleep_icon(512)
     preview.save(preview_path, 'PNG')
     print(f"\nPreview saved to: {preview_path}")
+
+    # Also save a large version for marketing
+    marketing_path = os.path.join(docs_path, 'zoe-sleep-icon-1024.png')
+    marketing = create_zoe_sleep_icon(1024)
+    marketing.save(marketing_path, 'PNG')
+    print(f"Marketing icon saved to: {marketing_path}")
+
+    # Generate Launch Screen Icons
+    launch_icon_path = os.path.join(project_root, 'Sleep360', 'Sleep360', 'Assets.xcassets', 'LaunchIcon.imageset')
+    os.makedirs(launch_icon_path, exist_ok=True)
+
+    print("\nGenerating Launch Screen icons...")
+    launch_sizes = [
+        ('LaunchIcon.png', 200),
+        ('LaunchIcon@2x.png', 400),
+        ('LaunchIcon@3x.png', 600),
+    ]
+
+    for filename, pixel_size in launch_sizes:
+        icon = create_zoe_sleep_icon(pixel_size)
+        filepath = os.path.join(launch_icon_path, filename)
+        icon.save(filepath, 'PNG')
+        print(f"  Created: {filename} ({pixel_size}x{pixel_size})")
+
+    print(f"Launch icons saved to: {launch_icon_path}")
 
 
 if __name__ == '__main__':

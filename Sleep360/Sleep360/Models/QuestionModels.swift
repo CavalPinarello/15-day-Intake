@@ -1,11 +1,338 @@
 //
 //  QuestionModels.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  Data models for the 15-day adaptive questionnaire system
 //
 
 import Foundation
+import SwiftUI
+
+// MARK: - Time Period Enum
+
+enum TimePeriod {
+    case morning    // 5 AM - 12 PM: Bright, energetic
+    case afternoon  // 12 PM - 5 PM: Transitioning warmth
+    case evening    // 5 PM - 9 PM: Full sunset warmth
+    case night      // 9 PM - 5 AM: Deep, calming
+
+    static var current: TimePeriod {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:
+            return .morning
+        case 12..<17:
+            return .afternoon
+        case 17..<21:
+            return .evening
+        default:
+            return .night
+        }
+    }
+}
+
+// MARK: - Color Theme
+
+struct ColorTheme {
+
+    // MARK: - Singleton with Time Awareness
+
+    static var shared: ColorTheme {
+        ColorTheme(period: TimePeriod.current)
+    }
+
+    let period: TimePeriod
+
+    init(period: TimePeriod = .current) {
+        self.period = period
+    }
+
+    // MARK: - Primary Colors (Time-Based)
+
+    /// Main accent color - changes with time of day
+    var primary: Color {
+        switch period {
+        case .morning:
+            return Color(hex: "#0EA5E9")!  // Sky blue - energetic morning
+        case .afternoon:
+            return Color(hex: "#F59E0B")!  // Amber - warm afternoon
+        case .evening:
+            return Color(hex: "#EA580C")!  // Orange - sunset glow
+        case .night:
+            return Color(hex: "#7C3AED")!  // Purple - calming night
+        }
+    }
+
+    /// Secondary accent for subtle elements
+    var secondary: Color {
+        switch period {
+        case .morning:
+            return Color(hex: "#38BDF8")!  // Light sky blue
+        case .afternoon:
+            return Color(hex: "#FBBF24")!  // Golden amber
+        case .evening:
+            return Color(hex: "#FB923C")!  // Warm orange
+        case .night:
+            return Color(hex: "#A78BFA")!  // Soft lavender
+        }
+    }
+
+    /// Tertiary color for accents and highlights
+    var tertiary: Color {
+        switch period {
+        case .morning:
+            return Color(hex: "#06B6D4")!  // Cyan
+        case .afternoon:
+            return Color(hex: "#D97706")!  // Deep amber
+        case .evening:
+            return Color(hex: "#DC2626")!  // Warm red
+        case .night:
+            return Color(hex: "#8B5CF6")!  // Violet
+        }
+    }
+
+    // MARK: - Background Colors
+
+    /// Subtle background tint
+    var backgroundTint: Color {
+        switch period {
+        case .morning:
+            return Color(hex: "#0EA5E9")!.opacity(0.08)  // Light blue tint
+        case .afternoon:
+            return Color(hex: "#F59E0B")!.opacity(0.08)  // Amber tint
+        case .evening:
+            return Color(hex: "#EA580C")!.opacity(0.08)  // Orange tint
+        case .night:
+            return Color(hex: "#7C3AED")!.opacity(0.08)  // Purple tint
+        }
+    }
+
+    /// Card background with time-based warmth
+    var cardBackground: Color {
+        switch period {
+        case .morning:
+            return Color(hex: "#F0F9FF")!  // Very light blue
+        case .afternoon:
+            return Color(hex: "#FFFBEB")!  // Warm cream
+        case .evening:
+            return Color(hex: "#FFF7ED")!  // Warm orange tint
+        case .night:
+            return Color(hex: "#FAF5FF")!  // Soft purple tint
+        }
+    }
+
+    // MARK: - Status Colors (Consistent across time periods)
+
+    var success: Color {
+        Color(hex: "#10B981")!  // Emerald green
+    }
+
+    var warning: Color {
+        Color(hex: "#F59E0B")!  // Amber
+    }
+
+    var error: Color {
+        Color(hex: "#EF4444")!  // Red
+    }
+
+    var info: Color {
+        primary
+    }
+
+    // MARK: - Progress Colors
+
+    /// Completed state
+    var completed: Color {
+        success
+    }
+
+    /// Current/Active state
+    var active: Color {
+        primary
+    }
+
+    /// Pending/Inactive state
+    var inactive: Color {
+        Color(hex: "#9CA3AF")!.opacity(0.4)  // Gray
+    }
+
+    // MARK: - Text Colors
+
+    var textPrimary: Color {
+        Color.primary
+    }
+
+    var textSecondary: Color {
+        Color.secondary
+    }
+
+    var textOnPrimary: Color {
+        .white
+    }
+
+    // MARK: - Component-Specific Colors
+
+    /// Sleep diary icon
+    var sleepDiary: Color {
+        switch period {
+        case .morning:
+            return Color(hex: "#8B5CF6")!  // Purple
+        case .afternoon:
+            return Color(hex: "#EA580C")!  // Orange
+        case .evening:
+            return Color(hex: "#DC2626")!  // Warm red
+        case .night:
+            return Color(hex: "#7C3AED")!  // Deep purple
+        }
+    }
+
+    /// HealthKit / Heart
+    var health: Color {
+        switch period {
+        case .morning:
+            return Color(hex: "#EF4444")!  // Red
+        case .afternoon:
+            return Color(hex: "#DC2626")!  // Darker red
+        case .evening:
+            return Color(hex: "#B91C1C")!  // Deep red
+        case .night:
+            return Color(hex: "#F87171")!  // Soft red
+        }
+    }
+
+    /// Insights / Charts
+    var insights: Color {
+        switch period {
+        case .morning:
+            return Color(hex: "#10B981")!  // Emerald
+        case .afternoon:
+            return Color(hex: "#059669")!  // Deep emerald
+        case .evening:
+            return Color(hex: "#047857")!  // Forest green
+        case .night:
+            return Color(hex: "#34D399")!  // Soft mint
+        }
+    }
+
+    // MARK: - Phase Colors
+
+    /// Core assessment phase (Days 1-5)
+    var corePhase: Color {
+        switch period {
+        case .morning:
+            return Color(hex: "#EAB308")!  // Yellow
+        case .afternoon:
+            return Color(hex: "#F59E0B")!  // Amber
+        case .evening:
+            return Color(hex: "#D97706")!  // Deep amber
+        case .night:
+            return Color(hex: "#FCD34D")!  // Soft yellow
+        }
+    }
+
+    /// Expansion phase (Days 6-15)
+    var expansionPhase: Color {
+        success
+    }
+
+    // MARK: - Gradient Definitions
+
+    /// Primary gradient for headers and accents
+    var primaryGradient: LinearGradient {
+        switch period {
+        case .morning:
+            return LinearGradient(
+                colors: [Color(hex: "#0EA5E9")!, Color(hex: "#38BDF8")!],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .afternoon:
+            return LinearGradient(
+                colors: [Color(hex: "#F59E0B")!, Color(hex: "#FBBF24")!],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .evening:
+            return LinearGradient(
+                colors: [Color(hex: "#EA580C")!, Color(hex: "#FB923C")!],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .night:
+            return LinearGradient(
+                colors: [Color(hex: "#7C3AED")!, Color(hex: "#A78BFA")!],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    /// Sunset gradient for decorative elements
+    var sunsetGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(hex: "#FCD34D")!,  // Yellow
+                Color(hex: "#F59E0B")!,  // Amber
+                Color(hex: "#EA580C")!,  // Orange
+                Color(hex: "#DC2626")!,  // Red
+                Color(hex: "#7C3AED")!   // Purple
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    /// Morning sky gradient
+    var morningGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(hex: "#38BDF8")!,  // Light blue
+                Color(hex: "#0EA5E9")!,  // Sky blue
+                Color(hex: "#0284C7")!   // Deeper blue
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+// MARK: - Observable Theme Manager
+
+@MainActor
+class ThemeManager: ObservableObject {
+    @Published var currentTheme: ColorTheme
+
+    init() {
+        self.currentTheme = ColorTheme.shared
+    }
+
+    func updateTheme() {
+        let newTheme = ColorTheme.shared
+        if newTheme.period != currentTheme.period {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                currentTheme = newTheme
+            }
+        }
+    }
+}
+
+// MARK: - Color Extension for Hex
+
+extension Color {
+    init?(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+
+        var rgb: UInt64 = 0
+        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
+
+        self.init(
+            red: Double((rgb & 0xFF0000) >> 16) / 255.0,
+            green: Double((rgb & 0x00FF00) >> 8) / 255.0,
+            blue: Double(rgb & 0x0000FF) / 255.0
+        )
+    }
+}
 
 // MARK: - Question Types
 
@@ -54,6 +381,37 @@ enum Pillar: String, Codable, CaseIterable {
         case .nutritional: return "#84CC16"
         case .sleepDiary: return "#06B6D4"
         case .sleepLog: return "#6366F1"
+        }
+    }
+
+    /// Time-aware pillar color
+    var themeColor: Color {
+        let theme = ColorTheme.shared
+        switch self {
+        case .social:
+            return Color(hex: "#6366F1")!  // Indigo (consistent)
+        case .metabolic:
+            return theme.secondary  // Amber/Orange based on time
+        case .sleepQuality:
+            return theme.primary  // Primary theme color
+        case .sleepQuantity:
+            return Color(hex: "#8B5CF6")!  // Violet
+        case .sleepRegularity:
+            return theme.success  // Green
+        case .sleepTiming:
+            return Color(hex: "#EC4899")!  // Pink
+        case .mentalHealth:
+            return theme.health  // Red tones
+        case .cognitive:
+            return theme.tertiary  // Orange/Cyan based on time
+        case .physical:
+            return Color(hex: "#14B8A6")!  // Teal
+        case .nutritional:
+            return Color(hex: "#84CC16")!  // Lime
+        case .sleepDiary:
+            return theme.sleepDiary  // Purple/Orange based on time
+        case .sleepLog:
+            return theme.primary  // Primary theme color
         }
     }
 }

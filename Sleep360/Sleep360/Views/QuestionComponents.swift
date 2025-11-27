@@ -1,6 +1,6 @@
 //
 //  QuestionComponents.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  Reusable UI components for different question types
 //
@@ -12,9 +12,11 @@ import SwiftUI
 struct QuestionCard<Content: View>: View {
     let question: Question
     let content: () -> Content
+    var theme: ColorTheme = ColorTheme.shared
 
-    init(question: Question, @ViewBuilder content: @escaping () -> Content) {
+    init(question: Question, theme: ColorTheme = ColorTheme.shared, @ViewBuilder content: @escaping () -> Content) {
         self.question = question
+        self.theme = theme
         self.content = content
     }
 
@@ -28,7 +30,7 @@ struct QuestionCard<Content: View>: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color(hex: question.pillar.color) ?? .blue)
+                    .background(question.pillar.themeColor)
                     .cornerRadius(4)
 
                 Spacer()
@@ -51,14 +53,14 @@ struct QuestionCard<Content: View>: View {
             if let helpText = question.helpText {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "info.circle")
-                        .foregroundColor(.blue)
+                        .foregroundColor(theme.primary)
                         .font(.caption)
                     Text(helpText)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .padding(8)
-                .background(Color.blue.opacity(0.1))
+                .background(theme.backgroundTint)
                 .cornerRadius(8)
             }
 
@@ -77,6 +79,7 @@ struct QuestionCard<Content: View>: View {
 struct ScaleInput: View {
     let question: Question
     @Binding var value: Double
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         VStack(spacing: 12) {
@@ -95,12 +98,12 @@ struct ScaleInput: View {
                 in: Double(question.scaleMin ?? 1)...Double(question.scaleMax ?? 10),
                 step: 1
             )
-            .accentColor(Color(hex: question.pillar.color) ?? .blue)
+            .accentColor(question.pillar.themeColor)
 
             Text("\(Int(value))")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(Color(hex: question.pillar.color) ?? .blue)
+                .foregroundColor(question.pillar.themeColor)
         }
     }
 }
@@ -110,6 +113,9 @@ struct ScaleInput: View {
 struct YesNoInput: View {
     let question: Question
     @Binding var value: String
+    var theme: ColorTheme = ColorTheme.shared
+
+    private var pillarColor: Color { question.pillar.themeColor }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -120,12 +126,12 @@ struct YesNoInput: View {
                         .fontWeight(.medium)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(value == option ? Color(hex: question.pillar.color)?.opacity(0.2) ?? Color.blue.opacity(0.2) : Color(.secondarySystemBackground))
-                        .foregroundColor(value == option ? Color(hex: question.pillar.color) ?? .blue : .primary)
+                        .background(value == option ? pillarColor.opacity(0.2) : Color(.secondarySystemBackground))
+                        .foregroundColor(value == option ? pillarColor : .primary)
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(value == option ? Color(hex: question.pillar.color) ?? .blue : Color.clear, lineWidth: 2)
+                                .stroke(value == option ? pillarColor : Color.clear, lineWidth: 2)
                         )
                 }
                 .buttonStyle(.plain)
@@ -150,6 +156,9 @@ struct YesNoInput: View {
 struct SingleSelectInput: View {
     let question: Question
     @Binding var value: String
+    var theme: ColorTheme = ColorTheme.shared
+
+    private var pillarColor: Color { question.pillar.themeColor }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -161,12 +170,12 @@ struct SingleSelectInput: View {
                         Spacer()
                         if value == option {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(Color(hex: question.pillar.color) ?? .blue)
+                                .foregroundColor(pillarColor)
                         }
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(value == option ? Color(hex: question.pillar.color)?.opacity(0.1) ?? Color.blue.opacity(0.1) : Color(.secondarySystemBackground))
+                    .background(value == option ? pillarColor.opacity(0.1) : Color(.secondarySystemBackground))
                     .foregroundColor(.primary)
                     .cornerRadius(8)
                 }
@@ -181,6 +190,9 @@ struct SingleSelectInput: View {
 struct MultiSelectInput: View {
     let question: Question
     @Binding var values: [String]
+    var theme: ColorTheme = ColorTheme.shared
+
+    private var pillarColor: Color { question.pillar.themeColor }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -191,11 +203,11 @@ struct MultiSelectInput: View {
                             .font(.subheadline)
                         Spacer()
                         Image(systemName: values.contains(option) ? "checkmark.square.fill" : "square")
-                            .foregroundColor(values.contains(option) ? Color(hex: question.pillar.color) ?? .blue : .secondary)
+                            .foregroundColor(values.contains(option) ? pillarColor : .secondary)
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(values.contains(option) ? Color(hex: question.pillar.color)?.opacity(0.1) ?? Color.blue.opacity(0.1) : Color(.secondarySystemBackground))
+                    .background(values.contains(option) ? pillarColor.opacity(0.1) : Color(.secondarySystemBackground))
                     .foregroundColor(.primary)
                     .cornerRadius(8)
                 }
@@ -218,6 +230,9 @@ struct MultiSelectInput: View {
 struct NumberInput: View {
     let question: Question
     @Binding var value: Double
+    var theme: ColorTheme = ColorTheme.shared
+
+    private var pillarColor: Color { question.pillar.themeColor }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -241,7 +256,7 @@ struct NumberInput: View {
                 Button(action: { decrementValue() }) {
                     Image(systemName: "minus.circle.fill")
                         .font(.title2)
-                        .foregroundColor(Color(hex: question.pillar.color) ?? .blue)
+                        .foregroundColor(pillarColor)
                 }
                 .disabled(value <= Double(question.minValue ?? 0))
 
@@ -253,7 +268,7 @@ struct NumberInput: View {
                 Button(action: { incrementValue() }) {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
-                        .foregroundColor(Color(hex: question.pillar.color) ?? .blue)
+                        .foregroundColor(pillarColor)
                 }
                 .disabled(value >= Double(question.maxValue ?? 100))
             }
@@ -286,16 +301,71 @@ struct NumberInput: View {
 struct TimeInput: View {
     let question: Question
     @Binding var value: Date
+    @ObservedObject private var themeManager = ThemeManager.shared
+
+    // Smart default times based on question context
+    private var smartDefaultTime: Date {
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.minute = 0
+
+        switch question.id {
+        // Stanford Sleep Log questions
+        case "SL_BEDTIME":
+            components.hour = 21  // 9:00 PM
+        case "SL_ASLEEP_TIME":
+            components.hour = 21  // 9:30 PM
+            components.minute = 30
+        case "SL_WAKE_TIME":
+            components.hour = 7   // 7:00 AM
+
+        // PSQI questions
+        case "PSQI_1":
+            components.hour = 22  // 10:00 PM
+        case "PSQI_3":
+            components.hour = 6   // 6:30 AM
+            components.minute = 30
+
+        default:
+            // Smart inference based on question text
+            let lowerText = question.text.lowercased()
+            if lowerText.contains("wake") || lowerText.contains("morning") || lowerText.contains("get up") {
+                components.hour = 7   // 7:00 AM for wake-related
+            } else if lowerText.contains("bed") || lowerText.contains("sleep") || lowerText.contains("night") {
+                components.hour = 21  // 9:00 PM for sleep-related
+            } else {
+                components.hour = 12  // Noon for unknown
+            }
+        }
+
+        return calendar.date(from: components) ?? Date()
+    }
 
     var body: some View {
-        DatePicker(
-            "",
-            selection: $value,
-            displayedComponents: .hourAndMinute
-        )
-        .datePickerStyle(.wheel)
-        .labelsHidden()
-        .frame(height: 150)
+        VStack(spacing: 8) {
+            DatePicker(
+                "",
+                selection: $value,
+                displayedComponents: .hourAndMinute
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .frame(height: themeManager.largeIconsMode ? 180 : 150)
+            .scaleEffect(themeManager.largeIconsMode ? 1.15 : 1.0)
+        }
+        .onAppear {
+            // Set smart default if value hasn't been set (check if it's the default Date())
+            let calendar = Calendar.current
+            let hour = calendar.component(.hour, from: value)
+            let minute = calendar.component(.minute, from: value)
+            let currentHour = calendar.component(.hour, from: Date())
+            let currentMinute = calendar.component(.minute, from: Date())
+
+            // If value is close to current time (within 2 minutes), use smart default instead
+            if abs(hour - currentHour) <= 1 && abs(minute - currentMinute) <= 2 {
+                value = smartDefaultTime
+            }
+        }
     }
 }
 
@@ -359,11 +429,12 @@ struct MinutesScrollPicker: View {
 
 struct InfoCard: View {
     let question: Question
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
+                .foregroundColor(theme.success)
                 .font(.title2)
 
             Text(question.text)
@@ -371,7 +442,7 @@ struct InfoCard: View {
                 .foregroundColor(.primary)
         }
         .padding(16)
-        .background(Color.green.opacity(0.1))
+        .background(theme.success.opacity(0.1))
         .cornerRadius(12)
     }
 }
@@ -381,6 +452,7 @@ struct InfoCard: View {
 struct SleepLogSummaryCard: View {
     let healthKitSummary: HealthKitSleepSummary?
     let userResponses: [String: QuestionResponse]
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -433,7 +505,7 @@ struct SleepLogSummaryCard: View {
             }
         }
         .padding(16)
-        .background(Color.purple.opacity(0.1))
+        .background(theme.sleepDiary.opacity(0.1))
         .cornerRadius(12)
     }
 }
@@ -445,6 +517,7 @@ struct QuestionnaireProgressHeader: View {
     let totalQuestions: Int
     let dayNumber: Int
     let pillarColor: Color
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         VStack(spacing: 8) {
@@ -473,12 +546,13 @@ struct QuestionnaireProgressHeader: View {
 struct GatewayAlertBanner: View {
     let gatewayType: GatewayType
     let isTriggered: Bool
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         if isTriggered {
             HStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
+                    .foregroundColor(theme.warning)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(gatewayType.displayName) Assessment Triggered")
@@ -492,27 +566,10 @@ struct GatewayAlertBanner: View {
                 Spacer()
             }
             .padding(12)
-            .background(Color.orange.opacity(0.15))
+            .background(theme.warning.opacity(0.15))
             .cornerRadius(8)
         }
     }
 }
 
-// MARK: - Color Extension
-
-extension Color {
-    init?(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-
-        var rgb: UInt64 = 0
-
-        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
-
-        self.init(
-            red: Double((rgb & 0xFF0000) >> 16) / 255.0,
-            green: Double((rgb & 0x00FF00) >> 8) / 255.0,
-            blue: Double(rgb & 0x0000FF) / 255.0
-        )
-    }
-}
+// Note: Color extension for hex is defined in QuestionModels.swift

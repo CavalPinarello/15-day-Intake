@@ -1,6 +1,6 @@
 //
 //  WatchConnectivityManager.swift
-//  Sleep 360 Platform - watchOS
+//  Zoe Sleep for Longevity System - watchOS
 //
 //  Manages communication between Apple Watch and iPhone
 //  for questionnaire sync and data exchange

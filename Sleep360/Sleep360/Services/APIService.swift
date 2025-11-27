@@ -1,6 +1,6 @@
 //
 //  APIService.swift
-//  Sleep 360 Platform
+//  Zoe Sleep for Longevity System
 //
 //  API service for communicating with Clerk-authenticated backend
 //

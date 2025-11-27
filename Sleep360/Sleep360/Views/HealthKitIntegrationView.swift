@@ -1,6 +1,6 @@
 //
 //  HealthKitIntegrationView.swift
-//  ZOE Sleep Platform
+//  Zoe Sleep for Longevity System
 //
 //  SwiftUI view for HealthKit integration
 //
@@ -15,71 +15,74 @@ struct HealthKitIntegrationView: View {
     @State private var isSyncing = false
     @State private var syncStatus: String = ""
     @State private var lastSyncDate: Date?
-    
+
+    private var theme: ColorTheme { ColorTheme.shared }
+
     var body: some View {
         VStack(spacing: 20) {
             // Header
             Text("Health Data Sync")
                 .font(.largeTitle)
                 .bold()
+                .foregroundColor(theme.primary)
                 .padding()
-            
+
             // Authentication Status
             if !authManager.isAuthenticated {
                 VStack(spacing: 15) {
                     Text("Sign in required to sync health data")
                         .font(.headline)
-                        .foregroundColor(.orange)
+                        .foregroundColor(theme.warning)
                         .multilineTextAlignment(.center)
-                    
-                    Text("Please sign in to your Sleep 360° account to enable health data synchronization with our platform.")
+
+                    Text("Please sign in to your Zoe Sleep account to enable health data synchronization with our platform.")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                 }
                 .padding()
-                .background(Color.orange.opacity(0.1))
+                .background(theme.warning.opacity(0.1))
                 .cornerRadius(10)
-                
+
                 Spacer()
             }
-            
+
             // HealthKit Availability
             if healthKitManager.isHealthKitAvailable {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundColor(theme.success)
                         Text("HealthKit Available")
                             .font(.headline)
                     }
-                    
+
                     if isAuthorized {
                         HStack {
                             Image(systemName: "checkmark.shield.fill")
-                                .foregroundColor(.blue)
+                                .foregroundColor(theme.primary)
                             Text("Authorized")
                                 .font(.subheadline)
                         }
                     } else {
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
+                                .foregroundColor(theme.warning)
                             Text("Not Authorized")
                                 .font(.subheadline)
                         }
                     }
                 }
                 .padding()
-                .background(Color.gray.opacity(0.1))
+                .background(theme.backgroundTint)
                 .cornerRadius(10)
             } else {
                 Text("HealthKit is not available on this device")
-                    .foregroundColor(.red)
+                    .foregroundColor(theme.error)
                     .padding()
             }
-            
+
             // Authorization Button
             if !isAuthorized {
                 Button(action: {
@@ -91,13 +94,13 @@ struct HealthKitIntegrationView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
+                    .background(theme.primary)
                     .foregroundColor(.white)
                     .cornerRadius(10)
                 }
                 .padding(.horizontal)
             }
-            
+
             // Sync Button
             if isAuthorized {
                 Button(action: {
@@ -114,33 +117,33 @@ struct HealthKitIntegrationView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(isSyncing ? Color.gray : Color.green)
+                    .background(isSyncing ? Color.gray : theme.success)
                     .foregroundColor(.white)
                     .cornerRadius(10)
                 }
                 .disabled(isSyncing)
                 .padding(.horizontal)
             }
-            
+
             // Sync Status
             if !syncStatus.isEmpty {
                 Text(syncStatus)
                     .font(.caption)
-                    .foregroundColor(syncStatus.contains("success") ? .green : .red)
+                    .foregroundColor(syncStatus.contains("success") ? theme.success : theme.error)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.gray.opacity(0.1))
+                    .background(theme.backgroundTint)
                     .cornerRadius(10)
                     .padding(.horizontal)
             }
-            
+
             // Last Sync Date
             if let lastSync = lastSyncDate {
                 Text("Last synced: \(lastSync, style: .relative)")
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
             }
-            
+
             Spacer()
         }
         .padding()

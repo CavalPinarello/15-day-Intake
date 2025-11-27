@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>Sleep 360°</string>
+	<string>Zoe Sleep</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -19,9 +19,9 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Sleep 360° needs access to your health data to provide personalized sleep insights and track your progress throughout the 15-day intake journey.</string>
+	<string>Zoe Sleep needs access to your health data to provide personalized sleep insights and track your progress throughout the 15-day intake journey.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Sleep 360° would like to save your sleep and activity data to track your progress and share with your physician.</string>
+	<string>Zoe Sleep would like to save your sleep and activity data to track your progress and share with your physician.</string>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.sleep360.app</string>
 </dict>

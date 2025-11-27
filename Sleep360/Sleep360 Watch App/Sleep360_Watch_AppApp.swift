@@ -1,8 +1,8 @@
 //
 //  Sleep360_Watch_AppApp.swift
-//  Sleep360 Watch App
+//  Zoe Sleep for Longevity System - watchOS
 //
-//  Created by Claude Code on 21/11/2025.
+//  Main app entry point for Apple Watch
 //
 
 import SwiftUI
@@ -46,13 +46,14 @@ struct Sleep360_Watch_App: App {
 struct ContentView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @State private var currentTab: WatchTab = .questionnaire
-    
+
     enum WatchTab {
         case questionnaire
+        case treatment
         case recommendations
         case health
     }
-    
+
     var body: some View {
         TabView(selection: $currentTab) {
             QuestionnaireView()
@@ -61,14 +62,21 @@ struct ContentView: View {
                     Image(systemName: "questionmark.circle")
                     Text("Questions")
                 }
-            
+
+            TreatmentTasksView()
+                .tag(WatchTab.treatment)
+                .tabItem {
+                    Image(systemName: "list.bullet.clipboard")
+                    Text("Tasks")
+                }
+
             RecommendationsView()
                 .tag(WatchTab.recommendations)
                 .tabItem {
                     Image(systemName: "heart.circle")
-                    Text("Recommendations")
+                    Text("Tips")
                 }
-            
+
             HealthSummaryView()
                 .tag(WatchTab.health)
                 .tabItem {
