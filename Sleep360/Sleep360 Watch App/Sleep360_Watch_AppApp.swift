@@ -13,30 +13,34 @@ import WatchConnectivity
 struct Sleep360_Watch_App: App {
     @StateObject private var watchConnectivity = WatchConnectivityManager()
     @StateObject private var healthManager = HealthKitWatchManager()
+    @ObservedObject private var themeManager = WatchThemeManager.shared
     @State private var isAuthenticated = false
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(watchConnectivity)
                 .environmentObject(healthManager)
+                .environmentObject(themeManager)
+                .preferredColorScheme(themeManager.currentColorScheme)
+                .tint(themeManager.accentColor)
                 .onAppear {
                     setupWatch()
                 }
         }
     }
-    
+
     private func setupWatch() {
         // Initialize watch connectivity
         watchConnectivity.activate()
-        
+
         // Request HealthKit permissions
         healthManager.requestPermissions()
-        
+
         // Check authentication status
         checkAuthenticationStatus()
     }
-    
+
     private func checkAuthenticationStatus() {
         // Check if user is authenticated via iPhone sync
         isAuthenticated = watchConnectivity.isUserAuthenticated
@@ -45,6 +49,7 @@ struct Sleep360_Watch_App: App {
 
 struct ContentView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
+    @EnvironmentObject var themeManager: WatchThemeManager
     @State private var currentTab: WatchTab = .questionnaire
 
     enum WatchTab {
@@ -52,6 +57,7 @@ struct ContentView: View {
         case treatment
         case recommendations
         case health
+        case settings
     }
 
     var body: some View {
@@ -83,6 +89,13 @@ struct ContentView: View {
                     Image(systemName: "heart.fill")
                     Text("Health")
                 }
+
+            WatchSettingsView()
+                .tag(WatchTab.settings)
+                .tabItem {
+                    Image(systemName: "gear")
+                    Text("Settings")
+                }
         }
         .onAppear {
             // Request latest data from iPhone
@@ -93,30 +106,36 @@ struct ContentView: View {
 
 struct HealthSummaryView: View {
     @EnvironmentObject var healthManager: HealthKitWatchManager
-    
+    @EnvironmentObject var themeManager: WatchThemeManager
+
+    private var theme: WatchColorTheme { themeManager.currentTheme }
+
     var body: some View {
         VStack(spacing: 8) {
             Text("Health Summary")
                 .font(.headline)
+                .foregroundColor(theme.primary)
                 .padding(.bottom)
-            
+
             if let sleepData = healthManager.lastNightSleep {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Last Night's Sleep")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Text("\(sleepData.duration, specifier: "%.1f") hours")
                         .font(.title3)
                         .fontWeight(.semibold)
+                        .foregroundColor(theme.primary)
                 }
                 .padding(.bottom)
             }
-            
+
             Button("Sync Health Data") {
                 healthManager.syncHealthData()
             }
             .buttonStyle(.borderedProminent)
+            .tint(themeManager.accentColor)
         }
         .padding()
     }

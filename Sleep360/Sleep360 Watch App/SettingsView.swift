@@ -9,29 +9,59 @@ import SwiftUI
 import WatchKit
 
 struct WatchSettingsView: View {
-    @AppStorage("largeTextMode") private var largeTextMode: Bool = false
-    @AppStorage("highContrast") private var highContrast: Bool = false
+    @EnvironmentObject var themeManager: WatchThemeManager
+    @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @AppStorage("debugMode") private var debugMode: Bool = false
+    @AppStorage("watchCurrentDay") private var currentDay: Int = 1
+    @AppStorage("watchCompletedDays") private var completedDaysData: Data = Data()
 
     @State private var showingAdvanceConfirmation = false
     @State private var showingResetConfirmation = false
-    @State private var currentDay: Int = 1
+    @State private var isResetting = false
 
     private let watchSize = WatchSizeDetector.current
 
     var body: some View {
         List {
+            // MARK: - Appearance
+            Section("Appearance") {
+                // Accent Color (synced from iPhone)
+                HStack {
+                    Label("Accent", systemImage: "paintpalette.fill")
+                    Spacer()
+                    Circle()
+                        .fill(themeManager.accentColor)
+                        .frame(width: 20, height: 20)
+                    Text(themeManager.accentColorOption.rawValue)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                // Theme Mode (synced from iPhone)
+                HStack {
+                    Label("Theme", systemImage: "circle.lefthalf.filled")
+                    Spacer()
+                    Text(themeManager.appearanceMode.rawValue)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Text("Change theme on iPhone")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
             // MARK: - Accessibility
             Section("Display") {
-                Toggle(isOn: $largeTextMode) {
+                Toggle(isOn: $themeManager.largeIconsMode) {
                     Label("Large Text", systemImage: "textformat.size.larger")
                 }
-                .tint(.teal)
+                .tint(themeManager.accentColor)
 
-                Toggle(isOn: $highContrast) {
+                Toggle(isOn: $themeManager.highContrast) {
                     Label("High Contrast", systemImage: "circle.lefthalf.filled")
                 }
-                .tint(.teal)
+                .tint(themeManager.accentColor)
             }
 
             // MARK: - Developer
@@ -64,10 +94,16 @@ struct WatchSettingsView: View {
                         HStack {
                             Image(systemName: "arrow.counterclockwise")
                                 .foregroundColor(.red)
-                            Text("Reset")
-                                .foregroundColor(.red)
+                            if isResetting {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Text("Reset Progress")
+                                    .foregroundColor(.red)
+                            }
                         }
                     }
+                    .disabled(isResetting)
                 }
             }
 
@@ -111,8 +147,14 @@ struct WatchSettingsView: View {
     }
 
     private func resetProgress() {
+        // Reset local storage
         currentDay = 1
+        completedDaysData = Data() // Clear completed days
+
         WKInterfaceDevice.current().play(.success)
+
+        // Also try to sync with iPhone if connected
+        watchConnectivity.resetJourneyProgress { _, _ in }
     }
 }
 
@@ -236,4 +278,6 @@ enum WatchSizeDetector {
 
 #Preview {
     WatchSettingsView()
+        .environmentObject(WatchThemeManager.shared)
+        .environmentObject(WatchConnectivityManager())
 }

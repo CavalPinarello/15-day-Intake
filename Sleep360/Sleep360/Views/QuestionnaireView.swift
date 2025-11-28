@@ -15,6 +15,10 @@ struct QuestionnaireView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var questionnaireManager = QuestionnaireManager.shared
 
+    // Which section to start with (and optionally limit to)
+    var startSection: QuestionnaireSection = .sleepLog
+    var sectionOnly: Bool = false  // If true, only show this section (don't transition to next)
+
     // Section State
     @State private var currentSection: QuestionnaireSection = .sleepLog
     @State private var showingTransition: Bool = false
@@ -704,6 +708,6 @@ struct HealthKitSleepCard: View {
     NavigationView {
         QuestionnaireView(currentDay: .constant(1))
             .environmentObject(HealthKitManager(authManager: AuthenticationManager()))
-            .environmentObject(ThemeManager())
+            .environmentObject(ThemeManager.shared)
     }
 }

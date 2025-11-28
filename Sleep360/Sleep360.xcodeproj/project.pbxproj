@@ -29,6 +29,16 @@
 		4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */; };
 		4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */; };
 		4A5E3BBB2C8E123456789A12 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */; };
+		4A5E3BD02C8E123456789C01 /* TreatmentTasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD12C8E123456789C02 /* TreatmentTasksView.swift */; };
+		4A5E3BD22C8E123456789C03 /* SleepLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD32C8E123456789C04 /* SleepLogView.swift */; };
+		4A5E3BD42C8E123456789C05 /* WatchQuestionComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD52C8E123456789C06 /* WatchQuestionComponents.swift */; };
+		4A5E3BD62C8E123456789C07 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD72C8E123456789C08 /* SettingsView.swift */; };
+		4A5E3BE02C8E123456789D01 /* WatchThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */; };
+		4A5E3BD82C8E123456789C09 /* TreatmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD92C8E123456789C0A /* TreatmentView.swift */; };
+		4A5E3BDA2C8E123456789C0B /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */; };
+		4A5E3BDC2C8E123456789C0D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDD2C8E123456789C0E /* SettingsView.swift */; };
+		4A5E3BDE2C8E123456789C0F /* QuestionnaireSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */; };
+		4A5E3BE22C8E123456789D03 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -83,6 +93,16 @@
 		4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionComponents.swift; sourceTree = "<group>"; };
 		4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireView.swift; sourceTree = "<group>"; };
 		4A5E3BCE2C8E123456789B0A /* ConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvexService.swift; sourceTree = "<group>"; };
+		4A5E3BD12C8E123456789C02 /* TreatmentTasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentTasksView.swift; sourceTree = "<group>"; };
+		4A5E3BD32C8E123456789C04 /* SleepLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepLogView.swift; sourceTree = "<group>"; };
+		4A5E3BD52C8E123456789C06 /* WatchQuestionComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchQuestionComponents.swift; sourceTree = "<group>"; };
+		4A5E3BD72C8E123456789C08 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchThemeManager.swift; sourceTree = "<group>"; };
+		4A5E3BD92C8E123456789C0A /* TreatmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentView.swift; sourceTree = "<group>"; };
+		4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		4A5E3BDD2C8E123456789C0E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireSections.swift; sourceTree = "<group>"; };
+		4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -157,6 +177,11 @@
 				4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */,
 				4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */,
 				4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */,
+				4A5E3BD12C8E123456789C02 /* TreatmentTasksView.swift */,
+				4A5E3BD32C8E123456789C04 /* SleepLogView.swift */,
+				4A5E3BD52C8E123456789C06 /* WatchQuestionComponents.swift */,
+				4A5E3BD72C8E123456789C08 /* SettingsView.swift */,
+				4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */,
 				4A5E3BAB2C8E123456789A0C /* Assets.xcassets */,
 			);
 			path = "Sleep360 Watch App";
@@ -168,6 +193,8 @@
 				4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */,
 				4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */,
 				4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */,
+				4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */,
+				4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -188,6 +215,9 @@
 				4A5E3BA12C8E123456789A0A /* HealthKitIntegrationView.swift */,
 				4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */,
 				4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */,
+				4A5E3BD92C8E123456789C0A /* TreatmentView.swift */,
+				4A5E3BDD2C8E123456789C0E /* SettingsView.swift */,
+				4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -316,6 +346,11 @@
 				4A5E3BC92C8E123456789B05 /* QuestionComponents.swift in Sources */,
 				4A5E3BCB2C8E123456789B07 /* QuestionnaireView.swift in Sources */,
 				4A5E3BCD2C8E123456789B09 /* ConvexService.swift in Sources */,
+				4A5E3BD82C8E123456789C09 /* TreatmentView.swift in Sources */,
+				4A5E3BDA2C8E123456789C0B /* ThemeManager.swift in Sources */,
+				4A5E3BDC2C8E123456789C0D /* SettingsView.swift in Sources */,
+				4A5E3BDE2C8E123456789C0F /* QuestionnaireSections.swift in Sources */,
+				4A5E3BE22C8E123456789D03 /* WatchConnectivityManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -328,6 +363,11 @@
 				4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */,
 				4A5E3BBB2C8E123456789A12 /* WatchConnectivityManager.swift in Sources */,
 				4A5E3BA82C8E123456789A0B /* Sleep360_Watch_AppApp.swift in Sources */,
+				4A5E3BD02C8E123456789C01 /* TreatmentTasksView.swift in Sources */,
+				4A5E3BD22C8E123456789C03 /* SleepLogView.swift in Sources */,
+				4A5E3BD42C8E123456789C05 /* WatchQuestionComponents.swift in Sources */,
+				4A5E3BD62C8E123456789C07 /* SettingsView.swift in Sources */,
+				4A5E3BE02C8E123456789D01 /* WatchThemeManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

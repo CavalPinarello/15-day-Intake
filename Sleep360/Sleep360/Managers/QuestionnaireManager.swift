@@ -33,7 +33,7 @@ class QuestionnaireManager: ObservableObject {
         initializeGatewayStates()
     }
 
-    private func initializeGatewayStates() {
+    func initializeGatewayStates() {
         gatewayStates = GatewayType.allCases.map { GatewayState(gatewayType: $0) }
     }
 

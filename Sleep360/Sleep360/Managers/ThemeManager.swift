@@ -7,14 +7,14 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
-@MainActor
 class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
 
-    // MARK: - Color Theme
+    // MARK: - Appearance Mode
 
-    enum ColorTheme: String, CaseIterable, Identifiable {
+    enum AppearanceMode: String, CaseIterable, Identifiable {
         case system = "System"
         case light = "Light"
         case dark = "Dark"
@@ -80,22 +80,78 @@ class ThemeManager: ObservableObject {
 
     // MARK: - Published Properties
 
-    // Appearance
-    @AppStorage("colorTheme") var colorTheme: ColorTheme = .system
-    @AppStorage("accentColor") var accentColorOption: AccentColorOption = .teal
+    @Published var appearanceMode: AppearanceMode = .system {
+        didSet {
+            UserDefaults.standard.set(appearanceMode.rawValue, forKey: "colorTheme")
+        }
+    }
 
-    // Accessibility
-    @AppStorage("largeIconsMode") var largeIconsMode: Bool = false
-    @AppStorage("highContrast") var highContrast: Bool = false
-    @AppStorage("reduceMotion") var reduceMotion: Bool = false
-    @AppStorage("textSizeMultiplier") var textSizeMultiplier: Double = 1.0
+    @Published var accentColorOption: AccentColorOption = .teal {
+        didSet {
+            UserDefaults.standard.set(accentColorOption.rawValue, forKey: "accentColor")
+        }
+    }
 
-    // Debug
-    @AppStorage("debugMode") var debugMode: Bool = false
+    @Published var largeIconsMode: Bool = false {
+        didSet {
+            UserDefaults.standard.set(largeIconsMode, forKey: "largeIconsMode")
+        }
+    }
+
+    @Published var highContrast: Bool = false {
+        didSet {
+            UserDefaults.standard.set(highContrast, forKey: "highContrast")
+        }
+    }
+
+    @Published var reduceMotion: Bool = false {
+        didSet {
+            UserDefaults.standard.set(reduceMotion, forKey: "reduceMotion")
+        }
+    }
+
+    @Published var textSizeMultiplier: Double = 1.0 {
+        didSet {
+            UserDefaults.standard.set(textSizeMultiplier, forKey: "textSizeMultiplier")
+        }
+    }
+
+    @Published var debugMode: Bool = false {
+        didSet {
+            UserDefaults.standard.set(debugMode, forKey: "debugMode")
+        }
+    }
 
     // MARK: - Initialization
 
-    private init() {}
+    private init() {
+        loadFromUserDefaults()
+    }
+
+    private func loadFromUserDefaults() {
+        // Load appearance mode
+        if let modeString = UserDefaults.standard.string(forKey: "colorTheme"),
+           let mode = AppearanceMode(rawValue: modeString) {
+            self.appearanceMode = mode
+        }
+
+        // Load accent color
+        if let colorString = UserDefaults.standard.string(forKey: "accentColor"),
+           let color = AccentColorOption(rawValue: colorString) {
+            self.accentColorOption = color
+        }
+
+        // Load accessibility settings
+        self.largeIconsMode = UserDefaults.standard.bool(forKey: "largeIconsMode")
+        self.highContrast = UserDefaults.standard.bool(forKey: "highContrast")
+        self.reduceMotion = UserDefaults.standard.bool(forKey: "reduceMotion")
+
+        let savedTextSize = UserDefaults.standard.double(forKey: "textSizeMultiplier")
+        self.textSizeMultiplier = savedTextSize > 0 ? savedTextSize : 1.0
+
+        // Load debug mode
+        self.debugMode = UserDefaults.standard.bool(forKey: "debugMode")
+    }
 
     // MARK: - Computed Properties
 
@@ -103,9 +159,13 @@ class ThemeManager: ObservableObject {
         accentColorOption.color
     }
 
-    /// Returns the current ColorTheme based on time of day
+    /// Returns the current ColorTheme based on appearance mode
     var currentTheme: ColorTheme {
-        ColorTheme.shared
+        if appearanceMode == .circadian {
+            return ColorTheme.shared
+        } else {
+            return ColorTheme(accentColor: accentColorOption)
+        }
     }
 
     var buttonScale: CGFloat {
@@ -113,7 +173,7 @@ class ThemeManager: ObservableObject {
     }
 
     var minimumTapTarget: CGFloat {
-        largeIconsMode ? 58 : 44  // Apple HIG minimum is 44pt
+        largeIconsMode ? 58 : 44
     }
 
     var scaledFontSize: (CGFloat) -> CGFloat {
@@ -123,7 +183,7 @@ class ThemeManager: ObservableObject {
     }
 
     var currentColorScheme: ColorScheme? {
-        switch colorTheme {
+        switch appearanceMode {
         case .system:
             return nil
         case .light:
@@ -139,7 +199,6 @@ class ThemeManager: ObservableObject {
 
     private func circadianScheme() -> ColorScheme {
         let hour = Calendar.current.component(.hour, from: Date())
-        // Light mode from 7 AM to 7 PM
         return (hour >= 7 && hour < 19) ? .light : .dark
     }
 
@@ -148,13 +207,13 @@ class ThemeManager: ObservableObject {
 
         let colors: [Color]
         switch hour {
-        case 5..<8:   // Dawn (5-8 AM)
+        case 5..<8:
             colors = [CircadianColors.dawnStart, CircadianColors.dawnEnd]
-        case 8..<17:  // Day (8 AM - 5 PM)
+        case 8..<17:
             colors = [CircadianColors.dayStart, CircadianColors.dayEnd]
-        case 17..<20: // Dusk (5-8 PM)
+        case 17..<20:
             colors = [CircadianColors.duskStart, CircadianColors.duskEnd]
-        default:      // Night (8 PM - 5 AM)
+        default:
             colors = [CircadianColors.nightStart, CircadianColors.nightEnd]
         }
 
@@ -179,7 +238,6 @@ class ThemeManager: ObservableObject {
 
     func adjustedColor(_ color: Color) -> Color {
         if highContrast {
-            // Increase saturation and contrast
             return color.opacity(1.0)
         }
         return color
@@ -222,33 +280,5 @@ extension View {
     func accessibleTapTarget() -> some View {
         let themeManager = ThemeManager.shared
         return self.frame(minWidth: themeManager.minimumTapTarget, minHeight: themeManager.minimumTapTarget)
-    }
-}
-
-// MARK: - Color Extensions
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: // ARGB (32-bit)
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
-        }
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue: Double(b) / 255,
-            opacity: Double(a) / 255
-        )
     }
 }

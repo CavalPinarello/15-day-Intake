@@ -21,11 +21,15 @@ struct WatchTreatmentTask: Identifiable {
 // MARK: - Treatment Tasks View
 
 struct TreatmentTasksView: View {
+    @EnvironmentObject var watchConnectivity: WatchConnectivityManager
+    @EnvironmentObject var themeManager: WatchThemeManager
     @State private var tasks: [WatchTreatmentTask] = []
     @State private var isLoading = true
+    @State private var loadError: String?
     @State private var selectedTask: WatchTreatmentTask?
 
     private let watchSize = WatchSizeDetector.current
+    private var theme: WatchColorTheme { themeManager.currentTheme }
 
     var body: some View {
         Group {
@@ -60,20 +64,36 @@ struct TreatmentTasksView: View {
     // MARK: - Empty View
 
     private var emptyView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 36))
-                .foregroundColor(.gray)
+        ScrollView {
+            VStack(spacing: 12) {
+                Image(systemName: "list.clipboard")
+                    .font(.system(size: 36))
+                    .foregroundColor(themeManager.accentColor)
 
-            Text("No tasks yet")
-                .font(.headline)
+                Text("No Tasks")
+                    .font(.headline)
 
-            Text("Complete intake for treatment plan")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+                Text("Complete your 15-day intake to get personalized tasks")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if !watchConnectivity.isConnected {
+                    Divider()
+                        .padding(.vertical, 4)
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "iphone")
+                            .font(.caption2)
+                        Text("Open iPhone app to sync")
+                            .font(.caption2)
+                    }
+                    .foregroundColor(.secondary)
+                }
+            }
+            .padding()
         }
-        .padding()
     }
 
     // MARK: - Task List View
@@ -120,7 +140,7 @@ struct TreatmentTasksView: View {
 
                 Text("\(percentage)%")
                     .font(.system(size: watchSize.fontSize + 2, weight: .bold))
-                    .foregroundColor(percentage == 100 ? .green : .teal)
+                    .foregroundColor(percentage == 100 ? theme.success : themeManager.accentColor)
             }
 
             // Progress Bar
@@ -133,7 +153,7 @@ struct TreatmentTasksView: View {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(
                             LinearGradient(
-                                colors: [.teal, .blue],
+                                colors: [themeManager.accentColor, theme.secondary],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
@@ -167,58 +187,45 @@ struct TreatmentTasksView: View {
 
     private func loadTasks() {
         isLoading = true
+        loadError = nil
 
-        // TODO: Replace with Convex API call via WatchConnectivity
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            tasks = [
-                WatchTreatmentTask(
-                    id: "1",
-                    name: "Morning Light",
-                    timing: "Morning",
-                    shortInstructions: "30 min bright light exposure",
-                    isCompleted: false
-                ),
-                WatchTreatmentTask(
-                    id: "2",
-                    name: "Caffeine Cutoff",
-                    timing: "Afternoon",
-                    shortInstructions: "No caffeine after 2 PM",
-                    isCompleted: true
-                ),
-                WatchTreatmentTask(
-                    id: "3",
-                    name: "Relaxation",
-                    timing: "Evening",
-                    shortInstructions: "10 min deep breathing",
-                    isCompleted: false
-                ),
-                WatchTreatmentTask(
-                    id: "4",
-                    name: "Sleep Restriction",
-                    timing: "Before bed",
-                    shortInstructions: "Bed at 11 PM, wake at 6:30 AM",
-                    isCompleted: false
-                ),
-                WatchTreatmentTask(
-                    id: "5",
-                    name: "Melatonin",
-                    timing: "Before bed",
-                    shortInstructions: "Take 3mg 30 min before bed",
-                    isCompleted: false
-                ),
-            ]
+        // Check if iPhone is connected
+        guard watchConnectivity.isConnected else {
+            // Show normal empty state when iPhone not connected
+            // Treatment tasks aren't critical - user can see them on iPhone
             isLoading = false
+            tasks = []
+            return
+        }
+
+        // Request tasks from iPhone via WatchConnectivity
+        watchConnectivity.requestTreatmentTasks { fetchedTasks in
+            DispatchQueue.main.async {
+                self.tasks = fetchedTasks
+                self.isLoading = false
+            }
         }
     }
 
     private func toggleTask(_ task: WatchTreatmentTask) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
-            tasks[index].isCompleted.toggle()
+            let newCompletedState = !tasks[index].isCompleted
+            tasks[index].isCompleted = newCompletedState
 
             // Haptic feedback
-            WKInterfaceDevice.current().play(tasks[index].isCompleted ? .success : .click)
+            WKInterfaceDevice.current().play(newCompletedState ? .success : .click)
 
-            // TODO: Sync with Convex via WatchConnectivity
+            // Sync with iPhone via WatchConnectivity
+            watchConnectivity.completeTreatmentTask(taskId: task.id) { success in
+                if !success {
+                    // Revert on failure
+                    DispatchQueue.main.async {
+                        if let idx = self.tasks.firstIndex(where: { $0.id == task.id }) {
+                            self.tasks[idx].isCompleted = !newCompletedState
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -236,7 +243,7 @@ struct WatchTaskRow: View {
             HStack(spacing: 10) {
                 // Checkbox
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: watchSize.buttonSize * 0.5))
+                    .font(.system(size: watchSize.buttonHeight * 0.5))
                     .foregroundColor(task.isCompleted ? .green : .gray)
 
                 // Content
@@ -299,11 +306,13 @@ struct WatchTaskRow: View {
 // MARK: - Treatment Card for Main View
 
 struct TreatmentTasksCard: View {
+    @EnvironmentObject var themeManager: WatchThemeManager
     let completedCount: Int
     let totalCount: Int
     var onTap: () -> Void
 
     private let watchSize = WatchSizeDetector.current
+    private var theme: WatchColorTheme { themeManager.currentTheme }
 
     var percentage: Int {
         guard totalCount > 0 else { return 0 }
@@ -324,19 +333,19 @@ struct TreatmentTasksCard: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.teal)
+                    .background(themeManager.accentColor)
                     .cornerRadius(6)
 
                     Spacer()
 
                     if percentage == 100 {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundColor(theme.success)
                     } else {
                         Text("\(percentage)%")
                             .font(.caption2)
                             .fontWeight(.bold)
-                            .foregroundColor(.teal)
+                            .foregroundColor(themeManager.accentColor)
                     }
                 }
 
@@ -351,7 +360,7 @@ struct TreatmentTasksCard: View {
                             .frame(height: 4)
 
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.teal)
+                            .fill(themeManager.accentColor)
                             .frame(width: geo.size.width * CGFloat(percentage) / 100, height: 4)
                     }
                 }
@@ -362,11 +371,11 @@ struct TreatmentTasksCard: View {
                     .foregroundColor(.secondary)
             }
             .padding()
-            .background(Color.teal.opacity(0.15))
+            .background(themeManager.accentColor.opacity(0.15))
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.teal.opacity(0.3), lineWidth: 1)
+                    .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -378,6 +387,8 @@ struct TreatmentTasksCard: View {
 #Preview("Treatment Tasks") {
     NavigationStack {
         TreatmentTasksView()
+            .environmentObject(WatchConnectivityManager())
+            .environmentObject(WatchThemeManager.shared)
     }
 }
 
@@ -387,4 +398,5 @@ struct TreatmentTasksCard: View {
         TreatmentTasksCard(completedCount: 5, totalCount: 5, onTap: {})
     }
     .padding()
+    .environmentObject(WatchThemeManager.shared)
 }

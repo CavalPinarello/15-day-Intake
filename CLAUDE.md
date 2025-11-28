@@ -204,7 +204,71 @@ For detailed architecture, setup instructions, and API documentation, see README
 - **Repository:** Successfully pushed to https://github.com/CavalPinarello/15-day-Intake.git
 - **Session Log:** `/docs/sessions/apple-watch-integration-2025-11-21.md`
 
-## Latest Session Context (2025-11-26)
+## Latest Session Context (2025-11-28)
+
+**Theme System Fix: Global Theme & Accent Color Propagation**
+
+This session fixed critical issues with the theme system where theme and accent color changes weren't propagating globally throughout the iOS app and to the Apple Watch.
+
+### Problem
+- Theme selections (System, Light, Dark, Circadian) in Settings weren't applying app-wide
+- Accent color changes (Teal, Coral, Violet, Gold) only worked on Settings page
+- Theme changes weren't syncing to Apple Watch
+
+### Root Cause Analysis
+1. **`@AppStorage` in `ObservableObject` doesn't trigger `objectWillChange`** - This is a known SwiftUI limitation where `@AppStorage` properties inside an `ObservableObject` class don't automatically notify observers of changes
+2. **Missing iOS `WatchConnectivityManager.swift`** - File existed on disk but wasn't added to Xcode project
+3. **Missing `WatchThemeManager.swift` in Watch project** - Created but not included in build
+
+### Technical Solution
+1. **ThemeManager.swift Rewrite:**
+   - Changed from `@AppStorage` to `@Published` properties with manual UserDefaults sync in `didSet`
+   - This ensures `objectWillChange` is triggered on every property change
+   ```swift
+   @Published var appearanceMode: AppearanceMode = .system {
+       didSet {
+           UserDefaults.standard.set(appearanceMode.rawValue, forKey: "colorTheme")
+       }
+   }
+   ```
+
+2. **Sleep360App.swift - ThemedRootView Wrapper:**
+   - Added `ThemedRootView` wrapper that observes ThemeManager with `@ObservedObject`
+   - Applies `.preferredColorScheme()` and `.tint()` modifiers at root level
+   - Uses `.onChange()` to trigger theme sync to Watch
+
+3. **SettingsView.swift - Standard Picker Controls:**
+   - Changed from custom Button implementations to standard SwiftUI `Picker` controls
+   - Direct binding with `$themeManager.appearanceMode` and `$themeManager.accentColorOption`
+
+4. **Xcode Project Fixes:**
+   - Added `WatchConnectivityManager.swift` to iOS Managers group and Sources build phase
+   - Added `WatchThemeManager.swift` to Watch App Sources build phase
+   - New unique IDs: `4A5E3BE22C8E123456789D03`, `4A5E3BE32C8E123456789D04`
+
+### Key Files Modified
+- **iOS:**
+  - `/Sleep360/Sleep360/Managers/ThemeManager.swift` - Major rewrite (134 lines changed)
+  - `/Sleep360/Sleep360/Sleep360App.swift` - Added ThemedRootView wrapper
+  - `/Sleep360/Sleep360/Views/SettingsView.swift` - Standard Picker controls
+  - `/Sleep360/Sleep360/Managers/WatchConnectivityManager.swift` - Added to project (NEW)
+  - `/Sleep360/Sleep360/Models/QuestionModels.swift` - ColorTheme supports accent colors
+- **watchOS:**
+  - `/Sleep360/Sleep360 Watch App/WatchThemeManager.swift` - Theme manager for Watch (NEW)
+  - `/Sleep360/Sleep360 Watch App/SettingsView.swift` - Theme display and settings
+  - `/Sleep360/Sleep360 Watch App/WatchConnectivityManager.swift` - Theme sync handling
+  - `/Sleep360/Sleep360 Watch App/TreatmentTasksView.swift` - Theme integration
+- **Project:**
+  - `/Sleep360/Sleep360.xcodeproj/project.pbxproj` - Added missing file references
+
+### Build Verification
+- ✅ iOS app builds successfully
+- ✅ watchOS app builds successfully
+- Theme changes now propagate globally
+
+---
+
+**Previous Session (2025-11-26):**
 
 **MAJOR UPDATE: Complete Physician Dashboard & Treatment Mode Implementation**
 

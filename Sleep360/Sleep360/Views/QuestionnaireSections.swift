@@ -41,37 +41,34 @@ enum QuestionnaireSection: String, CaseIterable {
         }
     }
 
+    /// Background color - Sleep Log: blue tint, Assessment: purple tint
     var backgroundColor: Color {
         switch self {
-        case .sleepLog: return Color(red: 0.89, green: 0.95, blue: 0.99) // Soft blue #E3F2FD
-        case .assessment: return Color(red: 0.95, green: 0.90, blue: 0.96) // Soft purple #F3E5F5
+        case .sleepLog: return Color(red: 0.13, green: 0.59, blue: 0.95).opacity(0.1)  // Blue
+        case .assessment: return Color(red: 0.61, green: 0.35, blue: 0.71).opacity(0.15)  // Purple
         }
     }
 
+    /// Accent color - Sleep Log: blue, Assessment: purple
     var accentColor: Color {
         switch self {
-        case .sleepLog: return Color(red: 0.13, green: 0.59, blue: 0.95) // Blue #2196F3
-        case .assessment: return Color(red: 0.61, green: 0.35, blue: 0.71) // Purple #9C27B0
+        case .sleepLog: return Color(red: 0.13, green: 0.59, blue: 0.95)  // #2196F3
+        case .assessment: return Color(red: 0.61, green: 0.35, blue: 0.71)  // #9C27B0
         }
     }
 
+    /// Header gradient
     var headerGradient: LinearGradient {
         switch self {
         case .sleepLog:
             return LinearGradient(
-                colors: [
-                    Color(red: 0.13, green: 0.59, blue: 0.95),
-                    Color(red: 0.25, green: 0.72, blue: 0.85)
-                ],
+                colors: [Color(red: 0.13, green: 0.59, blue: 0.95), Color(red: 0.13, green: 0.59, blue: 0.95).opacity(0.7)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .assessment:
             return LinearGradient(
-                colors: [
-                    Color(red: 0.61, green: 0.35, blue: 0.71),
-                    Color(red: 0.42, green: 0.36, blue: 0.90)
-                ],
+                colors: [Color(red: 0.61, green: 0.35, blue: 0.71), Color(red: 0.45, green: 0.25, blue: 0.55)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

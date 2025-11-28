@@ -10,20 +10,16 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var healthKitManager: HealthKitManager
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         NavigationStack {
             if authManager.isAuthenticated {
                 MainDashboardView()
-                    .environmentObject(themeManager)
             } else {
                 AuthenticationView()
-                    .environmentObject(themeManager)
             }
         }
-        .preferredColorScheme(themeManager.currentColorScheme)
-        .tint(themeManager.accentColor)
         .onAppear {
             authManager.checkAuthenticationStatus()
         }

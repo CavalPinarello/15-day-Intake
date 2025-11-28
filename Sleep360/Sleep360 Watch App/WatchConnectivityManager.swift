@@ -54,7 +54,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         }
     }
     
-    func requestCurrentDayQuestions(completion: @escaping (Int, [Question]) -> Void) {
+    func requestCurrentDayQuestions(completion: @escaping (Int, [WatchQuestion]) -> Void) {
         guard let session = session, session.isReachable else {
             completion(1, [])
             return
@@ -177,6 +177,122 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         }
     }
     
+    // MARK: - Treatment Tasks
+
+    func requestTreatmentTasks(completion: @escaping ([WatchTreatmentTask]) -> Void) {
+        guard let session = session, session.isReachable else {
+            // Return empty array if not connected - the view will show "No tasks yet"
+            completion([])
+            return
+        }
+
+        let requestId = UUID().uuidString
+        pendingCallbacks[requestId] = { response in
+            if let data = response as? [String: Any],
+               let tasksData = data["tasks"] as? [[String: Any]] {
+                let tasks = tasksData.compactMap { self.parseTreatmentTask(from: $0) }
+                completion(tasks)
+            } else {
+                completion([])
+            }
+        }
+
+        let message = [
+            "action": "requestTreatmentTasks",
+            "requestId": requestId,
+            "timestamp": Date().timeIntervalSince1970
+        ] as [String: Any]
+
+        session.sendMessage(message, replyHandler: { [weak self] reply in
+            DispatchQueue.main.async {
+                if let callback = self?.pendingCallbacks.removeValue(forKey: requestId) {
+                    callback(reply)
+                }
+            }
+        }) { [weak self] error in
+            print("Failed to request treatment tasks: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                if let callback = self?.pendingCallbacks.removeValue(forKey: requestId) {
+                    callback(nil)
+                }
+            }
+        }
+    }
+
+    func completeTreatmentTask(taskId: String, completion: @escaping (Bool) -> Void) {
+        guard let session = session, session.isReachable else {
+            completion(false)
+            return
+        }
+
+        let message = [
+            "action": "completeTreatmentTask",
+            "taskId": taskId,
+            "source": "watch",
+            "timestamp": Date().timeIntervalSince1970
+        ] as [String: Any]
+
+        session.sendMessage(message, replyHandler: { reply in
+            DispatchQueue.main.async {
+                let success = reply["success"] as? Bool ?? false
+                completion(success)
+            }
+        }) { error in
+            print("Failed to complete treatment task: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                completion(false)
+            }
+        }
+    }
+
+    private func parseTreatmentTask(from data: [String: Any]) -> WatchTreatmentTask? {
+        guard let id = data["id"] as? String,
+              let name = data["name"] as? String,
+              let shortInstructions = data["shortInstructions"] as? String else {
+            return nil
+        }
+
+        let timing = data["timing"] as? String
+        let isCompleted = data["isCompleted"] as? Bool ?? false
+
+        return WatchTreatmentTask(
+            id: id,
+            name: name,
+            timing: timing,
+            shortInstructions: shortInstructions,
+            isCompleted: isCompleted
+        )
+    }
+
+    func resetJourneyProgress(completion: @escaping (Bool, Int) -> Void) {
+        guard let session = session, session.isReachable else {
+            completion(false, currentUserDay)
+            return
+        }
+
+        let message = [
+            "action": "resetJourneyProgress",
+            "source": "watch",
+            "timestamp": Date().timeIntervalSince1970
+        ] as [String: Any]
+
+        session.sendMessage(message, replyHandler: { [weak self] reply in
+            DispatchQueue.main.async {
+                let success = reply["success"] as? Bool ?? false
+                let newDay = reply["newDay"] as? Int ?? 1
+                if success {
+                    self?.currentUserDay = newDay
+                }
+                completion(success, newDay)
+            }
+        }) { error in
+            print("Failed to reset journey progress: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                completion(false, self.currentUserDay)
+            }
+        }
+    }
+
     func advanceDay(completion: @escaping (Int) -> Void) {
         guard let session = session, session.isReachable else {
             completion(currentUserDay)
@@ -227,17 +343,17 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         }
     }
     
-    private func parseQuestion(from data: [String: Any]) -> Question? {
+    private func parseQuestion(from data: [String: Any]) -> WatchQuestion? {
         guard let id = data["id"] as? String,
               let text = data["text"] as? String,
               let typeString = data["type"] as? String,
-              let type = Question.QuestionType(rawValue: typeString) else {
+              let type = WatchQuestionType(rawValue: typeString) else {
             return nil
         }
-        
+
         let options = data["options"] as? [String]
-        
-        return Question(id: id, text: text, type: type, options: options)
+
+        return WatchQuestion(id: id, text: text, type: type, options: options)
     }
     
     private func parseRecommendation(from data: [String: Any]) -> PhysicianRecommendation? {
@@ -306,24 +422,50 @@ extension WatchConnectivityManager: WCSessionDelegate {
             replyHandler?(["error": "No action specified"])
             return
         }
-        
+
         switch action {
         case "userDataUpdate":
             handleUserDataResponse(message)
+            // Also update theme if included
+            handleThemeSettingsIfPresent(message)
             replyHandler?(["received": true])
-            
+
+        case "themeSettingsUpdate":
+            handleThemeSettingsUpdate(message)
+            replyHandler?(["received": true])
+
         case "recommendationUpdate":
             // Handle real-time recommendation updates
             replyHandler?(["received": true])
-            
+
         case "dayAdvanced":
             if let newDay = message["newDay"] as? Int {
                 currentUserDay = newDay
             }
             replyHandler?(["received": true])
-            
+
         default:
             replyHandler?(["error": "Unknown action: \(action)"])
+        }
+    }
+
+    // MARK: - Theme Settings Handler
+
+    private func handleThemeSettingsUpdate(_ message: [String: Any]) {
+        let themeManager = WatchThemeManager.shared
+        themeManager.updateFromiPhone(
+            accentColor: message["accentColor"] as? String,
+            appearanceMode: message["appearanceMode"] as? String,
+            largeIcons: message["largeIconsMode"] as? Bool,
+            highContrast: message["highContrast"] as? Bool,
+            reduceMotion: message["reduceMotion"] as? Bool
+        )
+    }
+
+    private func handleThemeSettingsIfPresent(_ message: [String: Any]) {
+        // Check if theme settings are included in the message
+        if message["accentColor"] != nil || message["appearanceMode"] != nil {
+            handleThemeSettingsUpdate(message)
         }
     }
 }

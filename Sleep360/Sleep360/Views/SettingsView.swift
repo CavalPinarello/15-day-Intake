@@ -21,63 +21,50 @@ struct SettingsView: View {
         List {
             // MARK: - Appearance Section
             Section {
-                // Color Theme
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Color Theme", systemImage: "paintbrush.fill")
-                        .font(.headline)
-
-                    ForEach(ThemeManager.ColorTheme.allCases) { theme in
-                        Button {
-                            withAnimation(themeManager.springAnimation) {
-                                themeManager.colorTheme = theme
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: theme.icon)
-                                    .foregroundColor(themeManager.accentColor)
-                                    .frame(width: 24)
-
-                                Text(theme.rawValue)
-                                    .foregroundColor(.primary)
-
-                                Spacer()
-
-                                if themeManager.colorTheme == theme {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(themeManager.accentColor)
-                                }
-                            }
-                            .padding(.vertical, 4)
+                // Color Theme Picker
+                Picker(selection: $themeManager.appearanceMode) {
+                    ForEach(ThemeManager.AppearanceMode.allCases) { mode in
+                        HStack {
+                            Image(systemName: mode.icon)
+                            Text(mode.rawValue)
                         }
-                        .accessibleTapTarget()
+                        .tag(mode)
                     }
+                } label: {
+                    Label("Color Theme", systemImage: "paintbrush.fill")
                 }
-                .padding(.vertical, 4)
 
-                // Accent Color
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Accent Color", systemImage: "paintpalette.fill")
-                        .font(.headline)
-
-                    HStack(spacing: 16) {
-                        ForEach(ThemeManager.AccentColorOption.allCases) { color in
-                            Button {
-                                withAnimation(themeManager.springAnimation) {
-                                    themeManager.accentColorOption = color
-                                }
-                            } label: {
-                                Circle()
-                                    .fill(color.color)
-                                    .frame(width: themeManager.largeIconsMode ? 52 : 40,
-                                           height: themeManager.largeIconsMode ? 52 : 40)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(themeManager.accentColorOption == color ? Color.primary : Color.clear, lineWidth: 3)
-                                    )
-                                    .shadow(color: color.color.opacity(0.4), radius: themeManager.shadowRadius)
-                            }
-                            .accessibleTapTarget()
+                // Accent Color Picker
+                Picker(selection: $themeManager.accentColorOption) {
+                    ForEach(ThemeManager.AccentColorOption.allCases) { color in
+                        HStack {
+                            Circle()
+                                .fill(color.color)
+                                .frame(width: 20, height: 20)
+                            Text(color.rawValue)
                         }
+                        .tag(color)
+                    }
+                } label: {
+                    Label("Accent Color", systemImage: "paintpalette.fill")
+                }
+
+                // Color Preview
+                HStack(spacing: 12) {
+                    Text("Preview:")
+                        .foregroundColor(.secondary)
+
+                    ForEach(ThemeManager.AccentColorOption.allCases) { color in
+                        Circle()
+                            .fill(color.color)
+                            .frame(width: 28, height: 28)
+                            .overlay(
+                                Circle()
+                                    .stroke(themeManager.accentColorOption == color ? Color.primary : Color.clear, lineWidth: 3)
+                            )
+                            .onTapGesture {
+                                themeManager.accentColorOption = color
+                            }
                     }
                 }
                 .padding(.vertical, 4)
@@ -356,13 +343,7 @@ struct SettingsView: View {
 }
 
 // MARK: - Placeholder Views
-
-struct ProfileView: View {
-    var body: some View {
-        Text("Profile Settings")
-            .navigationTitle("Profile")
-    }
-}
+// Note: ProfileView is defined in AuthenticationView.swift
 
 struct NotificationsSettingsView: View {
     var body: some View {
@@ -397,7 +378,7 @@ struct DebugDataView: View {
                     HStack {
                         Text(state.gatewayType.rawValue)
                         Spacer()
-                        if state.isTriggered {
+                        if state.triggered {
                             Text("Triggered")
                                 .foregroundColor(.orange)
                         } else {
@@ -409,15 +390,13 @@ struct DebugDataView: View {
             }
 
             Section("Responses") {
-                ForEach(Array(questionnaireManager.responses.keys.sorted()), id: \.self) { key in
-                    if let response = questionnaireManager.responses[key] {
-                        VStack(alignment: .leading) {
-                            Text(key)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(response.value)
-                                .font(.body)
-                        }
+                ForEach(questionnaireManager.responses.sorted(by: { $0.key < $1.key }), id: \.key) { key, response in
+                    VStack(alignment: .leading) {
+                        Text(key)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(response.stringValue ?? response.numberValue.map { String($0) } ?? "N/A")
+                            .font(.body)
                     }
                 }
             }

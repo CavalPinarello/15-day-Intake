@@ -18,6 +18,9 @@ struct WatchTimePicker: View {
     @AppStorage("largeTextMode") private var largeTextMode: Bool = false
     private let watchSize = WatchSizeDetector.current
 
+    // Track time as seconds from midnight for Digital Crown rotation
+    @State private var timeInSeconds: Double = 0
+
     // Smart defaults based on question context
     private var smartDefaultTime: Date {
         let calendar = Calendar.current
@@ -41,6 +44,12 @@ struct WatchTimePicker: View {
         }
 
         return calendar.date(from: components) ?? Date()
+    }
+
+    private var smartDefaultSeconds: Double {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: smartDefaultTime)
+        return Double((components.hour ?? 0) * 3600 + (components.minute ?? 0) * 60)
     }
 
     var body: some View {
@@ -73,21 +82,31 @@ struct WatchTimePicker: View {
         }
         .focusable(true)
         .digitalCrownRotation(
-            $selectedTime,
-            from: startOfDay,
-            through: endOfDay,
-            by: 900, // 15-minute increments (in seconds)
+            $timeInSeconds,
+            from: 0.0,
+            through: 86399.0, // 23:59:59 in seconds
+            by: 900.0, // 15-minute increments
             sensitivity: .medium,
             isContinuous: false,
             isHapticFeedbackEnabled: true
         )
+        .onChange(of: timeInSeconds) { _, newValue in
+            // Convert seconds to Date
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: Date())
+            selectedTime = startOfDay.addingTimeInterval(newValue)
+        }
         .onAppear {
-            // Set smart default on first appear
+            // Initialize timeInSeconds from selectedTime or smart default
             let calendar = Calendar.current
             let now = Date()
             let hourDiff = abs(calendar.component(.hour, from: selectedTime) - calendar.component(.hour, from: now))
             if hourDiff <= 1 {
+                timeInSeconds = smartDefaultSeconds
                 selectedTime = smartDefaultTime
+            } else {
+                let components = calendar.dateComponents([.hour, .minute], from: selectedTime)
+                timeInSeconds = Double((components.hour ?? 0) * 3600 + (components.minute ?? 0) * 60)
             }
         }
     }
@@ -96,14 +115,6 @@ struct WatchTimePicker: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "h:mm a"
         return formatter.string(from: selectedTime)
-    }
-
-    private var startOfDay: Date {
-        Calendar.current.startOfDay(for: Date())
-    }
-
-    private var endOfDay: Date {
-        Calendar.current.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
     }
 }
 
@@ -233,7 +244,7 @@ struct WatchScaleSlider: View {
             isContinuous: false,
             isHapticFeedbackEnabled: true
         )
-        .onChange(of: crownValue) { newValue in
+        .onChange(of: crownValue) { _, newValue in
             value = Int(newValue.rounded())
         }
         .onAppear {

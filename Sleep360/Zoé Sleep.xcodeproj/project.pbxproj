@@ -24,11 +24,21 @@
 		4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */; };
 		4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */; };
 		4A5E3BBB2C8E123456789A12 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */; };
+		4A5E3BE02C8E123456789D01 /* TreatmentTasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE12C8E123456789D02 /* TreatmentTasksView.swift */; };
+		4A5E3BE22C8E123456789D03 /* SleepLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE32C8E123456789D04 /* SleepLogView.swift */; };
+		4A5E3BE42C8E123456789D05 /* WatchQuestionComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE52C8E123456789D06 /* WatchQuestionComponents.swift */; };
+		4A5E3BE62C8E123456789D07 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE72C8E123456789D08 /* SettingsView.swift */; };
+		4A5E3BF22C8E123456789D13 /* WatchThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF32C8E123456789D14 /* WatchThemeManager.swift */; };
+		4A5E3BE82C8E123456789D09 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE92C8E123456789D0A /* ThemeManager.swift */; };
+		4A5E3BEA2C8E123456789D0B /* QuestionnaireSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BEB2C8E123456789D0C /* QuestionnaireSections.swift */; };
+		4A5E3BEC2C8E123456789D0D /* TreatmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BED2C8E123456789D0E /* TreatmentView.swift */; };
+		4A5E3BEE2C8E123456789D0F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BEF2C8E123456789D10 /* SettingsView.swift */; };
 		4A5E3BC52C8E123456789B01 /* QuestionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BC62C8E123456789B02 /* QuestionModels.swift */; };
 		4A5E3BC72C8E123456789B03 /* QuestionnaireManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */; };
 		4A5E3BC92C8E123456789B05 /* QuestionComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */; };
 		4A5E3BCB2C8E123456789B07 /* QuestionnaireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */; };
 		4A5E3BCD2C8E123456789B09 /* ConvexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BCE2C8E123456789B0A /* ConvexService.swift */; };
+		4A5E3BF02C8E123456789D11 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF12C8E123456789D12 /* WatchConnectivityManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -83,6 +93,16 @@
 		4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionComponents.swift; sourceTree = "<group>"; };
 		4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireView.swift; sourceTree = "<group>"; };
 		4A5E3BCE2C8E123456789B0A /* ConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvexService.swift; sourceTree = "<group>"; };
+		4A5E3BE12C8E123456789D02 /* TreatmentTasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentTasksView.swift; sourceTree = "<group>"; };
+		4A5E3BE32C8E123456789D04 /* SleepLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepLogView.swift; sourceTree = "<group>"; };
+		4A5E3BE52C8E123456789D06 /* WatchQuestionComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchQuestionComponents.swift; sourceTree = "<group>"; };
+		4A5E3BE72C8E123456789D08 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		4A5E3BE92C8E123456789D0A /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		4A5E3BEB2C8E123456789D0C /* QuestionnaireSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireSections.swift; sourceTree = "<group>"; };
+		4A5E3BED2C8E123456789D0E /* TreatmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentView.swift; sourceTree = "<group>"; };
+		4A5E3BEF2C8E123456789D10 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		4A5E3BF12C8E123456789D12 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+		4A5E3BF32C8E123456789D14 /* WatchThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchThemeManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -157,6 +177,11 @@
 				4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */,
 				4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */,
 				4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */,
+				4A5E3BF32C8E123456789D14 /* WatchThemeManager.swift */,
+				4A5E3BE12C8E123456789D02 /* TreatmentTasksView.swift */,
+				4A5E3BE32C8E123456789D04 /* SleepLogView.swift */,
+				4A5E3BE52C8E123456789D06 /* WatchQuestionComponents.swift */,
+				4A5E3BE72C8E123456789D08 /* SettingsView.swift */,
 				4A5E3BAB2C8E123456789A0C /* Assets.xcassets */,
 			);
 			path = "Sleep360 Watch App";
@@ -168,6 +193,8 @@
 				4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */,
 				4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */,
 				4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */,
+				4A5E3BE92C8E123456789D0A /* ThemeManager.swift */,
+				4A5E3BF12C8E123456789D12 /* WatchConnectivityManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -188,6 +215,9 @@
 				4A5E3BA12C8E123456789A0A /* HealthKitIntegrationView.swift */,
 				4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */,
 				4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */,
+				4A5E3BED2C8E123456789D0E /* TreatmentView.swift */,
+				4A5E3BEF2C8E123456789D10 /* SettingsView.swift */,
+				4A5E3BEB2C8E123456789D0C /* QuestionnaireSections.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -316,6 +346,11 @@
 				4A5E3BC92C8E123456789B05 /* QuestionComponents.swift in Sources */,
 				4A5E3BCB2C8E123456789B07 /* QuestionnaireView.swift in Sources */,
 				4A5E3BCD2C8E123456789B09 /* ConvexService.swift in Sources */,
+				4A5E3BE82C8E123456789D09 /* ThemeManager.swift in Sources */,
+				4A5E3BEA2C8E123456789D0B /* QuestionnaireSections.swift in Sources */,
+				4A5E3BEC2C8E123456789D0D /* TreatmentView.swift in Sources */,
+				4A5E3BEE2C8E123456789D0F /* SettingsView.swift in Sources */,
+				4A5E3BF02C8E123456789D11 /* WatchConnectivityManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -327,7 +362,12 @@
 				4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */,
 				4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */,
 				4A5E3BBB2C8E123456789A12 /* WatchConnectivityManager.swift in Sources */,
+				4A5E3BF22C8E123456789D13 /* WatchThemeManager.swift in Sources */,
 				4A5E3BA82C8E123456789A0B /* Sleep360_Watch_AppApp.swift in Sources */,
+				4A5E3BE02C8E123456789D01 /* TreatmentTasksView.swift in Sources */,
+				4A5E3BE22C8E123456789D03 /* SleepLogView.swift in Sources */,
+				4A5E3BE42C8E123456789D05 /* WatchQuestionComponents.swift in Sources */,
+				4A5E3BE62C8E123456789D07 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -268,7 +268,7 @@ struct AuthenticationView_Previews: PreviewProvider {
     static var previews: some View {
         AuthenticationView()
             .environmentObject(AuthenticationManager())
-            .environmentObject(ThemeManager())
+            .environmentObject(ThemeManager.shared)
     }
 }
 

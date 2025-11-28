@@ -35,22 +35,35 @@ enum TimePeriod {
 
 struct ColorTheme {
 
-    // MARK: - Singleton with Time Awareness
+    // MARK: - Singleton with Time Awareness (for circadian mode)
 
     static var shared: ColorTheme {
         ColorTheme(period: TimePeriod.current)
     }
 
-    let period: TimePeriod
+    let period: TimePeriod?
+    let accentColorOption: ThemeManager.AccentColorOption?
 
+    /// Initialize with time-based circadian colors
     init(period: TimePeriod = .current) {
         self.period = period
+        self.accentColorOption = nil
     }
 
-    // MARK: - Primary Colors (Time-Based)
+    /// Initialize with user-selected accent color
+    init(accentColor: ThemeManager.AccentColorOption) {
+        self.period = nil
+        self.accentColorOption = accentColor
+    }
 
-    /// Main accent color - changes with time of day
+    // MARK: - Primary Colors
+
+    /// Main accent color - changes with time of day (circadian) or user selection
     var primary: Color {
+        if let accent = accentColorOption {
+            return accent.color
+        }
+        guard let period = period else { return ThemeManager.AccentColorOption.teal.color }
         switch period {
         case .morning:
             return Color(hex: "#0EA5E9")!  // Sky blue - energetic morning
@@ -65,6 +78,10 @@ struct ColorTheme {
 
     /// Secondary accent for subtle elements
     var secondary: Color {
+        if let accent = accentColorOption {
+            return accent.color.opacity(0.7)
+        }
+        guard let period = period else { return ThemeManager.AccentColorOption.teal.color.opacity(0.7) }
         switch period {
         case .morning:
             return Color(hex: "#38BDF8")!  // Light sky blue
@@ -79,6 +96,10 @@ struct ColorTheme {
 
     /// Tertiary color for accents and highlights
     var tertiary: Color {
+        if let accent = accentColorOption {
+            return accent.color.opacity(0.5)
+        }
+        guard let period = period else { return ThemeManager.AccentColorOption.teal.color.opacity(0.5) }
         switch period {
         case .morning:
             return Color(hex: "#06B6D4")!  // Cyan
@@ -95,6 +116,10 @@ struct ColorTheme {
 
     /// Subtle background tint
     var backgroundTint: Color {
+        if let accent = accentColorOption {
+            return accent.color.opacity(0.08)
+        }
+        guard let period = period else { return ThemeManager.AccentColorOption.teal.color.opacity(0.08) }
         switch period {
         case .morning:
             return Color(hex: "#0EA5E9")!.opacity(0.08)  // Light blue tint
@@ -109,6 +134,10 @@ struct ColorTheme {
 
     /// Card background with time-based warmth
     var cardBackground: Color {
+        if accentColorOption != nil {
+            return Color(.secondarySystemBackground)
+        }
+        guard let period = period else { return Color(.secondarySystemBackground) }
         switch period {
         case .morning:
             return Color(hex: "#F0F9FF")!  // Very light blue
@@ -136,6 +165,11 @@ struct ColorTheme {
     }
 
     var info: Color {
+        primary
+    }
+
+    /// Alias for primary color (for code that uses theme.accent)
+    var accent: Color {
         primary
     }
 
@@ -174,6 +208,10 @@ struct ColorTheme {
 
     /// Sleep diary icon
     var sleepDiary: Color {
+        if accentColorOption != nil {
+            return primary
+        }
+        guard let period = period else { return Color(hex: "#8B5CF6")! }
         switch period {
         case .morning:
             return Color(hex: "#8B5CF6")!  // Purple
@@ -188,6 +226,10 @@ struct ColorTheme {
 
     /// HealthKit / Heart
     var health: Color {
+        if accentColorOption != nil {
+            return Color(hex: "#EF4444")!  // Red (consistent)
+        }
+        guard let period = period else { return Color(hex: "#EF4444")! }
         switch period {
         case .morning:
             return Color(hex: "#EF4444")!  // Red
@@ -202,6 +244,10 @@ struct ColorTheme {
 
     /// Insights / Charts
     var insights: Color {
+        if accentColorOption != nil {
+            return Color(hex: "#10B981")!  // Emerald (consistent)
+        }
+        guard let period = period else { return Color(hex: "#10B981")! }
         switch period {
         case .morning:
             return Color(hex: "#10B981")!  // Emerald
@@ -218,6 +264,10 @@ struct ColorTheme {
 
     /// Core assessment phase (Days 1-5)
     var corePhase: Color {
+        if accentColorOption != nil {
+            return Color(hex: "#F59E0B")!  // Amber (consistent)
+        }
+        guard let period = period else { return Color(hex: "#F59E0B")! }
         switch period {
         case .morning:
             return Color(hex: "#EAB308")!  // Yellow
@@ -239,6 +289,16 @@ struct ColorTheme {
 
     /// Primary gradient for headers and accents
     var primaryGradient: LinearGradient {
+        if let accent = accentColorOption {
+            return LinearGradient(
+                colors: [accent.color, accent.color.opacity(0.7)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+        guard let period = period else {
+            return LinearGradient(colors: [primary, secondary], startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
         switch period {
         case .morning:
             return LinearGradient(
@@ -296,25 +356,7 @@ struct ColorTheme {
     }
 }
 
-// MARK: - Observable Theme Manager
-
-@MainActor
-class ThemeManager: ObservableObject {
-    @Published var currentTheme: ColorTheme
-
-    init() {
-        self.currentTheme = ColorTheme.shared
-    }
-
-    func updateTheme() {
-        let newTheme = ColorTheme.shared
-        if newTheme.period != currentTheme.period {
-            withAnimation(.easeInOut(duration: 0.5)) {
-                currentTheme = newTheme
-            }
-        }
-    }
-}
+// Note: ThemeManager is defined in Managers/ThemeManager.swift
 
 // MARK: - Color Extension for Hex
 
