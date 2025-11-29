@@ -1,0 +1,682 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4A5E3B8A2C8E123456789A01 /* ZoeSleepApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B892C8E123456789A01 /* ZoeSleepApp.swift */; };
+		4A5E3B8C2C8E123456789A02 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B8B2C8E123456789A02 /* ContentView.swift */; };
+		4A5E3B8E2C8E123456789A03 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5E3B8D2C8E123456789A03 /* Assets.xcassets */; };
+		4A5E3B912C8E123456789A04 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5E3B902C8E123456789A04 /* Preview Assets.xcassets */; };
+		4A5E3B982C8E123456789A05 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B972C8E123456789A05 /* Config.swift */; };
+		4A5E3B9A2C8E123456789A06 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */; };
+		4A5E3B9C2C8E123456789A07 /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */; };
+		4A5E3B9E2C8E123456789A08 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B9D2C8E123456789A08 /* APIService.swift */; };
+		4A5E3BA02C8E123456789A09 /* AuthenticationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B9F2C8E123456789A09 /* AuthenticationView.swift */; };
+		4A5E3BA22C8E123456789A0A /* HealthKitIntegrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BA12C8E123456789A0A /* HealthKitIntegrationView.swift */; };
+		4A5E3BC52C8E123456789B01 /* QuestionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BC62C8E123456789B02 /* QuestionModels.swift */; };
+		4A5E3BC72C8E123456789B03 /* QuestionnaireManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */; };
+		4A5E3BC92C8E123456789B05 /* QuestionComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */; };
+		4A5E3BCB2C8E123456789B07 /* QuestionnaireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */; };
+		4A5E3BCD2C8E123456789B09 /* ConvexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BCE2C8E123456789B0A /* ConvexService.swift */; };
+		4A5E3BA82C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BA72C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift */; };
+		4A5E3BAC2C8E123456789A0C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5E3BAB2C8E123456789A0C /* Assets.xcassets */; };
+		4A5E3BB02C8E123456789A0D /* ZoeSleep Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 4A5E3BA52C8E123456789A0E /* ZoeSleep Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4A5E3BB52C8E123456789A0F /* HealthKitWatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB42C8E123456789A0F /* HealthKitWatchManager.swift */; };
+		4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */; };
+		4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */; };
+		4A5E3BBB2C8E123456789A12 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */; };
+		4A5E3BD02C8E123456789C01 /* TreatmentTasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD12C8E123456789C02 /* TreatmentTasksView.swift */; };
+		4A5E3BD22C8E123456789C03 /* SleepLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD32C8E123456789C04 /* SleepLogView.swift */; };
+		4A5E3BD42C8E123456789C05 /* WatchQuestionComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD52C8E123456789C06 /* WatchQuestionComponents.swift */; };
+		4A5E3BD62C8E123456789C07 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD72C8E123456789C08 /* SettingsView.swift */; };
+		4A5E3BE02C8E123456789D01 /* WatchThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */; };
+		4A5E3BE42C8E123456789D05 /* WatchConvexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE52C8E123456789D06 /* WatchConvexService.swift */; };
+		4A5E3BD82C8E123456789C09 /* TreatmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD92C8E123456789C0A /* TreatmentView.swift */; };
+		4A5E3BDA2C8E123456789C0B /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */; };
+		4A5E3BDC2C8E123456789C0D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDD2C8E123456789C0E /* SettingsView.swift */; };
+		4A5E3BDE2C8E123456789C0F /* QuestionnaireSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */; };
+		4A5E3BE22C8E123456789D03 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		4A5E3BAF2C8E123456789A13 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4A5E3B7D2C8E123456789A14 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4A5E3BA42C8E123456789A15;
+			remoteInfo = "ZoeSleep Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4A5E3BB12C8E123456789A16 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				4A5E3BB02C8E123456789A0D /* ZoeSleep Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		4A5E3B842C8E123456789A17 /* ZoeSleep.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZoeSleep.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4A5E3B892C8E123456789A01 /* ZoeSleepApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoeSleepApp.swift; sourceTree = "<group>"; };
+		4A5E3B8B2C8E123456789A02 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		4A5E3B8D2C8E123456789A03 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4A5E3B902C8E123456789A04 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		4A5E3B972C8E123456789A05 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
+		4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
+		4A5E3B9D2C8E123456789A08 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
+		4A5E3B9F2C8E123456789A09 /* AuthenticationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationView.swift; sourceTree = "<group>"; };
+		4A5E3BA12C8E123456789A0A /* HealthKitIntegrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitIntegrationView.swift; sourceTree = "<group>"; };
+		4A5E3BA32C8E123456789A18 /* ZoeSleep.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ZoeSleep.entitlements; sourceTree = "<group>"; };
+		4A5E3BA42C8E123456789A19 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4A5E3BA52C8E123456789A0E /* ZoeSleep Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ZoeSleep Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		4A5E3BA72C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoeSleep_Watch_AppApp.swift; sourceTree = "<group>"; };
+		4A5E3BAB2C8E123456789A0C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4A5E3BAD2C8E123456789A1A /* ZoeSleep Watch App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "ZoeSleep Watch App.entitlements"; sourceTree = "<group>"; };
+		4A5E3BAF2C8E123456789A1B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4A5E3BB42C8E123456789A0F /* HealthKitWatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitWatchManager.swift; sourceTree = "<group>"; };
+		4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireView.swift; sourceTree = "<group>"; };
+		4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationsView.swift; sourceTree = "<group>"; };
+		4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+		4A5E3BC62C8E123456789B02 /* QuestionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionModels.swift; sourceTree = "<group>"; };
+		4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireManager.swift; sourceTree = "<group>"; };
+		4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionComponents.swift; sourceTree = "<group>"; };
+		4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireView.swift; sourceTree = "<group>"; };
+		4A5E3BCE2C8E123456789B0A /* ConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvexService.swift; sourceTree = "<group>"; };
+		4A5E3BD12C8E123456789C02 /* TreatmentTasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentTasksView.swift; sourceTree = "<group>"; };
+		4A5E3BD32C8E123456789C04 /* SleepLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepLogView.swift; sourceTree = "<group>"; };
+		4A5E3BD52C8E123456789C06 /* WatchQuestionComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchQuestionComponents.swift; sourceTree = "<group>"; };
+		4A5E3BD72C8E123456789C08 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchThemeManager.swift; sourceTree = "<group>"; };
+		4A5E3BE52C8E123456789D06 /* WatchConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConvexService.swift; sourceTree = "<group>"; };
+		4A5E3BD92C8E123456789C0A /* TreatmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentView.swift; sourceTree = "<group>"; };
+		4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		4A5E3BDD2C8E123456789C0E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireSections.swift; sourceTree = "<group>"; };
+		4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4A5E3B812C8E123456789A1C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A5E3BA22C8E123456789A1D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4A5E3B7C2C8E123456789A1E = {
+			isa = PBXGroup;
+			children = (
+				4A5E3B872C8E123456789A1F /*/* ZoeSleep */,
+				4A5E3BA62C8E123456789A20 /*/* ZoeSleep Watch App */,
+				4A5E3B852C8E123456789A21 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4A5E3B852C8E123456789A21 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3B842C8E123456789A17 /* ZoeSleep.app */,
+				4A5E3BA52C8E123456789A0E /* ZoeSleep Watch App.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4A5E3B872C8E123456789A1F /*/* ZoeSleep */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3BA32C8E123456789A18 /* ZoeSleep.entitlements */,
+				4A5E3BA42C8E123456789A19 /* Info.plist */,
+				4A5E3B892C8E123456789A01 /* ZoeSleepApp.swift */,
+				4A5E3B8B2C8E123456789A02 /* ContentView.swift */,
+				4A5E3B972C8E123456789A05 /* Config.swift */,
+				4A5E3BCF2C8E123456789B0B /* Models */,
+				4A5E3BBC2C8E123456789A22 /* Managers */,
+				4A5E3BBD2C8E123456789A23 /* Services */,
+				4A5E3BBE2C8E123456789A24 /* Views */,
+				4A5E3B8D2C8E123456789A03 /* Assets.xcassets */,
+				4A5E3B8F2C8E123456789A25 /* Preview Content */,
+			);
+			path = ZoeSleep;
+			sourceTree = "<group>";
+		};
+		4A5E3B8F2C8E123456789A25 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3B902C8E123456789A04 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		4A5E3BA62C8E123456789A20 /*/* ZoeSleep Watch App */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3BAD2C8E123456789A1A /* ZoeSleep Watch App.entitlements */,
+				4A5E3BAF2C8E123456789A1B /* Info.plist */,
+				4A5E3BA72C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift */,
+				4A5E3BB42C8E123456789A0F /* HealthKitWatchManager.swift */,
+				4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */,
+				4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */,
+				4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */,
+				4A5E3BD12C8E123456789C02 /* TreatmentTasksView.swift */,
+				4A5E3BD32C8E123456789C04 /* SleepLogView.swift */,
+				4A5E3BD52C8E123456789C06 /* WatchQuestionComponents.swift */,
+				4A5E3BD72C8E123456789C08 /* SettingsView.swift */,
+				4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */,
+				4A5E3BE52C8E123456789D06 /* WatchConvexService.swift */,
+				4A5E3BAB2C8E123456789A0C /* Assets.xcassets */,
+			);
+			path = "ZoeSleep Watch App";
+			sourceTree = "<group>";
+		};
+		4A5E3BBC2C8E123456789A22 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */,
+				4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */,
+				4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */,
+				4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */,
+				4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		4A5E3BBD2C8E123456789A23 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3B9D2C8E123456789A08 /* APIService.swift */,
+				4A5E3BCE2C8E123456789B0A /* ConvexService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		4A5E3BBE2C8E123456789A24 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3B9F2C8E123456789A09 /* AuthenticationView.swift */,
+				4A5E3BA12C8E123456789A0A /* HealthKitIntegrationView.swift */,
+				4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */,
+				4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */,
+				4A5E3BD92C8E123456789C0A /* TreatmentView.swift */,
+				4A5E3BDD2C8E123456789C0E /* SettingsView.swift */,
+				4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		4A5E3BCF2C8E123456789B0B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3BC62C8E123456789B02 /* QuestionModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4A5E3B832C8E123456789A26 /*/* ZoeSleep */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4A5E3BBF2C8E123456789A27 /* Build configuration list for PBXNativeTarget "ZoeSleep" */;
+			buildPhases = (
+				4A5E3B802C8E123456789A28 /* Sources */,
+				4A5E3B812C8E123456789A1C /* Frameworks */,
+				4A5E3B822C8E123456789A29 /* Resources */,
+				4A5E3BB12C8E123456789A16 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4A5E3BB02C8E123456789A2A /* PBXTargetDependency */,
+			);
+			name = ZoeSleep;
+			productName = ZoeSleep;
+			productReference = 4A5E3B842C8E123456789A17 /* ZoeSleep.app */;
+			productType = "com.apple.product-type.application";
+		};
+		4A5E3BA42C8E123456789A15 /*/* ZoeSleep Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4A5E3BC22C8E123456789A2B /* Build configuration list for PBXNativeTarget "ZoeSleep Watch App" */;
+			buildPhases = (
+				4A5E3BA12C8E123456789A2C /* Sources */,
+				4A5E3BA22C8E123456789A1D /* Frameworks */,
+				4A5E3BA32C8E123456789A2D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "ZoeSleep Watch App";
+			productName = "ZoeSleep Watch App";
+			productReference = 4A5E3BA52C8E123456789A0E /* ZoeSleep Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4A5E3B7D2C8E123456789A14 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 2610;
+				TargetAttributes = {
+					4A5E3B832C8E123456789A26 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					4A5E3BA42C8E123456789A15 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 4A5E3B802C8E123456789A2E /* Build configuration list for PBXProject "ZoeSleep" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4A5E3B7C2C8E123456789A1E;
+			packageReferences = (
+			);
+			productRefGroup = 4A5E3B852C8E123456789A21 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4A5E3B832C8E123456789A26 /*/* ZoeSleep */,
+				4A5E3BA42C8E123456789A15 /*/* ZoeSleep Watch App */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4A5E3B822C8E123456789A29 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4A5E3B912C8E123456789A04 /* Preview Assets.xcassets in Resources */,
+				4A5E3B8E2C8E123456789A03 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A5E3BA32C8E123456789A2D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4A5E3BAC2C8E123456789A0C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4A5E3B802C8E123456789A28 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4A5E3B8C2C8E123456789A02 /* ContentView.swift in Sources */,
+				4A5E3B982C8E123456789A05 /* Config.swift in Sources */,
+				4A5E3B9A2C8E123456789A06 /* AuthenticationManager.swift in Sources */,
+				4A5E3B9C2C8E123456789A07 /* HealthKitManager.swift in Sources */,
+				4A5E3B9E2C8E123456789A08 /* APIService.swift in Sources */,
+				4A5E3BA02C8E123456789A09 /* AuthenticationView.swift in Sources */,
+				4A5E3BA22C8E123456789A0A /* HealthKitIntegrationView.swift in Sources */,
+				4A5E3B8A2C8E123456789A01 /* ZoeSleepApp.swift in Sources */,
+				4A5E3BC52C8E123456789B01 /* QuestionModels.swift in Sources */,
+				4A5E3BC72C8E123456789B03 /* QuestionnaireManager.swift in Sources */,
+				4A5E3BC92C8E123456789B05 /* QuestionComponents.swift in Sources */,
+				4A5E3BCB2C8E123456789B07 /* QuestionnaireView.swift in Sources */,
+				4A5E3BCD2C8E123456789B09 /* ConvexService.swift in Sources */,
+				4A5E3BD82C8E123456789C09 /* TreatmentView.swift in Sources */,
+				4A5E3BDA2C8E123456789C0B /* ThemeManager.swift in Sources */,
+				4A5E3BDC2C8E123456789C0D /* SettingsView.swift in Sources */,
+				4A5E3BDE2C8E123456789C0F /* QuestionnaireSections.swift in Sources */,
+				4A5E3BE22C8E123456789D03 /* WatchConnectivityManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A5E3BA12C8E123456789A2C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4A5E3BB52C8E123456789A0F /* HealthKitWatchManager.swift in Sources */,
+				4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */,
+				4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */,
+				4A5E3BBB2C8E123456789A12 /* WatchConnectivityManager.swift in Sources */,
+				4A5E3BA82C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift in Sources */,
+				4A5E3BD02C8E123456789C01 /* TreatmentTasksView.swift in Sources */,
+				4A5E3BD22C8E123456789C03 /* SleepLogView.swift in Sources */,
+				4A5E3BD42C8E123456789C05 /* WatchQuestionComponents.swift in Sources */,
+				4A5E3BD62C8E123456789C07 /* SettingsView.swift in Sources */,
+				4A5E3BE02C8E123456789D01 /* WatchThemeManager.swift in Sources */,
+				4A5E3BE42C8E123456789D05 /* WatchConvexService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4A5E3BB02C8E123456789A2A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4A5E3BA42C8E123456789A15 /*/* ZoeSleep Watch App */;
+			targetProxy = 4A5E3BAF2C8E123456789A13 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		4A5E3BBD2C8E123456789A2F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		4A5E3BBE2C8E123456789A30 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		4A5E3BC02C8E123456789A31 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ZoeSleep/ZoeSleep.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"ZoeSleep/Preview Content\"";
+				DEVELOPMENT_TEAM = HA7H8BB975;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ZoeSleep/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Zoe Sleep";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Zoe Sleep needs access to your health data to provide personalized sleep coaching and recommendations.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Zoe Sleep needs to update your health data to track your sleep progress and improvements.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoesleep.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4A5E3BC12C8E123456789A32 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ZoeSleep/ZoeSleep.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"ZoeSleep/Preview Content\"";
+				DEVELOPMENT_TEAM = HA7H8BB975;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ZoeSleep/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Zoe Sleep";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Zoe Sleep needs access to your health data to provide personalized sleep coaching and recommendations.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Zoe Sleep needs to update your health data to track your sleep progress and improvements.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoesleep.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		4A5E3BC32C8E123456789A33 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "ZoeSleep Watch App/ZoeSleep Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HA7H8BB975;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ZoeSleep Watch App/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Zoe Sleep";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Zoe Sleep needs access to your health data to provide personalized sleep coaching and recommendations on your watch.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Zoe Sleep needs to update your health data to track your sleep progress and improvements from your watch.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoesleep.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		4A5E3BC42C8E123456789A34 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "ZoeSleep Watch App/ZoeSleep Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HA7H8BB975;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ZoeSleep Watch App/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Zoe Sleep";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Zoe Sleep needs access to your health data to provide personalized sleep coaching and recommendations on your watch.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Zoe Sleep needs to update your health data to track your sleep progress and improvements from your watch.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoesleep.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4A5E3B802C8E123456789A2E /* Build configuration list for PBXProject "ZoeSleep" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A5E3BBD2C8E123456789A2F /* Debug */,
+				4A5E3BBE2C8E123456789A30 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4A5E3BBF2C8E123456789A27 /* Build configuration list for PBXNativeTarget "ZoeSleep" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A5E3BC02C8E123456789A31 /* Debug */,
+				4A5E3BC12C8E123456789A32 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4A5E3BC22C8E123456789A2B /* Build configuration list for PBXNativeTarget "ZoeSleep Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A5E3BC32C8E123456789A33 /* Debug */,
+				4A5E3BC42C8E123456789A34 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 4A5E3B7D2C8E123456789A14 /* Project object */;
+}

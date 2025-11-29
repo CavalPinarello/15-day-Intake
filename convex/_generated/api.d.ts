@@ -20,7 +20,9 @@ import type * as questions from "../questions.js";
 import type * as responses from "../responses.js";
 import type * as seedModules from "../seedModules.js";
 import type * as seedQuestions from "../seedQuestions.js";
+import type * as treatment from "../treatment.js";
 import type * as users from "../users.js";
+import type * as watch from "../watch.js";
 
 import type {
   ApiFromModules,
@@ -41,7 +43,9 @@ declare const fullApi: ApiFromModules<{
   responses: typeof responses;
   seedModules: typeof seedModules;
   seedQuestions: typeof seedQuestions;
+  treatment: typeof treatment;
   users: typeof users;
+  watch: typeof watch;
 }>;
 
 /**

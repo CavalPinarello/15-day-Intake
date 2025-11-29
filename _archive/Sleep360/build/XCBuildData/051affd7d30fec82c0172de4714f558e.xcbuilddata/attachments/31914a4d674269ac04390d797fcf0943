@@ -1,0 +1,99 @@
+{
+  "" : {
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360-primary.dia",
+    "emit-module-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360-primary-emit-module.dia",
+    "pch" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360-primary.swiftdeps"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360/Config.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Config.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Config.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Config.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Config.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Config.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Config.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Config.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Config~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360/ContentView.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/ContentView.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/ContentView.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/ContentView.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/ContentView.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/ContentView.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/ContentView~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360/Managers/AuthenticationManager.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationManager.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationManager.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationManager.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationManager.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationManager.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationManager.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationManager.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationManager~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360/Managers/HealthKitManager.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitManager.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitManager.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitManager.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitManager.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitManager.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitManager.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitManager.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitManager~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360/Services/APIService.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/APIService.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/APIService.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/APIService.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/APIService.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/APIService.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/APIService.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/APIService.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/APIService~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360/Sleep360App.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360App.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360App.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360App.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360App.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360App.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360App.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360App.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/Sleep360App~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360/Views/AuthenticationView.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationView.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationView.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationView.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationView.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationView.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationView.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationView.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/AuthenticationView~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/Sleep360/Views/HealthKitIntegrationView.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitIntegrationView.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitIntegrationView.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitIntegrationView.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitIntegrationView.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitIntegrationView.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitIntegrationView.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitIntegrationView.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/HealthKitIntegrationView~partial.swiftmodule"
+  },
+  "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/martinkawalski/Documents/GitHub/15-day-Intake/Sleep360/build/Sleep360.build/Debug-iphonesimulator/Sleep360.build/Objects-normal/x86_64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

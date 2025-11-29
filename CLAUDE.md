@@ -1,11 +1,11 @@
 # CLAUDE.md
 
-This file provides essential guidance to Claude Code when working with the **Zoe Sleep for Longevity System** repository.
+This file provides essential guidance to Claude Code when working with the **Zoe Sleep** repository.
 
 ## Brand & Product
 
-**Product Name:** Zoe Sleep for Longevity System
-**Tagline:** "The best sleep of your life and maximum daily energy while protecting your health"
+**Product Name:** Zoe Sleep
+**Tagline:** "Sleep Better, Live Longer"
 **Design Theme:** Elegant circadian waves (NO moon/stars clichés) - abstract waveforms, gradient flows
 
 ## Platform Architecture
@@ -72,27 +72,28 @@ npx convex dev && ./setup-convex.sh
 ## Key File Locations
 
 **iOS Application (Xcode Project):**
-- **Xcode Project:** `/Sleep360/Sleep360.xcodeproj` (Main iOS project)
-- **iOS Target:** `/Sleep360/Sleep360/` (Swift/SwiftUI iOS app implementation)
-- **Models:** `/Sleep360/Sleep360/Models/` (QuestionModels for questionnaire system)
-- **Managers:** `/Sleep360/Sleep360/Managers/` (HealthKitManager, AuthenticationManager, QuestionnaireManager)
-- **Views:** `/Sleep360/Sleep360/Views/` (QuestionnaireView, QuestionComponents, ContentView)
-- **Services:** `/Sleep360/Sleep360/Services/` (APIService, ConvexService for backend integration)
+- **Xcode Project:** `/ZoeSleep/ZoeSleep.xcodeproj` (Main iOS project)
+- **iOS Target:** `/ZoeSleep/ZoeSleep/` (Swift/SwiftUI iOS app implementation)
+- **Models:** `/ZoeSleep/ZoeSleep/Models/` (QuestionModels for questionnaire system)
+- **Managers:** `/ZoeSleep/ZoeSleep/Managers/` (HealthKitManager, AuthenticationManager, QuestionnaireManager)
+- **Views:** `/ZoeSleep/ZoeSleep/Views/` (QuestionnaireView, QuestionComponents, ContentView)
+- **Services:** `/ZoeSleep/ZoeSleep/Services/` (APIService, ConvexService for backend integration)
 
 **Apple Watch Application (Xcode Project):**
-- **Watch Target:** `/Sleep360/Sleep360 Watch App/` (watchOS app in Xcode project)
-- **Main App:** `/Sleep360/Sleep360 Watch App/Sleep360_Watch_AppApp.swift` (Watch app entry point)
-- **Questionnaire:** `/Sleep360/Sleep360 Watch App/QuestionnaireView.swift` (Watch-optimized UI)
-- **Sleep Log:** `/Sleep360/Sleep360 Watch App/SleepLogView.swift` (60-second morning flow)
-- **Settings:** `/Sleep360/Sleep360 Watch App/SettingsView.swift` (Large text, debug mode)
-- **Question Components:** `/Sleep360/Sleep360 Watch App/WatchQuestionComponents.swift` (Adaptive UI for all watch sizes)
-- **Recommendations:** `/Sleep360/Sleep360 Watch App/RecommendationsView.swift` (Physician recommendations)
-- **Watch HealthKit:** `/Sleep360/Sleep360 Watch App/HealthKitWatchManager.swift` (Watch health data)
-- **Watch Connectivity:** `/Sleep360/Sleep360 Watch App/WatchConnectivityManager.swift` (iPhone-Watch sync)
+- **Watch Target:** `/ZoeSleep/ZoeSleep Watch App/` (watchOS app in Xcode project)
+- **Main App:** `/ZoeSleep/ZoeSleep Watch App/ZoeSleep_Watch_AppApp.swift` (Watch app entry point)
+- **Questionnaire:** `/ZoeSleep/ZoeSleep Watch App/QuestionnaireView.swift` (Watch-optimized UI)
+- **Sleep Log:** `/ZoeSleep/ZoeSleep Watch App/SleepLogView.swift` (60-second morning flow)
+- **Settings:** `/ZoeSleep/ZoeSleep Watch App/SettingsView.swift` (Large text, debug mode)
+- **Question Components:** `/ZoeSleep/ZoeSleep Watch App/WatchQuestionComponents.swift` (Adaptive UI for all watch sizes)
+- **Recommendations:** `/ZoeSleep/ZoeSleep Watch App/RecommendationsView.swift` (Physician recommendations)
+- **Watch HealthKit:** `/ZoeSleep/ZoeSleep Watch App/HealthKitWatchManager.swift` (Watch health data)
+- **Watch Connectivity:** `/ZoeSleep/ZoeSleep Watch App/WatchConnectivityManager.swift` (iPhone-Watch sync)
 
-**Legacy Files (Reference):**
-- **iOS Reference:** `/ios/` (Original Swift files, now integrated in Xcode project)
-- **watchOS Reference:** `/watchos/` (Original watch files, now in Xcode project)
+**Legacy Files (Archived):**
+- **iOS Reference:** `/ios/` (Original Swift files - archived)
+- **watchOS Reference:** `/watchos/` (Original watch files - archived)
+- **Sleep360 (Old):** `/Sleep360/` (Archived, replaced by ZoeSleep)
 
 **Web Application (Patient + Physician):**
 - **Patient Journey:** `/client/src/app/journey/` (Next.js - 15-day questionnaire)
@@ -132,7 +133,7 @@ npx convex dev && ./setup-convex.sh
 - **Text Size Slider**: Scalable from 0.8x to 1.4x
 
 **iOS & watchOS Development:**
-- Swift/SwiftUI with Xcode project at `/Sleep360/Sleep360.xcodeproj`
+- Swift/SwiftUI with Xcode project at `/ZoeSleep/ZoeSleep.xcodeproj`
 - HealthKit integration for comprehensive sleep and health data
 - WatchConnectivity for iPhone-Watch sync
 
@@ -205,6 +206,24 @@ For detailed architecture, setup instructions, and API documentation, see README
 - **Session Log:** `/docs/sessions/apple-watch-integration-2025-11-21.md`
 
 ## Latest Session Context (2025-11-28)
+
+**REBRANDING: Sleep360 → Zoe Sleep**
+
+The project has been rebranded from "Sleep360" to "Zoe Sleep" with the tagline "Sleep Better, Live Longer".
+
+### Changes Made:
+- **New Xcode Project:** `/ZoeSleep/ZoeSleep.xcodeproj` (replaces Sleep360)
+- **iOS App:** `ZoeSleepApp.swift` with bundle ID `com.zoesleep.app`
+- **Watch App:** `ZoeSleep_Watch_AppApp.swift` with bundle ID `com.zoesleep.app.watchkitapp`
+- **Display Name:** "Zoe Sleep" (shown on home screen)
+- **Build Verified:** Both iOS and watchOS targets build successfully
+
+### Archived (Do Not Use):
+- `/Sleep360/` - Old project folder (archived for reference)
+- `/Sleep360/Sleep360.xcodeproj` - Old Xcode project
+- `/Sleep360/Zoé Sleep.xcodeproj` - Partial migration attempt
+
+---
 
 **Theme System Fix: Global Theme & Accent Color Propagation**
 
