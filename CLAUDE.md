@@ -207,7 +207,7 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-11-28)
 
-**REBRANDING: Sleep360 → Zoe Sleep**
+**REBRANDING: Sleep360 → Zoe Sleep** (Commit: `5741d9f`)
 
 The project has been rebranded from "Sleep360" to "Zoe Sleep" with the tagline "Sleep Better, Live Longer".
 
