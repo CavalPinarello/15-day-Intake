@@ -203,7 +203,7 @@ struct MainDashboardView: View {
 
                 Text(getGreeting())
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.textSecondary)
             }
 
             Spacer()
@@ -265,6 +265,7 @@ struct MainDashboardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("15-Day Sleep Journey")
                         .font(.headline)
+                        .foregroundColor(theme.textPrimary)
                     Text("Day \(currentDay) of 15")
                         .font(.title2)
                         .fontWeight(.bold)
@@ -313,7 +314,7 @@ struct MainDashboardView: View {
                         .foregroundColor(theme.corePhase)
                     Text("Core Assessment Phase (Days 1-5)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.textSecondary)
                 }
             } else {
                 HStack {
@@ -321,7 +322,7 @@ struct MainDashboardView: View {
                         .foregroundColor(theme.expansionPhase)
                     Text("Personalized Expansion Phase")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.textSecondary)
                 }
             }
         }
@@ -347,15 +348,16 @@ struct MainDashboardView: View {
             HStack {
                 Image(systemName: healthKitManager.isAuthorized ? "heart.fill" : "heart")
                     .font(.title2)
-                    .foregroundColor(healthKitManager.isAuthorized ? theme.health : .gray)
+                    .foregroundColor(healthKitManager.isAuthorized ? theme.health : theme.textSecondary)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(healthKitManager.isAuthorized ? "Apple Health Connected" : "Connect Apple Health")
                         .font(.subheadline)
                         .fontWeight(.medium)
+                        .foregroundColor(theme.textPrimary)
                     Text(healthKitManager.isAuthorized ? "Sleep data will be auto-synced" : "Enable automatic sleep tracking")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.textSecondary)
                 }
 
                 Spacer()
@@ -390,6 +392,7 @@ struct MainDashboardView: View {
             HStack {
                 Text("Today's Tasks")
                     .font(.headline)
+                    .foregroundColor(theme.textPrimary)
                 Spacer()
                 if isDayComplete {
                     HStack(spacing: 4) {
@@ -403,7 +406,7 @@ struct MainDashboardView: View {
                 } else if let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) {
                     Text("~\(config.estimatedMinutes + 2) min total")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.textSecondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(theme.backgroundTint)
@@ -426,7 +429,8 @@ struct MainDashboardView: View {
                     section: .sleepLog,
                     questionCount: 5,
                     estimatedMinutes: 2,
-                    isCompleted: questionnaireManager.journeyProgress?.sleepLogCompleted ?? false
+                    isCompleted: questionnaireManager.journeyProgress?.sleepLogCompleted ?? false,
+                    whyExplanation: getSleepLogWhyExplanation()
                 )
             }
             .disabled(questionnaireManager.journeyProgress?.sleepLogCompleted ?? false)
@@ -439,7 +443,8 @@ struct MainDashboardView: View {
                     subtitle: getDayDescription(),
                     questionCount: getAssessmentQuestionCount(),
                     estimatedMinutes: getAssessmentMinutes(),
-                    isCompleted: questionnaireManager.journeyProgress?.assessmentCompleted ?? false
+                    isCompleted: questionnaireManager.journeyProgress?.assessmentCompleted ?? false,
+                    whyExplanation: getAssessmentWhyExplanation()
                 )
             }
             .disabled(questionnaireManager.journeyProgress?.assessmentCompleted ?? false)
@@ -498,6 +503,33 @@ struct MainDashboardView: View {
             return 10
         }
         return config.estimatedMinutes
+    }
+
+    /// Get contextual explanation for why the sleep log matters
+    private func getSleepLogWhyExplanation() -> String {
+        return "Recording your subjective sleep perception daily helps us compare it with your wearable data and identify patterns."
+    }
+
+    /// Get contextual explanation for why this day's assessment matters
+    private func getAssessmentWhyExplanation() -> String {
+        let explanations: [Int: String] = [
+            1: "We're getting to know you and establishing your baseline sleep quality.",
+            2: "Understanding your sleep history and patterns helps identify what might be causing your sleep issues.",
+            3: "Sleep and mental health are closely connected. These questions help us see the full picture.",
+            4: "Physical health factors can significantly impact sleep. We're checking for anything relevant.",
+            5: "Your environment and daily habits play a big role in sleep quality.",
+            6: "Based on your responses, we're taking a deeper look at insomnia symptoms.",
+            7: "Your natural sleep-wake cycle affects when you sleep best.",
+            8: "We're checking in on mood and anxiety, which can affect sleep quality.",
+            9: "Daytime sleepiness tells us important things about your sleep quality.",
+            10: "We're screening for sleep apnea, a common but often undiagnosed condition.",
+            11: "Pain and physical discomfort can disrupt sleep. We're assessing if this applies to you.",
+            12: "Your body clock affects when you feel sleepy and alert.",
+            13: "What you eat can affect how you sleep. We're looking at dietary factors.",
+            14: "Sometimes our beliefs about sleep can make problems worse.",
+            15: "We're wrapping up your assessment and preparing your personalized recommendations.",
+        ]
+        return explanations[currentDay] ?? "These questions help us understand your unique sleep needs."
     }
 
     // MARK: - Gateway Status Card
@@ -635,10 +667,10 @@ struct TaskRow: View {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.primary)
+                    .foregroundColor(theme.textPrimary)
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.textSecondary)
                     .lineLimit(2)
             }
 
@@ -649,7 +681,7 @@ struct TaskRow: View {
                     .foregroundColor(theme.success)
             } else {
                 Image(systemName: "chevron.right")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.textSecondary)
             }
         }
         .padding(12)
@@ -680,16 +712,16 @@ struct QuickActionRow: View {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.primary)
+                    .foregroundColor(theme.textPrimary)
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.textSecondary)
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
+                .foregroundColor(theme.textSecondary)
         }
         .padding(12)
         .background(GlassyCardBackground(opacity: 0.35))
@@ -706,6 +738,8 @@ struct SectionTaskCard: View {
     let questionCount: Int
     let estimatedMinutes: Int
     let isCompleted: Bool
+    var whyExplanation: String? = nil  // Contextual explanation for why this matters
+    var theme: ColorTheme = ColorTheme.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -719,10 +753,10 @@ struct SectionTaskCard: View {
                         .fontWeight(.bold)
                         .tracking(0.5)
                 }
-                .foregroundColor(.white)
+                .foregroundColor(theme.textOnPrimary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(section.accentColor)
+                .background(theme.primary)  // Use circadian-safe primary color
                 .cornerRadius(6)
 
                 Spacer()
@@ -741,20 +775,36 @@ struct SectionTaskCard: View {
                         Text("~\(estimatedMinutes) min")
                             .font(.caption)
                     }
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.textSecondary)
                 }
             }
 
             // Title
             Text(title ?? section.title)
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundColor(theme.textPrimary)
 
             // Subtitle/Description
             Text(subtitle ?? section.description)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(theme.textSecondary)
                 .lineLimit(2)
+
+            // Why this matters (contextual explanation)
+            if let why = whyExplanation, !isCompleted {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.caption)
+                        .foregroundColor(theme.primary)
+                    Text(why)
+                        .font(.caption2)
+                        .foregroundColor(theme.textSecondary)
+                        .lineLimit(3)
+                }
+                .padding(10)
+                .background(theme.primary.opacity(0.15))
+                .cornerRadius(8)
+            }
 
             // Action indicator
             HStack {
@@ -766,19 +816,19 @@ struct SectionTaskCard: View {
                     Image(systemName: isCompleted ? "checkmark" : "arrow.right")
                         .font(.caption)
                 }
-                .foregroundColor(isCompleted ? .green : section.accentColor)
+                .foregroundColor(isCompleted ? .green : theme.primary)
             }
         }
         .padding(16)
-        .background(GlassyCardBackground(opacity: 0.35, tint: section.accentColor))
+        .background(GlassyCardBackground(opacity: 0.35, tint: theme.primary))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
                     LinearGradient(
                         colors: [
-                            section.accentColor.opacity(0.4),
-                            section.accentColor.opacity(0.15)
+                            theme.primary.opacity(0.4),
+                            theme.primary.opacity(0.15)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing

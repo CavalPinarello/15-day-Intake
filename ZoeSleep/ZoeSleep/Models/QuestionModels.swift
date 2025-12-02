@@ -56,7 +56,8 @@ struct ColorTheme {
         self.accentColorOption = accentColor
     }
 
-    // MARK: - Primary Colors
+    // MARK: - Primary Colors (Sleep-Optimized)
+    // CRITICAL: NO blue/teal/purple at night - only warm amber/orange for sleep health
 
     /// Main accent color - changes with time of day (circadian) or user selection
     var primary: Color {
@@ -66,13 +67,13 @@ struct ColorTheme {
         guard let period = period else { return ThemeManager.AccentColorOption.teal.color }
         switch period {
         case .morning:
-            return Color(hex: "#0EA5E9")!  // Sky blue - energetic morning
+            return Color(hex: "#0EA5E9")!  // Sky blue - energetic morning (OK)
         case .afternoon:
             return Color(hex: "#F59E0B")!  // Amber - warm afternoon
         case .evening:
-            return Color(hex: "#EA580C")!  // Orange - sunset glow
+            return Color(hex: "#F28C40")!  // Bright amber/orange - NO BLUE
         case .night:
-            return Color(hex: "#7C3AED")!  // Purple - calming night
+            return Color(hex: "#F28C40")!  // Warm amber - NO PURPLE/BLUE (sleep-safe)
         }
     }
 
@@ -84,13 +85,13 @@ struct ColorTheme {
         guard let period = period else { return ThemeManager.AccentColorOption.teal.color.opacity(0.7) }
         switch period {
         case .morning:
-            return Color(hex: "#38BDF8")!  // Light sky blue
+            return Color(hex: "#38BDF8")!  // Light sky blue (OK for morning)
         case .afternoon:
             return Color(hex: "#FBBF24")!  // Golden amber
         case .evening:
-            return Color(hex: "#FB923C")!  // Warm orange
+            return Color(hex: "#D97706")!  // Deep amber - NO BLUE
         case .night:
-            return Color(hex: "#A78BFA")!  // Soft lavender
+            return Color(hex: "#D97706")!  // Deep amber - NO LAVENDER (sleep-safe)
         }
     }
 
@@ -102,17 +103,17 @@ struct ColorTheme {
         guard let period = period else { return ThemeManager.AccentColorOption.teal.color.opacity(0.5) }
         switch period {
         case .morning:
-            return Color(hex: "#06B6D4")!  // Cyan
+            return Color(hex: "#06B6D4")!  // Cyan (OK for morning)
         case .afternoon:
             return Color(hex: "#D97706")!  // Deep amber
         case .evening:
-            return Color(hex: "#DC2626")!  // Warm red
+            return Color(hex: "#B45309")!  // Burnt orange - NO RED with blue
         case .night:
-            return Color(hex: "#8B5CF6")!  // Violet
+            return Color(hex: "#B45309")!  // Burnt orange - NO VIOLET (sleep-safe)
         }
     }
 
-    // MARK: - Background Colors
+    // MARK: - Background Colors (Sleep-Optimized)
 
     /// Subtle background tint
     var backgroundTint: Color {
@@ -122,13 +123,13 @@ struct ColorTheme {
         guard let period = period else { return ThemeManager.AccentColorOption.teal.color.opacity(0.08) }
         switch period {
         case .morning:
-            return Color(hex: "#0EA5E9")!.opacity(0.08)  // Light blue tint
+            return Color(hex: "#0EA5E9")!.opacity(0.08)  // Light blue tint (OK for morning)
         case .afternoon:
             return Color(hex: "#F59E0B")!.opacity(0.08)  // Amber tint
         case .evening:
-            return Color(hex: "#EA580C")!.opacity(0.08)  // Orange tint
+            return Color(hex: "#F28C40")!.opacity(0.12)  // Warm amber tint - NO BLUE
         case .night:
-            return Color(hex: "#7C3AED")!.opacity(0.08)  // Purple tint
+            return Color(hex: "#F28C40")!.opacity(0.12)  // Warm amber tint - NO PURPLE (sleep-safe)
         }
     }
 
@@ -140,13 +141,13 @@ struct ColorTheme {
         guard let period = period else { return Color(.secondarySystemBackground) }
         switch period {
         case .morning:
-            return Color(hex: "#F0F9FF")!  // Very light blue
+            return Color(hex: "#F0F9FF")!  // Very light blue (OK for morning)
         case .afternoon:
             return Color(hex: "#FFFBEB")!  // Warm cream
         case .evening:
             return Color(hex: "#FFF7ED")!  // Warm orange tint
         case .night:
-            return Color(hex: "#FAF5FF")!  // Soft purple tint
+            return Color(hex: "#2D1A14")!  // Deep warm brown - NO purple (sleep-safe)
         }
     }
 
@@ -190,23 +191,41 @@ struct ColorTheme {
         Color(hex: "#9CA3AF")!.opacity(0.4)  // Gray
     }
 
-    // MARK: - Text Colors
+    // MARK: - Text Colors (Sleep-Optimized for dark evening backgrounds)
 
     var textPrimary: Color {
-        Color.primary
+        guard let period = period else { return Color.primary }
+        switch period {
+        case .morning, .afternoon:
+            return Color.primary  // System default
+        case .evening, .night:
+            return Color(red: 1.0, green: 0.92, blue: 0.85)  // Warm white (sleep-safe)
+        }
     }
 
     var textSecondary: Color {
-        Color.secondary
+        guard let period = period else { return Color.secondary }
+        switch period {
+        case .morning, .afternoon:
+            return Color.secondary  // System default
+        case .evening, .night:
+            return Color(red: 0.85, green: 0.70, blue: 0.55)  // Warm tan (sleep-safe)
+        }
     }
 
     var textOnPrimary: Color {
-        .white
+        guard let period = period else { return .white }
+        switch period {
+        case .morning, .afternoon:
+            return .white
+        case .evening, .night:
+            return Color(red: 0.15, green: 0.10, blue: 0.08)  // Dark brown on amber buttons
+        }
     }
 
     // MARK: - Component-Specific Colors
 
-    /// Sleep diary icon
+    /// Sleep diary icon (Sleep-Optimized)
     var sleepDiary: Color {
         if accentColorOption != nil {
             return primary
@@ -214,13 +233,13 @@ struct ColorTheme {
         guard let period = period else { return Color(hex: "#8B5CF6")! }
         switch period {
         case .morning:
-            return Color(hex: "#8B5CF6")!  // Purple
+            return Color(hex: "#8B5CF6")!  // Purple (OK for morning)
         case .afternoon:
             return Color(hex: "#EA580C")!  // Orange
         case .evening:
-            return Color(hex: "#DC2626")!  // Warm red
+            return Color(hex: "#D97706")!  // Deep amber - NO PURPLE
         case .night:
-            return Color(hex: "#7C3AED")!  // Deep purple
+            return Color(hex: "#D97706")!  // Deep amber - NO PURPLE (sleep-safe)
         }
     }
 
@@ -242,7 +261,7 @@ struct ColorTheme {
         }
     }
 
-    /// Insights / Charts
+    /// Insights / Charts (Sleep-Optimized)
     var insights: Color {
         if accentColorOption != nil {
             return Color(hex: "#10B981")!  // Emerald (consistent)
@@ -250,13 +269,13 @@ struct ColorTheme {
         guard let period = period else { return Color(hex: "#10B981")! }
         switch period {
         case .morning:
-            return Color(hex: "#10B981")!  // Emerald
+            return Color(hex: "#10B981")!  // Emerald (OK for morning)
         case .afternoon:
             return Color(hex: "#059669")!  // Deep emerald
         case .evening:
-            return Color(hex: "#047857")!  // Forest green
+            return Color(hex: "#F59E0B")!  // Amber - NO GREEN
         case .night:
-            return Color(hex: "#34D399")!  // Soft mint
+            return Color(hex: "#F59E0B")!  // Amber - NO MINT/GREEN (sleep-safe)
         }
     }
 
@@ -287,7 +306,7 @@ struct ColorTheme {
 
     // MARK: - Gradient Definitions
 
-    /// Primary gradient for headers and accents
+    /// Primary gradient for headers and accents (Sleep-Optimized)
     var primaryGradient: LinearGradient {
         if let accent = accentColorOption {
             return LinearGradient(
@@ -302,7 +321,7 @@ struct ColorTheme {
         switch period {
         case .morning:
             return LinearGradient(
-                colors: [Color(hex: "#0EA5E9")!, Color(hex: "#38BDF8")!],
+                colors: [Color(hex: "#0EA5E9")!, Color(hex: "#38BDF8")!],  // Blue OK for morning
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -314,13 +333,13 @@ struct ColorTheme {
             )
         case .evening:
             return LinearGradient(
-                colors: [Color(hex: "#EA580C")!, Color(hex: "#FB923C")!],
+                colors: [Color(hex: "#F28C40")!, Color(hex: "#D97706")!],  // Warm amber/orange
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .night:
             return LinearGradient(
-                colors: [Color(hex: "#7C3AED")!, Color(hex: "#A78BFA")!],
+                colors: [Color(hex: "#F28C40")!, Color(hex: "#D97706")!],  // Warm amber - NO PURPLE (sleep-safe)
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

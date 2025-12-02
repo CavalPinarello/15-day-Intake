@@ -722,7 +722,7 @@ struct QuestionnaireView: View {
     }
 
     private func completeDay() {
-        // Save all remaining responses
+        // Save all remaining responses locally first
         for (questionId, value) in sleepLogResponses {
             saveResponseFromDictionary(questionId: questionId, value: value, questions: sleepLogQuestions)
         }
@@ -736,6 +736,10 @@ struct QuestionnaireView: View {
         // completedSectionAtFinish tells us which section triggered the completion screen
         Task {
             do {
+                // CRITICAL: Sync responses to Convex BEFORE completing the section
+                // This is required because Convex validates that responses exist
+                try await syncResponsesToConvex()
+
                 if let section = completedSectionAtFinish {
                     // Mark the specific section as complete
                     let sectionName = section == .sleepLog ? "sleepLog" : "assessment"
@@ -761,6 +765,8 @@ struct QuestionnaireView: View {
                 } else {
                     // Legacy full day completion (non-sectionOnly mode)
                     print("[iOS] Legacy mode - completing full day \(currentDay)")
+                    // Sync both sections' responses
+                    try await syncResponsesToConvex()
                     try await questionnaireManager.completeDay(currentDay)
                     await MainActor.run {
                         currentDay = min(currentDay + 1, 15)
@@ -776,6 +782,61 @@ struct QuestionnaireView: View {
                     presentationMode.wrappedValue.dismiss()
                 }
             }
+        }
+    }
+
+    /// Sync all responses to Convex before completing a section
+    /// This ensures server-side validation can verify responses exist
+    private func syncResponsesToConvex() async throws {
+        var convexResponses: [[String: Any]] = []
+
+        // Convert sleep log responses
+        for (questionId, value) in sleepLogResponses {
+            var response: [String: Any] = ["questionId": questionId]
+
+            if let stringValue = value as? String {
+                response["responseValue"] = stringValue
+            } else if let numberValue = value as? Double {
+                response["responseNumber"] = numberValue
+            } else if let intValue = value as? Int {
+                response["responseNumber"] = Double(intValue)
+            } else if let dateValue = value as? Date {
+                // Convert Date to time string
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                response["responseValue"] = formatter.string(from: dateValue)
+            } else if let arrayValue = value as? [String] {
+                response["responseArray"] = arrayValue
+            }
+
+            convexResponses.append(response)
+        }
+
+        // Convert assessment responses
+        for (questionId, value) in assessmentResponses {
+            var response: [String: Any] = ["questionId": questionId]
+
+            if let stringValue = value as? String {
+                response["responseValue"] = stringValue
+            } else if let numberValue = value as? Double {
+                response["responseNumber"] = numberValue
+            } else if let intValue = value as? Int {
+                response["responseNumber"] = Double(intValue)
+            } else if let dateValue = value as? Date {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                response["responseValue"] = formatter.string(from: dateValue)
+            } else if let arrayValue = value as? [String] {
+                response["responseArray"] = arrayValue
+            }
+
+            convexResponses.append(response)
+        }
+
+        // Only sync if we have responses
+        if !convexResponses.isEmpty {
+            let result = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
+            print("[iOS] Synced \(result.savedCount) responses to Convex")
         }
     }
 

@@ -1401,4 +1401,597 @@ This gives you:
 - Accessibility features for poor eyesight
 - Smart defaults for faster input
 
-Shall I begin implementation with Phase 1?
+---
+
+# CRITICAL UPDATE: Unified Cross-Platform Questionnaire System (December 2025)
+
+## Executive Summary
+
+This update addresses critical bugs and architectural issues where:
+1. **Assessments show as "Completed" without answering questions**
+2. **Different questions appear on iPhone vs Apple Watch**
+3. **Gateway logic doesn't work consistently across platforms**
+4. **Users don't understand why they're being asked certain questions**
+
+---
+
+## Issue 1: False Completion Bug (CRITICAL)
+
+### Root Cause
+Completion is triggered when user reaches the last question INDEX, not when they ANSWER it.
+
+**Locations:**
+- **iOS:** `QuestionnaireView.swift:402-403` - `isLastQuestionInSection` only checks index
+- **Watch:** `QuestionnaireView.swift:186` - Completion called without answer validation
+- **Backend:** `convex/watch.ts:169-279` - `completeSection` accepts without validating responses
+
+### Fix Required
+```swift
+// iOS: Add validation before marking complete
+private func nextQuestion() {
+    if isLastQuestionInSection {
+        let unanswered = getUnansweredRequiredQuestions()
+        if !unanswered.isEmpty {
+            showMissingQuestionsAlert(unanswered)
+            return
+        }
+    }
+    // proceed with completion
+}
+```
+
+```typescript
+// Convex: Validate responses exist before accepting completion
+export const completeSection = mutation({
+    // ... existing args
+    handler: async (ctx, args) => {
+        // Get required questions for this day/section
+        const required = await getRequiredQuestionsForSection(args.dayNumber, args.section);
+        const responses = await getUserResponses(args.userId, args.dayNumber);
+
+        const answeredIds = new Set(responses.map(r => r.question_id));
+        const missing = required.filter(q => !answeredIds.has(q.id));
+
+        if (missing.length > 0) {
+            throw new Error(`Cannot complete: ${missing.length} required questions unanswered`);
+        }
+        // proceed with completion
+    }
+});
+```
+
+---
+
+## Issue 2: Different Questions on Different Platforms
+
+### Root Cause
+- **iPhone:** Uses `QuestionnaireManager.swift` with full question bank + gateway logic
+- **Watch:** Uses simplified hardcoded questions (was `WatchQuestionBank`, now incorrectly uses incomplete `SharedQuestionBank`)
+- **Web:** Fetches from Convex database via API
+
+### Solution: Convex as Single Source of Truth
+
+ALL platforms should fetch questions from Convex, not hardcoded Swift files.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    CONVEX DATABASE                       │
+│  ┌─────────────────────┐  ┌─────────────────────────┐   │
+│  │ assessment_questions │  │ assessment_modules     │   │
+│  │ (300+ questions)     │  │ (18 modules)           │   │
+│  └─────────────────────┘  └─────────────────────────┘   │
+│  ┌─────────────────────┐  ┌─────────────────────────┐   │
+│  │ gateway_triggers    │  │ user_gateway_states    │   │
+│  │ (10 trigger rules)  │  │ (per-user activations) │   │
+│  └─────────────────────┘  └─────────────────────────┘   │
+└───────────────────────────────────────────────────────────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+    ┌─────▼─────┐    ┌─────▼─────┐    ┌─────▼─────┐
+    │   iOS     │    │   Watch   │    │    Web    │
+    │ConvexServ │    │WatchConvex│    │convexServ │
+    └───────────┘    └───────────┘    └───────────┘
+```
+
+### New Convex Function: `getQuestionsForUserDay`
+
+```typescript
+// /convex/questions.ts
+export const getQuestionsForUserDay = query({
+    args: { userId: v.id("users"), dayNumber: v.number() },
+    handler: async (ctx, args) => {
+        // 1. Get user's triggered gateways
+        const userGateways = await ctx.db.query("user_gateway_states")
+            .withIndex("by_user", q => q.eq("user_id", args.userId))
+            .filter(q => q.eq(q.field("triggered"), true))
+            .collect();
+
+        const triggeredTypes = userGateways.map(g => g.gateway_type);
+
+        // 2. Get base modules for this day
+        let modules = await ctx.db.query("day_modules")
+            .withIndex("by_day", q => q.eq("day_number", args.dayNumber))
+            .collect();
+
+        // 3. For Days 6-15, add expansion modules if gateways triggered
+        if (args.dayNumber >= 6) {
+            const expansions = getExpansionModulesForDay(args.dayNumber, triggeredTypes);
+            modules = modules.concat(expansions);
+        }
+
+        // 4. Fetch questions from all modules
+        const allQuestions = await fetchQuestionsFromModules(ctx, modules);
+
+        // 5. Separate into sleepLog vs assessment
+        const sleepLog = allQuestions.filter(q => q.pillar === "sleep_log");
+        const assessment = allQuestions.filter(q => q.pillar !== "sleep_log");
+
+        // 6. Build metadata with explanations
+        const metadata = buildDayMetadata(args.dayNumber, modules, triggeredTypes);
+
+        return { sleepLog, assessment, metadata };
+    }
+});
+```
+
+---
+
+## Issue 3: Gateway Logic Centralization
+
+### Current State
+- Gateway evaluation exists ONLY in iOS `QuestionnaireManager.swift`
+- Watch and Web don't evaluate gateways
+- Gateway states aren't stored in database
+
+### Solution: Server-Side Gateway Evaluation
+
+```typescript
+// /convex/gateways.ts - Single source of truth for gateway rules
+
+const GATEWAY_RULES = {
+    insomnia: {
+        description: "Insomnia symptoms detected",
+        why: "Based on your responses about difficulty sleeping, we'll assess insomnia severity using validated clinical instruments.",
+        triggers: [
+            { questionId: "3", condition: "equals", value: "Yes" },
+            { questionId: "PSQI_2", condition: "greaterThan", value: 30 },
+            { questionId: "PSQI_5a", condition: "optionIndex>=", value: 2 },
+        ],
+        expansionModules: ["expansion_isi", "expansion_dbas16"],
+        displayDays: [6, 7]
+    },
+    depression: {
+        description: "Mood screening indicates possible depression",
+        why: "Sleep and mood are closely connected. This assessment helps us understand if depression may be affecting your sleep.",
+        triggers: [
+            { questionId: "15", condition: "optionIndex>=", value: 2 }
+        ],
+        expansionModules: ["expansion_phq9"],
+        displayDays: [8]
+    },
+    anxiety: {
+        description: "Anxiety symptoms detected",
+        why: "Anxiety can significantly impact sleep quality. We'll assess this to tailor your treatment plan.",
+        triggers: [
+            { questionId: "16", condition: "optionIndex>=", value: 2 }
+        ],
+        expansionModules: ["expansion_gad7"],
+        displayDays: [8]
+    },
+    excessiveSleepiness: {
+        description: "Excessive daytime sleepiness reported",
+        why: "Feeling very sleepy during the day may indicate a sleep disorder. We'll assess this further.",
+        triggers: [
+            { questionId: "17", condition: "optionIndex>=", value: 3 }
+        ],
+        expansionModules: ["expansion_ess", "expansion_fss"],
+        displayDays: [9]
+    },
+    cognitive: {
+        description: "Cognitive issues affecting daily life",
+        why: "Sleep affects memory and concentration. We'll assess cognitive function to track improvement.",
+        triggers: [
+            { questionId: "18", condition: "equals", value: "Yes" }
+        ],
+        expansionModules: ["expansion_promis_cognitive"],
+        displayDays: [9]
+    },
+    osa: {
+        description: "Sleep apnea risk factors present",
+        why: "Snoring or observed breathing pauses may indicate sleep apnea. This screening helps determine if a sleep study is needed.",
+        triggers: [
+            { questionId: "19", condition: "equals", value: "Yes" },
+            { questionId: "20", condition: "equals", value: "Yes" }
+        ],
+        expansionModules: ["expansion_stop_bang", "expansion_berlin"],
+        displayDays: [10]
+    },
+    pain: {
+        description: "Pain affecting sleep",
+        why: "Pain can significantly disrupt sleep. We'll assess pain impact to include it in your treatment plan.",
+        triggers: [
+            { questionId: "22", condition: "equals", value: "Yes" },
+            { questionId: "23", condition: "greaterThan", value: 3 }
+        ],
+        expansionModules: ["expansion_bpi"],
+        displayDays: [10]
+    },
+    sleepTiming: {
+        description: "Circadian rhythm misalignment",
+        why: "Your sleep schedule varies significantly. We'll assess your chronotype to optimize your sleep timing.",
+        triggers: [
+            { questionId: "REG_2", condition: "optionIndex>=", value: 3 }
+        ],
+        expansionModules: ["expansion_meq"],
+        displayDays: [12]
+    },
+    dietImpact: {
+        description: "Diet affecting sleep quality",
+        why: "You've noticed diet impacts your sleep. We'll assess nutritional factors that may be involved.",
+        triggers: [
+            { questionId: "34", condition: "optionIndex>=", value: 2 }
+        ],
+        expansionModules: ["expansion_medas"],
+        displayDays: [13]
+    },
+    poorSleepQuality: {
+        description: "Overall poor sleep quality",
+        why: "Your sleep quality score suggests significant issues. We'll do a deeper assessment.",
+        triggers: [
+            { questionId: "1", condition: "lessThan", value: 5 }
+        ],
+        expansionModules: ["expansion_sleep_hygiene"],
+        displayDays: [6]
+    }
+};
+
+// Called after each response to evaluate and store gateway states
+export const evaluateGatewaysForResponse = mutation({
+    args: {
+        userId: v.id("users"),
+        questionId: v.string(),
+        response: v.any(),
+    },
+    handler: async (ctx, args) => {
+        for (const [gatewayType, rule] of Object.entries(GATEWAY_RULES)) {
+            for (const trigger of rule.triggers) {
+                if (trigger.questionId === args.questionId) {
+                    const isTriggered = evaluateCondition(trigger.condition, args.response, trigger.value);
+
+                    if (isTriggered) {
+                        // Store/update gateway state
+                        await ctx.db.insert("user_gateway_states", {
+                            user_id: args.userId,
+                            gateway_type: gatewayType,
+                            triggered: true,
+                            triggered_at: Date.now(),
+                            trigger_question_id: args.questionId,
+                            trigger_response: JSON.stringify(args.response),
+                            description: rule.description,
+                            why_explanation: rule.why,
+                        });
+                    }
+                }
+            }
+        }
+    }
+});
+```
+
+---
+
+## Issue 4: Contextual Messaging
+
+### Users Need to Know:
+1. **Why** they're being asked these questions
+2. **How long** it will take
+3. **What happens** with their responses
+
+### Module Explanations
+
+```typescript
+const MODULE_METADATA = {
+    // Stanford Sleep Log - Daily
+    sleep_log: {
+        title: "Daily Sleep Log",
+        shortTitle: "Sleep Log",
+        icon: "moon.zzz",
+        estimatedMinutes: 2,
+        questionCount: 5,
+        color: "#2196F3", // Blue
+        description: "About last night's sleep",
+        why: "Recording your subjective sleep perception daily helps us compare it with your wearable data and identify patterns. This takes about 60 seconds."
+    },
+
+    // Day 1: Demographics
+    core_demographics: {
+        title: "Your Profile",
+        shortTitle: "Profile",
+        icon: "person.circle",
+        estimatedMinutes: 3,
+        questionCount: 5,
+        color: "#9C27B0", // Purple
+        description: "Basic information about you",
+        why: "Age, sex, height, and weight affect sleep needs. Some of this can be auto-filled from Apple Health."
+    },
+
+    // Day 1-5: PSQI (Pittsburgh Sleep Quality Index)
+    core_psqi: {
+        title: "Sleep Quality Assessment",
+        shortTitle: "PSQI",
+        icon: "chart.bar",
+        estimatedMinutes: 8,
+        questionCount: 12,
+        color: "#9C27B0",
+        description: "Pittsburgh Sleep Quality Index",
+        why: "This validated questionnaire measures your sleep quality over the past month. Your score helps us understand the severity of sleep issues and track improvement."
+    },
+
+    // Expansion: ISI (Insomnia Severity Index)
+    expansion_isi: {
+        title: "Insomnia Assessment",
+        shortTitle: "ISI",
+        icon: "exclamationmark.triangle",
+        estimatedMinutes: 5,
+        questionCount: 7,
+        color: "#FF9800", // Orange - expansion
+        description: "Insomnia Severity Index",
+        why: "Based on your earlier responses about difficulty sleeping, this assessment measures insomnia severity. It's a clinically validated tool used worldwide.",
+        triggeredBy: "insomnia"
+    },
+
+    // Expansion: PHQ-9 (Depression)
+    expansion_phq9: {
+        title: "Mood Assessment",
+        shortTitle: "PHQ-9",
+        icon: "heart.text.square",
+        estimatedMinutes: 4,
+        questionCount: 9,
+        color: "#FF9800",
+        description: "Patient Health Questionnaire",
+        why: "Sleep and mood are closely connected. Based on your response about feeling down, this assessment helps us understand if depression may be affecting your sleep.",
+        triggeredBy: "depression"
+    },
+
+    // Expansion: GAD-7 (Anxiety)
+    expansion_gad7: {
+        title: "Anxiety Assessment",
+        shortTitle: "GAD-7",
+        icon: "brain.head.profile",
+        estimatedMinutes: 3,
+        questionCount: 7,
+        color: "#FF9800",
+        description: "Generalized Anxiety Disorder Scale",
+        why: "Based on your response about feeling anxious, this assessment helps us understand how anxiety may be impacting your sleep quality.",
+        triggeredBy: "anxiety"
+    },
+
+    // Expansion: ESS (Epworth Sleepiness Scale)
+    expansion_ess: {
+        title: "Daytime Sleepiness",
+        shortTitle: "ESS",
+        icon: "sun.max.fill",
+        estimatedMinutes: 4,
+        questionCount: 8,
+        color: "#FF9800",
+        description: "Epworth Sleepiness Scale",
+        why: "You mentioned feeling excessively sleepy during the day. This assessment measures daytime sleepiness severity, which may indicate a sleep disorder.",
+        triggeredBy: "excessiveSleepiness"
+    },
+
+    // Expansion: STOP-BANG (Sleep Apnea Risk)
+    expansion_stop_bang: {
+        title: "Sleep Apnea Screening",
+        shortTitle: "STOP-BANG",
+        icon: "lungs.fill",
+        estimatedMinutes: 3,
+        questionCount: 8,
+        color: "#F44336", // Red - important
+        description: "Sleep Apnea Risk Assessment",
+        why: "Based on your reports of snoring or breathing pauses, this screening helps determine if you may have sleep apnea and should have a sleep study.",
+        triggeredBy: "osa"
+    }
+};
+```
+
+---
+
+## UI Implementation
+
+### Day Summary Card (iOS ContentView)
+
+```swift
+// Show today's tasks with context
+VStack(alignment: .leading, spacing: 16) {
+    HStack {
+        Text("Today's Tasks")
+            .font(.headline)
+        Spacer()
+        Text("~\(metadata.totalMinutes) min")
+            .font(.caption)
+            .foregroundColor(.secondary)
+    }
+
+    // If new expansion modules were triggered
+    if let newModules = metadata.newlyTriggeredModules, !newModules.isEmpty {
+        HStack(spacing: 8) {
+            Image(systemName: "lightbulb.fill")
+                .foregroundColor(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Personalized for You")
+                    .font(.caption.bold())
+                Text(newModules.first?.why ?? "Based on your responses, we've added relevant assessments.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(8)
+    }
+
+    // Sleep Log Card
+    TaskCard(
+        section: .sleepLog,
+        title: metadata.sleepLog.title,
+        subtitle: "\(metadata.sleepLog.questionCount) questions • ~\(metadata.sleepLog.estimatedMinutes) min",
+        description: metadata.sleepLog.why,
+        color: .blue,
+        isCompleted: sleepLogCompleted
+    )
+
+    // Assessment Card
+    TaskCard(
+        section: .assessment,
+        title: metadata.assessment.title,
+        subtitle: "\(metadata.assessment.questionCount) questions • ~\(metadata.assessment.estimatedMinutes) min",
+        description: metadata.assessment.why,
+        color: .purple,
+        isCompleted: assessmentCompleted
+    )
+}
+```
+
+### Module Introduction Screen (Before Starting Assessment)
+
+```swift
+struct ModuleIntroView: View {
+    let module: ModuleMetadata
+    let onStart: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Image(systemName: module.icon)
+                .font(.system(size: 48))
+                .foregroundColor(Color(hex: module.color))
+
+            Text(module.title)
+                .font(.title2.bold())
+
+            Text(module.description)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 12) {
+                Label("\(module.questionCount) questions", systemImage: "list.bullet")
+                Label("~\(module.estimatedMinutes) minutes", systemImage: "clock")
+            }
+            .font(.subheadline)
+
+            // Why this matters
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Why this matters")
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+                Text(module.why)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+
+            Spacer()
+
+            Button(action: onStart) {
+                Text("Start \(module.shortTitle)")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(hex: module.color))
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+            }
+        }
+        .padding()
+    }
+}
+```
+
+### Watch Compact Version
+
+```swift
+// Watch: Simplified module intro
+VStack(spacing: 8) {
+    Image(systemName: module.icon)
+        .font(.title2)
+        .foregroundColor(Color(hex: module.color))
+
+    Text(module.shortTitle)
+        .font(.headline)
+
+    HStack(spacing: 4) {
+        Text("\(module.questionCount)Q")
+        Text("•")
+        Text("~\(module.estimatedMinutes)m")
+    }
+    .font(.caption2)
+    .foregroundColor(.secondary)
+
+    Button("Start") {
+        onStart()
+    }
+    .buttonStyle(.borderedProminent)
+    .tint(Color(hex: module.color))
+}
+```
+
+---
+
+## Files to Modify/Create
+
+| File | Action | Description |
+|------|--------|-------------|
+| `/convex/questions.ts` | CREATE | Unified question fetching with gateway logic |
+| `/convex/gateways.ts` | CREATE | Gateway evaluation and storage |
+| `/convex/watch.ts` | MODIFY | Add response validation to completeSection |
+| `/convex/schema.ts` | MODIFY | Add user_gateway_states table |
+| `/ZoeSleep/Services/ConvexService.swift` | MODIFY | Add getQuestionsForDay with metadata |
+| `/ZoeSleep/Views/QuestionnaireView.swift` | MODIFY | Add validation, module intros |
+| `/ZoeSleep/ContentView.swift` | MODIFY | Show gateway explanations |
+| `/ZoeSleep Watch App/WatchConvexService.swift` | MODIFY | Add getQuestionsForDay |
+| `/ZoeSleep Watch App/QuestionnaireView.swift` | MODIFY | Use Convex questions, add validation |
+| `/ZoeSleep/Shared/SharedQuestionBank.swift` | DELETE | Remove - replaced by Convex |
+| `/client/src/app/journey/page.tsx` | MODIFY | Use new Convex questions function |
+
+---
+
+## Implementation Priority
+
+### Phase 1: Fix Critical Bugs (Immediate)
+1. Add response validation to `completeSection` in Convex
+2. Add client-side validation in iOS/Watch before marking complete
+3. Fix Watch to show "unanswered" state properly
+
+### Phase 2: Unified Questions (Day 2-3)
+4. Create `getQuestionsForUserDay` Convex function
+5. Update iOS ConvexService to use it
+6. Update Watch WatchConvexService to use it
+7. Delete SharedQuestionBank.swift (no longer needed)
+
+### Phase 3: Gateway System (Day 3-4)
+8. Create gateway evaluation in Convex
+9. Add user_gateway_states table
+10. Evaluate gateways after each response
+11. Include triggered gateways in day metadata
+
+### Phase 4: Contextual Messaging (Day 4-5)
+12. Add module metadata with explanations
+13. Create ModuleIntroView for iOS
+14. Create compact intro for Watch
+15. Show triggered gateway explanations in dashboard
+
+---
+
+## Testing Checklist
+
+- [ ] Cannot complete section without answering all required questions
+- [ ] Same questions appear on iPhone, Watch, and Web for same user/day
+- [ ] Gateway triggers correctly store in database
+- [ ] Expansion modules appear on correct days when gateways triggered
+- [ ] Time estimates display accurately
+- [ ] Module explanations show before starting assessment
+- [ ] Cross-device sync works: start on Watch, continue on iPhone

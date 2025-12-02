@@ -8,6 +8,11 @@ This file provides essential guidance to Claude Code when working with the **Zoe
 **Tagline:** "Sleep Better, Live Longer"
 **Design Theme:** Elegant circadian waves (NO moon/stars clichés) - abstract waveforms, gradient flows
 
+**CRITICAL Color Principle (Sleep-Optimized):**
+- **Morning/Afternoon**: Blues, teals, greens OK (promotes alertness)
+- **Evening/Night**: ONLY warm colors (amber, orange, brown) - NO blue spectrum
+- This is non-negotiable for a sleep app - blue light disrupts melatonin production
+
 ## Platform Architecture
 
 **Patient-Facing Applications (Cross-Platform):**
@@ -205,7 +210,73 @@ For detailed architecture, setup instructions, and API documentation, see README
 - **Repository:** Successfully pushed to https://github.com/CavalPinarello/15-day-Intake.git
 - **Session Log:** `/docs/sessions/apple-watch-integration-2025-11-21.md`
 
-## Latest Session Context (2025-12-01)
+## Latest Session Context (2025-12-02)
+
+**Sleep-Optimized Circadian Color System**
+
+This session implemented a complete sleep-optimized circadian color system that eliminates ALL blue/teal/purple light from the app during evening and night hours, replacing them with warm amber/orange colors that are safe for melatonin production.
+
+### Critical Design Principle
+**NO BLUE LIGHT AFTER DUSK** - As a sleep app, Zoe Sleep must avoid the blue light spectrum (blue, teal, cyan, purple, green) in evening/night mode. Only warm colors (amber, orange, brown, red) are used after sunset.
+
+### Features Implemented
+
+#### 1. iOS ColorTheme Sleep-Optimization (`QuestionModels.swift`)
+Complete rewrite of the `ColorTheme` struct to use sleep-safe colors:
+
+| Color Property | Day (Morning/Afternoon) | Evening/Night |
+|----------------|------------------------|---------------|
+| `primary` | Sky blue `#0EA5E9` / Amber `#F59E0B` | Warm amber `#F28C40` |
+| `secondary` | Light blue `#38BDF8` / Golden `#FBBF24` | Deep amber `#D97706` |
+| `tertiary` | Cyan `#06B6D4` / Deep amber | Burnt orange `#B45309` |
+| `backgroundTint` | Blue/amber tint | Warm amber tint |
+| `cardBackground` | Light blue `#F0F9FF` / Cream | Deep warm brown `#2D1A14` |
+| `textPrimary` | System default | Warm white `rgb(1.0, 0.92, 0.85)` |
+| `textSecondary` | System default | Warm tan `rgb(0.85, 0.70, 0.55)` |
+| `insights` | Emerald green | Amber `#F59E0B` |
+| `sleepDiary` | Purple | Deep amber `#D97706` |
+
+#### 2. iOS Wave Background (`CircadianWaveBackground.swift`)
+- `DashboardWaveBackground`: Animated flowing waves with circadian-aware colors
+- `QuestionnaireWaveBackground`: Subtle animated waves for questionnaire screens
+- `CircadianPalette`: Centralized palette with seasonal sunrise/sunset calculation
+- `GlassyCardBackground`: Translucent cards with warm brown tones at night
+
+#### 3. Apple Watch Circadian System (`WatchThemeManager.swift`, `WatchHomeView.swift`)
+- Added `WatchCircadianPalette` struct matching iOS implementation
+- Updated all Watch UI components to use circadian colors:
+  - `CircadianBackground`: Warm amber ribbons at night
+  - `dayHeader`, `motivationCard`: Use palette accent/text colors
+  - `actionButtons`: Warm amber/orange for incomplete states at night
+  - `countdownCard`, `journeyProgressCard`: All circadian-aware
+  - `journeyCompleteCard`: Warm gold trophy at night
+
+#### 4. JSON Crash Fix (`ConvexService.swift`)
+Fixed `NSInvalidArgumentException: Invalid top-level type in JSON write` crash:
+- Added NSNull check before JSON serialization
+- Added `JSONSerialization.isValidJSONObject()` validation
+- Handle primitive types (String, Number, Bool) separately
+- Try-catch wrappers in `getQuestionProgress()` and `getSavedResponses()`
+
+### Time-Based Color Logic
+Uses seasonal sunrise/sunset calculation:
+```swift
+let seasonalOffset = sin(Double(dayOfYear - 80) / 365.0 * .pi * 2)
+let sunriseHour = 6.5 - seasonalOffset * 1.0  // 5:30 to 7:30 AM
+let sunsetHour = 18.5 + seasonalOffset * 2.0   // 4:30 to 8:30 PM
+```
+
+### Key Files Modified
+- `/ZoeSleep/ZoeSleep/Models/QuestionModels.swift` - Complete ColorTheme rewrite
+- `/ZoeSleep/ZoeSleep/Views/CircadianWaveBackground.swift` - Wave animations + CircadianPalette
+- `/ZoeSleep/ZoeSleep/ContentView.swift` - Use theme.textPrimary/textSecondary throughout
+- `/ZoeSleep/ZoeSleep/Services/ConvexService.swift` - JSON crash fix
+- `/ZoeSleep/ZoeSleep Watch App/WatchThemeManager.swift` - WatchCircadianPalette
+- `/ZoeSleep/ZoeSleep Watch App/WatchHomeView.swift` - All UI using circadian colors
+
+---
+
+## Previous Session Context (2025-12-01)
 
 **Enhanced Watch Day Complete UI & Number Input Improvements**
 

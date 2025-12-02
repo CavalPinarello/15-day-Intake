@@ -812,6 +812,26 @@ class ConvexService {
         let arrayValue: [String]?
     }
 
+    struct SaveResponsesResult: Codable {
+        let success: Bool
+        let savedCount: Int
+    }
+
+    /// Batch save responses to Convex (called before completing a section)
+    /// This ensures server-side validation can verify responses exist
+    func saveResponses(dayNumber: Int, responses: [[String: Any]]) async throws -> SaveResponsesResult {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("watch:saveResponses", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "responses": responses,
+            "source": "ios"
+        ])
+    }
+
     /// Get all saved responses for a day (to pre-fill answers when resuming)
     func getSavedResponses(dayNumber: Int) async throws -> [String: QuestionResponseValue] {
         guard let userId = currentUserId else {
@@ -847,6 +867,42 @@ struct QuestionResponseValue {
     let stringValue: String?
     let numberValue: Double?
     let arrayValue: [String]?
+}
+
+// MARK: - Day Metadata with Contextual Explanations
+
+struct ModuleMetadata: Codable {
+    let title: String
+    let shortTitle: String
+    let icon: String
+    let estimatedMinutes: Int
+    let questionCount: Int
+    let color: String
+    let description: String
+    let why: String
+    let isCompleted: Bool?
+}
+
+struct DayMetadataResponse: Codable {
+    let sleepLog: ModuleMetadata
+    let assessment: ModuleMetadata
+    let totalMinutes: Int
+    let totalQuestions: Int
+    let triggeredExpansions: [String]
+}
+
+extension ConvexService {
+    /// Get metadata for a specific day including time estimates and explanations
+    func getDayMetadata(dayNumber: Int) async throws -> DayMetadataResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("watch:getDayMetadata", args: [
+            "userId": userId,
+            "dayNumber": dayNumber
+        ])
+    }
 }
 
 // MARK: - Device Info

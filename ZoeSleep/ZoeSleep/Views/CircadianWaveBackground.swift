@@ -472,139 +472,282 @@ struct SplashGlowLine: View {
     }
 }
 
-// MARK: - Questionnaire Wave Background (Simple gradient for performance)
+// MARK: - Questionnaire Wave Background (Circadian animated waves)
 
-/// A simple gradient background for questionnaire views - no animations to prevent scrolling issues
+/// Animated wave background for questionnaire - uses same circadian system as dashboard
 struct QuestionnaireWaveBackground: View {
-    @Environment(\.colorScheme) var colorScheme
+    @State private var phase1: CGFloat = 0
+    @State private var phase2: CGFloat = 0
 
     var body: some View {
-        // Simple gradient with subtle teal tint - no animations
-        backgroundGradient
-            .ignoresSafeArea()
-    }
+        let palette = CircadianPalette.current
 
-    private var backgroundGradient: LinearGradient {
-        if colorScheme == .dark {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.04, green: 0.06, blue: 0.12),
-                    Color(red: 0.05, green: 0.09, blue: 0.16),
-                    Color(red: 0.06, green: 0.12, blue: 0.20)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        } else {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.94, green: 0.97, blue: 0.99),
-                    Color(red: 0.90, green: 0.95, blue: 0.98),
-                    Color(red: 0.85, green: 0.93, blue: 0.97)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
-    }
-}
-
-// MARK: - Dashboard Wave Background (Subtle animated waves)
-
-/// Animated wave background for dashboard - subtle and performant
-struct DashboardWaveBackground: View {
-    @Environment(\.colorScheme) var colorScheme
-    @State private var phase: CGFloat = 0
-
-    var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Base gradient
-                backgroundGradient
+                // Base gradient with circadian colors
+                LinearGradient(
+                    colors: palette.background,
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
 
-                // Subtle animated waves (only 2 layers for performance)
-                DashboardWaveLayer(index: 0, phase: phase, colorScheme: colorScheme)
-                DashboardWaveLayer(index: 1, phase: phase, colorScheme: colorScheme)
+                // Wave layer 1 - back, slow (MORE VISIBLE)
+                FlowingWave(
+                    phase: phase1,
+                    amplitude: 70,
+                    frequency: 0.6,
+                    verticalOffset: 0.65
+                )
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            palette.wave.opacity(0.30),
+                            palette.wave.opacity(0.12)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+                // Wave layer 2 - front, faster (MORE VISIBLE)
+                FlowingWave(
+                    phase: phase2,
+                    amplitude: 50,
+                    frequency: 0.8,
+                    verticalOffset: 0.4
+                )
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            palette.accent.opacity(0.22),
+                            palette.accent.opacity(0.08)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
             }
         }
         .ignoresSafeArea()
         .onAppear {
-            withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
-                phase = .pi * 2
+            withAnimation(.linear(duration: 25).repeatForever(autoreverses: false)) {
+                phase1 = .pi * 2
+            }
+            withAnimation(.linear(duration: 18).repeatForever(autoreverses: false)) {
+                phase2 = .pi * 2
             }
         }
     }
+}
 
-    private var backgroundGradient: LinearGradient {
-        if colorScheme == .dark {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.04, green: 0.06, blue: 0.12),
-                    Color(red: 0.05, green: 0.09, blue: 0.16),
-                    Color(red: 0.06, green: 0.12, blue: 0.20)
+// MARK: - Circadian Palette (Sleep-optimized color system)
+
+/// Centralized circadian color palette optimized for sleep health
+/// EVENING/NIGHT: Only warm colors (amber, orange, red, brown) - NO blue/teal/green
+/// MORNING/DAY: Can use energizing blues, teals, greens
+struct CircadianPalette {
+    let background: [Color]
+    let wave: Color
+    let accent: Color
+    let isDark: Bool
+    let textPrimary: Color
+    let textSecondary: Color
+
+    /// Get the current circadian palette based on time of day
+    static var current: CircadianPalette {
+        let now = Date()
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 180
+
+        // Seasonal sunrise/sunset calculation
+        let seasonalOffset = sin(Double(dayOfYear - 80) / 365.0 * .pi * 2)
+        let sunriseHour = 6.5 - seasonalOffset * 1.0
+        let sunsetHour = 18.5 + seasonalOffset * 2.0
+
+        let currentHour = Double(hour) + Double(minute) / 60.0
+
+        // Time periods
+        let dawnStart = sunriseHour - 0.5
+        let dawnEnd = sunriseHour + 1.5
+        let duskStart = sunsetHour - 1.5
+
+        // ========================================
+        // EVENING/NIGHT MODE (after dusk start)
+        // NO BLUE, NO TEAL, NO GREEN - only warm colors
+        // ========================================
+        if currentHour >= duskStart || currentHour < dawnStart {
+            // Deep warm amber/brown background - zero blue
+            return CircadianPalette(
+                background: [
+                    Color(red: 0.14, green: 0.08, blue: 0.06),  // Deep warm brown
+                    Color(red: 0.16, green: 0.09, blue: 0.07),
+                    Color(red: 0.18, green: 0.10, blue: 0.08)
                 ],
-                startPoint: .top,
-                endPoint: .bottom
+                wave: Color(red: 0.85, green: 0.45, blue: 0.20),      // Warm amber
+                accent: Color(red: 0.95, green: 0.55, blue: 0.25),    // Bright amber/orange
+                isDark: true,
+                textPrimary: Color(red: 1.0, green: 0.92, blue: 0.85),   // Warm white
+                textSecondary: Color(red: 0.85, green: 0.70, blue: 0.55) // Warm tan
             )
-        } else {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.94, green: 0.97, blue: 0.99),
-                    Color(red: 0.90, green: 0.95, blue: 0.98),
-                    Color(red: 0.85, green: 0.93, blue: 0.97)
+        }
+        // ========================================
+        // DAWN - Warm coral/peach transition
+        // ========================================
+        else if currentHour >= dawnStart && currentHour < dawnEnd {
+            return CircadianPalette(
+                background: [
+                    Color(red: 0.99, green: 0.94, blue: 0.90),  // Warm cream
+                    Color(red: 0.98, green: 0.91, blue: 0.86),
+                    Color(red: 0.97, green: 0.88, blue: 0.82)
                 ],
-                startPoint: .top,
-                endPoint: .bottom
+                wave: Color(red: 1.0, green: 0.60, blue: 0.40),       // Coral
+                accent: Color(red: 1.0, green: 0.75, blue: 0.45),     // Golden peach
+                isDark: false,
+                textPrimary: Color(red: 0.25, green: 0.15, blue: 0.10),
+                textSecondary: Color(red: 0.50, green: 0.35, blue: 0.25)
+            )
+        }
+        // ========================================
+        // MORNING - Bright, energizing (blues/teals OK)
+        // ========================================
+        else if currentHour >= dawnEnd && currentHour < 12 {
+            return CircadianPalette(
+                background: [
+                    Color(red: 0.92, green: 0.97, blue: 0.98),
+                    Color(red: 0.88, green: 0.95, blue: 0.97),
+                    Color(red: 0.84, green: 0.93, blue: 0.96)
+                ],
+                wave: Color(red: 0.31, green: 0.80, blue: 0.77),      // Teal
+                accent: Color(red: 0.27, green: 0.72, blue: 0.82),    // Cyan
+                isDark: false,
+                textPrimary: Color(red: 0.10, green: 0.15, blue: 0.20),
+                textSecondary: Color(red: 0.35, green: 0.45, blue: 0.50)
+            )
+        }
+        // ========================================
+        // AFTERNOON - Soft blue (still OK for alertness)
+        // ========================================
+        else {
+            return CircadianPalette(
+                background: [
+                    Color(red: 0.94, green: 0.96, blue: 0.99),
+                    Color(red: 0.90, green: 0.94, blue: 0.98),
+                    Color(red: 0.86, green: 0.92, blue: 0.97)
+                ],
+                wave: Color(red: 0.35, green: 0.70, blue: 0.85),
+                accent: Color(red: 0.45, green: 0.75, blue: 0.90),
+                isDark: false,
+                textPrimary: Color(red: 0.10, green: 0.15, blue: 0.20),
+                textSecondary: Color(red: 0.40, green: 0.45, blue: 0.50)
             )
         }
     }
 }
 
-struct DashboardWaveLayer: View {
-    let index: Int
-    let phase: CGFloat
-    let colorScheme: ColorScheme
+// MARK: - Dashboard Wave Background (Circadian-aware animated waves)
 
-    private var config: (amplitude: CGFloat, frequency: CGFloat, offset: CGFloat, yPos: CGFloat, opacity: Double) {
-        switch index {
-        case 0:
-            return (40, 0.6, 0, 0.7, 0.12)
-        default:
-            return (30, 0.8, .pi / 2, 0.55, 0.08)
-        }
-    }
+/// Animated wave background for dashboard - like Headspace meditation app
+/// Uses shared CircadianPalette that adjusts for time of day and season
+struct DashboardWaveBackground: View {
+    @State private var phase1: CGFloat = 0
+    @State private var phase2: CGFloat = 0
+    @State private var phase3: CGFloat = 0
 
     var body: some View {
-        GeometryReader { geometry in
-            let waveColor = colorScheme == .dark
-                ? Color(red: 0.30, green: 0.85, blue: 0.80)
-                : Color(red: 0.20, green: 0.65, blue: 0.75)
+        let palette = CircadianPalette.current
 
-            SimpleDashboardWave(
-                phase: phase + config.offset,
-                amplitude: config.amplitude,
-                frequency: config.frequency
-            )
-            .fill(
+        GeometryReader { geometry in
+            ZStack {
+                // Base gradient with circadian colors
                 LinearGradient(
-                    colors: [
-                        waveColor.opacity(config.opacity),
-                        waveColor.opacity(config.opacity * 0.3)
-                    ],
+                    colors: palette.background,
                     startPoint: .top,
                     endPoint: .bottom
                 )
-            )
-            .offset(y: geometry.size.height * config.yPos)
+
+                // Wave layer 1 - back, slow, large amplitude (MORE VISIBLE)
+                FlowingWave(
+                    phase: phase1,
+                    amplitude: 80,
+                    frequency: 0.5,
+                    verticalOffset: 0.7
+                )
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            palette.wave.opacity(0.35),
+                            palette.wave.opacity(0.15)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+                // Wave layer 2 - middle, medium speed (MORE VISIBLE)
+                FlowingWave(
+                    phase: phase2,
+                    amplitude: 60,
+                    frequency: 0.7,
+                    verticalOffset: 0.5
+                )
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            palette.wave.opacity(0.28),
+                            palette.wave.opacity(0.10)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+                // Wave layer 3 - front, faster, accent color (MORE VISIBLE)
+                FlowingWave(
+                    phase: phase3,
+                    amplitude: 45,
+                    frequency: 0.9,
+                    verticalOffset: 0.3
+                )
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            palette.accent.opacity(0.25),
+                            palette.accent.opacity(0.08)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+            }
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            startAnimations()
+        }
+    }
+
+    private func startAnimations() {
+        // Stagger the wave animations for organic feel
+        withAnimation(.linear(duration: 25).repeatForever(autoreverses: false)) {
+            phase1 = .pi * 2
+        }
+        withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
+            phase2 = .pi * 2
+        }
+        withAnimation(.linear(duration: 15).repeatForever(autoreverses: false)) {
+            phase3 = .pi * 2
         }
     }
 }
 
-/// Simple wave shape for dashboard - no blur for performance
-struct SimpleDashboardWave: Shape {
+/// Flowing wave shape - smooth, organic movement
+struct FlowingWave: Shape {
     var phase: CGFloat
     var amplitude: CGFloat
     var frequency: CGFloat
+    var verticalOffset: CGFloat // 0-1, where on screen the wave centers
 
     var animatableData: CGFloat {
         get { phase }
@@ -615,19 +758,40 @@ struct SimpleDashboardWave: Shape {
         var path = Path()
         let width = rect.width
         let height = rect.height
-        let midY = height / 2
+        let baseY = height * verticalOffset
 
+        // Start at bottom-left
         path.move(to: CGPoint(x: 0, y: height))
-        path.addLine(to: CGPoint(x: 0, y: midY + sin(phase) * amplitude))
 
-        // Use larger step for performance
-        for x in stride(from: 0, through: width, by: 6) {
-            let relativeX = x / width
-            let normalizedX = relativeX * frequency * .pi * 2 + phase
-            let y = midY + sin(normalizedX) * amplitude
-            path.addLine(to: CGPoint(x: x, y: y))
+        // Move to wave start
+        let startY = baseY + sin(phase) * amplitude
+        path.addLine(to: CGPoint(x: 0, y: startY))
+
+        // Draw smooth wave using quadratic curves for organic feel
+        let segments = 8
+        let segmentWidth = width / CGFloat(segments)
+
+        for i in 0..<segments {
+            let x1 = segmentWidth * CGFloat(i)
+            let x2 = segmentWidth * CGFloat(i + 1)
+            let midX = (x1 + x2) / 2
+
+            let progress1 = x1 / width
+            let progressMid = midX / width
+            let progress2 = x2 / width
+
+            let y1 = baseY + sin(progress1 * frequency * .pi * 2 + phase) * amplitude
+            let yMid = baseY + sin(progressMid * frequency * .pi * 2 + phase) * amplitude
+            let y2 = baseY + sin(progress2 * frequency * .pi * 2 + phase) * amplitude
+
+            // Use quadratic curve for smoother wave
+            path.addQuadCurve(
+                to: CGPoint(x: x2, y: y2),
+                control: CGPoint(x: midX, y: yMid)
+            )
         }
 
+        // Close path
         path.addLine(to: CGPoint(x: width, y: height))
         path.closeSubpath()
 
@@ -637,32 +801,33 @@ struct SimpleDashboardWave: Shape {
 
 // MARK: - Glassy Card Background
 
-/// A translucent background for cards that lets the wave background show through
+/// A translucent background for cards - uses circadian palette for proper contrast
 struct GlassyCardBackground: View {
-    @Environment(\.colorScheme) var colorScheme
-    var opacity: Double = 0.45  // More translucent by default
+    var opacity: Double = 0.5
     var tint: Color? = nil
     var blur: CGFloat = 0  // Kept for API compatibility
 
     var body: some View {
+        let palette = CircadianPalette.current
+
         ZStack {
-            // Base translucent layer
-            if colorScheme == .dark {
-                // Dark mode: very translucent dark with subtle gradient
+            // Base translucent layer - adapts to circadian mode
+            if palette.isDark {
+                // Night mode: warm translucent brown (no blue!)
                 LinearGradient(
                     colors: [
-                        Color(red: 0.10, green: 0.12, blue: 0.18).opacity(opacity),
-                        Color(red: 0.08, green: 0.10, blue: 0.15).opacity(opacity * 0.8)
+                        Color(red: 0.18, green: 0.12, blue: 0.10).opacity(opacity),
+                        Color(red: 0.15, green: 0.10, blue: 0.08).opacity(opacity * 0.85)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             } else {
-                // Light mode: very translucent white
+                // Day mode: translucent white/cream
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(opacity * 0.85),
-                        Color.white.opacity(opacity * 0.7)
+                        Color.white.opacity(opacity * 0.9),
+                        Color.white.opacity(opacity * 0.75)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -671,13 +836,13 @@ struct GlassyCardBackground: View {
 
             // Optional color tint
             if let tint = tint {
-                tint.opacity(0.05)
+                tint.opacity(palette.isDark ? 0.08 : 0.05)
             }
 
             // Subtle top highlight for glassy effect
             LinearGradient(
                 colors: [
-                    Color.white.opacity(colorScheme == .dark ? 0.05 : 0.3),
+                    (palette.isDark ? palette.accent : Color.white).opacity(palette.isDark ? 0.08 : 0.25),
                     Color.clear
                 ],
                 startPoint: .top,

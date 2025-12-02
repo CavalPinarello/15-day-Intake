@@ -165,6 +165,11 @@ export const isDayCompleted = query({
 /**
  * Complete a specific section (Sleep Log or Assessment) for a day
  * This allows partial day completion across devices
+ *
+ * VALIDATION: Ensures responses exist before marking section complete
+ * - Sleep Log requires at least 3 responses (minimum viable)
+ * - Assessment requires at least 1 response per day
+ * - Use skipValidation=true only for debug/testing purposes
  */
 export const completeSection = mutation({
   args: {
@@ -172,11 +177,44 @@ export const completeSection = mutation({
     dayNumber: v.number(),
     section: v.union(v.literal("sleepLog"), v.literal("assessment")),
     source: v.optional(v.string()), // "watch" or "iphone" or "web"
+    skipValidation: v.optional(v.boolean()), // Debug only - skips response validation
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("User not found");
+    }
+
+    // VALIDATION: Check that user has actually answered questions
+    // unless skipValidation is explicitly true (debug mode only)
+    if (!args.skipValidation) {
+      // Get all responses for this user and day
+      const responses = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_day", (q) =>
+          q.eq("user_id", args.userId).eq("day_number", args.dayNumber)
+        )
+        .collect();
+
+      // Define minimum required responses per section
+      // Sleep log has 5 questions - require at least 3 (time-based defaults are auto-filled)
+      // Assessment varies by day - require at least 1 to prove user engaged
+      const minResponses = args.section === "sleepLog" ? 3 : 1;
+
+      // Filter responses by section (rough heuristic - SL_ prefix for sleep log)
+      const sectionResponses = responses.filter(r => {
+        const isSleepLog = r.question_id.startsWith("SL_");
+        return args.section === "sleepLog" ? isSleepLog : !isSleepLog;
+      });
+
+      if (sectionResponses.length < minResponses) {
+        throw new Error(
+          `Cannot complete ${args.section}: Only ${sectionResponses.length} responses found, ` +
+          `minimum ${minResponses} required. Please answer the questions before completing.`
+        );
+      }
+
+      console.log(`[Convex] Section validation passed: ${sectionResponses.length} responses for ${args.section}`);
     }
 
     // Get or create the day entry
@@ -1017,3 +1055,366 @@ export const getSavedResponses = query({
     return responseMap;
   },
 });
+
+// ============================================
+// Module Metadata with Contextual Explanations
+// ============================================
+
+/**
+ * Module metadata with explanations for each questionnaire type
+ * This helps users understand WHY they're being asked certain questions
+ */
+const MODULE_METADATA: Record<string, {
+  title: string;
+  shortTitle: string;
+  icon: string;
+  estimatedMinutes: number;
+  questionCount: number;
+  color: string;
+  description: string;
+  why: string;
+  triggeredBy?: string;
+}> = {
+  // Stanford Sleep Log - Daily
+  sleep_log: {
+    title: "Daily Sleep Log",
+    shortTitle: "Sleep Log",
+    icon: "moon.zzz",
+    estimatedMinutes: 2,
+    questionCount: 5,
+    color: "#2196F3", // Blue
+    description: "About last night's sleep",
+    why: "Recording your subjective sleep perception daily helps us compare it with your wearable data and identify patterns. This takes about 60 seconds."
+  },
+
+  // Day 1: Demographics
+  core_demographics: {
+    title: "Your Profile",
+    shortTitle: "Profile",
+    icon: "person.circle",
+    estimatedMinutes: 3,
+    questionCount: 5,
+    color: "#9C27B0", // Purple
+    description: "Basic information about you",
+    why: "Age, sex, height, and weight affect sleep needs. Some of this can be auto-filled from Apple Health."
+  },
+
+  // Day 1-5: PSQI (Pittsburgh Sleep Quality Index)
+  core_psqi: {
+    title: "Sleep Quality Assessment",
+    shortTitle: "PSQI",
+    icon: "chart.bar",
+    estimatedMinutes: 8,
+    questionCount: 12,
+    color: "#9C27B0",
+    description: "Pittsburgh Sleep Quality Index",
+    why: "This validated questionnaire measures your sleep quality over the past month. Your score helps us understand the severity of sleep issues and track improvement."
+  },
+
+  // Day Assessment Generic
+  day_assessment: {
+    title: "Day Assessment",
+    shortTitle: "Assessment",
+    icon: "list.clipboard",
+    estimatedMinutes: 5,
+    questionCount: 8,
+    color: "#9C27B0",
+    description: "Daily assessment questions",
+    why: "These questions help us understand your unique sleep patterns and any factors affecting your rest."
+  },
+
+  // Expansion: ISI (Insomnia Severity Index)
+  expansion_isi: {
+    title: "Insomnia Assessment",
+    shortTitle: "ISI",
+    icon: "exclamationmark.triangle",
+    estimatedMinutes: 5,
+    questionCount: 7,
+    color: "#FF9800", // Orange - expansion
+    description: "Insomnia Severity Index",
+    why: "Based on your earlier responses about difficulty sleeping, this assessment measures insomnia severity. It's a clinically validated tool used worldwide.",
+    triggeredBy: "insomnia"
+  },
+
+  // Expansion: PHQ-9 (Depression)
+  expansion_phq9: {
+    title: "Mood Assessment",
+    shortTitle: "PHQ-9",
+    icon: "heart.text.square",
+    estimatedMinutes: 4,
+    questionCount: 9,
+    color: "#FF9800",
+    description: "Patient Health Questionnaire",
+    why: "Sleep and mood are closely connected. Based on your response about feeling down, this assessment helps us understand if depression may be affecting your sleep.",
+    triggeredBy: "depression"
+  },
+
+  // Expansion: GAD-7 (Anxiety)
+  expansion_gad7: {
+    title: "Anxiety Assessment",
+    shortTitle: "GAD-7",
+    icon: "brain.head.profile",
+    estimatedMinutes: 3,
+    questionCount: 7,
+    color: "#FF9800",
+    description: "Generalized Anxiety Disorder Scale",
+    why: "Based on your response about feeling anxious, this assessment helps us understand how anxiety may be impacting your sleep quality.",
+    triggeredBy: "anxiety"
+  },
+
+  // Expansion: ESS (Epworth Sleepiness Scale)
+  expansion_ess: {
+    title: "Daytime Sleepiness",
+    shortTitle: "ESS",
+    icon: "sun.max.fill",
+    estimatedMinutes: 4,
+    questionCount: 8,
+    color: "#FF9800",
+    description: "Epworth Sleepiness Scale",
+    why: "You mentioned feeling excessively sleepy during the day. This assessment measures daytime sleepiness severity, which may indicate a sleep disorder.",
+    triggeredBy: "excessiveSleepiness"
+  },
+
+  // Expansion: FSS (Fatigue Severity Scale)
+  expansion_fss: {
+    title: "Fatigue Assessment",
+    shortTitle: "FSS",
+    icon: "battery.25",
+    estimatedMinutes: 4,
+    questionCount: 9,
+    color: "#FF9800",
+    description: "Fatigue Severity Scale",
+    why: "This assessment measures how fatigue affects your daily life and helps distinguish between sleepiness and fatigue.",
+    triggeredBy: "excessiveSleepiness"
+  },
+
+  // Expansion: STOP-BANG (Sleep Apnea Risk)
+  expansion_stop_bang: {
+    title: "Sleep Apnea Screening",
+    shortTitle: "STOP-BANG",
+    icon: "lungs.fill",
+    estimatedMinutes: 3,
+    questionCount: 8,
+    color: "#F44336", // Red - important
+    description: "Sleep Apnea Risk Assessment",
+    why: "Based on your reports of snoring or breathing pauses, this screening helps determine if you may have sleep apnea and should have a sleep study.",
+    triggeredBy: "osa"
+  },
+
+  // Expansion: Berlin Questionnaire (OSA)
+  expansion_berlin: {
+    title: "Sleep Apnea Risk",
+    shortTitle: "Berlin",
+    icon: "lungs",
+    estimatedMinutes: 4,
+    questionCount: 10,
+    color: "#F44336",
+    description: "Berlin Questionnaire for Sleep Apnea",
+    why: "This additional screening helps us better assess your risk for obstructive sleep apnea.",
+    triggeredBy: "osa"
+  },
+
+  // Expansion: BPI (Brief Pain Inventory)
+  expansion_bpi: {
+    title: "Pain Assessment",
+    shortTitle: "BPI",
+    icon: "bolt.circle",
+    estimatedMinutes: 5,
+    questionCount: 11,
+    color: "#FF9800",
+    description: "Brief Pain Inventory",
+    why: "You reported that pain affects your sleep. This assessment helps us understand how pain impacts your daily life and sleep quality.",
+    triggeredBy: "pain"
+  },
+
+  // Expansion: DBAS-16 (Dysfunctional Beliefs About Sleep)
+  expansion_dbas16: {
+    title: "Sleep Beliefs",
+    shortTitle: "DBAS-16",
+    icon: "brain",
+    estimatedMinutes: 6,
+    questionCount: 16,
+    color: "#FF9800",
+    description: "Dysfunctional Beliefs and Attitudes about Sleep",
+    why: "This assessment identifies unhelpful beliefs about sleep that may be maintaining insomnia. Changing these beliefs is a key part of treatment.",
+    triggeredBy: "insomnia"
+  },
+
+  // Expansion: MEQ (Morningness-Eveningness Questionnaire)
+  expansion_meq: {
+    title: "Chronotype Assessment",
+    shortTitle: "MEQ",
+    icon: "sunrise",
+    estimatedMinutes: 6,
+    questionCount: 19,
+    color: "#FF9800",
+    description: "Morningness-Eveningness Questionnaire",
+    why: "This assessment determines your natural sleep-wake preference (are you a morning lark or night owl?), which helps optimize your sleep schedule.",
+    triggeredBy: "sleepTiming"
+  },
+
+  // Expansion: MEDAS (Mediterranean Diet Adherence)
+  expansion_medas: {
+    title: "Diet Assessment",
+    shortTitle: "MEDAS",
+    icon: "leaf",
+    estimatedMinutes: 5,
+    questionCount: 14,
+    color: "#4CAF50", // Green
+    description: "Mediterranean Diet Adherence Screener",
+    why: "You noticed diet affects your sleep. The Mediterranean diet has been shown to improve sleep quality. This assessment helps us make dietary recommendations.",
+    triggeredBy: "dietImpact"
+  },
+
+  // Expansion: Sleep Hygiene
+  expansion_sleep_hygiene: {
+    title: "Sleep Habits",
+    shortTitle: "Sleep Hygiene",
+    icon: "bed.double",
+    estimatedMinutes: 5,
+    questionCount: 12,
+    color: "#FF9800",
+    description: "Sleep Hygiene Assessment",
+    why: "This assessment identifies behaviors and habits that may be interfering with your sleep quality. Small changes can make a big difference.",
+    triggeredBy: "poorSleepQuality"
+  },
+
+  // Expansion: PROMIS Cognitive Function
+  expansion_promis_cognitive: {
+    title: "Cognitive Function",
+    shortTitle: "PROMIS-Cog",
+    icon: "brain.head.profile",
+    estimatedMinutes: 4,
+    questionCount: 8,
+    color: "#FF9800",
+    description: "PROMIS Cognitive Function Short Form",
+    why: "You mentioned cognitive issues affecting daily life. This assessment helps us understand how sleep affects your thinking and memory.",
+    triggeredBy: "cognitive"
+  },
+};
+
+/**
+ * Get module metadata for display
+ * Returns contextual information about a questionnaire section
+ */
+export const getModuleMetadata = query({
+  args: {
+    moduleKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const metadata = MODULE_METADATA[args.moduleKey];
+    if (!metadata) {
+      return null;
+    }
+    return metadata;
+  },
+});
+
+/**
+ * Get metadata for a specific day
+ * Returns sleep log and assessment metadata with time estimates
+ */
+export const getDayMetadata = query({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Get user's triggered gateways to determine if expansion modules apply
+    // For now, return basic metadata - gateway logic can be added later
+
+    const sleepLogMeta = MODULE_METADATA.sleep_log;
+
+    // Calculate assessment based on day number
+    // Days 1-5: Core assessments (varying lengths)
+    // Days 6-15: May include expansion modules
+    const dayAssessmentCounts: Record<number, { questions: number; minutes: number }> = {
+      1: { questions: 12, minutes: 6 },   // Demographics + initial
+      2: { questions: 10, minutes: 5 },   // PSQI Part 1
+      3: { questions: 10, minutes: 5 },   // PSQI Part 2
+      4: { questions: 8, minutes: 4 },    // Sleep patterns
+      5: { questions: 8, minutes: 4 },    // Health factors
+      6: { questions: 10, minutes: 5 },   // May include ISI
+      7: { questions: 8, minutes: 4 },
+      8: { questions: 12, minutes: 6 },   // May include PHQ-9, GAD-7
+      9: { questions: 10, minutes: 5 },   // May include ESS
+      10: { questions: 12, minutes: 6 },  // May include STOP-BANG
+      11: { questions: 8, minutes: 4 },
+      12: { questions: 10, minutes: 5 },  // May include MEQ
+      13: { questions: 8, minutes: 4 },   // May include MEDAS
+      14: { questions: 6, minutes: 3 },
+      15: { questions: 8, minutes: 4 },   // Final review
+    };
+
+    const dayData = dayAssessmentCounts[args.dayNumber] || { questions: 8, minutes: 4 };
+
+    return {
+      sleepLog: {
+        ...sleepLogMeta,
+        isCompleted: false, // Will be set by client based on progress
+      },
+      assessment: {
+        title: `Day ${args.dayNumber} Assessment`,
+        shortTitle: `Day ${args.dayNumber}`,
+        icon: "list.clipboard",
+        estimatedMinutes: dayData.minutes,
+        questionCount: dayData.questions,
+        color: "#9C27B0",
+        description: getDayDescription(args.dayNumber),
+        why: getDayExplanation(args.dayNumber),
+        isCompleted: false,
+      },
+      totalMinutes: sleepLogMeta.estimatedMinutes + dayData.minutes,
+      totalQuestions: sleepLogMeta.questionCount + dayData.questions,
+      triggeredExpansions: [], // Would be populated based on gateway states
+    };
+  },
+});
+
+/**
+ * Get description for a specific day's assessment
+ */
+function getDayDescription(dayNumber: number): string {
+  const descriptions: Record<number, string> = {
+    1: "Demographics & Sleep Quality",
+    2: "Sleep Patterns & History",
+    3: "Mental Health Screening",
+    4: "Physical Health Factors",
+    5: "Lifestyle & Environment",
+    6: "Insomnia Deep Dive",
+    7: "Sleep Timing",
+    8: "Mood & Anxiety",
+    9: "Daytime Function",
+    10: "Sleep Apnea Screening",
+    11: "Pain & Discomfort",
+    12: "Circadian Rhythm",
+    13: "Diet & Sleep",
+    14: "Sleep Beliefs",
+    15: "Final Review",
+  };
+  return descriptions[dayNumber] || "Daily Assessment";
+}
+
+/**
+ * Get explanation for why this day's questions matter
+ */
+function getDayExplanation(dayNumber: number): string {
+  const explanations: Record<number, string> = {
+    1: "We're getting to know you and establishing your baseline sleep quality. This helps us personalize your journey.",
+    2: "Understanding your sleep history and patterns helps us identify what might be causing your sleep issues.",
+    3: "Sleep and mental health are closely connected. These questions help us see the full picture.",
+    4: "Physical health factors can significantly impact sleep. We're checking for anything that might be relevant.",
+    5: "Your environment and daily habits play a big role in sleep quality. Let's see what might need adjustment.",
+    6: "Based on your responses, we're taking a deeper look at insomnia symptoms and their impact.",
+    7: "Your natural sleep-wake cycle affects when you sleep best. We're assessing your chronotype.",
+    8: "We're checking in on mood and anxiety, which can significantly affect sleep quality.",
+    9: "Daytime sleepiness and energy levels tell us important things about your sleep quality.",
+    10: "We're screening for sleep apnea, a common but often undiagnosed condition that affects sleep.",
+    11: "Pain and physical discomfort can disrupt sleep. We're assessing if this applies to you.",
+    12: "Your body clock affects when you feel sleepy and alert. Understanding this helps optimize your schedule.",
+    13: "What you eat can affect how you sleep. We're looking at dietary factors.",
+    14: "Sometimes our beliefs about sleep can make problems worse. We're identifying any unhelpful patterns.",
+    15: "We're wrapping up your assessment and preparing your personalized recommendations.",
+  };
+  return explanations[dayNumber] || "These questions help us understand your unique sleep needs.";
+}

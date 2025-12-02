@@ -36,6 +36,8 @@ struct QuestionnaireView: View {
     @State private var isSyncing = false
     @State private var syncError: String?
     @State private var lastRefreshTime: Date = Date()
+    // Track which questions the user has actually interacted with (not just default values)
+    @State private var userInteractedQuestions: Set<String> = []
 
     private var theme: WatchColorTheme { WatchColorTheme.shared }
 
@@ -410,7 +412,10 @@ struct QuestionnaireView: View {
 
                 Slider(value: Binding(
                     get: { responses[question.id] as? Double ?? 5.0 },
-                    set: { responses[question.id] = $0 }
+                    set: { newValue in
+                        responses[question.id] = newValue
+                        markQuestionInteracted(question.id)
+                    }
                 ), in: 1...10, step: 1)
                 .tint(theme.primary)
             }
@@ -497,7 +502,10 @@ struct QuestionnaireView: View {
                         }
                         return Date()
                     },
-                    set: { responses[question.id] = $0 }
+                    set: { newValue in
+                        responses[question.id] = newValue
+                        markQuestionInteracted(question.id)
+                    }
                 ),
                 theme: theme,
                 questionId: question.id
@@ -545,7 +553,10 @@ struct QuestionnaireView: View {
             WatchNumberInputView(
                 value: Binding(
                     get: { Int(responses[question.id] as? Double ?? 0) },
-                    set: { responses[question.id] = Double($0) }
+                    set: { newValue in
+                        responses[question.id] = Double(newValue)
+                        markQuestionInteracted(question.id)
+                    }
                 ),
                 minValue: 0,
                 maxValue: 20,
@@ -597,6 +608,7 @@ struct QuestionnaireView: View {
         questions = WatchQuestionBank.getQuestions(for: currentDay, mode: mode)
         currentQuestionIndex = 0
         responses = [:]
+        userInteractedQuestions = []  // Reset interaction tracking
 
         // Load saved progress from Convex for cross-device sync
         loadSavedProgress()
@@ -638,9 +650,11 @@ struct QuestionnaireView: View {
                         } else if let arr = value.arrayValue {
                             responses[questionId] = arr
                         }
+                        // Mark loaded responses as interacted (user answered on another device)
+                        userInteractedQuestions.insert(questionId)
                     }
                     if !savedResponses.isEmpty {
-                        print("[Watch] Loaded \(savedResponses.count) saved responses")
+                        print("[Watch] Loaded \(savedResponses.count) saved responses (marked as interacted)")
                     }
                 }
             } catch {
@@ -674,12 +688,19 @@ struct QuestionnaireView: View {
         guard currentQuestionIndex < questions.count else { return false }
         let question = questions[currentQuestionIndex]
 
-        // Time, scale, and number questions are always "answered" (have default values)
+        // For time, scale, and number questions:
+        // Check if user has actually interacted with them (not just default values)
+        // This prevents users from skipping through questions without answering
         if question.type == .time || question.type == .scale || question.type == .number {
-            return true
+            return userInteractedQuestions.contains(question.id)
         }
 
         return responses[question.id] != nil
+    }
+
+    /// Mark the current question as interacted by the user
+    private func markQuestionInteracted(_ questionId: String) {
+        userInteractedQuestions.insert(questionId)
     }
 
     private func completeQuestionnaire() {

@@ -114,31 +114,28 @@ struct CircadianRibbon: View {
     }
 }
 
-// MARK: - Animated Background
+// MARK: - Animated Background (Sleep-Optimized Circadian Colors)
 
 struct CircadianBackground: View {
     @EnvironmentObject var themeManager: WatchThemeManager
 
-    private var accentColor: Color { themeManager.accentColor }
+    /// Uses circadian palette - NO blue/teal after dusk for sleep health
+    private var palette: WatchCircadianPalette { WatchCircadianPalette.current }
 
     var body: some View {
         ZStack {
-            // Deep gradient background
+            // Base gradient background - circadian-aware
             LinearGradient(
-                colors: [
-                    Color(red: 0.05, green: 0.08, blue: 0.15),
-                    Color(red: 0.08, green: 0.12, blue: 0.22),
-                    Color(red: 0.05, green: 0.08, blue: 0.18)
-                ],
+                colors: palette.background,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
-            // Animated ribbons
-            CircadianRibbon(index: 0, color: accentColor)
-            CircadianRibbon(index: 1, color: accentColor.opacity(0.7))
-            CircadianRibbon(index: 2, color: Color.teal.opacity(0.5))
-            CircadianRibbon(index: 3, color: Color.cyan.opacity(0.3))
+            // Animated ribbons using circadian wave/accent colors
+            CircadianRibbon(index: 0, color: palette.wave)
+            CircadianRibbon(index: 1, color: palette.wave.opacity(0.7))
+            CircadianRibbon(index: 2, color: palette.accent.opacity(0.5))
+            CircadianRibbon(index: 3, color: palette.accent.opacity(0.3))
         }
         .ignoresSafeArea()
     }
@@ -303,12 +300,14 @@ struct WatchHomeView: View {
     // MARK: - Day Header
 
     private var dayHeader: some View {
-        VStack(spacing: 4) {
+        let palette = WatchCircadianPalette.current
+
+        return VStack(spacing: 4) {
             Text("DAY \(currentDay)")
                 .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [accentColor, accentColor.opacity(0.7)],
+                        colors: [palette.accent, palette.accent.opacity(0.7)],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -316,13 +315,13 @@ struct WatchHomeView: View {
 
             Text("of 15")
                 .font(.caption)
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(palette.textSecondary)
 
             // Progress dots
             HStack(spacing: 3) {
                 ForEach(1...15, id: \.self) { day in
                     Circle()
-                        .fill(day <= currentDay ? accentColor : Color.white.opacity(0.2))
+                        .fill(day <= currentDay ? palette.accent : palette.textSecondary.opacity(0.3))
                         .frame(width: day == currentDay ? 6 : 4, height: day == currentDay ? 6 : 4)
                 }
             }
@@ -334,14 +333,16 @@ struct WatchHomeView: View {
     // MARK: - Motivation Card
 
     private var motivationCard: some View {
-        VStack(spacing: 8) {
+        let palette = WatchCircadianPalette.current
+
+        return VStack(spacing: 8) {
             Text(motivation.title)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(accentColor)
+                .foregroundColor(palette.accent)
 
             Text(motivation.message)
                 .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.85))
+                .foregroundColor(palette.textPrimary.opacity(0.9))
                 .multilineTextAlignment(.center)
                 .lineLimit(4)
                 .fixedSize(horizontal: false, vertical: true)
@@ -350,10 +351,10 @@ struct WatchHomeView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.08))
+                .fill(palette.isDark ? Color(red: 0.18, green: 0.12, blue: 0.10).opacity(0.5) : Color.white.opacity(0.08))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(accentColor.opacity(0.3), lineWidth: 1)
+                        .strokeBorder(palette.accent.opacity(0.3), lineWidth: 1)
                 )
         )
     }
@@ -361,7 +362,12 @@ struct WatchHomeView: View {
     // MARK: - Action Buttons
 
     private var actionButtons: some View {
-        VStack(spacing: 10) {
+        let palette = WatchCircadianPalette.current
+        // Use warm amber for incomplete states at night instead of blue/purple
+        let incompleteColor = palette.isDark ? palette.wave.opacity(0.4) : Color.blue.opacity(0.3)
+        let incompleteAssessmentColor = palette.isDark ? palette.accent.opacity(0.35) : Color.purple.opacity(0.3)
+
+        return VStack(spacing: 10) {
             // Day Complete Celebration (if both tasks done)
             if isDayComplete {
                 dayCompleteCelebration
@@ -376,14 +382,14 @@ struct WatchHomeView: View {
                 HStack {
                     Image(systemName: sleepLogCompleted ? "checkmark.circle.fill" : "moon.stars.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(sleepLogCompleted ? .green : .white)
+                        .foregroundColor(sleepLogCompleted ? .green : palette.textPrimary)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Sleep Log")
                             .font(.system(size: 14, weight: .semibold))
                         Text(sleepLogCompleted ? "Completed" : "Record last night")
                             .font(.system(size: 10))
-                            .foregroundColor(sleepLogCompleted ? .green.opacity(0.8) : .white.opacity(0.7))
+                            .foregroundColor(sleepLogCompleted ? .green.opacity(0.8) : palette.textSecondary)
                     }
 
                     Spacer()
@@ -391,14 +397,14 @@ struct WatchHomeView: View {
                     if !sleepLogCompleted {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(palette.textSecondary.opacity(0.5))
                     }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(sleepLogCompleted ? Color.green.opacity(0.2) : Color.blue.opacity(0.3))
+                        .fill(sleepLogCompleted ? Color.green.opacity(0.2) : incompleteColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .strokeBorder(sleepLogCompleted ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1)
@@ -417,14 +423,14 @@ struct WatchHomeView: View {
                 HStack {
                     Image(systemName: assessmentCompleted ? "checkmark.circle.fill" : "list.clipboard.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(assessmentCompleted ? .green : .white)
+                        .foregroundColor(assessmentCompleted ? .green : palette.textPrimary)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Assessment")
                             .font(.system(size: 14, weight: .semibold))
                         Text(assessmentCompleted ? "Completed" : "Day \(currentDay) questions")
                             .font(.system(size: 10))
-                            .foregroundColor(assessmentCompleted ? .green.opacity(0.8) : .white.opacity(0.7))
+                            .foregroundColor(assessmentCompleted ? .green.opacity(0.8) : palette.textSecondary)
                     }
 
                     Spacer()
@@ -432,14 +438,14 @@ struct WatchHomeView: View {
                     if !assessmentCompleted {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(palette.textSecondary.opacity(0.5))
                     }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(assessmentCompleted ? Color.green.opacity(0.2) : Color.purple.opacity(0.3))
+                        .fill(assessmentCompleted ? Color.green.opacity(0.2) : incompleteAssessmentColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .strokeBorder(assessmentCompleted ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1)
@@ -449,7 +455,7 @@ struct WatchHomeView: View {
             .buttonStyle(.plain)
             .opacity(assessmentCompleted ? 0.8 : 1.0)
         }
-        .foregroundColor(.white)
+        .foregroundColor(palette.textPrimary)
     }
 
     // MARK: - Day Complete Celebration (Enhanced)
@@ -498,7 +504,9 @@ struct WatchHomeView: View {
     // MARK: - Countdown Card
 
     private var countdownCard: some View {
-        VStack(spacing: 6) {
+        let palette = WatchCircadianPalette.current
+
+        return VStack(spacing: 6) {
             if themeManager.debugMode {
                 // Debug mode: Show advance button immediately (bypasses time check only)
                 Button {
@@ -510,17 +518,17 @@ struct WatchHomeView: View {
                         Text("Advance to Day \(currentDay + 1)")
                             .font(.system(size: 12, weight: .semibold))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(palette.isDark ? Color(red: 0.1, green: 0.08, blue: 0.06) : .white)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
-                    .background(accentColor)
+                    .background(palette.accent)
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
 
                 Text("Debug mode: Time check bypassed")
                     .font(.system(size: 9))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(palette.textSecondary.opacity(0.7))
             } else if isCountdownReady {
                 // Time unlocked - show advance button
                 Button {
@@ -532,10 +540,10 @@ struct WatchHomeView: View {
                         Text("Start Day \(currentDay + 1)")
                             .font(.system(size: 12, weight: .semibold))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(palette.isDark ? Color(red: 0.1, green: 0.08, blue: 0.06) : .white)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
-                    .background(accentColor)
+                    .background(palette.accent)
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
@@ -543,45 +551,45 @@ struct WatchHomeView: View {
                 // Show countdown to 4 AM
                 Text("Day \(currentDay + 1) unlocks in")
                     .font(.system(size: 10))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(palette.textSecondary)
 
                 HStack(spacing: 2) {
                     // Hours
                     VStack(spacing: 2) {
                         Text(String(format: "%02d", countdownHours))
                             .font(.system(size: 18, weight: .bold, design: .monospaced))
-                            .foregroundColor(accentColor)
+                            .foregroundColor(palette.accent)
                         Text("hr")
                             .font(.system(size: 8))
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(palette.textSecondary.opacity(0.7))
                     }
 
                     Text(":")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white.opacity(0.4))
+                        .foregroundColor(palette.textSecondary.opacity(0.5))
 
                     // Minutes
                     VStack(spacing: 2) {
                         Text(String(format: "%02d", countdownMinutes))
                             .font(.system(size: 18, weight: .bold, design: .monospaced))
-                            .foregroundColor(accentColor)
+                            .foregroundColor(palette.accent)
                         Text("min")
                             .font(.system(size: 8))
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(palette.textSecondary.opacity(0.7))
                     }
 
                     Text(":")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white.opacity(0.4))
+                        .foregroundColor(palette.textSecondary.opacity(0.5))
 
                     // Seconds
                     VStack(spacing: 2) {
                         Text(String(format: "%02d", countdownSeconds))
                             .font(.system(size: 18, weight: .bold, design: .monospaced))
-                            .foregroundColor(accentColor)
+                            .foregroundColor(palette.accent)
                         Text("sec")
                             .font(.system(size: 8))
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(palette.textSecondary.opacity(0.7))
                     }
                 }
             }
@@ -590,7 +598,7 @@ struct WatchHomeView: View {
         .padding(.horizontal, 12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.05))
+                .fill(palette.isDark ? Color(red: 0.18, green: 0.12, blue: 0.10).opacity(0.4) : Color.white.opacity(0.05))
         )
     }
 
@@ -619,31 +627,33 @@ struct WatchHomeView: View {
     // MARK: - Journey Progress Card
 
     private var journeyProgressCard: some View {
-        VStack(spacing: 8) {
+        let palette = WatchCircadianPalette.current
+
+        return VStack(spacing: 8) {
             HStack {
                 Image(systemName: "figure.walk")
                     .font(.system(size: 12))
-                    .foregroundColor(accentColor)
+                    .foregroundColor(palette.accent)
                 Text("Your 15-Day Journey")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.9))
+                    .foregroundColor(palette.textPrimary.opacity(0.9))
                 Spacer()
                 Text("\(currentDay)/15")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(accentColor)
+                    .foregroundColor(palette.accent)
             }
 
             // Progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.white.opacity(0.15))
+                        .fill(palette.textSecondary.opacity(0.2))
                         .frame(height: 8)
 
                     RoundedRectangle(cornerRadius: 4)
                         .fill(
                             LinearGradient(
-                                colors: [accentColor, accentColor.opacity(0.7)],
+                                colors: [palette.accent, palette.accent.opacity(0.7)],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
@@ -658,7 +668,7 @@ struct WatchHomeView: View {
             HStack(spacing: 2) {
                 ForEach(1...15, id: \.self) { day in
                     Circle()
-                        .fill(day <= currentDay ? accentColor : Color.white.opacity(0.2))
+                        .fill(day <= currentDay ? palette.accent : palette.textSecondary.opacity(0.3))
                         .frame(width: 5, height: 5)
                 }
             }
@@ -667,12 +677,12 @@ struct WatchHomeView: View {
             let daysLeft = 15 - currentDay
             Text(daysLeft == 1 ? "1 day left!" : "\(daysLeft) days remaining")
                 .font(.system(size: 9))
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(palette.textSecondary)
         }
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.05))
+                .fill(palette.isDark ? Color(red: 0.18, green: 0.12, blue: 0.10).opacity(0.4) : Color.white.opacity(0.05))
         )
     }
 
@@ -719,24 +729,28 @@ struct WatchHomeView: View {
     // MARK: - Journey Complete Card
 
     private var journeyCompleteCard: some View {
-        VStack(spacing: 10) {
+        let palette = WatchCircadianPalette.current
+        // Use warm gold for trophy/celebration at night
+        let celebrationColor = palette.isDark ? Color(red: 1.0, green: 0.80, blue: 0.30) : Color.yellow
+
+        return VStack(spacing: 10) {
             Image(systemName: "trophy.fill")
                 .font(.system(size: 32))
-                .foregroundColor(.yellow)
+                .foregroundColor(celebrationColor)
 
             Text("Journey Complete!")
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.yellow)
+                .foregroundColor(celebrationColor)
 
             Text("Congratulations! You've completed your 15-day sleep intake.")
                 .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(palette.textPrimary.opacity(0.8))
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
 
             if !treatmentTasks.isEmpty {
                 Divider()
-                    .background(Color.white.opacity(0.2))
+                    .background(palette.textSecondary.opacity(0.3))
                     .padding(.vertical, 4)
 
                 Button {
@@ -744,13 +758,13 @@ struct WatchHomeView: View {
                 } label: {
                     HStack {
                         Image(systemName: "arrow.right.circle.fill")
-                            .foregroundColor(accentColor)
+                            .foregroundColor(palette.accent)
                         Text("View Treatment Plan")
                             .font(.system(size: 12, weight: .medium))
                     }
                     .padding(.vertical, 6)
                     .padding(.horizontal, 12)
-                    .background(accentColor.opacity(0.2))
+                    .background(palette.accent.opacity(0.2))
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)

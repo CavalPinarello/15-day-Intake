@@ -43,24 +43,44 @@ class WatchThemeManager: ObservableObject {
         }
     }
 
-    // MARK: - Circadian Color Palette
+    // MARK: - Sleep-Optimized Circadian Color Palette
+    // CRITICAL: NO blue/teal/green after dusk - only warm colors for sleep health
 
     struct CircadianColors {
-        // Dawn/Energy: Warm coral to soft gold
-        static let dawnStart = Color(red: 1.0, green: 0.42, blue: 0.42)     // #FF6B6B
-        static let dawnEnd = Color(red: 1.0, green: 0.85, blue: 0.24)       // #FFD93D
+        // ========================================
+        // EVENING/NIGHT: WARM COLORS ONLY (no blue light!)
+        // ========================================
+        static let nightBackground1 = Color(red: 0.14, green: 0.08, blue: 0.06)  // Deep warm brown
+        static let nightBackground2 = Color(red: 0.16, green: 0.09, blue: 0.07)
+        static let nightBackground3 = Color(red: 0.18, green: 0.10, blue: 0.08)
+        static let nightWave = Color(red: 0.85, green: 0.45, blue: 0.20)         // Warm amber
+        static let nightAccent = Color(red: 0.95, green: 0.55, blue: 0.25)       // Bright amber/orange
+        static let nightTextPrimary = Color(red: 1.0, green: 0.92, blue: 0.85)   // Warm white
+        static let nightTextSecondary = Color(red: 0.85, green: 0.70, blue: 0.55) // Warm tan
 
-        // Day/Vitality: Bright teal to sky blue
-        static let dayStart = Color(red: 0.31, green: 0.80, blue: 0.77)     // #4ECDC4
-        static let dayEnd = Color(red: 0.27, green: 0.72, blue: 0.82)       // #45B7D1
+        // ========================================
+        // DAWN: Warm coral/peach transition
+        // ========================================
+        static let dawnBackground1 = Color(red: 0.99, green: 0.94, blue: 0.90)
+        static let dawnBackground2 = Color(red: 0.98, green: 0.91, blue: 0.86)
+        static let dawnWave = Color(red: 1.0, green: 0.60, blue: 0.40)           // Coral
+        static let dawnAccent = Color(red: 1.0, green: 0.75, blue: 0.45)         // Golden peach
 
-        // Dusk/Transition: Purple to deep violet
-        static let duskStart = Color(red: 0.61, green: 0.35, blue: 0.71)    // #9B59B6
-        static let duskEnd = Color(red: 0.42, green: 0.36, blue: 0.90)      // #6C5CE7
+        // ========================================
+        // MORNING: Energizing (blues/teals OK)
+        // ========================================
+        static let morningBackground1 = Color(red: 0.92, green: 0.97, blue: 0.98)
+        static let morningBackground2 = Color(red: 0.88, green: 0.95, blue: 0.97)
+        static let morningWave = Color(red: 0.31, green: 0.80, blue: 0.77)       // Teal
+        static let morningAccent = Color(red: 0.27, green: 0.72, blue: 0.82)     // Cyan
 
-        // Night/Rest: Deep indigo to soft navy
-        static let nightStart = Color(red: 0.17, green: 0.24, blue: 0.31)   // #2C3E50
-        static let nightEnd = Color(red: 0.20, green: 0.29, blue: 0.37)     // #34495E
+        // ========================================
+        // AFTERNOON: Soft blue (OK for alertness)
+        // ========================================
+        static let afternoonBackground1 = Color(red: 0.94, green: 0.96, blue: 0.99)
+        static let afternoonBackground2 = Color(red: 0.90, green: 0.94, blue: 0.98)
+        static let afternoonWave = Color(red: 0.35, green: 0.70, blue: 0.85)
+        static let afternoonAccent = Color(red: 0.45, green: 0.75, blue: 0.90)
     }
 
     // MARK: - Published Properties (synced from iPhone)
@@ -175,26 +195,20 @@ class WatchThemeManager: ObservableObject {
         return (hour >= 7 && hour < 19) ? .light : .dark
     }
 
+    /// Get circadian-aware background gradient - NO blue after dusk for sleep health
     func circadianGradient() -> LinearGradient {
-        let hour = Calendar.current.component(.hour, from: Date())
-
-        let colors: [Color]
-        switch hour {
-        case 5..<8:   // Dawn (5-8 AM)
-            colors = [CircadianColors.dawnStart, CircadianColors.dawnEnd]
-        case 8..<17:  // Day (8 AM - 5 PM)
-            colors = [CircadianColors.dayStart, CircadianColors.dayEnd]
-        case 17..<20: // Dusk (5-8 PM)
-            colors = [CircadianColors.duskStart, CircadianColors.duskEnd]
-        default:      // Night (8 PM - 5 AM)
-            colors = [CircadianColors.nightStart, CircadianColors.nightEnd]
-        }
+        let palette = WatchCircadianPalette.current
 
         return LinearGradient(
-            colors: colors,
+            colors: palette.background,
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
+    }
+
+    /// Get the current circadian palette for dynamic theming
+    var circadianPalette: WatchCircadianPalette {
+        WatchCircadianPalette.current
     }
 
     // MARK: - Time-Based Theme Colors
@@ -331,6 +345,108 @@ enum WatchTimePeriod {
             return .evening
         default:
             return .night
+        }
+    }
+}
+
+// MARK: - Watch Circadian Palette (Sleep-optimized)
+
+/// Centralized circadian color palette for Apple Watch - matches iOS
+/// EVENING/NIGHT: Only warm colors (amber, orange, red, brown) - NO blue/teal/green
+/// MORNING/DAY: Can use energizing blues, teals, greens
+struct WatchCircadianPalette {
+    let background: [Color]
+    let wave: Color
+    let accent: Color
+    let isDark: Bool
+    let textPrimary: Color
+    let textSecondary: Color
+
+    /// Get the current circadian palette based on time of day and season
+    static var current: WatchCircadianPalette {
+        let now = Date()
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 180
+
+        // Seasonal sunrise/sunset calculation (same as iOS)
+        let seasonalOffset = sin(Double(dayOfYear - 80) / 365.0 * .pi * 2)
+        let sunriseHour = 6.5 - seasonalOffset * 1.0
+        let sunsetHour = 18.5 + seasonalOffset * 2.0
+
+        let currentHour = Double(hour) + Double(minute) / 60.0
+
+        // Time periods
+        let dawnStart = sunriseHour - 0.5
+        let dawnEnd = sunriseHour + 1.5
+        let duskStart = sunsetHour - 1.5
+
+        // ========================================
+        // EVENING/NIGHT MODE (after dusk start)
+        // NO BLUE, NO TEAL, NO GREEN - only warm colors
+        // ========================================
+        if currentHour >= duskStart || currentHour < dawnStart {
+            return WatchCircadianPalette(
+                background: [
+                    WatchThemeManager.CircadianColors.nightBackground1,
+                    WatchThemeManager.CircadianColors.nightBackground2,
+                    WatchThemeManager.CircadianColors.nightBackground3
+                ],
+                wave: WatchThemeManager.CircadianColors.nightWave,
+                accent: WatchThemeManager.CircadianColors.nightAccent,
+                isDark: true,
+                textPrimary: WatchThemeManager.CircadianColors.nightTextPrimary,
+                textSecondary: WatchThemeManager.CircadianColors.nightTextSecondary
+            )
+        }
+        // ========================================
+        // DAWN - Warm coral/peach transition
+        // ========================================
+        else if currentHour >= dawnStart && currentHour < dawnEnd {
+            return WatchCircadianPalette(
+                background: [
+                    WatchThemeManager.CircadianColors.dawnBackground1,
+                    WatchThemeManager.CircadianColors.dawnBackground2
+                ],
+                wave: WatchThemeManager.CircadianColors.dawnWave,
+                accent: WatchThemeManager.CircadianColors.dawnAccent,
+                isDark: false,
+                textPrimary: Color(red: 0.25, green: 0.15, blue: 0.10),
+                textSecondary: Color(red: 0.50, green: 0.35, blue: 0.25)
+            )
+        }
+        // ========================================
+        // MORNING - Energizing (blues/teals OK)
+        // ========================================
+        else if currentHour >= dawnEnd && currentHour < 12 {
+            return WatchCircadianPalette(
+                background: [
+                    WatchThemeManager.CircadianColors.morningBackground1,
+                    WatchThemeManager.CircadianColors.morningBackground2
+                ],
+                wave: WatchThemeManager.CircadianColors.morningWave,
+                accent: WatchThemeManager.CircadianColors.morningAccent,
+                isDark: false,
+                textPrimary: Color(red: 0.10, green: 0.15, blue: 0.20),
+                textSecondary: Color(red: 0.35, green: 0.45, blue: 0.50)
+            )
+        }
+        // ========================================
+        // AFTERNOON - Soft blue (OK for alertness)
+        // ========================================
+        else {
+            return WatchCircadianPalette(
+                background: [
+                    WatchThemeManager.CircadianColors.afternoonBackground1,
+                    WatchThemeManager.CircadianColors.afternoonBackground2
+                ],
+                wave: WatchThemeManager.CircadianColors.afternoonWave,
+                accent: WatchThemeManager.CircadianColors.afternoonAccent,
+                isDark: false,
+                textPrimary: Color(red: 0.10, green: 0.15, blue: 0.20),
+                textSecondary: Color(red: 0.40, green: 0.45, blue: 0.50)
+            )
         }
     }
 }
