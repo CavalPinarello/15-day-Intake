@@ -472,21 +472,16 @@ struct SplashGlowLine: View {
     }
 }
 
-// MARK: - Questionnaire Wave Background (Static for performance)
+// MARK: - Questionnaire Wave Background (Simple gradient for performance)
 
-/// A static gradient background for questionnaire views - no animations to prevent freezing
+/// A simple gradient background for questionnaire views - no animations to prevent scrolling issues
 struct QuestionnaireWaveBackground: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        ZStack {
-            // Base gradient only - no animated waves
-            backgroundGradient
-
-            // Static decorative wave shapes (no animation)
-            staticWaveOverlay
-        }
-        .ignoresSafeArea()
+        // Simple gradient with subtle teal tint - no animations
+        backgroundGradient
+            .ignoresSafeArea()
     }
 
     private var backgroundGradient: LinearGradient {
@@ -494,8 +489,8 @@ struct QuestionnaireWaveBackground: View {
             LinearGradient(
                 colors: [
                     Color(red: 0.04, green: 0.06, blue: 0.12),
-                    Color(red: 0.06, green: 0.09, blue: 0.16),
-                    Color(red: 0.08, green: 0.12, blue: 0.22)
+                    Color(red: 0.05, green: 0.09, blue: 0.16),
+                    Color(red: 0.06, green: 0.12, blue: 0.20)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -503,77 +498,118 @@ struct QuestionnaireWaveBackground: View {
         } else {
             LinearGradient(
                 colors: [
-                    Color(red: 0.96, green: 0.97, blue: 0.99),
-                    Color(red: 0.92, green: 0.95, blue: 0.98),
-                    Color(red: 0.88, green: 0.94, blue: 0.98)
+                    Color(red: 0.94, green: 0.97, blue: 0.99),
+                    Color(red: 0.90, green: 0.95, blue: 0.98),
+                    Color(red: 0.85, green: 0.93, blue: 0.97)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
         }
     }
+}
 
-    private var staticWaveOverlay: some View {
+// MARK: - Dashboard Wave Background (Subtle animated waves)
+
+/// Animated wave background for dashboard - subtle and performant
+struct DashboardWaveBackground: View {
+    @Environment(\.colorScheme) var colorScheme
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
         GeometryReader { geometry in
-            let waveColor = colorScheme == .dark
-                ? Color(red: 0.30, green: 0.85, blue: 0.80)
-                : Color(red: 0.15, green: 0.60, blue: 0.70)
-
             ZStack {
-                // Static wave 1 - bottom
-                StaticWavePath(amplitude: 40, frequency: 0.8, phase: 0)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                waveColor.opacity(0.15),
-                                waveColor.opacity(0.05)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .blur(radius: 8)
-                    .offset(y: geometry.size.height * 0.6)
+                // Base gradient
+                backgroundGradient
 
-                // Static wave 2 - middle
-                StaticWavePath(amplitude: 35, frequency: 1.0, phase: .pi / 3)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                waveColor.opacity(0.12),
-                                waveColor.opacity(0.03)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .blur(radius: 6)
-                    .offset(y: geometry.size.height * 0.45)
-
-                // Static wave 3 - top accent
-                StaticWavePath(amplitude: 25, frequency: 1.2, phase: .pi * 2/3)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                waveColor.opacity(0.10),
-                                waveColor.opacity(0.02)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .blur(radius: 4)
-                    .offset(y: geometry.size.height * 0.35)
+                // Subtle animated waves (only 2 layers for performance)
+                DashboardWaveLayer(index: 0, phase: phase, colorScheme: colorScheme)
+                DashboardWaveLayer(index: 1, phase: phase, colorScheme: colorScheme)
             }
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
+                phase = .pi * 2
+            }
+        }
+    }
+
+    private var backgroundGradient: LinearGradient {
+        if colorScheme == .dark {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.06, blue: 0.12),
+                    Color(red: 0.05, green: 0.09, blue: 0.16),
+                    Color(red: 0.06, green: 0.12, blue: 0.20)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        } else {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.94, green: 0.97, blue: 0.99),
+                    Color(red: 0.90, green: 0.95, blue: 0.98),
+                    Color(red: 0.85, green: 0.93, blue: 0.97)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
     }
 }
 
-/// Static wave path - no animation, fixed phase
-struct StaticWavePath: Shape {
+struct DashboardWaveLayer: View {
+    let index: Int
+    let phase: CGFloat
+    let colorScheme: ColorScheme
+
+    private var config: (amplitude: CGFloat, frequency: CGFloat, offset: CGFloat, yPos: CGFloat, opacity: Double) {
+        switch index {
+        case 0:
+            return (40, 0.6, 0, 0.7, 0.12)
+        default:
+            return (30, 0.8, .pi / 2, 0.55, 0.08)
+        }
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            let waveColor = colorScheme == .dark
+                ? Color(red: 0.30, green: 0.85, blue: 0.80)
+                : Color(red: 0.20, green: 0.65, blue: 0.75)
+
+            SimpleDashboardWave(
+                phase: phase + config.offset,
+                amplitude: config.amplitude,
+                frequency: config.frequency
+            )
+            .fill(
+                LinearGradient(
+                    colors: [
+                        waveColor.opacity(config.opacity),
+                        waveColor.opacity(config.opacity * 0.3)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .offset(y: geometry.size.height * config.yPos)
+        }
+    }
+}
+
+/// Simple wave shape for dashboard - no blur for performance
+struct SimpleDashboardWave: Shape {
+    var phase: CGFloat
     var amplitude: CGFloat
     var frequency: CGFloat
-    var phase: CGFloat
+
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -581,21 +617,18 @@ struct StaticWavePath: Shape {
         let height = rect.height
         let midY = height / 2
 
-        // Start at bottom-left
         path.move(to: CGPoint(x: 0, y: height))
         path.addLine(to: CGPoint(x: 0, y: midY + sin(phase) * amplitude))
 
-        // Draw the wave curve with larger step for performance
-        for x in stride(from: 0, through: width, by: 4) {
+        // Use larger step for performance
+        for x in stride(from: 0, through: width, by: 6) {
             let relativeX = x / width
             let normalizedX = relativeX * frequency * .pi * 2 + phase
             let y = midY + sin(normalizedX) * amplitude
             path.addLine(to: CGPoint(x: x, y: y))
         }
 
-        // Close the path
         path.addLine(to: CGPoint(x: width, y: height))
-        path.addLine(to: CGPoint(x: 0, y: height))
         path.closeSubpath()
 
         return path
@@ -604,83 +637,53 @@ struct StaticWavePath: Shape {
 
 // MARK: - Glassy Card Background
 
-/// A frosted glass-style background for cards that lets the waves show through
+/// A translucent background for cards that lets the wave background show through
 struct GlassyCardBackground: View {
     @Environment(\.colorScheme) var colorScheme
-    var opacity: Double = 0.65
+    var opacity: Double = 0.45  // More translucent by default
     var tint: Color? = nil
-    var blur: CGFloat = 0
+    var blur: CGFloat = 0  // Kept for API compatibility
 
     var body: some View {
         ZStack {
-            // Base frosted layer
+            // Base translucent layer
             if colorScheme == .dark {
-                // Dark mode: semi-transparent dark with subtle tint
-                RoundedRectangle(cornerRadius: 0)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.08, green: 0.10, blue: 0.18).opacity(opacity),
-                                Color(red: 0.06, green: 0.08, blue: 0.14).opacity(opacity * 0.9)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-
-                // Optional color tint
-                if let tint = tint {
-                    RoundedRectangle(cornerRadius: 0)
-                        .fill(tint.opacity(0.08))
-                }
-
-                // Subtle inner highlight (glassy effect)
-                RoundedRectangle(cornerRadius: 0)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.06),
-                                Color.clear
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .center
-                        )
-                    )
+                // Dark mode: very translucent dark with subtle gradient
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.10, green: 0.12, blue: 0.18).opacity(opacity),
+                        Color(red: 0.08, green: 0.10, blue: 0.15).opacity(opacity * 0.8)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             } else {
-                // Light mode: semi-transparent white
-                RoundedRectangle(cornerRadius: 0)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(opacity * 0.95),
-                                Color.white.opacity(opacity * 0.85)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-
-                // Optional color tint
-                if let tint = tint {
-                    RoundedRectangle(cornerRadius: 0)
-                        .fill(tint.opacity(0.06))
-                }
-
-                // Light mode highlight
-                RoundedRectangle(cornerRadius: 0)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.5),
-                                Color.clear
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .center
-                        )
-                    )
+                // Light mode: very translucent white
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(opacity * 0.85),
+                        Color.white.opacity(opacity * 0.7)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
+
+            // Optional color tint
+            if let tint = tint {
+                tint.opacity(0.05)
+            }
+
+            // Subtle top highlight for glassy effect
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(colorScheme == .dark ? 0.05 : 0.3),
+                    Color.clear
+                ],
+                startPoint: .top,
+                endPoint: .center
+            )
         }
-        .blur(radius: blur)
     }
 }
 

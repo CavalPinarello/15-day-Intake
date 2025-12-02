@@ -190,9 +190,28 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
         case "resetJourneyProgress":
             handleResetJourneyProgress(replyHandler: replyHandler)
 
+        case "sectionCompleted":
+            handleSectionCompleted(message, replyHandler: replyHandler)
+
         default:
             replyHandler?(["error": "Unknown action: \(action)"])
         }
+    }
+
+    private func handleSectionCompleted(_ message: [String: Any], replyHandler: (([String: Any]) -> Void)?) {
+        let section = message["section"] as? String ?? "unknown"
+        let dayNumber = message["dayNumber"] as? Int ?? 0
+
+        print("[iOS] Watch completed section '\(section)' for day \(dayNumber)")
+
+        // Post notification to trigger immediate refresh on dashboard
+        NotificationCenter.default.post(
+            name: .questionnaireProgressDidChange,
+            object: nil,
+            userInfo: ["section": section, "dayNumber": dayNumber, "source": "watch"]
+        )
+
+        replyHandler?(["received": true])
     }
 
     // MARK: - Request Handlers

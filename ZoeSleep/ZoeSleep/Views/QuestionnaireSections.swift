@@ -330,15 +330,15 @@ struct SectionQuestionCard<Content: View>: View {
             content()
         }
         .padding(16)
-        .background(GlassyCardBackground(opacity: 0.5, tint: section.accentColor))
+        .background(GlassyCardBackground(opacity: 0.4, tint: section.accentColor))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(
                     LinearGradient(
                         colors: [
-                            section.accentColor.opacity(0.4),
-                            section.accentColor.opacity(0.15)
+                            section.accentColor.opacity(0.3),
+                            section.accentColor.opacity(0.1)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing

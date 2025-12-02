@@ -293,6 +293,28 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         }
     }
 
+    /// Notify iPhone that a section was completed (triggers immediate refresh)
+    func notifyiPhoneSectionCompleted(section: String, dayNumber: Int) {
+        guard let session = session, session.isReachable else {
+            print("[Watch] Cannot notify iPhone - not reachable")
+            return
+        }
+
+        let message: [String: Any] = [
+            "action": "sectionCompleted",
+            "section": section,
+            "dayNumber": dayNumber,
+            "source": "watch",
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        session.sendMessage(message, replyHandler: { reply in
+            print("[Watch] iPhone acknowledged section completion")
+        }) { error in
+            print("[Watch] Failed to notify iPhone of section completion: \(error.localizedDescription)")
+        }
+    }
+
     func advanceDay(completion: @escaping (Int) -> Void) {
         guard let session = session, session.isReachable else {
             completion(currentUserDay)

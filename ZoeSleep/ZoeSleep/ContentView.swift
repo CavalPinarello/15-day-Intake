@@ -38,13 +38,18 @@ struct MainDashboardView: View {
     @State private var showingJourneyOverview = false
     @State private var lastRefreshTime: Date = Date()
     @State private var needsRefresh = false
+    @State private var refreshTimer: Timer?
+    @State private var isRefreshing = false
+
+    // Poll every 5 seconds when app is active (for cross-device sync)
+    private let refreshInterval: TimeInterval = 5.0
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         ZStack {
-            // Animated wave background - increased intensity
-            CircadianWaveBackground(intensity: 1.0)
+            // Animated wave background for dashboard
+            DashboardWaveBackground()
 
             ScrollView {
                 VStack(spacing: 16) {
@@ -79,13 +84,25 @@ struct MainDashboardView: View {
         }
         .onAppear {
             loadProgress()
+            startRefreshTimer()
+        }
+        .onDisappear {
+            stopRefreshTimer()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            // Refresh when app becomes active (e.g., returning from background or other screens)
-            if newPhase == .active {
+            switch newPhase {
+            case .active:
+                // Refresh immediately when app becomes active
                 Task {
                     await refreshFromConvex()
                 }
+                // Start polling timer for cross-device sync
+                startRefreshTimer()
+            case .inactive, .background:
+                // Stop polling when app is not active
+                stopRefreshTimer()
+            @unknown default:
+                break
             }
         }
         .onChange(of: questionnaireManager.journeyProgress?.currentDay) { _, newDay in
@@ -106,31 +123,71 @@ struct MainDashboardView: View {
         }
         .refreshable {
             // Pull-to-refresh to manually sync from Convex
-            await refreshFromConvex()
+            await refreshFromConvex(silent: false)
         }
         .onReceive(NotificationCenter.default.publisher(for: .questionnaireProgressDidChange)) { _ in
             // Refresh when questionnaire signals progress change
             Task {
-                await refreshFromConvex()
+                await refreshFromConvex(silent: false)
             }
         }
     }
 
-    private func refreshFromConvex() async {
-        // Avoid refreshing too frequently (min 1 second between refreshes)
-        guard Date().timeIntervalSince(lastRefreshTime) > 1 else {
-            print("[iOS Dashboard] Skipping refresh (too soon)")
+    // MARK: - Refresh Timer (for cross-device sync)
+
+    private func startRefreshTimer() {
+        // Don't start if already running
+        guard refreshTimer == nil else { return }
+
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { _ in
+            Task { @MainActor in
+                await self.refreshFromConvex(silent: true)
+            }
+        }
+        print("[iOS Dashboard] Started refresh timer (interval: \(refreshInterval)s)")
+    }
+
+    private func stopRefreshTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+        print("[iOS Dashboard] Stopped refresh timer")
+    }
+
+    private func refreshFromConvex(silent: Bool = false) async {
+        // Avoid refreshing too frequently (min 2 seconds between refreshes)
+        guard Date().timeIntervalSince(lastRefreshTime) > 2 else {
+            if !silent {
+                print("[iOS Dashboard] Skipping refresh (too soon)")
+            }
             return
         }
+
+        // Don't refresh if already refreshing
+        guard !isRefreshing else { return }
+        isRefreshing = true
         lastRefreshTime = Date()
 
-        print("[iOS Dashboard] Refreshing from Convex...")
+        if !silent {
+            print("[iOS Dashboard] Refreshing from Convex...")
+        }
+
         await questionnaireManager.loadJourneyProgress()
-        if let progress = questionnaireManager.journeyProgress {
-            await MainActor.run {
-                currentDay = progress.currentDay
+
+        await MainActor.run {
+            if let progress = questionnaireManager.journeyProgress {
+                // Only update if there's a change
+                if currentDay != progress.currentDay {
+                    withAnimation {
+                        currentDay = progress.currentDay
+                    }
+                    print("[iOS Dashboard] Day updated: \(progress.currentDay)")
+                }
+
+                if !silent {
+                    print("[iOS Dashboard] Refreshed: Day \(progress.currentDay), sleepLog=\(progress.sleepLogCompleted), assessment=\(progress.assessmentCompleted)")
+                }
             }
-            print("[iOS Dashboard] Refreshed: Day \(progress.currentDay), sleepLog=\(progress.sleepLogCompleted), assessment=\(progress.assessmentCompleted)")
+            isRefreshing = false
         }
     }
 
@@ -269,7 +326,7 @@ struct MainDashboardView: View {
             }
         }
         .padding()
-        .background(GlassyCardBackground())
+        .background(GlassyCardBackground(opacity: 0.4))
         .cornerRadius(16)
     }
 
@@ -317,7 +374,7 @@ struct MainDashboardView: View {
             }
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.6))
+        .background(GlassyCardBackground(opacity: 0.35))
         .cornerRadius(12)
     }
 
@@ -388,7 +445,7 @@ struct MainDashboardView: View {
             .disabled(questionnaireManager.journeyProgress?.assessmentCompleted ?? false)
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.7))
+        .background(GlassyCardBackground(opacity: 0.4))
         .cornerRadius(16)
     }
 
@@ -474,7 +531,7 @@ struct MainDashboardView: View {
                 }
             }
             .padding()
-            .background(GlassyCardBackground(opacity: 0.6, tint: theme.warning))
+            .background(GlassyCardBackground(opacity: 0.35, tint: theme.warning))
             .cornerRadius(12)
         }
     }
@@ -596,7 +653,7 @@ struct TaskRow: View {
             }
         }
         .padding(12)
-        .background(GlassyCardBackground(opacity: 0.5))
+        .background(GlassyCardBackground(opacity: 0.35))
         .cornerRadius(12)
     }
 }
@@ -635,7 +692,7 @@ struct QuickActionRow: View {
                 .foregroundColor(.secondary)
         }
         .padding(12)
-        .background(GlassyCardBackground(opacity: 0.5))
+        .background(GlassyCardBackground(opacity: 0.35))
         .cornerRadius(12)
     }
 }
@@ -713,15 +770,15 @@ struct SectionTaskCard: View {
             }
         }
         .padding(16)
-        .background(GlassyCardBackground(opacity: 0.55, tint: section.accentColor))
+        .background(GlassyCardBackground(opacity: 0.35, tint: section.accentColor))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
                     LinearGradient(
                         colors: [
-                            section.accentColor.opacity(0.5),
-                            section.accentColor.opacity(0.2)
+                            section.accentColor.opacity(0.4),
+                            section.accentColor.opacity(0.15)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing

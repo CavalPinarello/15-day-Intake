@@ -230,9 +230,31 @@ private class ConvexHTTPClient {
         // Convex wraps response in { "value": ... } or { "status": "success", "value": ... }
         if let wrapper = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             if let value = wrapper["value"] {
-                // Re-encode the value and decode to target type
-                let valueData = try JSONSerialization.data(withJSONObject: value)
-                return try decoder.decode(T.self, from: valueData)
+                // Handle null values
+                if value is NSNull {
+                    // For optional types, return empty data that decodes to nil
+                    let emptyData = "null".data(using: .utf8)!
+                    return try decoder.decode(T.self, from: emptyData)
+                }
+
+                // Check if value is JSON-serializable before re-encoding
+                if JSONSerialization.isValidJSONObject(value) {
+                    let valueData = try JSONSerialization.data(withJSONObject: value)
+                    return try decoder.decode(T.self, from: valueData)
+                } else if let stringValue = value as? String {
+                    // Handle primitive string values
+                    let quotedString = "\"\(stringValue)\""
+                    let valueData = quotedString.data(using: .utf8)!
+                    return try decoder.decode(T.self, from: valueData)
+                } else if let numberValue = value as? NSNumber {
+                    // Handle primitive number values
+                    let valueData = "\(numberValue)".data(using: .utf8)!
+                    return try decoder.decode(T.self, from: valueData)
+                } else if let boolValue = value as? Bool {
+                    // Handle primitive bool values
+                    let valueData = (boolValue ? "true" : "false").data(using: .utf8)!
+                    return try decoder.decode(T.self, from: valueData)
+                }
             }
         }
 
@@ -741,11 +763,17 @@ class ConvexService {
             throw ConvexError.notAuthenticated
         }
 
-        return try await client.query("watch:getQuestionProgress", args: [
-            "userId": userId,
-            "dayNumber": dayNumber,
-            "section": section
-        ])
+        do {
+            return try await client.query("watch:getQuestionProgress", args: [
+                "userId": userId,
+                "dayNumber": dayNumber,
+                "section": section
+            ])
+        } catch {
+            // If query fails or returns null, return nil - don't crash
+            print("[iOS] getQuestionProgress error: \(error), returning nil")
+            return nil
+        }
     }
 
     /// Update question progress after answering a question
@@ -791,20 +819,27 @@ class ConvexService {
         }
 
         // Query returns a dictionary of questionId -> response values
-        let rawResponse: [String: ResponseValue] = try await client.query("watch:getSavedResponses", args: [
-            "userId": userId,
-            "dayNumber": dayNumber
-        ])
+        // Handle case where response might be empty or null
+        do {
+            let rawResponse: [String: ResponseValue] = try await client.query("watch:getSavedResponses", args: [
+                "userId": userId,
+                "dayNumber": dayNumber
+            ])
 
-        var result: [String: QuestionResponseValue] = [:]
-        for (questionId, values) in rawResponse {
-            result[questionId] = QuestionResponseValue(
-                stringValue: values.stringValue,
-                numberValue: values.numberValue,
-                arrayValue: values.arrayValue
-            )
+            var result: [String: QuestionResponseValue] = [:]
+            for (questionId, values) in rawResponse {
+                result[questionId] = QuestionResponseValue(
+                    stringValue: values.stringValue,
+                    numberValue: values.numberValue,
+                    arrayValue: values.arrayValue
+                )
+            }
+            return result
+        } catch {
+            // If we fail to decode, return empty - don't crash
+            print("[iOS] getSavedResponses decode error: \(error), returning empty")
+            return [:]
         }
-        return result
     }
 }
 

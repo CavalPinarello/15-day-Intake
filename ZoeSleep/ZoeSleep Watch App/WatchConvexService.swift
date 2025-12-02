@@ -488,6 +488,12 @@ class WatchConvexService: ObservableObject {
                 self.sleepLogCompleted = response.sleepLogCompleted
                 self.assessmentCompleted = response.assessmentCompleted
 
+                // Notify iPhone that section was completed (triggers immediate refresh)
+                WatchConnectivityManager().notifyiPhoneSectionCompleted(
+                    section: section,
+                    dayNumber: dayNumber
+                )
+
                 if response.dayFullyCompleted {
                     if !self.completedDays.contains(dayNumber) {
                         self.completedDays.append(dayNumber)
