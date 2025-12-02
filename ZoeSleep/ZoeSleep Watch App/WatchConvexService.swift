@@ -42,8 +42,22 @@ struct WatchCompleteDayResponse: Codable {
 
 struct WatchAdvanceDayResponse: Codable {
     let success: Bool
-    let previousDay: Int
-    let newDay: Int
+    let previousDay: Int?
+    let newDay: Int?
+    let error: String?
+    let sleepLogCompleted: Bool?
+    let assessmentCompleted: Bool?
+    let currentDay: Int?
+}
+
+struct WatchCanAdvanceDayResponse: Codable {
+    let canAdvance: Bool
+    let reason: String
+    let sleepLogCompleted: Bool
+    let assessmentCompleted: Bool
+    let timeUnlocked: Bool
+    let currentDay: Int?
+    let nextDay: Int?
 }
 
 struct WatchResetResponse: Codable {
@@ -493,23 +507,46 @@ class WatchConvexService: ObservableObject {
         return response
     }
 
-    /// Advance to next day (Debug Mode)
-    func advanceDay() async throws -> WatchAdvanceDayResponse {
+    /// Check if user can advance to the next day
+    /// Requirements: Both Sleep Log AND Assessment must be completed
+    /// In debug mode: Bypasses time check but NOT completion check
+    func canAdvanceDay(debugMode: Bool = false) async throws -> WatchCanAdvanceDayResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        return try await query("watch:canAdvanceDay", args: [
+            "userId": userId,
+            "debugMode": debugMode
+        ])
+    }
+
+    /// Advance to next day
+    /// STRICT: Both sections must be completed first
+    /// - debugMode: true bypasses time check (4 AM) but NOT completion check
+    func advanceDay(debugMode: Bool = false) async throws -> WatchAdvanceDayResponse {
         guard let userId = userId else {
             throw WatchConvexError.notAuthenticated
         }
 
         let response: WatchAdvanceDayResponse = try await mutation("watch:advanceDay", args: [
-            "userId": userId
+            "userId": userId,
+            "debugMode": debugMode
         ])
 
         await MainActor.run {
             if response.success {
-                if !self.completedDays.contains(response.previousDay) {
-                    self.completedDays.append(response.previousDay)
+                if let previousDay = response.previousDay,
+                   !self.completedDays.contains(previousDay) {
+                    self.completedDays.append(previousDay)
                     self.completedDays.sort()
                 }
-                self.currentDay = response.newDay
+                if let newDay = response.newDay {
+                    self.currentDay = newDay
+                    // Reset section completion for the new day
+                    self.sleepLogCompleted = false
+                    self.assessmentCompleted = false
+                }
             }
         }
 

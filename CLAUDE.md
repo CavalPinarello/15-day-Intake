@@ -207,6 +207,71 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-12-01)
 
+**Enhanced Watch Day Complete UI & Number Input Improvements**
+
+This session enhanced the Apple Watch "Day Complete" state with useful information and fixed the number stepper input.
+
+### Features Implemented
+
+#### 1. Enhanced Day Complete Celebration (WatchHomeView.swift)
+When a day is complete, the Watch now shows much more useful information:
+
+- **Live Countdown Timer**: Shows hours:minutes:seconds until 4 AM unlock
+  - Updates every second in real-time
+  - Shows "Ready now!" with green checkmark when unlocked
+  - Debug mode: Shows "Advance to Day X" button that bypasses time check
+
+- **15-Day Journey Progress**: Visual progress visualization
+  - Progress bar showing X/15 completion
+  - 15 dots representing each day (filled = completed)
+  - "X days remaining" message
+
+- **ZOE Treatment Tasks Card**: If pending tasks exist
+  - Orange card showing number of pending tasks
+  - Tapping navigates to TreatmentTasksView
+
+- **Journey Complete State**: For Day 15 completion
+  - Trophy icon with celebration message
+  - "View Treatment Plan" button if tasks exist
+
+#### 2. Number Input with Progress Bar & Digital Crown (QuestionnaireView.swift)
+The "How many times did you wake up?" stepper now has:
+
+- **Visual Progress Bar**: Fills left-to-right as number increases (0-20 range)
+- **Digital Crown Support**: Rotate scroll wheel to change value with haptic feedback
+- **+/- Buttons**: Still work, now show disabled state at limits
+- **Smooth Animations**: Number display animates on change
+- **Hint Text**: "Rotate Crown or tap ±" to guide users
+
+#### 3. Day Advancement System (convex/watch.ts)
+New backend support for day progression:
+
+- **advanceDay mutation**: Server-side day advancement with validation
+  - Checks if current day's sleep log + assessment are complete
+  - Debug mode bypasses time check (NOT completion check)
+  - Returns new day number or error if sections incomplete
+
+- **Watch Integration**: "Start Day X" button in countdown card
+  - Only appears when countdown reaches zero (or debug mode)
+  - Calls advanceDay mutation to progress journey
+
+### Key Files Modified
+- `/ZoeSleep/ZoeSleep Watch App/WatchHomeView.swift` - Enhanced day complete UI, countdown timer, journey progress
+- `/ZoeSleep/ZoeSleep Watch App/QuestionnaireView.swift` - New WatchNumberInputView with progress bar + crown
+- `/ZoeSleep/ZoeSleep Watch App/WatchConvexService.swift` - advanceDay method
+- `/ZoeSleep/ZoeSleep Watch App/WatchThemeManager.swift` - debugMode property
+- `/ZoeSleep/ZoeSleep Watch App/SettingsView.swift` - Debug mode toggle
+- `/convex/watch.ts` - advanceDay mutation with completion validation
+- `/ZoeSleep/ZoeSleep/Services/ConvexService.swift` - iOS advanceDay support
+- `/ZoeSleep/ZoeSleep/ContentView.swift` - Debug mode advance button
+
+### Unlock Time Changed
+- Day unlock time changed from **5 AM to 4 AM** for earlier morning access
+
+---
+
+## Previous Session Context (2025-12-01)
+
 **Cross-Device Question-by-Question Sync & Day Completion UI**
 
 This session implemented seamless question-level progress sync across iOS, Watch, and Web, plus day completion celebration UI.

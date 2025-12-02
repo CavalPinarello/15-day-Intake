@@ -595,14 +595,28 @@ class ConvexService {
 
     struct AdvanceDayResponse: Codable {
         let success: Bool
-        let newDay: Int
-        let previousDay: Int
-        let message: String
+        let newDay: Int?
+        let previousDay: Int?
+        let error: String?
+        let sleepLogCompleted: Bool?
+        let assessmentCompleted: Bool?
+        let timeUnlocked: Bool?
+        let currentDay: Int?
+    }
+
+    struct CanAdvanceDayResponse: Codable {
+        let canAdvance: Bool
+        let reason: String
+        let sleepLogCompleted: Bool
+        let assessmentCompleted: Bool
+        let timeUnlocked: Bool
+        let currentDay: Int?
+        let nextDay: Int?
     }
 
     struct ResetProgressResponse: Codable {
         let success: Bool
-        let message: String
+        let newDay: Int?
     }
 
     struct JourneyDebugInfo: Codable {
@@ -613,24 +627,50 @@ class ConvexService {
         let journeyComplete: Bool
     }
 
-    /// Advance user to the next day (Debug Mode only)
-    func advanceToNextDay() async throws -> AdvanceDayResponse {
+    /// Check if user can advance to the next day
+    /// Requirements: Both Sleep Log AND Assessment must be completed
+    /// In debug mode: Bypasses time check but NOT completion check
+    func canAdvanceDay(debugMode: Bool = false) async throws -> CanAdvanceDayResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
-        return try await client.mutation("ios:advanceToNextDay", args: ["userId": userId])
+        return try await client.query("watch:canAdvanceDay", args: [
+            "userId": userId,
+            "debugMode": debugMode
+        ])
     }
 
-    /// Advance user to a specific day number
-    func advanceDay(to dayNumber: Int) async throws {
+    /// Advance user to the next day
+    /// STRICT: Both sections must be completed first
+    /// - debugMode: true bypasses time check (4 AM) but NOT completion check
+    func advanceToNextDay(debugMode: Bool = false) async throws -> AdvanceDayResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
-        // Use the existing advanceToNextDay which increments the day
-        // This will be called after completing a day to move to the next
-        let _: AdvanceDayResponse = try await client.mutation("ios:advanceToNextDay", args: ["userId": userId])
+        return try await client.mutation("watch:advanceDay", args: [
+            "userId": userId,
+            "debugMode": debugMode
+        ])
+    }
+
+    /// Advance user to a specific day number (convenience method)
+    /// Uses advanceToNextDay internally - validates completion first
+    func advanceDay(to dayNumber: Int, debugMode: Bool = false) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        // Use watch:advanceDay which validates completion
+        let response: AdvanceDayResponse = try await client.mutation("watch:advanceDay", args: [
+            "userId": userId,
+            "debugMode": debugMode
+        ])
+
+        if !response.success {
+            throw ConvexError.serverError(response.error ?? "Cannot advance day")
+        }
     }
 
     /// Reset journey progress to Day 1 (Debug Mode only)
@@ -639,7 +679,7 @@ class ConvexService {
             throw ConvexError.notAuthenticated
         }
 
-        return try await client.mutation("ios:resetJourneyProgress", args: ["userId": userId])
+        return try await client.mutation("watch:resetProgress", args: ["userId": userId])
     }
 
     /// Get debug information about the user's journey

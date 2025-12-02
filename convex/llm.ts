@@ -5,10 +5,17 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import OpenAI from "openai";
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy-initialize OpenAI client to avoid deploy-time errors
+let openai: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
 
 /**
  * Analyze patient responses using LLM
@@ -71,7 +78,7 @@ Please analyze this patient's sleep data and provide:
 Format your response as JSON with keys: summary, riskFactors (array), recommendations (array).`;
 
     try {
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAI().chat.completions.create({
         model: "gpt-4o",
         messages: [
           {

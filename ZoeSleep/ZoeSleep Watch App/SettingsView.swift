@@ -12,7 +12,6 @@ struct WatchSettingsView: View {
     @EnvironmentObject var themeManager: WatchThemeManager
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @StateObject private var convexService = WatchConvexService.shared
-    @AppStorage("debugMode") private var debugMode: Bool = false
     @AppStorage("watchCurrentDay") private var localCurrentDay: Int = 1
     @AppStorage("watchCompletedDays") private var completedDaysData: Data = Data()
 
@@ -137,12 +136,12 @@ struct WatchSettingsView: View {
 
             // MARK: - Developer
             Section("Developer") {
-                Toggle(isOn: $debugMode) {
+                Toggle(isOn: $themeManager.debugMode) {
                     Label("Debug Mode", systemImage: "hammer.fill")
                 }
                 .tint(.orange)
 
-                if debugMode {
+                if themeManager.debugMode {
                     Button {
                         showingAdvanceConfirmation = true
                     } label: {
@@ -215,38 +214,61 @@ struct WatchSettingsView: View {
 
         isAdvancing = true
 
-        // Update local first
-        let newDay = currentDay + 1
-        localCurrentDay = newDay
-
-        // Update local completed days
-        var days = (try? JSONDecoder().decode([Int].self, from: completedDaysData)) ?? []
-        if !days.contains(currentDay) {
-            days.append(currentDay)
-            if let encoded = try? JSONEncoder().encode(days) {
-                completedDaysData = encoded
-            }
-        }
-
-        WKInterfaceDevice.current().play(.success)
-
-        // Sync to Convex
+        // Sync to Convex with debug mode (bypasses time check but NOT completion check)
         Task {
             if convexService.isAuthenticated {
                 do {
-                    let result = try await convexService.advanceDay()
-                    print("[Watch Settings] Advanced to day \(result.newDay) in Convex")
+                    let result = try await convexService.advanceDay(debugMode: themeManager.debugMode)
+
+                    if result.success {
+                        // Update local state
+                        if let newDay = result.newDay {
+                            await MainActor.run {
+                                localCurrentDay = newDay
+                            }
+                        }
+
+                        // Update local completed days
+                        if let previousDay = result.previousDay {
+                            var days = (try? JSONDecoder().decode([Int].self, from: completedDaysData)) ?? []
+                            if !days.contains(previousDay) {
+                                days.append(previousDay)
+                                if let encoded = try? JSONEncoder().encode(days) {
+                                    await MainActor.run {
+                                        completedDaysData = encoded
+                                    }
+                                }
+                            }
+                        }
+
+                        print("[Watch Settings] Advanced to day \(result.newDay ?? 0) in Convex")
+                        WKInterfaceDevice.current().play(.success)
+
+                        // Also notify iPhone
+                        watchConnectivity.advanceDay { _ in }
+                    } else {
+                        // Server rejected - sections not complete
+                        print("[Watch Settings] Cannot advance: \(result.error ?? "Unknown error")")
+                        print("[Watch Settings] Sleep Log: \(result.sleepLogCompleted ?? false), Assessment: \(result.assessmentCompleted ?? false)")
+                        WKInterfaceDevice.current().play(.failure)
+                    }
                 } catch {
                     print("[Watch Settings] Failed to advance day in Convex: \(error)")
+                    WKInterfaceDevice.current().play(.failure)
                 }
+            } else {
+                // Offline mode - allow local advancement but show warning
+                let newDay = currentDay + 1
+                await MainActor.run {
+                    localCurrentDay = newDay
+                }
+                WKInterfaceDevice.current().play(.notification)
+                print("[Watch Settings] Advanced locally to Day \(newDay) (offline mode)")
             }
             await MainActor.run {
                 isAdvancing = false
             }
         }
-
-        // Also notify iPhone
-        watchConnectivity.advanceDay { _ in }
     }
 
     private func resetProgress() {

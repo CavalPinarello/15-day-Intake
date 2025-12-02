@@ -72,6 +72,70 @@ export interface SavedResponse {
 
 // API Functions
 
+export interface CanAdvanceDayResponse {
+  canAdvance: boolean;
+  reason: string;
+  sleepLogCompleted: boolean;
+  assessmentCompleted: boolean;
+  timeUnlocked: boolean;
+  currentDay?: number;
+  nextDay?: number;
+}
+
+export interface AdvanceDayResponse {
+  success: boolean;
+  newDay?: number;
+  previousDay?: number;
+  error?: string;
+  sleepLogCompleted?: boolean;
+  assessmentCompleted?: boolean;
+  currentDay?: number;
+}
+
+/**
+ * Check if user can advance to the next day
+ * Requirements: Both Sleep Log AND Assessment must be completed
+ * In debug mode: Bypasses time check but NOT completion check
+ */
+export async function canAdvanceDay(
+  debugMode: boolean = false
+): Promise<CanAdvanceDayResponse | null> {
+  const userId = getUserId();
+  if (!userId) return null;
+
+  try {
+    return await convexQuery<CanAdvanceDayResponse>('watch:canAdvanceDay', {
+      userId,
+      debugMode,
+    });
+  } catch (error) {
+    console.error('[Web Convex] Failed to check if can advance day:', error);
+    return null;
+  }
+}
+
+/**
+ * Advance to the next day
+ * STRICT: Both sections must be completed before advancing
+ * - debugMode: true bypasses time check (4 AM) but NOT completion check
+ */
+export async function advanceDay(
+  debugMode: boolean = false
+): Promise<AdvanceDayResponse | null> {
+  const userId = getUserId();
+  if (!userId) return null;
+
+  try {
+    return await convexMutation<AdvanceDayResponse>('watch:advanceDay', {
+      userId,
+      debugMode,
+    });
+  } catch (error) {
+    console.error('[Web Convex] Failed to advance day:', error);
+    return null;
+  }
+}
+
 /**
  * Get current question progress for a section
  */

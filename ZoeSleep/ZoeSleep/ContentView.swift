@@ -396,16 +396,25 @@ struct MainDashboardView: View {
         guard currentDay < 15 else { return }
         Task {
             do {
-                let newDay = currentDay + 1
-                try await ConvexService.shared.advanceDay(to: newDay)
-                await questionnaireManager.loadJourneyProgress()
-                await MainActor.run {
-                    withAnimation {
-                        currentDay = newDay
+                // Pass debugMode flag - only bypasses time check, NOT completion check
+                let response = try await ConvexService.shared.advanceToNextDay(debugMode: themeManager.debugMode)
+
+                if response.success {
+                    await questionnaireManager.loadJourneyProgress()
+                    await MainActor.run {
+                        if let newDay = response.newDay {
+                            withAnimation {
+                                currentDay = newDay
+                            }
+                        }
+                        NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
                     }
-                    NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                    print("[iOS] Advanced to Day \(response.newDay ?? currentDay)")
+                } else {
+                    // Server rejected advancement - sections not complete
+                    print("[iOS] Cannot advance: \(response.error ?? "Unknown error")")
+                    print("[iOS] Sleep Log: \(response.sleepLogCompleted ?? false), Assessment: \(response.assessmentCompleted ?? false)")
                 }
-                print("[iOS] Advanced to Day \(newDay)")
             } catch {
                 print("[iOS] Error advancing day: \(error)")
             }
@@ -906,7 +915,7 @@ struct DayCompleteCelebrationView: View {
                 Divider()
 
                 if isDebugMode {
-                    // Debug mode: Show advance button
+                    // Debug mode: Show advance button immediately (bypasses time check only)
                     Button(action: onAdvanceDay) {
                         HStack {
                             Image(systemName: "forward.fill")
@@ -922,11 +931,11 @@ struct DayCompleteCelebrationView: View {
                         .cornerRadius(10)
                     }
 
-                    Text("Debug mode enabled")
+                    Text("Debug mode: Time check bypassed")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 } else if isUnlocked {
-                    // Day unlocked - show advance button
+                    // Day unlocked (past 4 AM) - show advance button
                     Button(action: onAdvanceDay) {
                         HStack {
                             Image(systemName: "arrow.right.circle.fill")
@@ -942,12 +951,12 @@ struct DayCompleteCelebrationView: View {
                         .cornerRadius(10)
                     }
                 } else {
-                    // Countdown to 5 AM
+                    // Countdown to 4 AM
                     HStack {
                         Image(systemName: "clock.fill")
                             .foregroundColor(theme.secondary)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Day \(currentDay + 1) unlocks at 5:00 AM")
+                            Text("Day \(currentDay + 1) unlocks at 4:00 AM")
                                 .font(.subheadline)
                                 .foregroundColor(.primary)
                             Text(timeUntilUnlock)
@@ -1002,16 +1011,16 @@ struct DayCompleteCelebrationView: View {
         let now = Date()
         let calendar = Calendar.current
 
-        // Find next 5 AM
+        // Find next 4 AM (not 5 AM - changed per user request)
         var nextUnlock: Date
-        let todayAt5AM = calendar.date(bySettingHour: 5, minute: 0, second: 0, of: now)!
+        let todayAt4AM = calendar.date(bySettingHour: 4, minute: 0, second: 0, of: now)!
 
-        if now < todayAt5AM {
-            // Today's 5 AM hasn't happened yet
-            nextUnlock = todayAt5AM
+        if now < todayAt4AM {
+            // Today's 4 AM hasn't happened yet
+            nextUnlock = todayAt4AM
         } else {
-            // Next 5 AM is tomorrow
-            nextUnlock = calendar.date(byAdding: .day, value: 1, to: todayAt5AM)!
+            // Next 4 AM is tomorrow
+            nextUnlock = calendar.date(byAdding: .day, value: 1, to: todayAt4AM)!
         }
 
         // Check if already unlocked

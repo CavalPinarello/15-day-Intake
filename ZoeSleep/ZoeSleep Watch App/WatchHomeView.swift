@@ -12,26 +12,27 @@ import WatchKit
 // MARK: - Countdown Timer Helper
 
 struct CountdownTimer {
-    static func timeUntil5AM() -> (hours: Int, minutes: Int, seconds: Int, isReady: Bool) {
+    /// Calculate time until 4 AM (day unlock time)
+    static func timeUntil4AM() -> (hours: Int, minutes: Int, seconds: Int, isReady: Bool) {
         let now = Date()
         let calendar = Calendar.current
 
-        // Get today at 5 AM
+        // Get today at 4 AM
         var components = calendar.dateComponents([.year, .month, .day], from: now)
-        components.hour = 5
+        components.hour = 4
         components.minute = 0
         components.second = 0
 
-        guard let todayAt5AM = calendar.date(from: components) else {
+        guard let todayAt4AM = calendar.date(from: components) else {
             return (0, 0, 0, true)
         }
 
         let targetDate: Date
-        if now >= todayAt5AM {
-            // Already past 5 AM today, target is tomorrow at 5 AM
-            targetDate = calendar.date(byAdding: .day, value: 1, to: todayAt5AM) ?? todayAt5AM
+        if now >= todayAt4AM {
+            // Already past 4 AM today, target is tomorrow at 4 AM
+            targetDate = calendar.date(byAdding: .day, value: 1, to: todayAt4AM) ?? todayAt4AM
         } else {
-            targetDate = todayAt5AM
+            targetDate = todayAt4AM
         }
 
         let interval = targetDate.timeIntervalSince(now)
@@ -258,7 +259,7 @@ struct WatchHomeView: View {
     }
 
     private func updateCountdown() {
-        let countdown = CountdownTimer.timeUntil5AM()
+        let countdown = CountdownTimer.timeUntil4AM()
         countdownHours = countdown.hours
         countdownMinutes = countdown.minutes
         countdownSeconds = countdown.seconds
@@ -498,19 +499,52 @@ struct WatchHomeView: View {
 
     private var countdownCard: some View {
         VStack(spacing: 6) {
-            Text("Day \(currentDay + 1) unlocks in")
-                .font(.system(size: 10))
-                .foregroundColor(.white.opacity(0.7))
-
-            if isCountdownReady {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Ready now!")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.green)
+            if themeManager.debugMode {
+                // Debug mode: Show advance button immediately (bypasses time check only)
+                Button {
+                    advanceToNextDay()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "forward.fill")
+                            .font(.system(size: 12))
+                        Text("Advance to Day \(currentDay + 1)")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(accentColor)
+                    .cornerRadius(8)
                 }
+                .buttonStyle(.plain)
+
+                Text("Debug mode: Time check bypassed")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.5))
+            } else if isCountdownReady {
+                // Time unlocked - show advance button
+                Button {
+                    advanceToNextDay()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.system(size: 12))
+                        Text("Start Day \(currentDay + 1)")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(accentColor)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
             } else {
+                // Show countdown to 4 AM
+                Text("Day \(currentDay + 1) unlocks in")
+                    .font(.system(size: 10))
+                    .foregroundColor(.white.opacity(0.7))
+
                 HStack(spacing: 2) {
                     // Hours
                     VStack(spacing: 2) {
@@ -558,6 +592,28 @@ struct WatchHomeView: View {
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color.white.opacity(0.05))
         )
+    }
+
+    // MARK: - Advance Day Action
+
+    private func advanceToNextDay() {
+        Task {
+            do {
+                // Pass debugMode flag - only bypasses time check, NOT completion check
+                let response = try await convexService.advanceDay(debugMode: themeManager.debugMode)
+
+                if response.success {
+                    print("[Watch] Advanced to Day \(response.newDay ?? currentDay)")
+                    // State is already updated in WatchConvexService
+                } else {
+                    // Server rejected - sections not complete
+                    print("[Watch] Cannot advance: \(response.error ?? "Unknown error")")
+                    print("[Watch] Sleep Log: \(response.sleepLogCompleted ?? false), Assessment: \(response.assessmentCompleted ?? false)")
+                }
+            } catch {
+                print("[Watch] Error advancing day: \(error)")
+            }
+        }
     }
 
     // MARK: - Journey Progress Card

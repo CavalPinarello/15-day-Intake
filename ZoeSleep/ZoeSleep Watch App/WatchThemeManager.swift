@@ -95,6 +95,12 @@ class WatchThemeManager: ObservableObject {
         }
     }
 
+    @Published var debugMode: Bool = false {
+        didSet {
+            UserDefaults.standard.set(debugMode, forKey: "watchDebugMode")
+        }
+    }
+
     // MARK: - Initialization
 
     private init() {
@@ -115,6 +121,7 @@ class WatchThemeManager: ObservableObject {
         largeIconsMode = UserDefaults.standard.bool(forKey: "watchLargeIconsMode")
         highContrast = UserDefaults.standard.bool(forKey: "watchHighContrast")
         reduceMotion = UserDefaults.standard.bool(forKey: "watchReduceMotion")
+        debugMode = UserDefaults.standard.bool(forKey: "watchDebugMode")
     }
 
     // MARK: - Update from iPhone

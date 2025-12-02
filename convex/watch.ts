@@ -368,11 +368,118 @@ export const completeDay = mutation({
 });
 
 /**
- * Advance to next day (Debug Mode)
+ * Check if user can advance to the next day
+ * Requirements:
+ * - Both sleepLog AND assessment must be completed for current day
+ * - In normal mode: Must also be past 4 AM the next day
+ * - In debug mode: Can advance immediately once both sections complete
+ */
+export const canAdvanceDay = query({
+  args: {
+    userId: v.id("users"),
+    debugMode: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      return {
+        canAdvance: false,
+        reason: "User not found",
+        sleepLogCompleted: false,
+        assessmentCompleted: false,
+        timeUnlocked: false,
+      };
+    }
+
+    const currentDay = user.current_day || 1;
+
+    // Can't advance past day 15
+    if (currentDay >= 15) {
+      return {
+        canAdvance: false,
+        reason: "Journey already complete",
+        sleepLogCompleted: true,
+        assessmentCompleted: true,
+        timeUnlocked: true,
+        currentDay: 15,
+      };
+    }
+
+    // Get the day entry
+    const day = await ctx.db
+      .query("days")
+      .withIndex("by_day_number", (q) => q.eq("day_number", currentDay))
+      .first();
+
+    let sleepLogCompleted = false;
+    let assessmentCompleted = false;
+
+    if (day) {
+      const progress = await ctx.db
+        .query("user_progress")
+        .withIndex("by_user_day", (q) =>
+          q.eq("user_id", args.userId).eq("day_id", day._id)
+        )
+        .first();
+
+      if (progress) {
+        sleepLogCompleted = progress.sleep_log_completed ?? progress.completed ?? false;
+        assessmentCompleted = progress.assessment_completed ?? progress.completed ?? false;
+      }
+    }
+
+    const bothSectionsComplete = sleepLogCompleted && assessmentCompleted;
+
+    // Check time restriction (4 AM unlock)
+    // In debug mode, skip time check
+    let timeUnlocked = args.debugMode ?? false;
+
+    if (!timeUnlocked) {
+      // Check if it's past 4 AM
+      // Note: This runs on the server, so we use UTC and let clients handle timezone
+      const now = new Date();
+      const hour = now.getHours();
+      // For now, assume server is in user's timezone (simplified)
+      // In production, you'd want to track user's timezone
+      timeUnlocked = hour >= 4;
+    }
+
+    const canAdvance = bothSectionsComplete && timeUnlocked;
+
+    let reason = "";
+    if (!sleepLogCompleted && !assessmentCompleted) {
+      reason = "Complete both Sleep Log and Assessment to unlock the next day";
+    } else if (!sleepLogCompleted) {
+      reason = "Complete the Sleep Log to unlock the next day";
+    } else if (!assessmentCompleted) {
+      reason = "Complete the Assessment to unlock the next day";
+    } else if (!timeUnlocked) {
+      reason = "Next day unlocks at 4:00 AM";
+    } else {
+      reason = "Ready to advance";
+    }
+
+    return {
+      canAdvance,
+      reason,
+      sleepLogCompleted,
+      assessmentCompleted,
+      timeUnlocked,
+      currentDay,
+      nextDay: currentDay + 1,
+    };
+  },
+});
+
+/**
+ * Advance to next day
+ * STRICT VALIDATION: Both sections must be completed before advancing
+ * - debugMode: Bypasses time check (4 AM) but NOT completion check
  */
 export const advanceDay = mutation({
   args: {
     userId: v.id("users"),
+    debugMode: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -381,9 +488,17 @@ export const advanceDay = mutation({
     }
 
     const currentDay = user.current_day || 1;
-    const newDay = Math.min(currentDay + 1, 15);
 
-    // Mark current day as completed
+    // Can't advance past day 15
+    if (currentDay >= 15) {
+      return {
+        success: false,
+        error: "Journey already complete",
+        currentDay: 15,
+      };
+    }
+
+    // Get the day entry
     let day = await ctx.db
       .query("days")
       .withIndex("by_day_number", (q) => q.eq("day_number", currentDay))
@@ -398,42 +513,92 @@ export const advanceDay = mutation({
       day = await ctx.db.get(dayId);
     }
 
-    if (day) {
-      const existingProgress = await ctx.db
-        .query("user_progress")
-        .withIndex("by_user_day", (q) =>
-          q.eq("user_id", args.userId).eq("day_id", day!._id)
-        )
-        .first();
+    if (!day) {
+      throw new Error("Failed to create day entry");
+    }
 
-      const now = Date.now();
+    // Check section completion - REQUIRED even in debug mode
+    const progress = await ctx.db
+      .query("user_progress")
+      .withIndex("by_user_day", (q) =>
+        q.eq("user_id", args.userId).eq("day_id", day!._id)
+      )
+      .first();
 
-      if (existingProgress) {
-        await ctx.db.patch(existingProgress._id, {
-          completed: true,
-          completed_at: now,
-        });
+    const sleepLogCompleted = progress?.sleep_log_completed ?? progress?.completed ?? false;
+    const assessmentCompleted = progress?.assessment_completed ?? progress?.completed ?? false;
+
+    // STRICT CHECK: Both sections must be completed
+    if (!sleepLogCompleted || !assessmentCompleted) {
+      let missingSection = "";
+      if (!sleepLogCompleted && !assessmentCompleted) {
+        missingSection = "both Sleep Log and Assessment";
+      } else if (!sleepLogCompleted) {
+        missingSection = "Sleep Log";
       } else {
-        await ctx.db.insert("user_progress", {
-          user_id: args.userId,
-          day_id: day._id,
-          completed: true,
-          completed_at: now,
-          created_at: now,
-        });
+        missingSection = "Assessment";
       }
+
+      return {
+        success: false,
+        error: `Cannot advance: Complete ${missingSection} first`,
+        sleepLogCompleted,
+        assessmentCompleted,
+        currentDay,
+      };
+    }
+
+    // Time check (only in normal mode)
+    if (!args.debugMode) {
+      const now = new Date();
+      const hour = now.getHours();
+      if (hour < 4) {
+        return {
+          success: false,
+          error: "Next day unlocks at 4:00 AM",
+          sleepLogCompleted,
+          assessmentCompleted,
+          currentDay,
+          timeUnlocked: false,
+        };
+      }
+    }
+
+    const newDay = currentDay + 1;
+
+    // Mark current day as fully completed (ensure both flags set)
+    const now = Date.now();
+    if (progress) {
+      await ctx.db.patch(progress._id, {
+        completed: true,
+        completed_at: now,
+        sleep_log_completed: true,
+        assessment_completed: true,
+      });
+    } else {
+      await ctx.db.insert("user_progress", {
+        user_id: args.userId,
+        day_id: day._id,
+        completed: true,
+        completed_at: now,
+        created_at: now,
+        sleep_log_completed: true,
+        assessment_completed: true,
+      });
     }
 
     // Update user's current day
     await ctx.db.patch(args.userId, {
       current_day: newDay,
-      last_accessed: Date.now(),
+      last_accessed: now,
     });
 
     return {
       success: true,
       previousDay: currentDay,
       newDay: newDay,
+      sleepLogCompleted: true,
+      assessmentCompleted: true,
     };
   },
 });

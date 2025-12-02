@@ -472,31 +472,21 @@ struct SplashGlowLine: View {
     }
 }
 
-// MARK: - Questionnaire Wave Background (Simplified for performance)
+// MARK: - Questionnaire Wave Background (Static for performance)
 
-/// A lighter wave background for questionnaire views with fewer animations
+/// A static gradient background for questionnaire views - no animations to prevent freezing
 struct QuestionnaireWaveBackground: View {
     @Environment(\.colorScheme) var colorScheme
-    @State private var phase: CGFloat = 0
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Base gradient
-                backgroundGradient
+        ZStack {
+            // Base gradient only - no animated waves
+            backgroundGradient
 
-                // Only 3 wave layers (reduced from 9 for performance)
-                ForEach(0..<3, id: \.self) { index in
-                    QuestionnaireWaveLayer(index: index, phase: phase, colorScheme: colorScheme)
-                }
-            }
+            // Static decorative wave shapes (no animation)
+            staticWaveOverlay
         }
         .ignoresSafeArea()
-        .onAppear {
-            withAnimation(.linear(duration: 25).repeatForever(autoreverses: false)) {
-                phase = .pi * 2
-            }
-        }
     }
 
     private var backgroundGradient: LinearGradient {
@@ -505,7 +495,7 @@ struct QuestionnaireWaveBackground: View {
                 colors: [
                     Color(red: 0.04, green: 0.06, blue: 0.12),
                     Color(red: 0.06, green: 0.09, blue: 0.16),
-                    Color(red: 0.05, green: 0.10, blue: 0.18)
+                    Color(red: 0.08, green: 0.12, blue: 0.22)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -522,56 +512,93 @@ struct QuestionnaireWaveBackground: View {
             )
         }
     }
+
+    private var staticWaveOverlay: some View {
+        GeometryReader { geometry in
+            let waveColor = colorScheme == .dark
+                ? Color(red: 0.30, green: 0.85, blue: 0.80)
+                : Color(red: 0.15, green: 0.60, blue: 0.70)
+
+            ZStack {
+                // Static wave 1 - bottom
+                StaticWavePath(amplitude: 40, frequency: 0.8, phase: 0)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                waveColor.opacity(0.15),
+                                waveColor.opacity(0.05)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .blur(radius: 8)
+                    .offset(y: geometry.size.height * 0.6)
+
+                // Static wave 2 - middle
+                StaticWavePath(amplitude: 35, frequency: 1.0, phase: .pi / 3)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                waveColor.opacity(0.12),
+                                waveColor.opacity(0.03)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .blur(radius: 6)
+                    .offset(y: geometry.size.height * 0.45)
+
+                // Static wave 3 - top accent
+                StaticWavePath(amplitude: 25, frequency: 1.2, phase: .pi * 2/3)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                waveColor.opacity(0.10),
+                                waveColor.opacity(0.02)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .blur(radius: 4)
+                    .offset(y: geometry.size.height * 0.35)
+            }
+        }
+    }
 }
 
-struct QuestionnaireWaveLayer: View {
-    let index: Int
-    let phase: CGFloat
-    let colorScheme: ColorScheme
+/// Static wave path - no animation, fixed phase
+struct StaticWavePath: Shape {
+    var amplitude: CGFloat
+    var frequency: CGFloat
+    var phase: CGFloat
 
-    private var config: (amplitude: CGFloat, frequency: CGFloat, phaseOffset: CGFloat, yOffset: CGFloat, opacity: Double) {
-        switch index {
-        case 0:
-            return (45, 0.7, 0, 0.55, 0.18)
-        case 1:
-            return (35, 0.9, .pi / 3, 0.45, 0.15)
-        default:
-            return (28, 1.1, .pi * 2/3, 0.65, 0.12)
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let width = rect.width
+        let height = rect.height
+        let midY = height / 2
+
+        // Start at bottom-left
+        path.move(to: CGPoint(x: 0, y: height))
+        path.addLine(to: CGPoint(x: 0, y: midY + sin(phase) * amplitude))
+
+        // Draw the wave curve with larger step for performance
+        for x in stride(from: 0, through: width, by: 4) {
+            let relativeX = x / width
+            let normalizedX = relativeX * frequency * .pi * 2 + phase
+            let y = midY + sin(normalizedX) * amplitude
+            path.addLine(to: CGPoint(x: x, y: y))
         }
-    }
 
-    private var gradient: LinearGradient {
-        let baseColor = colorScheme == .dark
-            ? Color(red: 0.30, green: 0.85, blue: 0.80)
-            : Color(red: 0.15, green: 0.60, blue: 0.70)
+        // Close the path
+        path.addLine(to: CGPoint(x: width, y: height))
+        path.addLine(to: CGPoint(x: 0, y: height))
+        path.closeSubpath()
 
-        let highlightColor = colorScheme == .dark
-            ? Color(red: 0.40, green: 0.95, blue: 0.90)
-            : Color(red: 0.25, green: 0.75, blue: 0.85)
-
-        return LinearGradient(
-            colors: [
-                highlightColor.opacity(config.opacity * 1.2),
-                baseColor.opacity(config.opacity),
-                baseColor.opacity(config.opacity * 0.3)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-
-    var body: some View {
-        GeometryReader { geometry in
-            GlassyWaveShape(
-                phase: phase + config.phaseOffset,
-                amplitude: config.amplitude,
-                frequency: config.frequency,
-                fillDown: true
-            )
-            .fill(gradient)
-            .blur(radius: 6)
-            .offset(y: geometry.size.height * config.yOffset)
-        }
+        return path
     }
 }
 

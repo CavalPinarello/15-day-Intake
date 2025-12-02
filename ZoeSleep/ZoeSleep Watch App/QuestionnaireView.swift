@@ -229,8 +229,8 @@ struct QuestionnaireView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                // If only sleep log was completed, show prompt to do assessment
-                if mode == .sleepLog {
+                // If only sleep log was completed, show button to proceed to assessment
+                if mode == .sleepLog && !convexService.assessmentCompleted {
                     Divider()
                         .padding(.vertical, 4)
 
@@ -242,6 +242,21 @@ struct QuestionnaireView: View {
                     Text("still remaining")
                         .font(.caption2)
                         .foregroundColor(.secondary)
+
+                    NavigationLink(destination: QuestionnaireView(mode: .assessment)) {
+                        HStack {
+                            Image(systemName: "list.clipboard.fill")
+                            Text("Start Assessment")
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 16)
+                        .background(theme.primary)
+                        .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
                 } else if mode == .assessment || mode == .all {
                     // Day fully complete or assessment done
                     if currentDay < 15 {
