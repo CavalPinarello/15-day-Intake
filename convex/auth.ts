@@ -1,5 +1,145 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
+
+// ============================================
+// Authorization Helper Functions
+// ============================================
+
+/**
+ * Session validation result
+ */
+export interface SessionValidation {
+  valid: boolean;
+  userId?: Id<"users">;
+  role?: string;
+  error?: string;
+}
+
+/**
+ * Validate an iOS session token and return the authenticated user
+ */
+export async function validateIOSSession(
+  ctx: QueryCtx | MutationCtx,
+  sessionToken: string
+): Promise<SessionValidation> {
+  if (!sessionToken) {
+    return { valid: false, error: "No session token provided" };
+  }
+
+  const session = await ctx.db
+    .query("ios_sessions")
+    .withIndex("by_session_token", (q) => q.eq("session_token", sessionToken))
+    .first();
+
+  if (!session) {
+    return { valid: false, error: "Session not found" };
+  }
+
+  if (!session.is_active) {
+    return { valid: false, error: "Session inactive" };
+  }
+
+  if (session.expires_at < Date.now()) {
+    return { valid: false, error: "Session expired" };
+  }
+
+  const user = await ctx.db.get(session.user_id);
+  if (!user) {
+    return { valid: false, error: "User not found" };
+  }
+
+  return {
+    valid: true,
+    userId: user._id,
+    role: user.role,
+  };
+}
+
+/**
+ * Validate that the session user matches the requested userId
+ * This prevents users from accessing or modifying other users' data
+ */
+export async function validateUserOwnership(
+  ctx: QueryCtx | MutationCtx,
+  sessionToken: string,
+  requestedUserId: Id<"users">
+): Promise<SessionValidation> {
+  const session = await validateIOSSession(ctx, sessionToken);
+
+  if (!session.valid) {
+    return session;
+  }
+
+  // Check if the authenticated user matches the requested user
+  if (session.userId !== requestedUserId) {
+    return {
+      valid: false,
+      error: "Unauthorized: Cannot access another user's data"
+    };
+  }
+
+  return session;
+}
+
+/**
+ * Validate that the session user is a physician
+ */
+export async function validatePhysicianRole(
+  ctx: QueryCtx | MutationCtx,
+  sessionToken: string
+): Promise<SessionValidation> {
+  const session = await validateIOSSession(ctx, sessionToken);
+
+  if (!session.valid) {
+    return session;
+  }
+
+  if (session.role !== "physician" && session.role !== "admin") {
+    return {
+      valid: false,
+      error: "Unauthorized: Physician access required"
+    };
+  }
+
+  return session;
+}
+
+/**
+ * Validate that a user can access patient data
+ * - Physicians can access any patient's data
+ * - Patients can only access their own data
+ */
+export async function validatePatientDataAccess(
+  ctx: QueryCtx | MutationCtx,
+  sessionToken: string,
+  patientUserId: Id<"users">
+): Promise<SessionValidation> {
+  const session = await validateIOSSession(ctx, sessionToken);
+
+  if (!session.valid) {
+    return session;
+  }
+
+  // Physicians and admins can access any patient's data
+  if (session.role === "physician" || session.role === "admin") {
+    return session;
+  }
+
+  // Patients can only access their own data
+  if (session.userId !== patientUserId) {
+    return {
+      valid: false,
+      error: "Unauthorized: Cannot access another user's data"
+    };
+  }
+
+  return session;
+}
+
+// ============================================
+// Authentication Queries and Mutations
+// ============================================
 
 // Get user for login (password comparison done server-side)
 export const getUserForLogin = query({

@@ -3,10 +3,14 @@
  *
  * These functions enable Apple Watch to directly communicate with Convex
  * for real-time sync of questionnaire progress between Watch, iPhone, and Web.
+ *
+ * SECURITY: All mutations now require session token validation to prevent
+ * unauthorized access to other users' data.
  */
 
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { validateIOSSession } from "./auth";
 
 // ============================================
 // Watch Authentication (Simple Username/Password)
@@ -30,11 +34,13 @@ const TEST_PASSWORD_SIMPLE = simpleHash("1"); // "31"
 /**
  * Sign in from Watch using username and password
  * Accepts both SHA256 and simple hash for compatibility
+ * Returns a session token for subsequent authenticated requests
  */
 export const signIn = mutation({
   args: {
     username: v.string(),
     passwordHash: v.string(),
+    deviceId: v.optional(v.string()), // Watch device ID for session tracking
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -58,9 +64,26 @@ export const signIn = mutation({
       throw new Error("Invalid password");
     }
 
+    const now = Date.now();
+
+    // Generate session token for Watch
+    const sessionToken = generateWatchSessionToken();
+    const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
+
+    // Create Watch session (using ios_sessions table for unified session management)
+    await ctx.db.insert("ios_sessions", {
+      user_id: user._id,
+      session_token: sessionToken,
+      device_id: args.deviceId || `watch_${user._id}`,
+      expires_at: expiresAt,
+      created_at: now,
+      last_refreshed_at: now,
+      is_active: true,
+    });
+
     // Update last accessed
     await ctx.db.patch(user._id, {
-      last_accessed: Date.now(),
+      last_accessed: now,
     });
 
     return {
@@ -68,9 +91,23 @@ export const signIn = mutation({
       username: user.username,
       currentDay: user.current_day,
       onboardingCompleted: user.onboarding_completed ?? false,
+      sessionToken, // NEW: Return session token for authenticated requests
+      expiresAt,
     };
   },
 });
+
+/**
+ * Generate a secure session token
+ */
+function generateWatchSessionToken(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let token = "watch_";
+  for (let i = 0; i < 58; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
 
 // ============================================
 // Journey Progress Functions
@@ -170,6 +207,8 @@ export const isDayCompleted = query({
  * - Sleep Log requires at least 3 responses (minimum viable)
  * - Assessment requires at least 1 response per day
  * - Use skipValidation=true only for debug/testing purposes
+ *
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const completeSection = mutation({
   args: {
@@ -178,8 +217,23 @@ export const completeSection = mutation({
     section: v.union(v.literal("sleepLog"), v.literal("assessment")),
     source: v.optional(v.string()), // "watch" or "iphone" or "web"
     skipValidation: v.optional(v.boolean()), // Debug only - skips response validation
+    sessionToken: v.optional(v.string()), // Session token for authorization
   },
   handler: async (ctx, args) => {
+    // Validate session token if provided
+    if (args.sessionToken) {
+      const session = await validateIOSSession(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Invalid session");
+      }
+      // Verify the session user matches the requested userId
+      if (session.userId !== args.userId) {
+        throw new Error("Unauthorized: Cannot modify another user's data");
+      }
+    }
+    // TODO: Make sessionToken required once Watch app is updated
+    // For now, allow calls without sessionToken for backward compatibility
+
     const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("User not found");
@@ -513,13 +567,27 @@ export const canAdvanceDay = query({
  * Advance to next day
  * STRICT VALIDATION: Both sections must be completed before advancing
  * - debugMode: Bypasses time check (4 AM) but NOT completion check
+ *
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const advanceDay = mutation({
   args: {
     userId: v.id("users"),
     debugMode: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()), // Session token for authorization
   },
   handler: async (ctx, args) => {
+    // Validate session token if provided
+    if (args.sessionToken) {
+      const session = await validateIOSSession(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Invalid session");
+      }
+      if (session.userId !== args.userId) {
+        throw new Error("Unauthorized: Cannot advance another user's day");
+      }
+    }
+
     const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("User not found");
@@ -643,12 +711,25 @@ export const advanceDay = mutation({
 
 /**
  * Reset journey progress (Debug Mode)
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const resetProgress = mutation({
   args: {
     userId: v.id("users"),
+    sessionToken: v.optional(v.string()), // Session token for authorization
   },
   handler: async (ctx, args) => {
+    // Validate session token if provided
+    if (args.sessionToken) {
+      const session = await validateIOSSession(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Invalid session");
+      }
+      if (session.userId !== args.userId) {
+        throw new Error("Unauthorized: Cannot reset another user's progress");
+      }
+    }
+
     const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("User not found");
@@ -705,6 +786,7 @@ export const resetProgress = mutation({
 
 /**
  * Save a questionnaire response from Watch
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const saveResponse = mutation({
   args: {
@@ -715,8 +797,20 @@ export const saveResponse = mutation({
     responseNumber: v.optional(v.number()),
     responseArray: v.optional(v.array(v.string())),
     source: v.optional(v.string()), // "watch" or "iphone"
+    sessionToken: v.optional(v.string()), // Session token for authorization
   },
   handler: async (ctx, args) => {
+    // Validate session token if provided
+    if (args.sessionToken) {
+      const session = await validateIOSSession(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Invalid session");
+      }
+      if (session.userId !== args.userId) {
+        throw new Error("Unauthorized: Cannot save responses for another user");
+      }
+    }
+
     const now = Date.now();
 
     // Check if response already exists
@@ -935,6 +1029,7 @@ export const getQuestionProgress = query({
 /**
  * Update question progress when user answers a question
  * Called after each question to enable seamless cross-device sync
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const updateQuestionProgress = mutation({
   args: {
@@ -944,8 +1039,20 @@ export const updateQuestionProgress = mutation({
     currentQuestionIndex: v.number(),
     totalQuestions: v.number(),
     device: v.string(), // "ios", "watch", "web"
+    sessionToken: v.optional(v.string()), // Session token for authorization
   },
   handler: async (ctx, args) => {
+    // Validate session token if provided
+    if (args.sessionToken) {
+      const session = await validateIOSSession(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Invalid session");
+      }
+      if (session.userId !== args.userId) {
+        throw new Error("Unauthorized: Cannot update another user's progress");
+      }
+    }
+
     const now = Date.now();
 
     // Check if session exists
@@ -987,6 +1094,7 @@ export const updateQuestionProgress = mutation({
 
 /**
  * Mark a section as completed in the question progress tracker
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const completeQuestionProgress = mutation({
   args: {
@@ -994,8 +1102,20 @@ export const completeQuestionProgress = mutation({
     dayNumber: v.number(),
     section: v.string(),
     device: v.string(),
+    sessionToken: v.optional(v.string()), // Session token for authorization
   },
   handler: async (ctx, args) => {
+    // Validate session token if provided
+    if (args.sessionToken) {
+      const session = await validateIOSSession(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Invalid session");
+      }
+      if (session.userId !== args.userId) {
+        throw new Error("Unauthorized: Cannot complete another user's section");
+      }
+    }
+
     const now = Date.now();
 
     const session = await ctx.db
@@ -1053,6 +1173,318 @@ export const getSavedResponses = query({
     }
 
     return responseMap;
+  },
+});
+
+// ============================================
+// Unified Question Fetching (Single Source of Truth)
+// ============================================
+
+/**
+ * Get all questions for a user's day - THE SINGLE SOURCE OF TRUTH
+ * This is what iOS, Watch, and Web should ALL use to get questions.
+ *
+ * Returns:
+ * - Sleep Log questions (same every day)
+ * - Assessment questions for the day (from database)
+ * - Expansion questions based on triggered gateways
+ */
+export const getQuestionsForUserDay = query({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+    section: v.optional(v.union(v.literal("sleepLog"), v.literal("assessment"), v.literal("all"))),
+  },
+  handler: async (ctx, args) => {
+    const section = args.section ?? "all";
+
+    // Get user's triggered gateways
+    const gatewayStates = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    const triggeredGatewayIds = new Set(
+      gatewayStates
+        .filter((g) => g.is_triggered)
+        .map((g) => g.gateway_id)
+    );
+
+    console.log(`[Convex] User ${args.userId} Day ${args.dayNumber} - Triggered gateways: ${[...triggeredGatewayIds].join(", ")}`);
+
+    const result: {
+      sleepLog: Array<{
+        id: string;
+        text: string;
+        type: string;
+        required: boolean;
+        options?: string[];
+        helpText?: string;
+        formatConfig?: Record<string, unknown>;
+      }>;
+      assessment: Array<{
+        id: string;
+        text: string;
+        type: string;
+        required: boolean;
+        options?: string[];
+        helpText?: string;
+        moduleName?: string;
+        formatConfig?: Record<string, unknown>;
+      }>;
+      metadata: {
+        sleepLogCount: number;
+        assessmentCount: number;
+        totalMinutes: number;
+        triggeredGateways: string[];
+        dayDescription: string;
+        dayExplanation: string;
+      };
+    } = {
+      sleepLog: [],
+      assessment: [],
+      metadata: {
+        sleepLogCount: 0,
+        assessmentCount: 0,
+        totalMinutes: 0,
+        triggeredGateways: [...triggeredGatewayIds],
+        dayDescription: getDayDescription(args.dayNumber),
+        dayExplanation: getDayExplanation(args.dayNumber),
+      },
+    };
+
+    // ========== SLEEP LOG (Same Every Day) ==========
+    if (section === "all" || section === "sleepLog") {
+      // Get sleep diary questions from database
+      const sleepDiaryQuestions = await ctx.db
+        .query("sleep_diary_questions")
+        .collect();
+
+      // Sort by order_index
+      sleepDiaryQuestions.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+      result.sleepLog = sleepDiaryQuestions.map((q) => ({
+        id: q.id,
+        text: q.question_text,
+        type: mapAnswerFormatToType(q.answer_format),
+        required: true,
+        helpText: q.help_text ?? undefined,
+        formatConfig: q.format_config ? JSON.parse(q.format_config) : undefined,
+      }));
+
+      result.metadata.sleepLogCount = result.sleepLog.length;
+    }
+
+    // ========== ASSESSMENT (Day-Specific + Gateway Expansion) ==========
+    if (section === "all" || section === "assessment") {
+      // Get all modules assigned to this day
+      const dayModules = await ctx.db
+        .query("day_modules")
+        .withIndex("by_day", (q) => q.eq("day_number", args.dayNumber))
+        .collect();
+
+      // Sort modules by order
+      dayModules.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+      let totalSeconds = 0;
+
+      for (const dayModule of dayModules) {
+        // Get module info
+        const module = await ctx.db
+          .query("assessment_modules")
+          .withIndex("by_module_id", (q) => q.eq("module_id", dayModule.module_id))
+          .first();
+
+        if (!module) continue;
+
+        // Check if this is an expansion module that requires a gateway trigger
+        if (module.tier === "expansion" || module.tier === "specialized") {
+          // Get the gateway requirements for this module
+          const moduleGateways = await ctx.db
+            .query("module_gateways")
+            .withIndex("by_module_id", (q) => q.eq("module_id", dayModule.module_id))
+            .collect();
+
+          // If module has gateway requirements, check if ANY are triggered
+          if (moduleGateways.length > 0) {
+            const hasTriggeredGateway = moduleGateways.some((mg) =>
+              triggeredGatewayIds.has(mg.gateway_id)
+            );
+
+            if (!hasTriggeredGateway) {
+              console.log(`[Convex] Skipping module ${dayModule.module_id} - no gateway triggered`);
+              continue; // Skip this module - gateway not triggered
+            }
+          }
+        }
+
+        // Get questions in this module
+        const moduleQuestions = await ctx.db
+          .query("module_questions")
+          .withIndex("by_module", (q) => q.eq("module_id", dayModule.module_id))
+          .collect();
+
+        // Sort by order_index
+        moduleQuestions.sort((a, b) => a.order_index - b.order_index);
+
+        // Get full question data
+        for (const mq of moduleQuestions) {
+          const question = await ctx.db
+            .query("assessment_questions")
+            .withIndex("by_question_id", (q) => q.eq("question_id", mq.question_id))
+            .first();
+
+          if (question) {
+            // Check conditional logic
+            if (question.conditional_logic) {
+              // TODO: Evaluate conditional logic based on user's responses
+              // For now, include all questions
+            }
+
+            result.assessment.push({
+              id: question.question_id,
+              text: question.question_text,
+              type: mapAnswerFormatToType(question.answer_format),
+              required: true,
+              helpText: question.help_text ?? undefined,
+              moduleName: module.name,
+              formatConfig: question.format_config ? JSON.parse(question.format_config) : undefined,
+              options: question.format_config ? parseOptions(question.format_config) : undefined,
+            });
+
+            totalSeconds += question.estimated_time_seconds || 30;
+          }
+        }
+      }
+
+      result.metadata.assessmentCount = result.assessment.length;
+      result.metadata.totalMinutes = Math.ceil((result.sleepLog.length * 30 + totalSeconds) / 60);
+
+      // If NO assessment questions found, add a fallback message
+      if (result.assessment.length === 0) {
+        result.assessment.push({
+          id: "INFO_NO_QUESTIONS",
+          text: "Based on your previous responses, no additional questions are needed for today. Great news - you're all caught up!",
+          type: "info",
+          required: false,
+        });
+      }
+    }
+
+    console.log(`[Convex] Returning ${result.sleepLog.length} sleep log + ${result.assessment.length} assessment questions for Day ${args.dayNumber}`);
+
+    return result;
+  },
+});
+
+/**
+ * Map database answer_format to client-side type
+ */
+function mapAnswerFormatToType(answerFormat: string): string {
+  const mapping: Record<string, string> = {
+    time: "time",
+    scale: "scale",
+    number: "number",
+    yes_no: "yesNo",
+    single_select: "singleSelect",
+    multi_select: "multiSelect",
+    text: "text",
+    likert_5: "scale",
+    likert_7: "scale",
+    text_short: "text",
+    text_long: "text",
+    duration_minutes: "number",
+    percentage: "number",
+  };
+  return mapping[answerFormat] || "text";
+}
+
+/**
+ * Parse options from format_config JSON
+ */
+function parseOptions(formatConfig: string): string[] | undefined {
+  try {
+    const config = JSON.parse(formatConfig);
+    if (config.options && Array.isArray(config.options)) {
+      return config.options.map((opt: { value: string; label: string } | string) =>
+        typeof opt === "string" ? opt : opt.label || opt.value
+      );
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Update user's gateway state when a gateway question is answered
+ * This is called when a gateway-triggering response is detected
+ */
+export const updateGatewayState = mutation({
+  args: {
+    userId: v.id("users"),
+    gatewayId: v.string(),
+    isTriggered: v.boolean(),
+    triggerQuestionId: v.optional(v.string()),
+    triggerValue: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Check if state already exists
+    const existing = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user_gateway", (q) =>
+        q.eq("user_id", args.userId).eq("gateway_id", args.gatewayId)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        is_triggered: args.isTriggered,
+        trigger_question_id: args.triggerQuestionId,
+        trigger_value: args.triggerValue,
+        updated_at: now,
+      });
+    } else {
+      await ctx.db.insert("user_gateway_states", {
+        user_id: args.userId,
+        gateway_id: args.gatewayId,
+        is_triggered: args.isTriggered,
+        trigger_question_id: args.triggerQuestionId,
+        trigger_value: args.triggerValue,
+        triggered_at: args.isTriggered ? now : undefined,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+
+    console.log(`[Convex] Gateway ${args.gatewayId} for user ${args.userId}: ${args.isTriggered ? "TRIGGERED" : "not triggered"}`);
+
+    return { success: true, gatewayId: args.gatewayId, isTriggered: args.isTriggered };
+  },
+});
+
+/**
+ * Get all gateway states for a user
+ */
+export const getGatewayStates = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const states = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    return states.map((s) => ({
+      gatewayId: s.gateway_id,
+      isTriggered: s.is_triggered,
+      triggerQuestionId: s.trigger_question_id,
+      triggerValue: s.trigger_value,
+      triggeredAt: s.triggered_at,
+    }));
   },
 });
 

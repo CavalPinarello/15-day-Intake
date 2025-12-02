@@ -398,9 +398,10 @@ struct NumberInput: View {
 struct TimeInput: View {
     let question: Question
     @Binding var value: Date
+    var previousBedtime: Date? = nil  // Used to calculate smart defaults for wake/asleep times
     @ObservedObject private var themeManager = ThemeManager.shared
 
-    // Smart default times based on question context
+    // Smart default times based on question context and previous answers
     private var smartDefaultTime: Date {
         let calendar = Calendar.current
         var components = DateComponents()
@@ -410,10 +411,20 @@ struct TimeInput: View {
         // Stanford Sleep Log questions
         case "SL_BEDTIME":
             components.hour = 22  // 10:00 PM - typical bedtime
+
         case "SL_ASLEEP_TIME":
+            // If we have a bedtime answer, default to 15-30 min after
+            if let bedtime = previousBedtime {
+                return calendar.date(byAdding: .minute, value: 15, to: bedtime) ?? bedtime
+            }
             components.hour = 22  // 10:30 PM - slightly after bedtime
             components.minute = 30
+
         case "SL_WAKE_TIME":
+            // If we have a bedtime answer, default to ~8 hours after
+            if let bedtime = previousBedtime {
+                return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? Date()
+            }
             components.hour = 7   // 7:00 AM - typical wake time
 
         // PSQI questions
@@ -421,14 +432,26 @@ struct TimeInput: View {
             components.hour = 22  // 10:30 PM - usual bedtime
             components.minute = 30
         case "PSQI_3":
+            // If we have PSQI_1 (bedtime) answer, default to ~8 hours after
+            if let bedtime = previousBedtime {
+                return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? Date()
+            }
             components.hour = 7   // 7:00 AM - usual wake time
 
         default:
             // Smart inference based on question text
             let lowerText = question.text.lowercased()
             if lowerText.contains("wake") || lowerText.contains("morning") || lowerText.contains("get up") {
+                // Wake-related: use bedtime + 8 hours if available
+                if let bedtime = previousBedtime {
+                    return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? Date()
+                }
                 components.hour = 7   // 7:00 AM for wake-related
             } else if lowerText.contains("fall asleep") || lowerText.contains("fell asleep") {
+                // Fall asleep: use bedtime + 15 min if available
+                if let bedtime = previousBedtime {
+                    return calendar.date(byAdding: .minute, value: 15, to: bedtime) ?? bedtime
+                }
                 components.hour = 22  // 10:30 PM for fall asleep
                 components.minute = 30
             } else if lowerText.contains("bed") || lowerText.contains("sleep") || lowerText.contains("night") {

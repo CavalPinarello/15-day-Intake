@@ -209,7 +209,8 @@ struct QuestionnaireView: View {
             case .time:
                 TimeInput(
                     question: question,
-                    value: dateBinding(for: question.id)
+                    value: dateBinding(for: question.id),
+                    previousBedtime: getPreviousBedtime(for: question.id)
                 )
 
             case .date:
@@ -338,6 +339,36 @@ struct QuestionnaireView: View {
         )
     }
 
+    // MARK: - Smart Default Helpers
+
+    /// Returns the previously answered bedtime to help set smart defaults for subsequent time questions
+    private func getPreviousBedtime(for questionId: String) -> Date? {
+        // For sleep log questions, check if bedtime was already answered
+        if currentSection == .sleepLog {
+            // SL_ASLEEP_TIME and SL_WAKE_TIME should use SL_BEDTIME
+            if questionId == "SL_ASLEEP_TIME" || questionId == "SL_WAKE_TIME" {
+                return sleepLogResponses["SL_BEDTIME"] as? Date
+            }
+        }
+
+        // For assessment questions, check for PSQI bedtime
+        if currentSection == .assessment {
+            // PSQI_3 (wake time) should use PSQI_1 (bedtime)
+            if questionId == "PSQI_3" {
+                return assessmentResponses["PSQI_1"] as? Date
+            }
+            // Questions 8, 10 (weekend/weekday wake times) should use corresponding bedtime
+            if questionId == "8" {
+                return assessmentResponses["7"] as? Date  // weekday wake uses weekday bed
+            }
+            if questionId == "10" {
+                return assessmentResponses["9"] as? Date  // weekend wake uses weekend bed
+            }
+        }
+
+        return nil
+    }
+
     // MARK: - Navigation Buttons
 
     private var navigationButtons: some View {
@@ -433,26 +464,113 @@ struct QuestionnaireView: View {
     // MARK: - Actions
 
     private func loadQuestions() {
-        let allQuestions = questionnaireManager.getQuestionsForDay(currentDay)
+        // Use async task to fetch questions from Convex (THE SINGLE SOURCE OF TRUTH)
+        Task {
+            do {
+                print("[iOS] Fetching questions from Convex for Day \(currentDay)...")
+                let questionsResponse = try await ConvexService.shared.getQuestionsForUserDay(dayNumber: currentDay, section: "all")
 
-        // Separate sleep log from assessment questions
-        sleepLogQuestions = allQuestions.filter { $0.group == "sleep_log" || $0.pillar == .sleepLog }
-        assessmentQuestions = allQuestions.filter { $0.group != "sleep_log" && $0.pillar != .sleepLog }
+                // Convert Convex questions to iOS Question type
+                let convertedSleepLog = questionsResponse.sleepLog.map { convertConvexQuestion($0, isSleepLog: true) }
+                let convertedAssessment = questionsResponse.assessment.map { convertConvexQuestion($0, isSleepLog: false) }
 
-        // Start with the specified section (startSection is set in onAppear before this is called)
-        currentSection = startSection
-        sleepLogIndex = 0
-        assessmentIndex = 0
-        startTime = Date()
-        questionStartTime = Date()
+                await MainActor.run {
+                    sleepLogQuestions = convertedSleepLog
+                    assessmentQuestions = convertedAssessment
 
-        // Pre-fill demographics from HealthKit (Day 1 only)
-        if currentDay == 1 {
-            prefillDemographicsFromHealthKit()
+                    print("[iOS] Loaded \(sleepLogQuestions.count) sleep log + \(assessmentQuestions.count) assessment questions from Convex")
+                    print("[iOS] Triggered gateways: \(questionsResponse.metadata.triggeredGateways.joined(separator: ", "))")
+
+                    // Start with the specified section
+                    currentSection = startSection
+                    sleepLogIndex = 0
+                    assessmentIndex = 0
+                    startTime = Date()
+                    questionStartTime = Date()
+
+                    // Pre-fill demographics from HealthKit (Day 1 only)
+                    if currentDay == 1 {
+                        prefillDemographicsFromHealthKit()
+                    }
+
+                    // Load saved progress from Convex (cross-device sync)
+                    loadSavedProgress()
+                }
+            } catch {
+                print("[iOS] Error fetching questions from Convex: \(error.localizedDescription)")
+                // Fallback to local questions if Convex fails
+                await MainActor.run {
+                    let allQuestions = questionnaireManager.getQuestionsForDay(currentDay)
+                    sleepLogQuestions = allQuestions.filter { $0.group == "sleep_log" || $0.pillar == .sleepLog }
+                    assessmentQuestions = allQuestions.filter { $0.group != "sleep_log" && $0.pillar != .sleepLog }
+
+                    print("[iOS] Fallback: Using local questions (\(sleepLogQuestions.count) sleep log + \(assessmentQuestions.count) assessment)")
+
+                    currentSection = startSection
+                    sleepLogIndex = 0
+                    assessmentIndex = 0
+                    startTime = Date()
+                    questionStartTime = Date()
+
+                    if currentDay == 1 {
+                        prefillDemographicsFromHealthKit()
+                    }
+                    loadSavedProgress()
+                }
+            }
+        }
+    }
+
+    /// Convert a ConvexQuestion to the iOS Question type
+    private func convertConvexQuestion(_ cq: ConvexQuestion, isSleepLog: Bool) -> Question {
+        // Map Convex question type to iOS QuestionType
+        let questionType: QuestionType
+        switch cq.type {
+        case "time": questionType = .time
+        case "scale": questionType = .scale
+        case "number": questionType = .number
+        case "yesNo": questionType = .yesNo
+        case "singleSelect": questionType = .singleSelect
+        case "multiSelect": questionType = .multiSelect
+        case "text": questionType = .text
+        case "info": questionType = .info
+        default: questionType = .text
         }
 
-        // Load saved progress from Convex (cross-device sync)
-        loadSavedProgress()
+        // Extract scale config from formatConfig if available
+        var scaleMin: Int? = nil
+        var scaleMax: Int? = nil
+        var scaleMinLabel: String? = nil
+        var scaleMaxLabel: String? = nil
+        var minValue: Int? = nil
+        var maxValue: Int? = nil
+
+        if let config = cq.formatConfig {
+            if let min = config["min"]?.value as? Int { scaleMin = min; minValue = min }
+            if let max = config["max"]?.value as? Int { scaleMax = max; maxValue = max }
+            if let minLabel = config["minLabel"]?.value as? String { scaleMinLabel = minLabel }
+            if let maxLabel = config["maxLabel"]?.value as? String { scaleMaxLabel = maxLabel }
+        }
+
+        return Question(
+            id: cq.id,
+            text: cq.text,
+            pillar: isSleepLog ? .sleepLog : .sleepQuality,
+            tier: .core,
+            questionType: questionType,
+            estimatedMinutes: 0.5,
+            required: cq.required,
+            options: cq.options,
+            scaleMin: scaleMin,
+            scaleMax: scaleMax,
+            scaleMinLabel: scaleMinLabel,
+            scaleMaxLabel: scaleMaxLabel,
+            minValue: minValue,
+            maxValue: maxValue,
+            helpText: cq.helpText,
+            isGateway: false,
+            group: isSleepLog ? "sleep_log" : nil
+        )
     }
 
     /// Pre-fill demographic questions (D2, D4, D5, D6) from Apple Health

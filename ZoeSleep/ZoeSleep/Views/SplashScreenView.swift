@@ -2,99 +2,75 @@
 //  SplashScreenView.swift
 //  Zoe Sleep - Sleep Better, Live Longer
 //
-//  Simple splash screen with logo and text - no complex animations
+//  Brief splash screen with circadian-aware colors - minimal duration
+//  to avoid feeling like a double splash with system launch screen
 //
 
 import SwiftUI
 
 struct SplashScreenView: View {
-    @State private var logoScale: CGFloat = 0.8
     @State private var logoOpacity: Double = 0
     @State private var textOpacity: Double = 0
 
     // Callback when splash is complete
     var onComplete: (() -> Void)?
 
-    // Splash duration in seconds
-    var duration: Double = 2.0
+    // Shorter splash duration (system already shows launch screen)
+    var duration: Double = 1.2
 
-    // Theme colors
-    private let backgroundColor = Color(red: 0.04, green: 0.06, blue: 0.12)
-    private let tealColor = Color(red: 0.35, green: 0.90, blue: 0.85)
-    private let highlightColor = Color(red: 0.50, green: 1.0, blue: 0.95)
-    private let accentColor = Color(red: 1.0, green: 0.85, blue: 0.40)
+    // Use circadian colors
+    private var palette: CircadianPalette { CircadianPalette.current }
 
     var body: some View {
         ZStack {
-            // Background gradient
+            // Circadian-aware background gradient
             LinearGradient(
-                colors: [
-                    backgroundColor,
-                    Color(red: 0.06, green: 0.09, blue: 0.16),
-                    Color(red: 0.05, green: 0.12, blue: 0.20)
-                ],
+                colors: palette.background,
                 startPoint: .top,
                 endPoint: .bottom
             )
 
             // Center logo composition
-            VStack(spacing: 24) {
+            VStack(spacing: 20) {
                 // Logo
                 ZStack {
-                    // Outer ring
-                    Circle()
-                        .stroke(highlightColor.opacity(0.3), lineWidth: 3)
-                        .frame(width: 160, height: 160)
-
-                    // Inner glow
+                    // Subtle glow
                     Circle()
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    tealColor.opacity(0.2),
-                                    backgroundColor.opacity(0.3)
+                                    palette.accent.opacity(0.2),
+                                    Color.clear
                                 ],
                                 center: .center,
                                 startRadius: 20,
-                                endRadius: 70
+                                endRadius: 60
                             )
                         )
-                        .frame(width: 140, height: 140)
+                        .frame(width: 120, height: 120)
 
-                    // Static wave icon
-                    StaticWaveIcon()
-                        .frame(width: 80, height: 50)
-                        .opacity(logoOpacity)
-
-                    // Energy orb
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    accentColor.opacity(0.8),
-                                    accentColor.opacity(0.3),
-                                    .clear
-                                ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 14
+                    // Wave icon
+                    Image(systemName: "waveform.path.ecg")
+                        .font(.system(size: 50, weight: .thin))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [palette.accent, palette.wave],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 28, height: 28)
-                        .offset(x: 32, y: -28)
-                        .opacity(logoOpacity * 0.9)
                 }
-                .scaleEffect(logoScale)
+                .opacity(logoOpacity)
 
                 // App name
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     Text("Zoe Sleep")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(palette.textPrimary)
 
                     Text("Sleep Better, Live Longer")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundColor(tealColor.opacity(0.9))
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundColor(palette.accent.opacity(0.9))
                 }
                 .opacity(textOpacity)
             }
@@ -106,56 +82,18 @@ struct SplashScreenView: View {
     }
 
     private func startAnimations() {
-        // Logo fade in and scale
-        withAnimation(.easeOut(duration: 0.6)) {
+        // Quick fade in
+        withAnimation(.easeOut(duration: 0.4)) {
             logoOpacity = 1.0
-            logoScale = 1.0
         }
 
-        // Text fade in
-        withAnimation(.easeOut(duration: 0.5).delay(0.2)) {
+        withAnimation(.easeOut(duration: 0.3).delay(0.15)) {
             textOpacity = 1.0
         }
 
-        // Complete callback
+        // Complete callback after short duration
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
             onComplete?()
-        }
-    }
-}
-
-// MARK: - Static Wave Icon (no animation)
-
-struct StaticWaveIcon: View {
-    private let color = Color(red: 0.50, green: 1.0, blue: 0.95)
-
-    var body: some View {
-        Canvas { context, size in
-            let midY = size.height / 2
-            let amplitude: CGFloat = 12
-
-            // Draw three wave lines
-            for i in 0..<3 {
-                let yOffset = CGFloat(i - 1) * 14
-                let opacity = 1.0 - Double(i) * 0.3
-                let lineWidth = 3.0 - CGFloat(i) * 0.5
-                let phase = CGFloat(i) * .pi / 3
-
-                var path = Path()
-                path.move(to: CGPoint(x: 0, y: midY + yOffset + sin(phase) * amplitude))
-
-                for x in stride(from: 0, through: size.width, by: 4) {
-                    let angle = (x / size.width) * .pi * 2 + phase
-                    let y = midY + yOffset + sin(angle) * amplitude
-                    path.addLine(to: CGPoint(x: x, y: y))
-                }
-
-                context.stroke(
-                    path,
-                    with: .color(color.opacity(opacity)),
-                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
-                )
-            }
         }
     }
 }

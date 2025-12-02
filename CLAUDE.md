@@ -212,6 +212,52 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-12-02)
 
+**Smart Time Picker Defaults Based on Previous Answers**
+
+This session fixed the time picker pre-selection issue where subsequent time questions (like "What time did you wake up?") were showing arbitrary default times instead of logically following the previously answered bedtime.
+
+### Problem
+When completing the daily sleep log:
+- First question "What time did you go to bed?" correctly defaulted to 10:00 PM
+- Second question "What time did you fall asleep?" showed 1:00 PM instead of ~10:15 PM
+- Third question "What time did you wake up?" showed arbitrary time instead of ~6:00-7:00 AM
+
+### Solution
+Modified time picker components on both iOS and Watch to use **previously answered bedtime** as the basis for calculating smart defaults:
+
+#### iOS Changes (`QuestionComponents.swift`)
+- Added `previousBedtime: Date?` parameter to `TimeInput` component
+- Updated `smartDefaultTime` to calculate:
+  - **SL_ASLEEP_TIME**: bedtime + 15 minutes
+  - **SL_WAKE_TIME**: bedtime + 8 hours
+  - **PSQI_3**: bedtime + 8 hours (for PSQI wake time questions)
+
+#### iOS Changes (`QuestionnaireView.swift`)
+- Added `getPreviousBedtime(for:)` helper function that returns:
+  - For `SL_ASLEEP_TIME` and `SL_WAKE_TIME` → `SL_BEDTIME` answer
+  - For `PSQI_3` (wake time) → `PSQI_1` (bedtime) answer
+  - For weekday/weekend wake times → corresponding bedtime answer
+
+#### Watch Changes (`QuestionnaireView.swift`)
+- Added `previousBedtime: Date?` parameter to `WatchTimePickerView`
+- Added same smart default calculation logic
+- Added `getPreviousBedtime(for:)` helper function
+
+### Result
+Now when answering "What time did you go to bed?" with 11:00 PM:
+- "What time did you fall asleep?" defaults to **11:15 PM** (15 min later)
+- "What time did you wake up?" defaults to **7:00 AM** (8 hours later)
+
+### Key Files Modified
+- `/ZoeSleep/ZoeSleep/Views/QuestionComponents.swift` - TimeInput with previousBedtime
+- `/ZoeSleep/ZoeSleep/Views/QuestionnaireView.swift` - getPreviousBedtime helper
+- `/ZoeSleep/ZoeSleep Watch App/QuestionnaireView.swift` - WatchTimePickerView with previousBedtime + helper
+- `/ZoeSleep/ZoeSleep/Services/ConvexService.swift` - Fixed mutation response type bug
+
+---
+
+## Previous Session Context (2025-12-02)
+
 **Sleep-Optimized Circadian Color System**
 
 This session implemented a complete sleep-optimized circadian color system that eliminates ALL blue/teal/purple light from the app during evening and night hours, replacing them with warm amber/orange colors that are safe for melatonin production.

@@ -905,6 +905,133 @@ extension ConvexService {
     }
 }
 
+// MARK: - Unified Question Fetching (Single Source of Truth)
+
+struct ConvexQuestion: Codable {
+    let id: String
+    let text: String
+    let type: String
+    let required: Bool
+    let options: [String]?
+    let helpText: String?
+    let moduleName: String?
+    let formatConfig: [String: AnyCodable]?
+}
+
+struct QuestionsForDayResponse: Codable {
+    let sleepLog: [ConvexQuestion]
+    let assessment: [ConvexQuestion]
+    let metadata: QuestionsMetadata
+}
+
+struct QuestionsMetadata: Codable {
+    let sleepLogCount: Int
+    let assessmentCount: Int
+    let totalMinutes: Int
+    let triggeredGateways: [String]
+    let dayDescription: String
+    let dayExplanation: String
+}
+
+struct ConvexGatewayState: Codable {
+    let gatewayId: String
+    let isTriggered: Bool
+    let triggerQuestionId: String?
+    let triggerValue: String?
+    let triggeredAt: Double?
+}
+
+/// Helper to decode Any values from JSON
+struct AnyCodable: Codable {
+    let value: Any
+
+    init(_ value: Any) {
+        self.value = value
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let intValue = try? container.decode(Int.self) {
+            value = intValue
+        } else if let doubleValue = try? container.decode(Double.self) {
+            value = doubleValue
+        } else if let stringValue = try? container.decode(String.self) {
+            value = stringValue
+        } else if let boolValue = try? container.decode(Bool.self) {
+            value = boolValue
+        } else if let arrayValue = try? container.decode([AnyCodable].self) {
+            value = arrayValue.map { $0.value }
+        } else if let dictValue = try? container.decode([String: AnyCodable].self) {
+            value = dictValue.mapValues { $0.value }
+        } else {
+            value = NSNull()
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        if let intValue = value as? Int {
+            try container.encode(intValue)
+        } else if let doubleValue = value as? Double {
+            try container.encode(doubleValue)
+        } else if let stringValue = value as? String {
+            try container.encode(stringValue)
+        } else if let boolValue = value as? Bool {
+            try container.encode(boolValue)
+        } else {
+            try container.encodeNil()
+        }
+    }
+}
+
+extension ConvexService {
+    /// THE SINGLE SOURCE OF TRUTH - Get all questions for a user's day from Convex
+    /// This is what iOS, Watch, and Web should ALL use to get questions.
+    func getQuestionsForUserDay(dayNumber: Int, section: String = "all") async throws -> QuestionsForDayResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("watch:getQuestionsForUserDay", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "section": section
+        ])
+    }
+
+    /// Update gateway state when a gateway-triggering response is detected
+    func updateGatewayState(gatewayId: String, isTriggered: Bool, triggerQuestionId: String?, triggerValue: String?) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        var args: [String: Any] = [
+            "userId": userId,
+            "gatewayId": gatewayId,
+            "isTriggered": isTriggered
+        ]
+        if let questionId = triggerQuestionId {
+            args["triggerQuestionId"] = questionId
+        }
+        if let value = triggerValue {
+            args["triggerValue"] = value
+        }
+
+        let _: SuccessResponse = try await client.mutation("watch:updateGatewayState", args: args)
+    }
+
+    /// Get all gateway states for the current user
+    func getGatewayStates() async throws -> [ConvexGatewayState] {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("watch:getGatewayStates", args: [
+            "userId": userId
+        ])
+    }
+}
+
 // MARK: - Device Info
 
 struct DeviceInfo {

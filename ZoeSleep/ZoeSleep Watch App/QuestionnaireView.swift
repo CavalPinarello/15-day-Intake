@@ -508,7 +508,8 @@ struct QuestionnaireView: View {
                     }
                 ),
                 theme: theme,
-                questionId: question.id
+                questionId: question.id,
+                previousBedtime: getPreviousBedtime(for: question.id)
             )
 
         case .yesNo:
@@ -562,6 +563,91 @@ struct QuestionnaireView: View {
                 maxValue: 20,
                 theme: theme
             )
+
+        case .singleSelect:
+            // Same as radio - single selection from options
+            if let options = question.options {
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(options, id: \.self) { option in
+                            Button(action: {
+                                responses[question.id] = option
+                                WKInterfaceDevice.current().play(.click)
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: responses[question.id] as? String == option ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(responses[question.id] as? String == option ? theme.primary : .secondary)
+                                    Text(option)
+                                        .font(.system(size: 14))
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
+                                    Spacer()
+                                }
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(responses[question.id] as? String == option ? theme.primary.opacity(0.15) : Color.gray.opacity(0.1))
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+
+        case .multiSelect:
+            // Same as checkbox - multiple selection from options
+            if let options = question.options {
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(options, id: \.self) { option in
+                            Button(action: {
+                                toggleCheckboxOption(question.id, option: option)
+                                WKInterfaceDevice.current().play(.click)
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: isOptionSelected(question.id, option: option) ? "checkmark.square.fill" : "square")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(isOptionSelected(question.id, option: option) ? theme.primary : .secondary)
+                                    Text(option)
+                                        .font(.system(size: 14))
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
+                                    Spacer()
+                                }
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(isOptionSelected(question.id, option: option) ? theme.primary.opacity(0.15) : Color.gray.opacity(0.1))
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+
+        case .info:
+            // Information display - no input required
+            // Mark as interacted immediately since it's just informational
+            VStack(spacing: 12) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 36))
+                    .foregroundColor(.green)
+
+                Text(question.text)
+                    .font(.system(size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+            }
+            .onAppear {
+                markQuestionInteracted(question.id)
+                responses[question.id] = "acknowledged"
+            }
         }
     }
 
@@ -604,14 +690,71 @@ struct QuestionnaireView: View {
     }
 
     private func loadQuestions() {
-        // Load questions based on mode (sleep log, assessment, or all)
-        questions = WatchQuestionBank.getQuestions(for: currentDay, mode: mode)
+        // Reset state
         currentQuestionIndex = 0
         responses = [:]
-        userInteractedQuestions = []  // Reset interaction tracking
+        userInteractedQuestions = []
 
-        // Load saved progress from Convex for cross-device sync
-        loadSavedProgress()
+        // Fetch questions from Convex (THE SINGLE SOURCE OF TRUTH)
+        Task {
+            do {
+                print("[Watch] Fetching questions from Convex for Day \(currentDay), mode: \(mode)...")
+                let section = mode == .sleepLog ? "sleepLog" : (mode == .assessment ? "assessment" : "all")
+                let questionsResponse = try await convexService.getQuestionsForUserDay(dayNumber: currentDay, section: section)
+
+                // Convert Convex questions to WatchQuestion type
+                var convertedQuestions: [WatchQuestion] = []
+
+                if mode == .sleepLog || mode == .all {
+                    convertedQuestions.append(contentsOf: questionsResponse.sleepLog.map { convertConvexToWatchQuestion($0) })
+                }
+                if mode == .assessment || mode == .all {
+                    convertedQuestions.append(contentsOf: questionsResponse.assessment.map { convertConvexToWatchQuestion($0) })
+                }
+
+                await MainActor.run {
+                    questions = convertedQuestions
+                    print("[Watch] Loaded \(questions.count) questions from Convex (sleep: \(questionsResponse.metadata.sleepLogCount), assessment: \(questionsResponse.metadata.assessmentCount))")
+                    print("[Watch] Triggered gateways: \(questionsResponse.metadata.triggeredGateways.joined(separator: ", "))")
+
+                    // Load saved progress from Convex for cross-device sync
+                    loadSavedProgress()
+                }
+            } catch {
+                print("[Watch] Error fetching questions from Convex: \(error.localizedDescription)")
+                // Fallback to local questions if Convex fails
+                await MainActor.run {
+                    questions = WatchQuestionBank.getQuestions(for: currentDay, mode: mode)
+                    print("[Watch] Fallback: Using local questions (\(questions.count) questions)")
+                    loadSavedProgress()
+                }
+            }
+        }
+    }
+
+    /// Convert a WatchConvexQuestion to WatchQuestion
+    private func convertConvexToWatchQuestion(_ cq: WatchConvexQuestion) -> WatchQuestion {
+        // Map Convex question type to WatchQuestionType
+        let questionType: WatchQuestionType
+        switch cq.type {
+        case "time": questionType = .time
+        case "scale": questionType = .scale
+        case "number": questionType = .number
+        case "yesNo": questionType = .yesNo
+        case "singleSelect": questionType = .singleSelect
+        case "multiSelect": questionType = .multiSelect
+        case "text": questionType = .text
+        case "info": questionType = .info
+        default: questionType = .text
+        }
+
+        return WatchQuestion(
+            id: cq.id,
+            text: cq.text,
+            type: questionType,
+            options: cq.options,
+            helpText: cq.helpText
+        )
     }
 
     /// Load saved progress and responses from Convex for cross-device sync
@@ -701,6 +844,16 @@ struct QuestionnaireView: View {
     /// Mark the current question as interacted by the user
     private func markQuestionInteracted(_ questionId: String) {
         userInteractedQuestions.insert(questionId)
+    }
+
+    /// Returns the previously answered bedtime to help set smart defaults for subsequent time questions
+    private func getPreviousBedtime(for questionId: String) -> Date? {
+        // For sleep log questions, check if bedtime was already answered
+        // SL_ASLEEP_TIME and SL_WAKE_TIME should use SL_BEDTIME
+        if questionId == "SL_ASLEEP_TIME" || questionId == "SL_WAKE_TIME" {
+            return responses["SL_BEDTIME"] as? Date
+        }
+        return nil
     }
 
     private func completeQuestionnaire() {
@@ -826,12 +979,14 @@ struct WatchQuestion {
     let text: String
     let type: WatchQuestionType
     let options: [String]?
+    let helpText: String?
 
-    init(id: String, text: String, type: WatchQuestionType, options: [String]? = nil) {
+    init(id: String, text: String, type: WatchQuestionType, options: [String]? = nil, helpText: String? = nil) {
         self.id = id
         self.text = text
         self.type = type
         self.options = options
+        self.helpText = helpText
     }
 }
 
@@ -843,6 +998,9 @@ enum WatchQuestionType: String, CaseIterable {
     case time
     case yesNo
     case number
+    case singleSelect  // Same as radio, but named consistently with Convex
+    case multiSelect   // Same as checkbox, but named consistently with Convex
+    case info          // Display-only information, no input required
 }
 
 // MARK: - Watch Question Bank (Uses Shared Question Definitions)
@@ -1023,6 +1181,7 @@ struct WatchTimePickerView: View {
     @Binding var selectedTime: Date
     let theme: WatchColorTheme
     var questionId: String = ""
+    var previousBedtime: Date? = nil  // Used to calculate smart defaults for wake/asleep times
 
     @State private var hour12: Int = 10      // 1-12 format
     @State private var minute: Int = 0
@@ -1032,15 +1191,32 @@ struct WatchTimePickerView: View {
     private let hours12 = Array(1...12)
     private let minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 
-    // Smart defaults based on question
+    // Smart defaults based on question and previous answers
     private var smartDefault: (hour24: Int, minute: Int) {
+        let calendar = Calendar.current
+
         switch questionId {
         case "SL_BEDTIME":
             return (22, 0)   // 10:00 PM
+
         case "SL_ASLEEP_TIME":
+            // If we have a bedtime answer, default to 15 min after
+            if let bedtime = previousBedtime {
+                let adjustedTime = calendar.date(byAdding: .minute, value: 15, to: bedtime) ?? bedtime
+                let components = calendar.dateComponents([.hour, .minute], from: adjustedTime)
+                return (components.hour ?? 22, components.minute ?? 30)
+            }
             return (22, 30)  // 10:30 PM
+
         case "SL_WAKE_TIME":
+            // If we have a bedtime answer, default to ~8 hours after
+            if let bedtime = previousBedtime {
+                let adjustedTime = calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? bedtime
+                let components = calendar.dateComponents([.hour, .minute], from: adjustedTime)
+                return (components.hour ?? 7, components.minute ?? 0)
+            }
             return (7, 0)    // 7:00 AM
+
         default:
             // Infer from question text would be passed separately
             return (22, 0)   // Default to 10 PM for sleep-related

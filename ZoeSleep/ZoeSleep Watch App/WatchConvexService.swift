@@ -89,6 +89,8 @@ struct WatchUserInfo: Codable {
     let username: String
     let currentDay: Int
     let onboardingCompleted: Bool
+    let sessionToken: String? // NEW: Session token for authenticated requests
+    let expiresAt: Double?
 }
 
 struct WatchUserLookup: Codable {
@@ -153,6 +155,7 @@ class WatchConvexService: ObservableObject {
     @Published var isAuthenticated = false
     @Published var userId: String?
     @Published var username: String?
+    @Published var sessionToken: String? // NEW: Session token for secure API calls
     @Published var currentDay: Int = 1
     @Published var completedDays: [Int] = []
     @Published var journeyComplete = false
@@ -182,8 +185,9 @@ class WatchConvexService: ObservableObject {
         if let savedUserId = UserDefaults.standard.string(forKey: "convexUserId") {
             self.userId = savedUserId
             self.username = UserDefaults.standard.string(forKey: "convexUsername")
+            self.sessionToken = UserDefaults.standard.string(forKey: "convexSessionToken")
             self.isAuthenticated = true
-            print("[WatchConvex] Loaded saved credentials - userId: \(savedUserId)")
+            print("[WatchConvex] Loaded saved credentials - userId: \(savedUserId), hasSessionToken: \(self.sessionToken != nil)")
         }
     }
 
@@ -252,19 +256,25 @@ class WatchConvexService: ObservableObject {
         }
     }
 
-    private func saveCredentials(userId: String, username: String) {
+    private func saveCredentials(userId: String, username: String, sessionToken: String? = nil) {
         UserDefaults.standard.set(userId, forKey: "convexUserId")
         UserDefaults.standard.set(username, forKey: "convexUsername")
+        if let token = sessionToken {
+            UserDefaults.standard.set(token, forKey: "convexSessionToken")
+        }
         self.userId = userId
         self.username = username
+        self.sessionToken = sessionToken
         self.isAuthenticated = true
     }
 
     func clearCredentials() {
         UserDefaults.standard.removeObject(forKey: "convexUserId")
         UserDefaults.standard.removeObject(forKey: "convexUsername")
+        UserDefaults.standard.removeObject(forKey: "convexSessionToken")
         self.userId = nil
         self.username = nil
+        self.sessionToken = nil
         self.isAuthenticated = false
     }
 
@@ -361,15 +371,19 @@ class WatchConvexService: ObservableObject {
 
         let response: WatchUserInfo = try await mutation("watch:signIn", args: [
             "username": username,
-            "passwordHash": passwordHash
+            "passwordHash": passwordHash,
+            "deviceId": "watch_\(WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown")"
         ])
 
-        saveCredentials(userId: response.userId, username: response.username)
+        // Save credentials including session token for secure API calls
+        saveCredentials(userId: response.userId, username: response.username, sessionToken: response.sessionToken)
 
         await MainActor.run {
             self.currentDay = response.currentDay
             self.journeyComplete = response.onboardingCompleted
         }
+
+        print("[WatchConvex] Signed in with session token: \(response.sessionToken != nil)")
 
         return response
     }
@@ -476,12 +490,19 @@ class WatchConvexService: ObservableObject {
             throw WatchConvexError.notAuthenticated
         }
 
-        let response: WatchCompleteSectionResponse = try await mutation("watch:completeSection", args: [
+        var args: [String: Any] = [
             "userId": userId,
             "dayNumber": dayNumber,
             "section": section,
             "source": "watch"
-        ])
+        ]
+
+        // Include session token for authorization
+        if let token = sessionToken {
+            args["sessionToken"] = token
+        }
+
+        let response: WatchCompleteSectionResponse = try await mutation("watch:completeSection", args: args)
 
         await MainActor.run {
             if response.success {
@@ -535,10 +556,17 @@ class WatchConvexService: ObservableObject {
             throw WatchConvexError.notAuthenticated
         }
 
-        let response: WatchAdvanceDayResponse = try await mutation("watch:advanceDay", args: [
+        var args: [String: Any] = [
             "userId": userId,
             "debugMode": debugMode
-        ])
+        ]
+
+        // Include session token for authorization
+        if let token = sessionToken {
+            args["sessionToken"] = token
+        }
+
+        let response: WatchAdvanceDayResponse = try await mutation("watch:advanceDay", args: args)
 
         await MainActor.run {
             if response.success {
@@ -565,9 +593,16 @@ class WatchConvexService: ObservableObject {
             throw WatchConvexError.notAuthenticated
         }
 
-        let response: WatchResetResponse = try await mutation("watch:resetProgress", args: [
+        var args: [String: Any] = [
             "userId": userId
-        ])
+        ]
+
+        // Include session token for authorization
+        if let token = sessionToken {
+            args["sessionToken"] = token
+        }
+
+        let response: WatchResetResponse = try await mutation("watch:resetProgress", args: args)
 
         await MainActor.run {
             if response.success {
@@ -609,6 +644,11 @@ class WatchConvexService: ObservableObject {
         }
         if let arr = arrayValue {
             args["responseArray"] = arr
+        }
+
+        // Include session token for authorization
+        if let token = sessionToken {
+            args["sessionToken"] = token
         }
 
         struct SuccessResponse: Codable {
@@ -679,14 +719,21 @@ class WatchConvexService: ObservableObject {
             let questionIndex: Int
         }
 
-        let _: SuccessResult = try await mutation("watch:updateQuestionProgress", args: [
+        var args: [String: Any] = [
             "userId": userId,
             "dayNumber": dayNumber,
             "section": section,
             "currentQuestionIndex": questionIndex,
             "totalQuestions": totalQuestions,
             "device": "watch"
-        ])
+        ]
+
+        // Include session token for authorization
+        if let token = sessionToken {
+            args["sessionToken"] = token
+        }
+
+        let _: SuccessResult = try await mutation("watch:updateQuestionProgress", args: args)
     }
 
     /// Get all saved responses for a day (to pre-fill answers when resuming)
@@ -700,4 +747,47 @@ class WatchConvexService: ObservableObject {
             "dayNumber": dayNumber
         ])
     }
+
+    // MARK: - Unified Question Fetching (Single Source of Truth)
+
+    /// THE SINGLE SOURCE OF TRUTH - Get all questions for a user's day from Convex
+    /// This is what Watch should use to get questions (same as iOS and Web)
+    func getQuestionsForUserDay(dayNumber: Int, section: String = "all") async throws -> WatchQuestionsForDayResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        return try await query("watch:getQuestionsForUserDay", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "section": section
+        ])
+    }
+}
+
+// MARK: - Question Response Models
+
+struct WatchConvexQuestion: Codable {
+    let id: String
+    let text: String
+    let type: String
+    let required: Bool
+    let options: [String]?
+    let helpText: String?
+    let moduleName: String?
+}
+
+struct WatchQuestionsMetadata: Codable {
+    let sleepLogCount: Int
+    let assessmentCount: Int
+    let totalMinutes: Int
+    let triggeredGateways: [String]
+    let dayDescription: String
+    let dayExplanation: String
+}
+
+struct WatchQuestionsForDayResponse: Codable {
+    let sleepLog: [WatchConvexQuestion]
+    let assessment: [WatchConvexQuestion]
+    let metadata: WatchQuestionsMetadata
 }

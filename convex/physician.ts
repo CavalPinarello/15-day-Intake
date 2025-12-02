@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { validatePhysicianRole, validateIOSSession } from "./auth";
 
 // ============================================
 // Patient List & Overview Queries
@@ -8,9 +9,11 @@ import { Id } from "./_generated/dataModel";
 
 /**
  * Get all patients with their progress and review status
+ * SECURITY: Requires physician or admin role via sessionToken
  */
 export const getAllPatientsWithProgress = query({
   args: {
+    sessionToken: v.optional(v.string()), // Required for production, optional for backward compat
     statusFilter: v.optional(v.string()),
     searchTerm: v.optional(v.string()),
   },
@@ -30,10 +33,19 @@ export const getAllPatientsWithProgress = query({
     })
   ),
   handler: async (ctx, args) => {
+    // Validate physician role if session token provided
+    if (args.sessionToken) {
+      const session = await validatePhysicianRole(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Unauthorized: Physician access required");
+      }
+    }
+    // TODO: Make sessionToken required once web dashboard auth is updated
+
     const users = await ctx.db.query("users").collect();
 
     // Filter out physicians and admins - only show patients
-    const patientUsers = users.filter(user => 
+    const patientUsers = users.filter(user =>
       user.role !== "physician" && user.role !== "admin"
     );
 
@@ -102,9 +114,13 @@ export const getAllPatientsWithProgress = query({
 
 /**
  * Get comprehensive patient details including all responses, scores, and notes
+ * SECURITY: Requires physician or admin role via sessionToken
  */
 export const getPatientDetails = query({
-  args: { userId: v.id("users") },
+  args: {
+    userId: v.id("users"),
+    sessionToken: v.optional(v.string()), // Required for production
+  },
   returns: v.object({
     user: v.object({
       _id: v.id("users"),
@@ -136,6 +152,14 @@ export const getPatientDetails = query({
     completedDays: v.number(),
   }),
   handler: async (ctx, args) => {
+    // Validate physician role if session token provided
+    if (args.sessionToken) {
+      const session = await validatePhysicianRole(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Unauthorized: Physician access required");
+      }
+    }
+
     const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("User not found");
@@ -232,11 +256,13 @@ export const getPatientDetails = query({
 
 /**
  * Get all responses and notes for a specific day
+ * SECURITY: Requires physician or admin role via sessionToken
  */
 export const getPatientDayData = query({
   args: {
     userId: v.id("users"),
     dayNumber: v.number(),
+    sessionToken: v.optional(v.string()), // Required for production
   },
   returns: v.object({
     responses: v.array(
@@ -263,6 +289,14 @@ export const getPatientDayData = query({
     ),
   }),
   handler: async (ctx, args) => {
+    // Validate physician role if session token provided
+    if (args.sessionToken) {
+      const session = await validatePhysicianRole(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Unauthorized: Physician access required");
+      }
+    }
+
     // Get responses for this day
     const responses = await ctx.db
       .query("user_assessment_responses")

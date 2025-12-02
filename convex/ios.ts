@@ -3,11 +3,15 @@
  *
  * This file contains all Convex functions optimized for direct iOS app usage.
  * The iOS app should call these functions directly using the Convex Swift SDK.
+ *
+ * SECURITY: All mutations that modify user data require session token validation
+ * to prevent unauthorized access.
  */
 
 import { query, mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { validateIOSSession, validateUserOwnership } from "./auth";
 
 // ============================================
 // iOS Authentication Functions
@@ -537,10 +541,12 @@ export const getUserProfile = query({
 
 /**
  * Update user profile
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const updateUserProfile = mutation({
   args: {
     userId: v.id("users"),
+    sessionToken: v.string(), // Required for authorization
     updates: v.object({
       email: v.optional(v.string()),
       profilePicture: v.optional(v.string()),
@@ -548,6 +554,12 @@ export const updateUserProfile = mutation({
     }),
   },
   handler: async (ctx, args) => {
+    // Validate session and ownership
+    const session = await validateUserOwnership(ctx, args.sessionToken, args.userId);
+    if (!session.valid) {
+      throw new Error(session.error || "Unauthorized");
+    }
+
     const updateData: Record<string, unknown> = {};
 
     if (args.updates.email !== undefined) {
@@ -639,10 +651,12 @@ export const updateUserPreferences = mutation({
 
 /**
  * Sync sleep data from HealthKit
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const syncSleepData = mutation({
   args: {
     userId: v.id("users"),
+    sessionToken: v.optional(v.string()), // Session token for authorization
     deviceId: v.string(),
     sleepData: v.array(v.object({
       date: v.string(), // YYYY-MM-DD
@@ -660,6 +674,14 @@ export const syncSleepData = mutation({
     })),
   },
   handler: async (ctx, args) => {
+    // Validate session token if provided
+    if (args.sessionToken) {
+      const session = await validateUserOwnership(ctx, args.sessionToken, args.userId);
+      if (!session.valid) {
+        throw new Error(session.error || "Unauthorized");
+      }
+    }
+
     const now = Date.now();
     let recordsSynced = 0;
 

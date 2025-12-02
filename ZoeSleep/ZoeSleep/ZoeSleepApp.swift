@@ -12,6 +12,7 @@ import WatchConnectivity
 struct ZoeSleepApp: App {
     @StateObject private var authManager: AuthenticationManager
     @StateObject private var healthKitManager: HealthKitManager
+    @StateObject private var onboardingManager = OnboardingManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     // Watch connectivity - initialized as singleton
@@ -26,10 +27,11 @@ struct ZoeSleepApp: App {
 
     var body: some Scene {
         WindowGroup {
-            SplashScreenWrapper()
+            AppRootView()
                 .environmentObject(authManager)
                 .environmentObject(healthKitManager)
                 .environmentObject(ThemeManager.shared)
+                .environmentObject(onboardingManager)
                 .onAppear {
                     // Request HealthKit authorization when authenticated
                     if authManager.isAuthenticated {
@@ -47,7 +49,6 @@ struct ZoeSleepApp: App {
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         // Refresh journey state when app becomes active
-                        // This ensures we pick up changes made on Watch or Web
                         refreshJourneyState()
                     }
                 }
@@ -63,33 +64,38 @@ struct ZoeSleepApp: App {
     }
 }
 
-/// Wrapper that shows animated splash screen on launch, then transitions to main content
-struct SplashScreenWrapper: View {
+/// App root that handles splash -> onboarding/content flow
+struct AppRootView: View {
     @State private var showSplash = true
     @State private var splashOpacity: Double = 1.0
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var onboardingManager: OnboardingManager
 
     var body: some View {
         ZStack {
             // Main content (underneath)
-            ThemedRootView()
-                .opacity(showSplash ? 0 : 1)
+            if onboardingManager.hasCompletedOnboarding {
+                ThemedRootView()
+                    .opacity(showSplash ? 0 : 1)
+            } else {
+                OnboardingView(onboardingManager: onboardingManager)
+                    .opacity(showSplash ? 0 : 1)
+            }
 
-            // Splash screen (on top)
+            // Splash screen (on top) - brief, circadian-aware
             if showSplash {
                 SplashScreenView(onComplete: {
-                    // Fade out splash
-                    withAnimation(.easeInOut(duration: 0.5)) {
+                    // Quick fade out
+                    withAnimation(.easeInOut(duration: 0.3)) {
                         splashOpacity = 0
                     }
 
                     // Remove splash after fade
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         withAnimation {
                             showSplash = false
                         }
                     }
-                }, duration: 2.5)
+                }, duration: 1.2)
                 .opacity(splashOpacity)
                 .transition(.opacity)
             }

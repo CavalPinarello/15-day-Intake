@@ -45,6 +45,9 @@
 		4A5E3BF22C8E123456789E03 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */; };
 		4A5E3BF42C8E123456789F01 /* SharedQuestionBank.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */; };
 		4A5E3BF62C8E123456789F03 /* SharedQuestionBank.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */; };
+		4A5E3C002C8E123456789G01 /* OnboardingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C012C8E123456789G02 /* OnboardingManager.swift */; };
+		4A5E3C022C8E123456789G03 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C032C8E123456789G04 /* OnboardingView.swift */; };
+		4A5E3C042C8E123456789G05 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +106,9 @@
 		4A5E3BF12C8E123456789E02 /* CircadianWaveBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircadianWaveBackground.swift; sourceTree = "<group>"; };
 		4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
 		4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedQuestionBank.swift; sourceTree = "<group>"; };
+		4A5E3C012C8E123456789G02 /* OnboardingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingManager.swift; sourceTree = "<group>"; };
+		4A5E3C032C8E123456789G04 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -207,6 +213,7 @@
 				4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */,
 				4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */,
 				4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */,
+				4A5E3C012C8E123456789G02 /* OnboardingManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -232,6 +239,8 @@
 				4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */,
 				4A5E3BF12C8E123456789E02 /* CircadianWaveBackground.swift */,
 				4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */,
+				4A5E3C032C8E123456789G04 /* OnboardingView.swift */,
+				4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -366,6 +375,9 @@
 				4A5E3BF02C8E123456789E01 /* CircadianWaveBackground.swift in Sources */,
 				4A5E3BF22C8E123456789E03 /* SplashScreenView.swift in Sources */,
 				4A5E3BF42C8E123456789F01 /* SharedQuestionBank.swift in Sources */,
+				4A5E3C002C8E123456789G01 /* OnboardingManager.swift in Sources */,
+				4A5E3C022C8E123456789G03 /* OnboardingView.swift in Sources */,
+				4A5E3C042C8E123456789G05 /* ProfileSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -11,17 +11,32 @@ struct ContentView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var themeManager: ThemeManager
+    @ObservedObject private var onboardingManager = OnboardingManager.shared
 
     var body: some View {
         NavigationStack {
             if authManager.isAuthenticated {
-                MainDashboardView()
+                // Check if onboarding is complete
+                if onboardingManager.isOnboardingComplete {
+                    MainDashboardView()
+                } else {
+                    // Show onboarding for new users
+                    OnboardingView(onboardingManager: onboardingManager)
+                        .environmentObject(healthKitManager)
+                        .environmentObject(themeManager)
+                }
             } else {
                 AuthenticationView()
             }
         }
         .onAppear {
             authManager.checkAuthenticationStatus()
+        }
+        .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+            // Check onboarding status when auth state changes
+            if isAuthenticated {
+                onboardingManager.checkOnboardingStatus(isAuthenticated: isAuthenticated)
+            }
         }
     }
 }
@@ -34,7 +49,6 @@ struct MainDashboardView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var currentDay: Int = 1
-    @State private var showingHealthKit = false
     @State private var showingJourneyOverview = false
     @State private var lastRefreshTime: Date = Date()
     @State private var needsRefresh = false
@@ -59,9 +73,6 @@ struct MainDashboardView: View {
                     // Journey Progress Card
                     journeyProgressCard
 
-                    // HealthKit Status Card
-                    healthKitStatusCard
-
                     // Today's Tasks Card
                     todaysTasksCard
 
@@ -75,9 +86,6 @@ struct MainDashboardView: View {
             }
         }
         .navigationBarHidden(true)
-        .sheet(isPresented: $showingHealthKit) {
-            HealthKitIntegrationView()
-        }
         .sheet(isPresented: $showingJourneyOverview) {
             JourneyOverviewView(currentDay: $currentDay)
                 .environmentObject(themeManager)
@@ -201,9 +209,16 @@ struct MainDashboardView: View {
                     .fontWeight(.bold)
                     .foregroundColor(theme.primary)
 
-                Text(getGreeting())
-                    .font(.subheadline)
-                    .foregroundColor(theme.textSecondary)
+                // Personalized greeting with user's name
+                if !OnboardingManager.shared.profile.name.isEmpty {
+                    Text("\(getGreeting()), \(OnboardingManager.shared.profile.name)")
+                        .font(.subheadline)
+                        .foregroundColor(theme.textSecondary)
+                } else {
+                    Text(getGreeting())
+                        .font(.subheadline)
+                        .foregroundColor(theme.textSecondary)
+                }
             }
 
             Spacer()
@@ -225,34 +240,30 @@ struct MainDashboardView: View {
             }
             .padding(.trailing, 8)
 
-            // Settings gear icon
+            // Profile button - navigates to unified profile/settings view
             NavigationLink {
-                SettingsView()
+                ProfileSettingsView()
                     .environmentObject(themeManager)
                     .environmentObject(authManager)
-                    .environmentObject(questionnaireManager)
+                    .environmentObject(healthKitManager)
             } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.title2)
-                    .foregroundColor(theme.primary)
-            }
-            .padding(.trailing, 8)
+                // Profile avatar with user initial or icon
+                ZStack {
+                    Circle()
+                        .fill(theme.primary.opacity(0.2))
+                        .frame(width: 40, height: 40)
 
-            Menu {
-                Button(action: { showingJourneyOverview = true }) {
-                    Label("Journey Overview", systemImage: "calendar")
+                    if !OnboardingManager.shared.profile.name.isEmpty {
+                        Text(String(OnboardingManager.shared.profile.name.prefix(1)).uppercased())
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(theme.primary)
+                    } else {
+                        Image(systemName: "person.fill")
+                            .font(.body)
+                            .foregroundColor(theme.primary)
+                    }
                 }
-                Button(action: { showingHealthKit = true }) {
-                    Label("HealthKit Settings", systemImage: "heart")
-                }
-                Divider()
-                Button(role: .destructive, action: { authManager.signOut() }) {
-                    Label("Sign Out", systemImage: "arrow.right.square")
-                }
-            } label: {
-                Image(systemName: "person.circle.fill")
-                    .font(.title)
-                    .foregroundColor(theme.primary)
             }
         }
     }
@@ -339,45 +350,6 @@ struct MainDashboardView: View {
         } else {
             return theme.inactive
         }
-    }
-
-    // MARK: - HealthKit Status Card
-
-    private var healthKitStatusCard: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: healthKitManager.isAuthorized ? "heart.fill" : "heart")
-                    .font(.title2)
-                    .foregroundColor(healthKitManager.isAuthorized ? theme.health : theme.textSecondary)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(healthKitManager.isAuthorized ? "Apple Health Connected" : "Connect Apple Health")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(theme.textPrimary)
-                    Text(healthKitManager.isAuthorized ? "Sleep data will be auto-synced" : "Enable automatic sleep tracking")
-                        .font(.caption)
-                        .foregroundColor(theme.textSecondary)
-                }
-
-                Spacer()
-
-                if !healthKitManager.isAuthorized {
-                    Button("Connect") {
-                        showingHealthKit = true
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(theme.primary)
-                    .controlSize(.small)
-                } else {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(theme.success)
-                }
-            }
-        }
-        .padding()
-        .background(GlassyCardBackground(opacity: 0.35))
-        .cornerRadius(12)
     }
 
     // MARK: - Today's Tasks Card
