@@ -59,12 +59,12 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
         cachedReduceMotion = themeManager.reduceMotion
     }
 
-    /// Send updated user data to Watch
+    /// Send updated user data to Watch (including user credentials for Convex sync)
     func sendUserDataToWatch() {
         updateCachedThemeValues()
-        guard let session = session, session.isReachable else { return }
+        guard let session = session else { return }
 
-        let message: [String: Any] = [
+        var message: [String: Any] = [
             "action": "userDataUpdate",
             "isAuthenticated": ConvexService.shared.isAuthenticated,
             "currentDay": questionnaireManager.currentDay,
@@ -73,8 +73,52 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             "timestamp": Date().timeIntervalSince1970
         ]
 
-        session.sendMessage(message, replyHandler: nil) { error in
-            print("Failed to send user data to Watch: \(error.localizedDescription)")
+        // Send user credentials to Watch for Convex sync (only if authenticated)
+        if let userId = ConvexService.shared.userId {
+            message["convexUserId"] = userId
+        }
+
+        // Also include username for Watch to use
+        if let username = KeychainHelper.load(forKey: "convex_username") {
+            message["convexUsername"] = username
+        }
+
+        // Try sendMessage if reachable, otherwise use transferUserInfo for background delivery
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                print("Failed to send user data to Watch: \(error.localizedDescription)")
+            }
+        } else {
+            // Use transferUserInfo for guaranteed delivery when Watch is not reachable
+            session.transferUserInfo(message)
+            print("[iOS] Queued user data for Watch via transferUserInfo")
+        }
+    }
+
+    /// Call this after successful login to immediately sync credentials to Watch
+    func syncCredentialsToWatch(userId: String, username: String) {
+        guard let session = session else { return }
+
+        let message: [String: Any] = [
+            "action": "credentialsSync",
+            "convexUserId": userId,
+            "convexUsername": username,
+            "isAuthenticated": true,
+            "currentDay": questionnaireManager.currentDay,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: { reply in
+                print("[iOS] Watch acknowledged credentials sync")
+            }) { error in
+                print("[iOS] Failed to send credentials to Watch: \(error.localizedDescription)")
+                // Fallback to transferUserInfo
+                session.transferUserInfo(message)
+            }
+        } else {
+            session.transferUserInfo(message)
+            print("[iOS] Queued credentials for Watch via transferUserInfo")
         }
     }
 

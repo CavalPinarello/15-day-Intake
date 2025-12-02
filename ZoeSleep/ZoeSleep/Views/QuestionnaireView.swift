@@ -9,6 +9,7 @@
 import SwiftUI
 import Combine
 
+
 struct QuestionnaireView: View {
     @Binding var currentDay: Int
     @EnvironmentObject var healthKitManager: HealthKitManager
@@ -23,6 +24,7 @@ struct QuestionnaireView: View {
     @State private var currentSection: QuestionnaireSection = .sleepLog
     @State private var showingTransition: Bool = false
     @State private var showingCompletion: Bool = false
+    @State private var completedSectionAtFinish: QuestionnaireSection? = nil  // Tracks which section triggered completion
 
     // Sleep Log State
     @State private var sleepLogQuestions: [Question] = []
@@ -80,7 +82,13 @@ struct QuestionnaireView: View {
                     triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
                     onDone: {
                         completeDay()
-                    }
+                    },
+                    // Pass which section was completed (nil = full day)
+                    // Use the captured section from when completion was triggered
+                    completedSection: sectionOnly ? completedSectionAtFinish : nil,
+                    onProceedToNextSection: sectionOnly && completedSectionAtFinish == .sleepLog ? {
+                        proceedToAssessment()
+                    } : nil
                 )
             } else {
                 mainQuestionnaireView
@@ -94,56 +102,67 @@ struct QuestionnaireView: View {
                 fetchHealthKitSleepData()
             }
         }
+        .onDisappear {
+            // When leaving the questionnaire (back button or dismissal),
+            // notify dashboard to refresh from Convex
+            print("[iOS Questionnaire] View disappearing - posting refresh notification")
+            NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+        }
     }
 
     // MARK: - Main Questionnaire View
 
     private var mainQuestionnaireView: some View {
-        VStack(spacing: 0) {
-            // Section Header
-            SectionHeaderView(
-                section: currentSection,
-                currentQuestion: currentIndex + 1,
-                totalQuestions: currentQuestions.count
-            )
+        ZStack {
+            // Animated wave background with subtle intensity
+            CircadianWaveBackground(intensity: 0.5)
 
-            // Progress
-            SectionProgressView(
-                section: currentSection,
-                currentIndex: currentIndex,
-                totalQuestions: currentQuestions.count
-            )
-            .padding(.vertical, 8)
+            VStack(spacing: 0) {
+                // Section Header
+                SectionHeaderView(
+                    section: currentSection,
+                    currentQuestion: currentIndex + 1,
+                    totalQuestions: currentQuestions.count
+                )
 
-            // Main Content
-            ScrollView {
-                VStack(spacing: 20) {
-                    // HealthKit Sleep Summary (show at start of sleep log)
-                    if currentSection == .sleepLog && currentIndex == 0 && healthKitSleepSummary != nil {
-                        HealthKitSleepCard(summary: healthKitSleepSummary!, theme: theme)
-                            .padding(.horizontal)
-                    }
+                // Progress
+                SectionProgressView(
+                    section: currentSection,
+                    currentIndex: currentIndex,
+                    totalQuestions: currentQuestions.count
+                )
+                .padding(.vertical, 8)
 
-                    // Current Question
-                    if !currentQuestions.isEmpty && currentIndex < currentQuestions.count {
-                        questionView(for: currentQuestions[currentIndex])
-                            .padding(.horizontal)
-                    }
-
-                    // Gateway alerts (only show in assessment section)
-                    if currentSection == .assessment {
-                        ForEach(questionnaireManager.gatewayStates.filter { $0.triggered }, id: \.id) { gateway in
-                            GatewayAlertBanner(gatewayType: gateway.gatewayType, isTriggered: true, theme: theme)
+                // Main Content
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // HealthKit Sleep Summary (show at start of sleep log)
+                        if currentSection == .sleepLog && currentIndex == 0 && healthKitSleepSummary != nil {
+                            HealthKitSleepCard(summary: healthKitSleepSummary!, theme: theme)
                                 .padding(.horizontal)
                         }
-                    }
-                }
-                .padding(.vertical)
-            }
-            .background(currentSection.backgroundColor.opacity(0.3))
 
-            // Navigation Buttons
-            navigationButtons
+                        // Current Question
+                        if !currentQuestions.isEmpty && currentIndex < currentQuestions.count {
+                            questionView(for: currentQuestions[currentIndex])
+                                .padding(.horizontal)
+                        }
+
+                        // Gateway alerts (only show in assessment section)
+                        if currentSection == .assessment {
+                            ForEach(questionnaireManager.gatewayStates.filter { $0.triggered }, id: \.id) { gateway in
+                                GatewayAlertBanner(gatewayType: gateway.gatewayType, isTriggered: true, theme: theme)
+                                    .padding(.horizontal)
+                            }
+                        }
+                    }
+                    .padding(.vertical)
+                }
+                .background(currentSection.backgroundColor.opacity(0.2))
+
+                // Navigation Buttons
+                navigationButtons
+            }
         }
     }
 
@@ -496,6 +515,7 @@ struct QuestionnaireView: View {
                 if sectionOnly || assessmentQuestions.isEmpty {
                     // Sleep log only mode OR no assessment questions - complete section
                     withAnimation {
+                        completedSectionAtFinish = .sleepLog  // Capture which section we completed
                         showingCompletion = true
                     }
                 } else {
@@ -512,12 +532,49 @@ struct QuestionnaireView: View {
             if isLastQuestionInSection {
                 // Finished assessment - show completion
                 withAnimation {
+                    completedSectionAtFinish = .assessment  // Capture which section we completed
                     showingCompletion = true
                 }
             } else {
                 assessmentIndex += 1
                 questionStartTime = Date()
             }
+        }
+    }
+
+    /// Proceed from sleep log to assessment section
+    /// This saves the sleep log responses, marks the section as complete in Convex,
+    /// and transitions to the assessment questions within the same view
+    private func proceedToAssessment() {
+        // First, save all sleep log responses to the manager
+        for (questionId, value) in sleepLogResponses {
+            saveResponseFromDictionary(questionId: questionId, value: value, questions: sleepLogQuestions)
+        }
+
+        // Mark sleep log as complete in Convex (async, but don't block UI)
+        Task {
+            do {
+                let result = try await ConvexService.shared.completeSection(dayNumber: currentDay, section: "sleepLog")
+                print("[iOS] Sleep log section completed: sleepLog=\(result.sleepLogCompleted), assessment=\(result.assessmentCompleted)")
+
+                // Refresh the journey progress so dashboard shows correct state if user navigates back
+                await questionnaireManager.loadJourneyProgress()
+
+                // Notify dashboard to refresh
+                await MainActor.run {
+                    NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                }
+            } catch {
+                print("[iOS] Error saving sleep log completion: \(error)")
+            }
+        }
+
+        // Immediately transition to assessment section (don't wait for async)
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showingCompletion = false
+            currentSection = .assessment
+            assessmentIndex = 0
+            questionStartTime = Date()
         }
     }
 
@@ -562,35 +619,59 @@ struct QuestionnaireView: View {
     }
 
     private func completeDay() {
-        // Save all remaining responses based on which section(s) we completed
-        if currentSection == .sleepLog || !sectionOnly {
-            for (questionId, value) in sleepLogResponses {
-                saveResponseFromDictionary(questionId: questionId, value: value, questions: sleepLogQuestions)
-            }
+        // Save all remaining responses
+        for (questionId, value) in sleepLogResponses {
+            saveResponseFromDictionary(questionId: questionId, value: value, questions: sleepLogQuestions)
         }
-        if currentSection == .assessment || !sectionOnly {
-            for (questionId, value) in assessmentResponses {
-                saveResponseFromDictionary(questionId: questionId, value: value, questions: assessmentQuestions)
-            }
+        for (questionId, value) in assessmentResponses {
+            saveResponseFromDictionary(questionId: questionId, value: value, questions: assessmentQuestions)
         }
 
-        // If sectionOnly, just dismiss without advancing day
-        if sectionOnly {
-            presentationMode.wrappedValue.dismiss()
-            return
-        }
+        print("[iOS] completeDay() called - sectionOnly=\(sectionOnly), completedSectionAtFinish=\(String(describing: completedSectionAtFinish))")
 
-        // Full day completion - advance to next day
+        // Determine what to complete based on which section just finished
+        // completedSectionAtFinish tells us which section triggered the completion screen
         Task {
             do {
-                try await questionnaireManager.completeDay(currentDay)
-                currentDay = min(currentDay + 1, 15)
-                presentationMode.wrappedValue.dismiss()
+                if let section = completedSectionAtFinish {
+                    // Mark the specific section as complete
+                    let sectionName = section == .sleepLog ? "sleepLog" : "assessment"
+                    print("[iOS] Calling completeSection for '\(sectionName)' on day \(currentDay)...")
+                    let result = try await ConvexService.shared.completeSection(dayNumber: currentDay, section: sectionName)
+                    print("[iOS] Section '\(sectionName)' completed: sleepLog=\(result.sleepLogCompleted), assessment=\(result.assessmentCompleted), dayComplete=\(result.dayFullyCompleted), newDay=\(result.currentDay)")
+
+                    // If both sections are now complete, day advances automatically
+                    if result.dayFullyCompleted {
+                        print("[iOS] Day fully completed! Advancing to day \(result.currentDay)")
+                        await MainActor.run {
+                            currentDay = result.currentDay
+                        }
+                    }
+
+                    // Refresh journey progress to update dashboard
+                    await questionnaireManager.loadJourneyProgress()
+
+                    // Post notification to ensure dashboard refreshes
+                    await MainActor.run {
+                        NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                    }
+                } else {
+                    // Legacy full day completion (non-sectionOnly mode)
+                    print("[iOS] Legacy mode - completing full day \(currentDay)")
+                    try await questionnaireManager.completeDay(currentDay)
+                    await MainActor.run {
+                        currentDay = min(currentDay + 1, 15)
+                    }
+                }
+
+                await MainActor.run {
+                    presentationMode.wrappedValue.dismiss()
+                }
             } catch {
-                print("Error completing day: \(error.localizedDescription)")
-                // Still advance locally even if sync fails
-                currentDay = min(currentDay + 1, 15)
-                presentationMode.wrappedValue.dismiss()
+                print("[iOS] Error completing: \(error.localizedDescription)")
+                await MainActor.run {
+                    presentationMode.wrappedValue.dismiss()
+                }
             }
         }
     }

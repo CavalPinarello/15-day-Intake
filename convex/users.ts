@@ -1,5 +1,74 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, httpAction } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
+
+// SHA256 hash of "1" (the test password)
+// Generated with: echo -n "1" | shasum -a 256
+// This matches what the iOS app generates for password "1"
+const TEST_PASSWORD_SHA256 = "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b";
+
+// Simple hash of "1" (the test password) - matches Watch app
+// This is the hash the Watch app generates for password "1"
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(16);
+}
+const TEST_PASSWORD_SIMPLE = simpleHash("1");
+
+/**
+ * Seed test users with both SHA256 and simple hash for cross-platform testing
+ * Call this from the Convex dashboard or via CLI: npx convex run users:seedTestUsers
+ */
+export const seedTestUsers = mutation({
+  args: {
+    hashType: v.optional(v.union(v.literal("sha256"), v.literal("simple"))),
+  },
+  handler: async (ctx, args) => {
+    const hashType = args.hashType || "sha256";
+    const passwordHash = hashType === "sha256" ? TEST_PASSWORD_SHA256 : TEST_PASSWORD_SIMPLE;
+    const now = Date.now();
+    const createdUsers: string[] = [];
+
+    for (let i = 1; i <= 10; i++) {
+      const username = `user${i}`;
+
+      // Check if user already exists
+      const existing = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", username))
+        .first();
+
+      if (existing) {
+        // Update password hash to match requested type
+        await ctx.db.patch(existing._id, { password_hash: passwordHash });
+        createdUsers.push(`${username} (updated)`);
+      } else {
+        // Create new user
+        await ctx.db.insert("users", {
+          username,
+          password_hash: passwordHash,
+          email: `${username}@test.com`,
+          current_day: 1,
+          started_at: now,
+          last_accessed: now,
+          created_at: now,
+        });
+        createdUsers.push(`${username} (created)`);
+      }
+    }
+
+    return {
+      success: true,
+      hashType,
+      passwordHash: passwordHash.substring(0, 16) + "...",
+      users: createdUsers,
+    };
+  },
+});
 
 // Get user by username
 export const getUserByUsername = query({

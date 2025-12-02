@@ -764,6 +764,9 @@ struct JourneyProgressData: Codable {
     let totalDays: Int
     let startedAt: Date
     var gatewayStates: [GatewayState]
+    // Section completion status for current day
+    var sleepLogCompleted: Bool = false
+    var assessmentCompleted: Bool = false
 
     var progressPercentage: Double {
         return Double(completedDays.count) / Double(totalDays) * 100.0

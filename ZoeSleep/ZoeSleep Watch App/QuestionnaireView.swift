@@ -9,9 +9,19 @@
 import SwiftUI
 import WatchKit
 
+// Question mode - determines which questions to show
+enum QuestionMode {
+    case sleepLog      // Stanford Sleep Log questions only
+    case assessment    // Day-specific assessment questions only
+    case all           // Both sleep log and assessment (legacy)
+}
+
 struct QuestionnaireView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
-    @StateObject private var convexService = WatchConvexService.shared
+    @ObservedObject private var convexService = WatchConvexService.shared
+
+    // Question mode - determines what to show
+    var mode: QuestionMode = .all
 
     // Local storage for offline capability
     @AppStorage("watchCurrentDay") private var localCurrentDay: Int = 1
@@ -24,6 +34,7 @@ struct QuestionnaireView: View {
     @State private var showingQuestions = false
     @State private var isSyncing = false
     @State private var syncError: String?
+    @State private var lastRefreshTime: Date = Date()
 
     private var theme: WatchColorTheme { WatchColorTheme.shared }
 
@@ -39,8 +50,17 @@ struct QuestionnaireView: View {
         return (try? JSONDecoder().decode([Int].self, from: completedDaysData)) ?? []
     }
 
-    private var isDayCompleted: Bool {
-        completedDays.contains(currentDay)
+    /// Check if this specific section is completed (not the whole day)
+    private var isSectionCompleted: Bool {
+        switch mode {
+        case .sleepLog:
+            return convexService.sleepLogCompleted
+        case .assessment:
+            return convexService.assessmentCompleted
+        case .all:
+            // Legacy mode - check if full day is done
+            return completedDays.contains(currentDay)
+        }
     }
 
     var body: some View {
@@ -51,12 +71,45 @@ struct QuestionnaireView: View {
                     .onAppear {
                         loadCurrentDay()
                     }
-            } else if isDayCompleted && !showingQuestions {
+            } else if isSectionCompleted && !showingQuestions {
                 completedView
             } else if questions.isEmpty {
                 noQuestionsView
             } else {
                 questionnaireContent
+            }
+        }
+        .onAppear {
+            // Refresh from Convex when view appears
+            refreshFromConvex()
+        }
+    }
+
+    private func refreshFromConvex() {
+        // Avoid refreshing too frequently (min 2 seconds between refreshes)
+        guard Date().timeIntervalSince(lastRefreshTime) > 2 else { return }
+        lastRefreshTime = Date()
+
+        Task {
+            guard convexService.isAuthenticated else { return }
+            do {
+                let state = try await convexService.fetchJourneyState()
+                await MainActor.run {
+                    // Update local storage to match Convex
+                    localCurrentDay = state.currentDay
+                    if let encoded = try? JSONEncoder().encode(state.completedDays) {
+                        completedDaysData = encoded
+                    }
+                    // Reset questionnaire state if day changed
+                    if !showingQuestions {
+                        questions = []
+                        currentQuestionIndex = 0
+                        responses = [:]
+                    }
+                }
+                print("[Watch Questionnaire] Refreshed: Day \(state.currentDay), Completed: \(state.completedDays)")
+            } catch {
+                print("[Watch Questionnaire] Refresh failed: \(error.localizedDescription)")
             }
         }
     }
@@ -165,33 +218,50 @@ struct QuestionnaireView: View {
                     .font(.system(size: 40))
                     .foregroundColor(theme.success)
 
-                Text("Day \(currentDay) Complete!")
+                // Show appropriate title based on mode
+                Text(completionTitle)
                     .font(.headline)
                     .multilineTextAlignment(.center)
 
-                Text("Great job!")
+                Text(completionSubtitle)
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                if currentDay < 15 {
+                // If only sleep log was completed, show prompt to do assessment
+                if mode == .sleepLog {
                     Divider()
                         .padding(.vertical, 4)
 
-                    Text("See you tomorrow")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-
-                    Text("Day \(currentDay + 1)")
+                    Text("Day Assessment")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(theme.primary)
-                } else {
-                    Divider()
-                        .padding(.vertical, 4)
 
-                    Text("Journey Complete!")
-                        .font(.caption)
-                        .foregroundColor(theme.success)
+                    Text("still remaining")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                } else if mode == .assessment || mode == .all {
+                    // Day fully complete or assessment done
+                    if currentDay < 15 {
+                        Divider()
+                            .padding(.vertical, 4)
+
+                        Text("See you tomorrow")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+
+                        Text("Day \(currentDay + 1)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(theme.primary)
+                    } else {
+                        Divider()
+                            .padding(.vertical, 4)
+
+                        Text("Journey Complete!")
+                            .font(.caption)
+                            .foregroundColor(theme.success)
+                    }
                 }
 
                 Divider()
@@ -206,6 +276,30 @@ struct QuestionnaireView: View {
                 .font(.caption2)
             }
             .padding()
+        }
+    }
+
+    // Computed property for completion title
+    private var completionTitle: String {
+        switch mode {
+        case .sleepLog:
+            return "Sleep Log Complete!"
+        case .assessment:
+            return "Assessment Complete!"
+        case .all:
+            return "Day \(currentDay) Complete!"
+        }
+    }
+
+    // Computed property for completion subtitle
+    private var completionSubtitle: String {
+        switch mode {
+        case .sleepLog:
+            return "Great job logging your sleep"
+        case .assessment:
+            return "Day \(currentDay) done!"
+        case .all:
+            return "Great job!"
         }
     }
 
@@ -503,8 +597,8 @@ struct QuestionnaireView: View {
     }
 
     private func loadQuestions() {
-        // Built-in Stanford Sleep Log questions for Watch
-        questions = WatchQuestionBank.getQuestionsForDay(currentDay)
+        // Load questions based on mode (sleep log, assessment, or all)
+        questions = WatchQuestionBank.getQuestions(for: currentDay, mode: mode)
         currentQuestionIndex = 0
         responses = [:]
     }
@@ -582,13 +676,38 @@ struct QuestionnaireView: View {
                 print("[Watch] Saved \(convexResponses.count) responses to Convex")
             }
 
-            // Then mark day as complete
-            let result = try await convexService.completeDay(dayNumber: dayNumber)
-            print("[Watch] Day \(dayNumber) marked complete in Convex, new day: \(result.newDay)")
+            // Mark the appropriate section as complete based on mode
+            let sectionName: String
+            switch mode {
+            case .sleepLog:
+                sectionName = "sleepLog"
+            case .assessment:
+                sectionName = "assessment"
+            case .all:
+                // Legacy mode: mark both sections as complete
+                let sleepResult = try await convexService.completeSection(dayNumber: dayNumber, section: "sleepLog")
+                print("[Watch] Sleep log marked complete: \(sleepResult.sleepLogCompleted)")
+                let assessResult = try await convexService.completeSection(dayNumber: dayNumber, section: "assessment")
+                print("[Watch] Assessment marked complete: \(assessResult.assessmentCompleted)")
+                if assessResult.dayFullyCompleted {
+                    print("[Watch] Day \(dayNumber) fully completed, advancing to day \(assessResult.currentDay)")
+                    await MainActor.run {
+                        localCurrentDay = assessResult.currentDay
+                    }
+                }
+                return
+            }
 
-            // Update local state to match
-            await MainActor.run {
-                localCurrentDay = result.newDay
+            // Complete the specific section
+            let result = try await convexService.completeSection(dayNumber: dayNumber, section: sectionName)
+            print("[Watch] Section '\(sectionName)' marked complete for day \(dayNumber)")
+            print("[Watch] sleepLogCompleted: \(result.sleepLogCompleted), assessmentCompleted: \(result.assessmentCompleted)")
+
+            if result.dayFullyCompleted {
+                print("[Watch] Day \(dayNumber) fully completed, advancing to day \(result.currentDay)")
+                await MainActor.run {
+                    localCurrentDay = result.currentDay
+                }
             }
         } catch {
             print("[Watch] Failed to sync completion to Convex: \(error.localizedDescription)")
@@ -642,7 +761,7 @@ enum WatchQuestionType: String, CaseIterable {
 
 struct WatchQuestionBank {
 
-    // Stanford Sleep Log - asked every day
+    // Stanford Sleep Log - asked every day (blue section)
     static let sleepLogQuestions: [WatchQuestion] = [
         WatchQuestion(
             id: "SL_BEDTIME",
@@ -676,7 +795,7 @@ struct WatchQuestionBank {
         )
     ]
 
-    // Day-specific additional questions
+    // Day-specific assessment questions (purple section)
     static let day1Questions: [WatchQuestion] = [
         WatchQuestion(
             id: "D1_SLEEP_PROBLEM",
@@ -716,22 +835,84 @@ struct WatchQuestionBank {
         )
     ]
 
-    static func getQuestionsForDay(_ day: Int) -> [WatchQuestion] {
-        var questions = sleepLogQuestions
+    static let day4Questions: [WatchQuestion] = [
+        WatchQuestion(
+            id: "D4_ALCOHOL",
+            text: "Did you consume alcohol yesterday?",
+            type: .yesNo
+        ),
+        WatchQuestion(
+            id: "D4_BEDROOM_TEMP",
+            text: "Is your bedroom comfortable?",
+            type: .yesNo
+        )
+    ]
 
+    static let day5Questions: [WatchQuestion] = [
+        WatchQuestion(
+            id: "D5_WORRY",
+            text: "Do you worry about sleep?",
+            type: .yesNo
+        ),
+        WatchQuestion(
+            id: "D5_ENERGY",
+            text: "Rate your energy level (1-10)",
+            type: .scale
+        )
+    ]
+
+    // MARK: - Get Sleep Log Questions Only
+    static func getSleepLogQuestions() -> [WatchQuestion] {
+        return sleepLogQuestions
+    }
+
+    // MARK: - Get Assessment Questions Only (day-specific)
+    static func getAssessmentQuestionsForDay(_ day: Int) -> [WatchQuestion] {
         switch day {
         case 1:
-            questions.append(contentsOf: day1Questions)
+            return day1Questions
         case 2:
-            questions.append(contentsOf: day2Questions)
+            return day2Questions
         case 3:
-            questions.append(contentsOf: day3Questions)
+            return day3Questions
+        case 4:
+            return day4Questions
+        case 5:
+            return day5Questions
         default:
-            // Days 4+ just use sleep log for now
-            break
+            // Days 6+ - return generic daily check-in questions
+            return [
+                WatchQuestion(
+                    id: "D\(day)_MOOD",
+                    text: "How is your mood today? (1-10)",
+                    type: .scale
+                ),
+                WatchQuestion(
+                    id: "D\(day)_ENERGY",
+                    text: "How is your energy? (1-10)",
+                    type: .scale
+                )
+            ]
         }
+    }
 
+    // MARK: - Get All Questions (legacy - combines both)
+    static func getQuestionsForDay(_ day: Int) -> [WatchQuestion] {
+        var questions = sleepLogQuestions
+        questions.append(contentsOf: getAssessmentQuestionsForDay(day))
         return questions
+    }
+
+    // MARK: - Get Questions by Mode
+    static func getQuestions(for day: Int, mode: QuestionMode) -> [WatchQuestion] {
+        switch mode {
+        case .sleepLog:
+            return getSleepLogQuestions()
+        case .assessment:
+            return getAssessmentQuestionsForDay(day)
+        case .all:
+            return getQuestionsForDay(day)
+        }
     }
 }
 

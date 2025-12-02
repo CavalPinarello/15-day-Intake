@@ -8,6 +8,7 @@
 
 import Foundation
 import WatchKit
+import CryptoKit
 
 // MARK: - Response Models
 
@@ -16,6 +17,20 @@ struct WatchJourneyState: Codable {
     let completedDays: [Int]
     let journeyComplete: Bool
     let totalDays: Int
+    // Section-level completion for current day
+    let sleepLogCompleted: Bool?
+    let assessmentCompleted: Bool?
+}
+
+struct WatchCompleteSectionResponse: Codable {
+    let success: Bool
+    let section: String
+    let sleepLogCompleted: Bool
+    let assessmentCompleted: Bool
+    let dayFullyCompleted: Bool
+    let currentDay: Int
+    let journeyComplete: Bool
+    let source: String?
 }
 
 struct WatchCompleteDayResponse: Codable {
@@ -113,6 +128,9 @@ class WatchConvexService: ObservableObject {
     @Published var currentDay: Int = 1
     @Published var completedDays: [Int] = []
     @Published var journeyComplete = false
+    // Section-level completion for current day
+    @Published var sleepLogCompleted = false
+    @Published var assessmentCompleted = false
 
     private init() {
         let config = URLSessionConfiguration.ephemeral
@@ -120,18 +138,89 @@ class WatchConvexService: ObservableObject {
         config.timeoutIntervalForResource = 30
         self.session = URLSession(configuration: config)
 
-        // Load saved credentials
+        // Load any saved credentials (may have been synced from iPhone)
         loadSavedCredentials()
+
+        // If not authenticated from saved credentials, wait for iPhone to sync credentials
+        // This ensures Watch uses the same account as iPhone
+        if !isAuthenticated {
+            print("[WatchConvex] Not authenticated - waiting for iPhone to sync credentials")
+        }
     }
 
     // MARK: - Credentials Management
 
     private func loadSavedCredentials() {
-        if let savedUserId = UserDefaults.standard.string(forKey: "convexUserId"),
-           let savedUsername = UserDefaults.standard.string(forKey: "convexUsername") {
+        if let savedUserId = UserDefaults.standard.string(forKey: "convexUserId") {
             self.userId = savedUserId
-            self.username = savedUsername
+            self.username = UserDefaults.standard.string(forKey: "convexUsername")
             self.isAuthenticated = true
+            print("[WatchConvex] Loaded saved credentials - userId: \(savedUserId)")
+        }
+    }
+
+    /// Refresh journey state from Convex (called on app activation)
+    /// Auto-logs in as user3 for development/simulator testing if not authenticated
+    func refreshFromConvex() async {
+        // Auto-login for development if not authenticated
+        if !isAuthenticated {
+            print("[WatchConvex] Not authenticated - auto-logging in as user3 for development")
+            do {
+                let userInfo = try await signIn(username: "user3", password: "1")
+                print("[WatchConvex] Auto-logged in as \(userInfo.username), Day \(userInfo.currentDay)")
+            } catch {
+                print("[WatchConvex] Auto-login failed: \(error)")
+                return
+            }
+        }
+
+        do {
+            _ = try await fetchJourneyState()
+            print("[WatchConvex] Refreshed state: Day \(currentDay)")
+        } catch {
+            print("[WatchConvex] Failed to refresh: \(error)")
+        }
+    }
+
+    /// Update credentials (called when receiving userId from iPhone via WatchConnectivity)
+    func updateUserId(_ userId: String) {
+        UserDefaults.standard.set(userId, forKey: "convexUserId")
+        self.userId = userId
+        self.isAuthenticated = true
+        print("[WatchConvex] Updated userId from iPhone: \(userId)")
+
+        // Fetch current journey state with new credentials
+        Task {
+            do {
+                _ = try await fetchJourneyState()
+            } catch {
+                print("[WatchConvex] Failed to fetch state after userId update: \(error)")
+            }
+        }
+    }
+
+    /// Update credentials from iPhone login (called from WatchConnectivityManager)
+    func updateCredentialsFromiPhone(userId: String, username: String?) {
+        // Save to UserDefaults
+        UserDefaults.standard.set(userId, forKey: "convexUserId")
+        if let username = username {
+            UserDefaults.standard.set(username, forKey: "convexUsername")
+        }
+
+        // Update published properties on main thread
+        Task { @MainActor in
+            self.userId = userId
+            self.username = username
+            self.isAuthenticated = true
+            print("[WatchConvex] ✅ Synced credentials from iPhone: userId=\(userId), username=\(username ?? "nil")")
+
+            // Fetch current journey state
+            do {
+                _ = try await self.fetchJourneyState()
+                print("[WatchConvex] Fetched state after iPhone sync: Day \(self.currentDay)")
+            } catch {
+                print("[WatchConvex] Failed to fetch state after iPhone sync: \(error)")
+            }
         }
     }
 
@@ -230,8 +319,8 @@ class WatchConvexService: ObservableObject {
 
     /// Sign in with username and password
     func signIn(username: String, password: String) async throws -> WatchUserInfo {
-        // Simple hash for password (matches iOS app)
-        let passwordHash = simpleHash(password)
+        // SHA256 hash for password (matches database - seeded with SHA256)
+        let passwordHash = sha256Hash(password)
 
         let response: WatchUserInfo = try await mutation("watch:signIn", args: [
             "username": username,
@@ -256,14 +345,11 @@ class WatchConvexService: ObservableObject {
         return result
     }
 
-    private func simpleHash(_ string: String) -> String {
-        // Simple hash matching the iOS app's password hashing
-        // In production, use proper crypto
-        var hash: Int = 0
-        for char in string.unicodeScalars {
-            hash = ((hash << 5) &- hash) &+ Int(char.value)
-        }
-        return String(format: "%x", abs(hash))
+    private func sha256Hash(_ string: String) -> String {
+        // SHA256 hash to match the database (test users seeded with SHA256)
+        let data = Data(string.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: - Journey State
@@ -282,6 +368,9 @@ class WatchConvexService: ObservableObject {
             self.currentDay = state.currentDay
             self.completedDays = state.completedDays
             self.journeyComplete = state.journeyComplete
+            // Update section completion status for current day
+            self.sleepLogCompleted = state.sleepLogCompleted ?? false
+            self.assessmentCompleted = state.assessmentCompleted ?? false
         }
 
         return state
@@ -338,6 +427,43 @@ class WatchConvexService: ObservableObject {
                 }
                 self.currentDay = response.newDay
                 self.journeyComplete = response.journeyComplete
+            }
+        }
+
+        return response
+    }
+
+    /// Mark a section as completed (sleepLog or assessment)
+    func completeSection(dayNumber: Int, section: String) async throws -> WatchCompleteSectionResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        let response: WatchCompleteSectionResponse = try await mutation("watch:completeSection", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "section": section,
+            "source": "watch"
+        ])
+
+        await MainActor.run {
+            if response.success {
+                self.sleepLogCompleted = response.sleepLogCompleted
+                self.assessmentCompleted = response.assessmentCompleted
+
+                if response.dayFullyCompleted {
+                    if !self.completedDays.contains(dayNumber) {
+                        self.completedDays.append(dayNumber)
+                        self.completedDays.sort()
+                    }
+                    self.currentDay = response.currentDay
+                    self.journeyComplete = response.journeyComplete
+                    // Reset section completion for the new day
+                    if response.currentDay != dayNumber {
+                        self.sleepLogCompleted = false
+                        self.assessmentCompleted = false
+                    }
+                }
             }
         }
 

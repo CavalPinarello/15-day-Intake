@@ -348,8 +348,39 @@ struct DayCompletionView: View {
     let assessmentQuestionsCount: Int
     let triggeredGateways: [GatewayType]
     let onDone: () -> Void
+    // New: Which section was just completed (nil means full day)
+    var completedSection: QuestionnaireSection? = nil
+    // New: Callback for proceeding to next section
+    var onProceedToNextSection: (() -> Void)? = nil
 
     @State private var isAnimating = false
+
+    // Computed: Is this a full day completion or section-only?
+    private var isFullDayComplete: Bool {
+        completedSection == nil
+    }
+
+    // Computed: Title text
+    private var titleText: String {
+        if isFullDayComplete {
+            return "Day \(dayNumber) Complete!"
+        } else if completedSection == .sleepLog {
+            return "Sleep Log Complete!"
+        } else {
+            return "Assessment Complete!"
+        }
+    }
+
+    // Computed: Subtitle text
+    private var subtitleText: String {
+        if isFullDayComplete {
+            return "Great progress on your sleep journey"
+        } else if completedSection == .sleepLog {
+            return "Now let's complete the Day Assessment"
+        } else {
+            return "Great work!"
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -371,18 +402,18 @@ struct DayCompletionView: View {
                 }
 
                 VStack(spacing: 8) {
-                    Text("Day \(dayNumber) Complete!")
+                    Text(titleText)
                         .font(.title)
                         .fontWeight(.bold)
 
-                    Text("Great progress on your sleep journey")
+                    Text(subtitleText)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
 
                 // Summary cards
                 VStack(spacing: 12) {
-                    // Sleep Log summary
+                    // Sleep Log summary - show completed or pending based on context
                     HStack {
                         Image(systemName: "moon.zzz.fill")
                             .foregroundColor(QuestionnaireSection.sleepLog.accentColor)
@@ -405,7 +436,7 @@ struct DayCompletionView: View {
                     .background(QuestionnaireSection.sleepLog.backgroundColor)
                     .cornerRadius(12)
 
-                    // Assessment summary
+                    // Assessment summary - show as completed, pending, or to-do
                     HStack {
                         Image(systemName: "clipboard.fill")
                             .foregroundColor(QuestionnaireSection.assessment.accentColor)
@@ -414,15 +445,26 @@ struct DayCompletionView: View {
                             Text("Day Assessment")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                            Text("\(assessmentQuestionsCount) questions completed")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            if isFullDayComplete || completedSection == .assessment {
+                                Text("\(assessmentQuestionsCount) questions completed")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("\(assessmentQuestionsCount) questions remaining")
+                                    .font(.caption)
+                                    .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                            }
                         }
 
                         Spacer()
 
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                        if isFullDayComplete || completedSection == .assessment {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        } else {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                        }
                     }
                     .padding()
                     .background(QuestionnaireSection.assessment.backgroundColor)
@@ -468,18 +510,35 @@ struct DayCompletionView: View {
 
                 Spacer(minLength: 20)
 
-                // Done button
-                Button(action: onDone) {
-                    Text("Continue")
+                // Button: Either "Proceed to Assessment" or "Continue"
+                if completedSection == .sleepLog, let proceedAction = onProceedToNextSection {
+                    Button(action: proceedAction) {
+                        HStack {
+                            Text("Proceed to Day Assessment")
+                            Image(systemName: "arrow.right")
+                        }
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.green)
+                        .background(QuestionnaireSection.assessment.accentColor)
                         .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
+                } else {
+                    Button(action: onDone) {
+                        Text("Continue")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.green)
+                            .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
             }
         }
         .background(Color(.systemBackground))
@@ -556,12 +615,24 @@ struct FlowLayout: Layout {
     )
 }
 
-#Preview("Day Completion") {
+#Preview("Day Completion - Full Day") {
     DayCompletionView(
         dayNumber: 3,
         sleepLogQuestionsCount: 5,
         assessmentQuestionsCount: 8,
         triggeredGateways: [.insomnia, .anxiety],
         onDone: {}
+    )
+}
+
+#Preview("Day Completion - Sleep Log Only") {
+    DayCompletionView(
+        dayNumber: 2,
+        sleepLogQuestionsCount: 5,
+        assessmentQuestionsCount: 11,
+        triggeredGateways: [],
+        onDone: {},
+        completedSection: .sleepLog,
+        onProceedToNextSection: {}
     )
 }

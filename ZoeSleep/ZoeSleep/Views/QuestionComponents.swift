@@ -80,6 +80,33 @@ struct ScaleInput: View {
     let question: Question
     @Binding var value: Double
     var theme: ColorTheme = ColorTheme.shared
+    @State private var hasSetInitialValue = false
+
+    // Smart default values for scale questions
+    private var smartDefaultValue: Double {
+        let minVal = Double(question.scaleMin ?? 1)
+        let maxVal = Double(question.scaleMax ?? 10)
+
+        switch question.id {
+        // Sleep quality (1-10) - neutral/slightly good
+        case "SL_QUALITY", "1":
+            return 6
+        default:
+            // Smart inference based on question text
+            let lowerText = question.text.lowercased()
+            if lowerText.contains("quality") && lowerText.contains("sleep") {
+                return 6  // Sleep quality - neutral
+            } else if lowerText.contains("stress") {
+                return 5  // Stress level - moderate
+            } else if lowerText.contains("pain") {
+                return 2  // Pain level - low (optimistic)
+            } else if lowerText.contains("energy") || lowerText.contains("refreshed") {
+                return 6  // Energy/refreshed - neutral
+            }
+            // Default to middle of range
+            return (minVal + maxVal) / 2
+        }
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -104,6 +131,17 @@ struct ScaleInput: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(question.pillar.themeColor)
+        }
+        .onAppear {
+            // Only set smart default once on first appear
+            if !hasSetInitialValue {
+                hasSetInitialValue = true
+                let smartDefault = smartDefaultValue
+                // Ensure within bounds
+                let minVal = Double(question.scaleMin ?? 1)
+                let maxVal = Double(question.scaleMax ?? 10)
+                value = min(max(smartDefault, minVal), maxVal)
+            }
         }
     }
 }
@@ -231,8 +269,56 @@ struct NumberInput: View {
     let question: Question
     @Binding var value: Double
     var theme: ColorTheme = ColorTheme.shared
+    @State private var hasSetInitialValue = false
 
     private var pillarColor: Color { question.pillar.themeColor }
+
+    // Smart default values based on question context
+    private var smartDefaultValue: Double {
+        switch question.id {
+        // Demographics
+        case "D1":
+            return 35    // Age - median adult
+        case "D5":
+            return 170   // Height in cm - average
+        case "D6":
+            return 70    // Weight in kg - average
+        // Sleep-related
+        case "SL_AWAKENINGS":
+            return 1     // Night awakenings - typical
+        case "PSQI_2":
+            return 15    // Time to fall asleep (minutes)
+        case "PSQI_4":
+            return 7     // Hours of actual sleep
+        default:
+            // Smart inference based on question text
+            let lowerText = question.text.lowercased()
+            if lowerText.contains("age") {
+                return 35
+            } else if lowerText.contains("height") {
+                return 170
+            } else if lowerText.contains("weight") {
+                return 70
+            } else if lowerText.contains("wake") && lowerText.contains("times") {
+                return 1
+            } else if lowerText.contains("hours") && lowerText.contains("sleep") {
+                return 7
+            } else if lowerText.contains("minutes") && (lowerText.contains("fall asleep") || lowerText.contains("latency")) {
+                return 15
+            } else if lowerText.contains("caffeine") || lowerText.contains("coffee") {
+                return 2
+            } else if lowerText.contains("screen") && lowerText.contains("hours") {
+                return 6
+            }
+            // Default to middle of range or explicit defaultValue
+            if let defaultVal = question.defaultValue {
+                return Double(defaultVal)
+            }
+            let minVal = Double(question.minValue ?? 0)
+            let maxVal = Double(question.maxValue ?? 100)
+            return (minVal + maxVal) / 2
+        }
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -273,6 +359,17 @@ struct NumberInput: View {
                 .disabled(value >= Double(question.maxValue ?? 100))
             }
         }
+        .onAppear {
+            // Only set smart default once on first appear
+            if !hasSetInitialValue {
+                hasSetInitialValue = true
+                let smartDefault = smartDefaultValue
+                // Ensure within bounds
+                let minVal = Double(question.minValue ?? 0)
+                let maxVal = Double(question.maxValue ?? 100)
+                value = min(max(smartDefault, minVal), maxVal)
+            }
+        }
     }
 
     private func formatValue() -> String {
@@ -302,6 +399,7 @@ struct TimeInput: View {
     let question: Question
     @Binding var value: Date
     @ObservedObject private var themeManager = ThemeManager.shared
+    @State private var hasSetInitialValue = false
 
     // Smart default times based on question context
     private var smartDefaultTime: Date {
@@ -312,27 +410,30 @@ struct TimeInput: View {
         switch question.id {
         // Stanford Sleep Log questions
         case "SL_BEDTIME":
-            components.hour = 21  // 9:00 PM
+            components.hour = 22  // 10:00 PM - typical bedtime
         case "SL_ASLEEP_TIME":
-            components.hour = 21  // 9:30 PM
+            components.hour = 22  // 10:30 PM - slightly after bedtime
             components.minute = 30
         case "SL_WAKE_TIME":
-            components.hour = 7   // 7:00 AM
+            components.hour = 7   // 7:00 AM - typical wake time
 
         // PSQI questions
         case "PSQI_1":
-            components.hour = 22  // 10:00 PM
-        case "PSQI_3":
-            components.hour = 6   // 6:30 AM
+            components.hour = 22  // 10:30 PM - usual bedtime
             components.minute = 30
+        case "PSQI_3":
+            components.hour = 7   // 7:00 AM - usual wake time
 
         default:
             // Smart inference based on question text
             let lowerText = question.text.lowercased()
             if lowerText.contains("wake") || lowerText.contains("morning") || lowerText.contains("get up") {
                 components.hour = 7   // 7:00 AM for wake-related
+            } else if lowerText.contains("fall asleep") || lowerText.contains("fell asleep") {
+                components.hour = 22  // 10:30 PM for fall asleep
+                components.minute = 30
             } else if lowerText.contains("bed") || lowerText.contains("sleep") || lowerText.contains("night") {
-                components.hour = 21  // 9:00 PM for sleep-related
+                components.hour = 22  // 10:00 PM for bedtime-related
             } else {
                 components.hour = 12  // Noon for unknown
             }
@@ -354,15 +455,9 @@ struct TimeInput: View {
             .scaleEffect(themeManager.largeIconsMode ? 1.15 : 1.0)
         }
         .onAppear {
-            // Set smart default if value hasn't been set (check if it's the default Date())
-            let calendar = Calendar.current
-            let hour = calendar.component(.hour, from: value)
-            let minute = calendar.component(.minute, from: value)
-            let currentHour = calendar.component(.hour, from: Date())
-            let currentMinute = calendar.component(.minute, from: Date())
-
-            // If value is close to current time (within 2 minutes), use smart default instead
-            if abs(hour - currentHour) <= 1 && abs(minute - currentMinute) <= 2 {
+            // Only set smart default once on first appear
+            if !hasSetInitialValue {
+                hasSetInitialValue = true
                 value = smartDefaultTime
             }
         }

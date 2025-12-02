@@ -20,6 +20,8 @@ struct WatchSettingsView: View {
     @State private var showingResetConfirmation = false
     @State private var isResetting = false
     @State private var isAdvancing = false
+    @State private var isSyncing = false
+    @State private var loginError: String?
 
     private let watchSize = WatchSizeDetector.current
 
@@ -69,6 +71,68 @@ struct WatchSettingsView: View {
                     Label("High Contrast", systemImage: "circle.lefthalf.filled")
                 }
                 .tint(themeManager.accentColor)
+            }
+
+            // MARK: - Sync
+            Section("Sync") {
+                Button {
+                    syncFromConvex()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundColor(themeManager.accentColor)
+                        if isSyncing {
+                            Text("Syncing...")
+                            Spacer()
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Sync from Cloud")
+                            Spacer()
+                            if convexService.isAuthenticated {
+                                Text("Day \(convexService.currentDay)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("Not logged in")
+                                    .font(.caption2)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                    }
+                }
+                .disabled(isSyncing)
+
+                if !convexService.isAuthenticated {
+                    Button {
+                        autoLoginForDev()
+                    } label: {
+                        HStack {
+                            Image(systemName: "person.badge.key.fill")
+                                .foregroundColor(.orange)
+                            Text("Login as user3")
+                        }
+                    }
+
+                    Text("Use same account on iPhone")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    if let error = loginError {
+                        Text(error)
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                            .lineLimit(3)
+                    }
+                } else {
+                    HStack {
+                        Text("Logged in as")
+                        Spacer()
+                        Text(convexService.username ?? "Unknown")
+                            .foregroundColor(.secondary)
+                    }
+                    .font(.caption)
+                }
             }
 
             // MARK: - Developer
@@ -211,6 +275,53 @@ struct WatchSettingsView: View {
 
         // Also notify iPhone
         watchConnectivity.resetJourneyProgress { _, _ in }
+    }
+
+    private func syncFromConvex() {
+        isSyncing = true
+        WKInterfaceDevice.current().play(.click)
+
+        Task {
+            do {
+                let state = try await convexService.fetchJourneyState()
+                print("[Watch Settings] Synced from Convex: Day \(state.currentDay)")
+                WKInterfaceDevice.current().play(.success)
+            } catch {
+                print("[Watch Settings] Sync failed: \(error)")
+                WKInterfaceDevice.current().play(.failure)
+            }
+            await MainActor.run {
+                isSyncing = false
+            }
+        }
+    }
+
+    private func autoLoginForDev() {
+        // Auto-login as user3 (same as iPhone test account)
+        // This is a development convenience for simulator testing
+        isSyncing = true
+        loginError = nil
+        WKInterfaceDevice.current().play(.click)
+
+        Task {
+            do {
+                let userInfo = try await convexService.signIn(username: "user3", password: "1")
+                print("[Watch Settings] Auto-logged in as \(userInfo.username), Day \(userInfo.currentDay)")
+                await MainActor.run {
+                    loginError = nil
+                }
+                WKInterfaceDevice.current().play(.success)
+            } catch {
+                print("[Watch Settings] Auto-login failed: \(error)")
+                await MainActor.run {
+                    loginError = error.localizedDescription
+                }
+                WKInterfaceDevice.current().play(.failure)
+            }
+            await MainActor.run {
+                isSyncing = false
+            }
+        }
     }
 }
 

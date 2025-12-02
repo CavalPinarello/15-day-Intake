@@ -13,8 +13,10 @@ import WatchConnectivity
 struct ZoeSleep_Watch_App: App {
     @StateObject private var watchConnectivity = WatchConnectivityManager()
     @StateObject private var healthManager = HealthKitWatchManager()
+    @StateObject private var convexService = WatchConvexService.shared
     @ObservedObject private var themeManager = WatchThemeManager.shared
     @State private var isAuthenticated = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -22,10 +24,17 @@ struct ZoeSleep_Watch_App: App {
                 .environmentObject(watchConnectivity)
                 .environmentObject(healthManager)
                 .environmentObject(themeManager)
+                .environmentObject(convexService)
                 .preferredColorScheme(themeManager.currentColorScheme)
                 .tint(themeManager.accentColor)
                 .onAppear {
                     setupWatch()
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        // Refresh state from Convex when app becomes active
+                        refreshFromConvex()
+                    }
                 }
         }
     }
@@ -39,36 +48,49 @@ struct ZoeSleep_Watch_App: App {
 
         // Check authentication status
         checkAuthenticationStatus()
+
+        // Initial sync with Convex (will auto-login if needed)
+        refreshFromConvex()
     }
 
     private func checkAuthenticationStatus() {
         // Check if user is authenticated via iPhone sync
         isAuthenticated = watchConnectivity.isUserAuthenticated
     }
+
+    private func refreshFromConvex() {
+        Task {
+            // This will auto-login if not authenticated, then fetch state
+            await convexService.refreshFromConvex()
+            print("[Watch] Current day: \(convexService.currentDay)")
+        }
+    }
 }
 
 struct WatchContentView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var themeManager: WatchThemeManager
-    @State private var currentTab: WatchTab = .questionnaire
+    @State private var currentTab: WatchTab = .home
+    @ObservedObject private var convexService = WatchConvexService.shared
 
     enum WatchTab {
-        case questionnaire
+        case home
         case treatment
-        case recommendations
         case health
         case settings
     }
 
     var body: some View {
         TabView(selection: $currentTab) {
-            QuestionnaireView()
-                .tag(WatchTab.questionnaire)
+            // Home - Start screen with animated ribbons
+            WatchHomeView()
+                .tag(WatchTab.home)
                 .tabItem {
-                    Image(systemName: "questionmark.circle")
-                    Text("Questions")
+                    Image(systemName: "moon.stars")
+                    Text("Today")
                 }
 
+            // Treatment tasks (after 15-day intake)
             TreatmentTasksView()
                 .tag(WatchTab.treatment)
                 .tabItem {
@@ -76,13 +98,7 @@ struct WatchContentView: View {
                     Text("Tasks")
                 }
 
-            RecommendationsView()
-                .tag(WatchTab.recommendations)
-                .tabItem {
-                    Image(systemName: "heart.circle")
-                    Text("Tips")
-                }
-
+            // Health summary
             HealthSummaryView()
                 .tag(WatchTab.health)
                 .tabItem {
@@ -90,6 +106,7 @@ struct WatchContentView: View {
                     Text("Health")
                 }
 
+            // Settings
             WatchSettingsView()
                 .tag(WatchTab.settings)
                 .tabItem {
@@ -100,6 +117,24 @@ struct WatchContentView: View {
         .onAppear {
             // Request latest data from iPhone
             watchConnectivity.requestDataFromiPhone()
+        }
+        .onChange(of: currentTab) { _, newTab in
+            // Refresh state from Convex when switching to home tab
+            if newTab == .home {
+                refreshFromConvex()
+            }
+        }
+    }
+
+    private func refreshFromConvex() {
+        Task {
+            guard convexService.isAuthenticated else { return }
+            do {
+                _ = try await convexService.fetchJourneyState()
+                print("[Watch] Tab switch refresh: Day \(convexService.currentDay)")
+            } catch {
+                print("[Watch] Tab switch refresh failed: \(error.localizedDescription)")
+            }
         }
     }
 }

@@ -205,7 +205,113 @@ For detailed architecture, setup instructions, and API documentation, see README
 - **Repository:** Successfully pushed to https://github.com/CavalPinarello/15-day-Intake.git
 - **Session Log:** `/docs/sessions/apple-watch-integration-2025-11-21.md`
 
-## Latest Session Context (2025-11-28)
+## Latest Session Context (2025-12-01)
+
+**Animated Circadian Wave Background & Splash Screen**
+
+This session implemented animated flowing wave backgrounds inspired by EEG/circadian rhythms, similar to Apple Watch sleep tracking visuals.
+
+### Features Implemented
+
+1. **CircadianWaveBackground (`/ZoeSleep/ZoeSleep/Views/CircadianWaveBackground.swift`)**
+   - Multiple layers of animated sine waves flowing horizontally
+   - Configurable amplitude, frequency, speed, and opacity per wave layer
+   - Dark/light mode aware with appropriate color schemes
+   - Respects `reduceMotion` accessibility setting
+   - View modifier `.circadianWaveBackground()` for easy application
+
+2. **SplashScreenView (`/ZoeSleep/ZoeSleep/Views/SplashScreenView.swift`)**
+   - Full-screen animated splash screen on app launch
+   - Deep navy (#0F172A) background with flowing teal waves
+   - Animated vector logo with three layered circadian waves
+   - Subtle amber energy orb accent
+   - "Zoe Sleep" branding with tagline fade-in
+   - Smooth 2.5-second animation then fade transition to main app
+
+3. **Background Integration**
+   - `MainDashboardView` - Subtle wave background (intensity: 0.7)
+   - `QuestionnaireView` - Subtle wave background (intensity: 0.5)
+   - Both views now feature gentle animated waves behind content
+
+4. **Launch Screen Update**
+   - Removed static `LaunchIcon` image from Info.plist
+   - iOS system launch shows only deep navy background
+   - SwiftUI animated splash takes over immediately
+
+### New Files Created
+- `/ZoeSleep/ZoeSleep/Views/CircadianWaveBackground.swift` - Wave animation components
+- `/ZoeSleep/ZoeSleep/Views/SplashScreenView.swift` - Animated splash screen
+
+### Files Modified
+- `/ZoeSleep/ZoeSleep/ZoeSleepApp.swift` - Added `SplashScreenWrapper`
+- `/ZoeSleep/ZoeSleep/ContentView.swift` - Added wave background to dashboard
+- `/ZoeSleep/ZoeSleep/Views/QuestionnaireView.swift` - Added wave background
+- `/ZoeSleep/ZoeSleep/Info.plist` - Removed static launch icon
+- `/ZoeSleep/ZoeSleep.xcodeproj/project.pbxproj` - Added new Swift files
+
+### Design Philosophy
+- Subtle, non-distracting animated waves evoke EEG/circadian rhythms
+- Waves flow continuously but gently (not hyperactive)
+- Colors match the teal (#4ECDC4) circadian theme
+- Accessibility-first: animations disable with reduceMotion
+
+---
+
+## Previous Session Context (2025-11-28)
+
+**Cross-Device Sync: Watch ↔ iPhone ↔ Web via Convex**
+
+This session implemented real-time questionnaire sync between Apple Watch, iPhone, and Web applications.
+
+### Problem
+- Watch and iPhone apps weren't syncing questionnaire progress
+- Watch was using a different password hash format than the database
+- Completing questions on one device wasn't reflected on others
+
+### Solution Implemented
+
+1. **Watch Authentication Fixed (`/convex/watch.ts`)**
+   - Updated `signIn` mutation to accept multiple hash formats
+   - Accepts both SHA256 and simple hash ("31") for development flexibility
+   - Watch can now authenticate with test users (user1-user10, password: "1")
+
+2. **Watch Auto-Login (`/ZoeSleep/ZoeSleep Watch App/WatchConvexService.swift`)**
+   - Added development mode with configurable test user
+   - Set `devTestUsername = "user3"` and `devTestPassword = "1"`
+   - Watch auto-logs in as same user as iPhone for testing
+   - Added CryptoKit import for SHA256 hashing
+
+3. **iPhone Sync Button (`/ZoeSleep/ZoeSleep/ContentView.swift`)**
+   - Added manual sync button (circular arrows icon) in header
+   - Triggers `loadJourneyProgress()` to fetch latest state from Convex
+   - Logs sync status: `[iOS] Synced from Convex: Day X`
+
+4. **Real-time State Refresh**
+   - Watch refreshes from Convex on app activation via `scenePhase`
+   - iPhone refreshes via pull-to-refresh and sync button
+   - Both apps read from same Convex `user.current_day` field
+
+### Key Files Modified
+- `/convex/watch.ts` - Multi-format password hash support
+- `/ZoeSleep/ZoeSleep Watch App/WatchConvexService.swift` - Dev auto-login, SHA256 hashing
+- `/ZoeSleep/ZoeSleep Watch App/ZoeSleep_Watch_AppApp.swift` - Simplified refresh logic
+- `/ZoeSleep/ZoeSleep/ContentView.swift` - Added sync button
+- `/ZoeSleep/ZoeSleep/ZoeSleep.entitlements` - App Group capability (for future use)
+- `/ZoeSleep/ZoeSleep Watch App/ZoeSleep Watch App.entitlements` - App Group capability
+
+### Testing Cross-Device Sync
+1. Log into iPhone as `user3` (password: `1`)
+2. Watch auto-logs in as `user3`
+3. Complete questions on either device
+4. Tap sync button on iPhone or switch tabs on Watch to refresh
+5. Both devices should show same day number
+
+### Known Limitations
+- Simulators can't use WatchConnectivity (no real-time push between devices)
+- App Groups require Apple Developer Program for production
+- For development, both apps use hardcoded test user for reliable sync
+
+---
 
 **REBRANDING: Sleep360 → Zoe Sleep** (Commit: `5741d9f`)
 

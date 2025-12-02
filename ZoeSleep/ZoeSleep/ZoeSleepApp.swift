@@ -12,6 +12,7 @@ import WatchConnectivity
 struct ZoeSleepApp: App {
     @StateObject private var authManager: AuthenticationManager
     @StateObject private var healthKitManager: HealthKitManager
+    @Environment(\.scenePhase) private var scenePhase
 
     // Watch connectivity - initialized as singleton
     private let watchConnectivity = iOSWatchConnectivityManager.shared
@@ -25,7 +26,7 @@ struct ZoeSleepApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ThemedRootView()
+            SplashScreenWrapper()
                 .environmentObject(authManager)
                 .environmentObject(healthKitManager)
                 .environmentObject(ThemeManager.shared)
@@ -43,6 +44,55 @@ struct ZoeSleepApp: App {
                         watchConnectivity.sendThemeSettingsToWatch()
                     }
                 }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        // Refresh journey state when app becomes active
+                        // This ensures we pick up changes made on Watch or Web
+                        refreshJourneyState()
+                    }
+                }
+        }
+    }
+
+    private func refreshJourneyState() {
+        guard authManager.isAuthenticated else { return }
+        Task {
+            await QuestionnaireManager.shared.loadJourneyProgress()
+            print("[iOS] Refreshed journey state on app activation")
+        }
+    }
+}
+
+/// Wrapper that shows animated splash screen on launch, then transitions to main content
+struct SplashScreenWrapper: View {
+    @State private var showSplash = true
+    @State private var splashOpacity: Double = 1.0
+    @ObservedObject private var themeManager = ThemeManager.shared
+
+    var body: some View {
+        ZStack {
+            // Main content (underneath)
+            ThemedRootView()
+                .opacity(showSplash ? 0 : 1)
+
+            // Splash screen (on top)
+            if showSplash {
+                SplashScreenView(onComplete: {
+                    // Fade out splash
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        splashOpacity = 0
+                    }
+
+                    // Remove splash after fade
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation {
+                            showSplash = false
+                        }
+                    }
+                }, duration: 2.5)
+                .opacity(splashOpacity)
+                .transition(.opacity)
+            }
         }
     }
 }

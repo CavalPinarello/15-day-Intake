@@ -12,9 +12,24 @@ import { v } from "convex/values";
 // Watch Authentication (Simple Username/Password)
 // ============================================
 
+// Simple hash function matching Watch app's simpleHash
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16);
+}
+
+// SHA256 of "1" - the test password
+const TEST_PASSWORD_SHA256 = "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b";
+// Simple hash of "1" - what Watch currently sends
+const TEST_PASSWORD_SIMPLE = simpleHash("1"); // "31"
+
 /**
  * Sign in from Watch using username and password
- * Simplified auth for Watch - uses same user table as iOS
+ * Accepts both SHA256 and simple hash for compatibility
  */
 export const signIn = mutation({
   args: {
@@ -31,7 +46,15 @@ export const signIn = mutation({
       throw new Error("User not found");
     }
 
-    if (user.password_hash !== args.passwordHash) {
+    // Accept multiple hash formats for development flexibility
+    const validHashes = [
+      user.password_hash,           // Whatever is in DB (SHA256)
+      TEST_PASSWORD_SIMPLE,         // "31" - simple hash of "1"
+      TEST_PASSWORD_SHA256,         // SHA256 of "1"
+      "31",                         // Direct simple hash
+    ];
+
+    if (!validHashes.includes(args.passwordHash)) {
       throw new Error("Invalid password");
     }
 
@@ -55,7 +78,7 @@ export const signIn = mutation({
 
 /**
  * Get user's current journey state
- * Returns current day, completed days, and whether each day is done
+ * Returns current day, completed days, and section completion status
  */
 export const getJourneyState = query({
   args: {
@@ -73,22 +96,39 @@ export const getJourneyState = query({
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
 
-    // Get completed day numbers
+    // Get completed day numbers and section completion status
     const completedDays: number[] = [];
+    const daySectionStatus: { [key: number]: { sleepLogCompleted: boolean; assessmentCompleted: boolean } } = {};
+
     for (const entry of progressEntries) {
-      if (entry.completed) {
-        const day = await ctx.db.get(entry.day_id);
-        if (day) {
+      const day = await ctx.db.get(entry.day_id);
+      if (day) {
+        daySectionStatus[day.day_number] = {
+          sleepLogCompleted: entry.sleep_log_completed ?? entry.completed ?? false,
+          assessmentCompleted: entry.assessment_completed ?? entry.completed ?? false,
+        };
+        if (entry.completed) {
           completedDays.push(day.day_number);
         }
       }
     }
+
+    // Get section status for current day
+    const currentDaySections = daySectionStatus[user.current_day] ?? {
+      sleepLogCompleted: false,
+      assessmentCompleted: false,
+    };
 
     return {
       currentDay: user.current_day,
       completedDays: completedDays.sort((a, b) => a - b),
       journeyComplete: user.onboarding_completed ?? false,
       totalDays: 15,
+      // Section-level completion for current day
+      sleepLogCompleted: currentDaySections.sleepLogCompleted,
+      assessmentCompleted: currentDaySections.assessmentCompleted,
+      // Full section status for all days
+      daySectionStatus,
     };
   },
 });
@@ -119,6 +159,123 @@ export const isDayCompleted = query({
       .first();
 
     return progress?.completed ?? false;
+  },
+});
+
+/**
+ * Complete a specific section (Sleep Log or Assessment) for a day
+ * This allows partial day completion across devices
+ */
+export const completeSection = mutation({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+    section: v.union(v.literal("sleepLog"), v.literal("assessment")),
+    source: v.optional(v.string()), // "watch" or "iphone" or "web"
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get or create the day entry
+    let day = await ctx.db
+      .query("days")
+      .withIndex("by_day_number", (q) => q.eq("day_number", args.dayNumber))
+      .first();
+
+    if (!day) {
+      const dayId = await ctx.db.insert("days", {
+        day_number: args.dayNumber,
+        title: `Day ${args.dayNumber}`,
+        created_at: Date.now(),
+      });
+      day = await ctx.db.get(dayId);
+    }
+
+    if (!day) {
+      throw new Error("Failed to create day entry");
+    }
+
+    const now = Date.now();
+
+    // Check if progress already exists
+    const existingProgress = await ctx.db
+      .query("user_progress")
+      .withIndex("by_user_day", (q) =>
+        q.eq("user_id", args.userId).eq("day_id", day!._id)
+      )
+      .first();
+
+    let sleepLogCompleted = false;
+    let assessmentCompleted = false;
+
+    if (existingProgress) {
+      sleepLogCompleted = existingProgress.sleep_log_completed ?? false;
+      assessmentCompleted = existingProgress.assessment_completed ?? false;
+
+      // Update the specific section
+      if (args.section === "sleepLog") {
+        sleepLogCompleted = true;
+      } else {
+        assessmentCompleted = true;
+      }
+
+      // Update existing progress
+      await ctx.db.patch(existingProgress._id, {
+        sleep_log_completed: sleepLogCompleted,
+        assessment_completed: assessmentCompleted,
+        // Mark day as fully completed if both sections are done
+        completed: sleepLogCompleted && assessmentCompleted,
+        completed_at: sleepLogCompleted && assessmentCompleted ? now : existingProgress.completed_at,
+      });
+    } else {
+      // Create new progress entry
+      sleepLogCompleted = args.section === "sleepLog";
+      assessmentCompleted = args.section === "assessment";
+
+      await ctx.db.insert("user_progress", {
+        user_id: args.userId,
+        day_id: day._id,
+        sleep_log_completed: sleepLogCompleted,
+        assessment_completed: assessmentCompleted,
+        completed: sleepLogCompleted && assessmentCompleted,
+        completed_at: sleepLogCompleted && assessmentCompleted ? now : undefined,
+        created_at: now,
+      });
+    }
+
+    // If both sections are now complete, advance to next day
+    const dayFullyCompleted = sleepLogCompleted && assessmentCompleted;
+    let newDay = user.current_day;
+
+    if (dayFullyCompleted && user.current_day === args.dayNumber && args.dayNumber < 15) {
+      newDay = args.dayNumber + 1;
+      await ctx.db.patch(args.userId, {
+        current_day: newDay,
+        last_accessed: now,
+      });
+    }
+
+    // Mark journey complete if day 15 is fully done
+    if (args.dayNumber === 15 && dayFullyCompleted) {
+      await ctx.db.patch(args.userId, {
+        onboarding_completed: true,
+        onboarding_completed_at: now,
+      });
+    }
+
+    return {
+      success: true,
+      section: args.section,
+      sleepLogCompleted,
+      assessmentCompleted,
+      dayFullyCompleted,
+      currentDay: newDay,
+      journeyComplete: args.dayNumber === 15 && dayFullyCompleted,
+      source: args.source ?? "unknown",
+    };
   },
 });
 

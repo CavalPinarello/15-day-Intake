@@ -2,8 +2,10 @@ const { getDatabase } = require('../database/init');
 const sqlite3 = require('sqlite3').verbose();
 
 // Stanford Sleep Log - Asked every day in parallel with assessment questions
+// IMPORTANT: question_key must match iOS QuestionnaireManager.swift IDs for cross-platform sync
 const dailySleepLogQuestions = [
   {
+    question_key: 'SL_BEDTIME',
     question_text: 'What time did you go to bed last night? (Your subjective perception - don\'t check your wearable device)',
     question_type: 'time',
     options: null,
@@ -13,8 +15,9 @@ const dailySleepLogQuestions = [
     help_text: 'We want your subjective perception of when you went to bed, not what your device recorded.'
   },
   {
+    question_key: 'SL_ASLEEP_TIME',
     question_text: 'What time did you fall asleep last night? (Your best estimate - don\'t check your wearable)',
-    question_type: 'time', 
+    question_type: 'time',
     options: null,
     order_index: 1,
     required: true,
@@ -22,6 +25,7 @@ const dailySleepLogQuestions = [
     help_text: 'This is about your perception of when you actually fell asleep.'
   },
   {
+    question_key: 'SL_AWAKENINGS',
     question_text: 'How many times did you wake up during the night?',
     question_type: 'number',
     options: { min: 0, max: 20 },
@@ -30,6 +34,7 @@ const dailySleepLogQuestions = [
     is_daily_log: true
   },
   {
+    question_key: 'SL_WAKE_TIME',
     question_text: 'What time did you wake up this morning? (Final awakening - don\'t check your wearable)',
     question_type: 'time',
     options: null,
@@ -39,6 +44,7 @@ const dailySleepLogQuestions = [
     help_text: 'We want your subjective perception, not device data.'
   },
   {
+    question_key: 'SL_QUALITY',
     question_text: 'How would you rate your sleep quality last night?',
     question_type: 'scale',
     options: { min: 1, max: 10, minLabel: 'Very Poor', maxLabel: 'Excellent' },
@@ -49,9 +55,11 @@ const dailySleepLogQuestions = [
 ];
 
 // Day 1: Demographics + Sleep Quality Core + PSQI (Part 1) - 15 questions, 12 minutes
+// IMPORTANT: question_key must match iOS QuestionnaireManager.swift IDs for cross-platform sync
 const day1AssessmentQuestions = [
   // Demographics (Static)
   {
+    question_key: 'D1',
     question_text: 'What is your age?',
     question_type: 'number',
     options: { min: 18, max: 120 },
@@ -60,6 +68,7 @@ const day1AssessmentQuestions = [
     pillar: 'Social'
   },
   {
+    question_key: 'D4',
     question_text: 'What is your sex assigned at birth?',
     question_type: 'select',
     options: ['Male', 'Female', 'Other'],
@@ -68,6 +77,7 @@ const day1AssessmentQuestions = [
     pillar: 'Social'
   },
   {
+    question_key: 'D5',
     question_text: 'What is your height?',
     question_type: 'number',
     options: { min: 100, max: 250, unit: 'cm' },
@@ -76,16 +86,18 @@ const day1AssessmentQuestions = [
     pillar: 'Metabolic'
   },
   {
+    question_key: 'D6',
     question_text: 'What is your weight?',
-    question_type: 'number', 
+    question_type: 'number',
     options: { min: 30, max: 300, unit: 'kg' },
     order_index: 13,
     required: true,
     pillar: 'Metabolic'
   },
-  
+
   // Sleep Quality Core
   {
+    question_key: '2',
     question_text: 'How often do you feel refreshed after sleep?',
     question_type: 'select',
     options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'],
@@ -94,6 +106,7 @@ const day1AssessmentQuestions = [
     pillar: 'Sleep Quality'
   },
   {
+    question_key: '1',
     question_text: 'Overall sleep quality in past month',
     question_type: 'scale',
     options: { min: 1, max: 10, minLabel: 'Very Poor', maxLabel: 'Excellent' },
@@ -104,9 +117,10 @@ const day1AssessmentQuestions = [
     gateway_condition: 'sleep_quality_poor',
     gateway_threshold: 6
   },
-  
+
   // PSQI Part 1 (Gateway questions included)
   {
+    question_key: 'PSQI_1',
     question_text: 'During the past month, when have you usually gone to bed at night? (Your subjective perception - don\'t check your wearable)',
     question_type: 'time',
     options: null,
@@ -116,6 +130,7 @@ const day1AssessmentQuestions = [
     help_text: 'We want your subjective perception of your usual bedtime, not what your device recorded.'
   },
   {
+    question_key: 'PSQI_2',
     question_text: 'During the past month, how long (in minutes) has it usually taken you to fall asleep each night?',
     question_type: 'number',
     options: { min: 0, max: 180, unit: 'minutes' },
@@ -127,6 +142,7 @@ const day1AssessmentQuestions = [
     gateway_threshold: 30
   },
   {
+    question_key: 'PSQI_3',
     question_text: 'During the past month, when have you usually gotten up in the morning? (Your subjective perception - don\'t check your wearable)',
     question_type: 'time',
     options: null,
@@ -136,6 +152,7 @@ const day1AssessmentQuestions = [
     help_text: 'We want your subjective perception, not device data.'
   },
   {
+    question_key: 'PSQI_4',
     question_text: 'During the past month, how many hours of actual sleep did you get at night?',
     question_type: 'number',
     options: { min: 0, max: 15, step: 0.5, unit: 'hours' },
@@ -445,7 +462,8 @@ function seedAdaptiveQuestions() {
                   q.options ? JSON.stringify(q.options) : null,
                   q.order_index,
                   q.required ? 1 : 0,
-                  JSON.stringify({ 
+                  JSON.stringify({
+                    question_key: q.question_key,
                     is_daily_log: q.is_daily_log,
                     help_text: q.help_text || null,
                     pillar: 'Sleep Log'
@@ -480,6 +498,7 @@ function seedAdaptiveQuestions() {
                     q.order_index,
                     q.required ? 1 : 0,
                     JSON.stringify({
+                      question_key: q.question_key,
                       pillar: q.pillar,
                       is_gateway: q.is_gateway || false,
                       gateway_condition: q.gateway_condition || null,

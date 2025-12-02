@@ -337,9 +337,20 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         if let authenticated = data["isAuthenticated"] as? Bool {
             isUserAuthenticated = authenticated
         }
-        
+
         if let day = data["currentDay"] as? Int {
             currentUserDay = day
+        }
+
+        // If iPhone sent a Convex userId, use it to authenticate on Watch
+        // This ensures Watch and iPhone use the same user for Convex sync
+        if let convexUserId = data["convexUserId"] as? String {
+            let convexService = WatchConvexService.shared
+            if convexService.userId != convexUserId {
+                // Update credentials and fetch latest state
+                convexService.updateUserId(convexUserId)
+                print("[Watch] Synced Convex userId from iPhone: \(convexUserId)")
+            }
         }
     }
     
@@ -395,7 +406,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         DispatchQueue.main.async {
             self.isConnected = activationState == .activated
-            
+
             if let error = error {
                 print("Watch connectivity activation failed: \(error.localizedDescription)")
             } else {
@@ -404,16 +415,25 @@ extension WatchConnectivityManager: WCSessionDelegate {
             }
         }
     }
-    
+
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
         DispatchQueue.main.async {
             self.handleIncomingMessage(message, replyHandler: replyHandler)
         }
     }
-    
+
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         DispatchQueue.main.async {
             self.handleIncomingMessage(message, replyHandler: nil)
+        }
+    }
+
+    /// Handle userInfo transfers (used when Watch is not reachable during iPhone login)
+    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        DispatchQueue.main.async {
+            print("[Watch] Received userInfo transfer from iPhone")
+            // Handle as a message - it may contain credentials or user data
+            self.handleIncomingMessage(userInfo, replyHandler: nil)
         }
     }
     
@@ -430,6 +450,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
             handleThemeSettingsIfPresent(message)
             replyHandler?(["received": true])
 
+        case "credentialsSync":
+            // iPhone is syncing login credentials - update Watch's Convex authentication
+            handleCredentialsSync(message)
+            replyHandler?(["received": true, "synced": true])
+
         case "themeSettingsUpdate":
             handleThemeSettingsUpdate(message)
             replyHandler?(["received": true])
@@ -441,12 +466,41 @@ extension WatchConnectivityManager: WCSessionDelegate {
         case "dayAdvanced":
             if let newDay = message["newDay"] as? Int {
                 currentUserDay = newDay
+                // Also update Convex service
+                Task {
+                    await WatchConvexService.shared.refreshFromConvex()
+                }
             }
             replyHandler?(["received": true])
 
         default:
             replyHandler?(["error": "Unknown action: \(action)"])
         }
+    }
+
+    // MARK: - Credentials Sync Handler
+
+    private func handleCredentialsSync(_ message: [String: Any]) {
+        // Extract credentials from iPhone
+        guard let userId = message["convexUserId"] as? String else {
+            print("[Watch] Credentials sync missing userId")
+            return
+        }
+
+        let username = message["convexUsername"] as? String
+        let currentDay = message["currentDay"] as? Int
+
+        print("[Watch] Received credentials from iPhone: userId=\(userId), username=\(username ?? "nil")")
+
+        // Update local state
+        isUserAuthenticated = true
+        if let day = currentDay {
+            currentUserDay = day
+        }
+
+        // Update WatchConvexService with the iPhone's credentials
+        let convexService = WatchConvexService.shared
+        convexService.updateCredentialsFromiPhone(userId: userId, username: username)
     }
 
     // MARK: - Theme Settings Handler

@@ -100,7 +100,10 @@ struct JourneyProgress: Codable {
     let completedDays: [Int]
     let totalDays: Int
     let journeyComplete: Bool?
-    let startedAt: Int
+    let startedAt: Int?  // Optional - watch:getJourneyState doesn't return this
+    // Section completion status for current day
+    let sleepLogCompleted: Bool?
+    let assessmentCompleted: Bool?
 }
 
 struct SleepDataRecord: Codable {
@@ -122,6 +125,17 @@ struct CompleteDayResponse: Codable {
     let success: Bool
     let newDay: Int
     let journeyComplete: Bool?
+}
+
+struct CompleteSectionResponse: Codable {
+    let success: Bool
+    let section: String
+    let sleepLogCompleted: Bool
+    let assessmentCompleted: Bool
+    let dayFullyCompleted: Bool
+    let currentDay: Int
+    let journeyComplete: Bool
+    let source: String?
 }
 
 struct SuccessResponse: Codable {
@@ -241,15 +255,36 @@ class ConvexService {
 
     private init() {
         self.client = ConvexHTTPClient(deploymentUrl: Config.convexDeploymentURL)
+
+        // Automatically load saved session on init
+        if let token = KeychainHelper.load(forKey: "convex_session_token"),
+           let userId = KeychainHelper.load(forKey: "convex_user_id") {
+            self.sessionToken = token
+            self.currentUserId = userId
+            print("[ConvexService] Auto-loaded session for userId: \(userId)")
+        } else {
+            print("[ConvexService] No saved session found")
+        }
     }
 
     // MARK: - Session Management
 
-    func setSession(token: String, userId: String) {
+    func setSession(token: String, userId: String, username: String? = nil) {
         self.sessionToken = token
         self.currentUserId = userId
         KeychainHelper.save(token, forKey: "convex_session_token")
         KeychainHelper.save(userId, forKey: "convex_user_id")
+        if let username = username {
+            KeychainHelper.save(username, forKey: "convex_username")
+        }
+        print("[ConvexService] Session saved for userId: \(userId)")
+
+        // Sync credentials to Watch immediately after login
+        if let username = username {
+            Task { @MainActor in
+                iOSWatchConnectivityManager.shared.syncCredentialsToWatch(userId: userId, username: username)
+            }
+        }
     }
 
     func clearSession() {
@@ -296,7 +331,7 @@ class ConvexService {
         }
 
         let response: SignInResponse = try await client.mutation("ios:signIn", args: args)
-        setSession(token: response.sessionToken, userId: response.userId)
+        setSession(token: response.sessionToken, userId: response.userId, username: response.user.username)
         return response
     }
 
@@ -491,7 +526,8 @@ class ConvexService {
             throw ConvexError.notAuthenticated
         }
 
-        return try await client.query("ios:getJourneyProgress", args: ["userId": userId])
+        // Use watch:getJourneyState which includes section completion status
+        return try await client.query("watch:getJourneyState", args: ["userId": userId])
     }
 
     func completeDay(dayNumber: Int) async throws -> CompleteDayResponse {
@@ -502,6 +538,20 @@ class ConvexService {
         return try await client.mutation("ios:completeDay", args: [
             "userId": userId,
             "dayNumber": dayNumber
+        ])
+    }
+
+    /// Complete a specific section (sleepLog or assessment) for a day
+    func completeSection(dayNumber: Int, section: String) async throws -> CompleteSectionResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("watch:completeSection", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "section": section,
+            "source": "ios"
         ])
     }
 
@@ -570,6 +620,17 @@ class ConvexService {
         }
 
         return try await client.mutation("ios:advanceToNextDay", args: ["userId": userId])
+    }
+
+    /// Advance user to a specific day number
+    func advanceDay(to dayNumber: Int) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        // Use the existing advanceToNextDay which increments the day
+        // This will be called after completing a day to move to the next
+        let _: AdvanceDayResponse = try await client.mutation("ios:advanceToNextDay", args: ["userId": userId])
     }
 
     /// Reset journey progress to Day 1 (Debug Mode only)

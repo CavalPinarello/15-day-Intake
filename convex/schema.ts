@@ -89,6 +89,9 @@ export default defineSchema({
     completed: v.boolean(),
     completed_at: v.optional(v.number()),
     created_at: v.number(),
+    // Section-level completion tracking for cross-device sync
+    sleep_log_completed: v.optional(v.boolean()),
+    assessment_completed: v.optional(v.boolean()),
   })
     .index("by_user", ["user_id"])
     .index("by_user_day", ["user_id", "day_id"])

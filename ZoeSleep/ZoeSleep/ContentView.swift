@@ -30,36 +30,44 @@ struct MainDashboardView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var themeManager: ThemeManager
-    @StateObject private var questionnaireManager = QuestionnaireManager.shared
+    @ObservedObject private var questionnaireManager = QuestionnaireManager.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var currentDay: Int = 1
     @State private var showingHealthKit = false
     @State private var showingJourneyOverview = false
+    @State private var lastRefreshTime: Date = Date()
+    @State private var needsRefresh = false
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Header
-                headerView
+        ZStack {
+            // Animated wave background
+            CircadianWaveBackground(intensity: 0.7)
 
-                // Journey Progress Card
-                journeyProgressCard
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header
+                    headerView
 
-                // HealthKit Status Card
-                healthKitStatusCard
+                    // Journey Progress Card
+                    journeyProgressCard
 
-                // Today's Tasks Card
-                todaysTasksCard
+                    // HealthKit Status Card
+                    healthKitStatusCard
 
-                // Gateway Status (if any triggered)
-                gatewayStatusCard
+                    // Today's Tasks Card
+                    todaysTasksCard
 
-                // Quick Actions
-                quickActionsCard
+                    // Gateway Status (if any triggered)
+                    gatewayStatusCard
+
+                    // Quick Actions
+                    quickActionsCard
+                }
+                .padding()
             }
-            .padding()
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showingHealthKit) {
@@ -71,6 +79,58 @@ struct MainDashboardView: View {
         }
         .onAppear {
             loadProgress()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Refresh when app becomes active (e.g., returning from background or other screens)
+            if newPhase == .active {
+                Task {
+                    await refreshFromConvex()
+                }
+            }
+        }
+        .onChange(of: questionnaireManager.journeyProgress?.currentDay) { _, newDay in
+            // Update UI when journey progress changes (from other device)
+            if let day = newDay {
+                withAnimation {
+                    currentDay = day
+                }
+            }
+        }
+        .onChange(of: questionnaireManager.journeyProgress?.sleepLogCompleted) { _, newValue in
+            // Log section completion change for debugging
+            print("[iOS Dashboard] sleepLogCompleted changed to: \(newValue ?? false)")
+        }
+        .onChange(of: questionnaireManager.journeyProgress?.assessmentCompleted) { _, newValue in
+            // Log section completion change for debugging
+            print("[iOS Dashboard] assessmentCompleted changed to: \(newValue ?? false)")
+        }
+        .refreshable {
+            // Pull-to-refresh to manually sync from Convex
+            await refreshFromConvex()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .questionnaireProgressDidChange)) { _ in
+            // Refresh when questionnaire signals progress change
+            Task {
+                await refreshFromConvex()
+            }
+        }
+    }
+
+    private func refreshFromConvex() async {
+        // Avoid refreshing too frequently (min 1 second between refreshes)
+        guard Date().timeIntervalSince(lastRefreshTime) > 1 else {
+            print("[iOS Dashboard] Skipping refresh (too soon)")
+            return
+        }
+        lastRefreshTime = Date()
+
+        print("[iOS Dashboard] Refreshing from Convex...")
+        await questionnaireManager.loadJourneyProgress()
+        if let progress = questionnaireManager.journeyProgress {
+            await MainActor.run {
+                currentDay = progress.currentDay
+            }
+            print("[iOS Dashboard] Refreshed: Day \(progress.currentDay), sleepLog=\(progress.sleepLogCompleted), assessment=\(progress.assessmentCompleted)")
         }
     }
 
@@ -90,6 +150,23 @@ struct MainDashboardView: View {
             }
 
             Spacer()
+
+            // Sync button - manually refresh from Convex
+            Button {
+                Task {
+                    print("[iOS] Manual sync triggered")
+                    await questionnaireManager.loadJourneyProgress()
+                    if let progress = questionnaireManager.journeyProgress {
+                        currentDay = progress.currentDay
+                        print("[iOS] Synced from Convex: Day \(progress.currentDay)")
+                    }
+                }
+            } label: {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.title2)
+                    .foregroundColor(theme.primary)
+            }
+            .padding(.trailing, 8)
 
             // Settings gear icon
             NavigationLink {
@@ -246,13 +323,27 @@ struct MainDashboardView: View {
 
     // MARK: - Today's Tasks Card
 
+    private var isDayComplete: Bool {
+        (questionnaireManager.journeyProgress?.sleepLogCompleted ?? false) &&
+        (questionnaireManager.journeyProgress?.assessmentCompleted ?? false)
+    }
+
     private var todaysTasksCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Today's Tasks")
                     .font(.headline)
                 Spacer()
-                if let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) {
+                if isDayComplete {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(theme.success)
+                        Text("Complete")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(theme.success)
+                    }
+                } else if let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) {
                     Text("~\(config.estimatedMinutes + 2) min total")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -263,15 +354,25 @@ struct MainDashboardView: View {
                 }
             }
 
+            // Day Complete Celebration View
+            if isDayComplete {
+                DayCompleteCelebrationView(
+                    currentDay: currentDay,
+                    isDebugMode: themeManager.debugMode,
+                    onAdvanceDay: advanceToNextDay
+                )
+            }
+
             // Sleep Log Section Card (Blue) - Stanford Sleep Log, done daily
             NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
                 SectionTaskCard(
                     section: .sleepLog,
                     questionCount: 5,
                     estimatedMinutes: 2,
-                    isCompleted: false
+                    isCompleted: questionnaireManager.journeyProgress?.sleepLogCompleted ?? false
                 )
             }
+            .disabled(questionnaireManager.journeyProgress?.sleepLogCompleted ?? false)
 
             // Day Assessment Section Card (Purple) - Adaptive questionnaire with gateway questions
             NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
@@ -281,14 +382,35 @@ struct MainDashboardView: View {
                     subtitle: getDayDescription(),
                     questionCount: getAssessmentQuestionCount(),
                     estimatedMinutes: getAssessmentMinutes(),
-                    isCompleted: false
+                    isCompleted: questionnaireManager.journeyProgress?.assessmentCompleted ?? false
                 )
             }
+            .disabled(questionnaireManager.journeyProgress?.assessmentCompleted ?? false)
         }
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+    }
+
+    private func advanceToNextDay() {
+        guard currentDay < 15 else { return }
+        Task {
+            do {
+                let newDay = currentDay + 1
+                try await ConvexService.shared.advanceDay(to: newDay)
+                await questionnaireManager.loadJourneyProgress()
+                await MainActor.run {
+                    withAnimation {
+                        currentDay = newDay
+                    }
+                    NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                }
+                print("[iOS] Advanced to Day \(newDay)")
+            } catch {
+                print("[iOS] Error advancing day: \(error)")
+            }
+        }
     }
 
     private func getAssessmentQuestionCount() -> Int {
@@ -729,6 +851,182 @@ struct InsightsView: View {
 struct SleepDiaryView: View {
     var body: some View {
         SleepDiaryHistoryView()
+    }
+}
+
+// MARK: - Day Complete Celebration View
+
+struct DayCompleteCelebrationView: View {
+    let currentDay: Int
+    let isDebugMode: Bool
+    let onAdvanceDay: () -> Void
+
+    @State private var timeUntilUnlock: String = ""
+    @State private var isUnlocked: Bool = false
+    @State private var timer: Timer?
+
+    private var theme: ColorTheme { ColorTheme.shared }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // Celebration header
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(theme.success.opacity(0.2))
+                        .frame(width: 50, height: 50)
+                    Image(systemName: "star.fill")
+                        .font(.title2)
+                        .foregroundColor(theme.success)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Day \(currentDay) Complete!")
+                        .font(.headline)
+                        .foregroundColor(theme.success)
+                    Text(currentDay < 15 ? "Great progress on your sleep journey" : "Congratulations! Journey complete!")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+
+            // Next day info
+            if currentDay < 15 {
+                Divider()
+
+                if isDebugMode {
+                    // Debug mode: Show advance button
+                    Button(action: onAdvanceDay) {
+                        HStack {
+                            Image(systemName: "forward.fill")
+                                .font(.subheadline)
+                            Text("Advance to Day \(currentDay + 1)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(theme.primary)
+                        .cornerRadius(10)
+                    }
+
+                    Text("Debug mode enabled")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                } else if isUnlocked {
+                    // Day unlocked - show advance button
+                    Button(action: onAdvanceDay) {
+                        HStack {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .font(.subheadline)
+                            Text("Start Day \(currentDay + 1)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(theme.primary)
+                        .cornerRadius(10)
+                    }
+                } else {
+                    // Countdown to 5 AM
+                    HStack {
+                        Image(systemName: "clock.fill")
+                            .foregroundColor(theme.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Day \(currentDay + 1) unlocks at 5:00 AM")
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                            Text(timeUntilUnlock)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .monospacedDigit()
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                }
+            } else {
+                // Journey complete message
+                Divider()
+                HStack {
+                    Image(systemName: "trophy.fill")
+                        .foregroundColor(.yellow)
+                    Text("You've completed the 15-day sleep assessment!")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                }
+            }
+        }
+        .padding(16)
+        .background(theme.success.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(theme.success.opacity(0.3), lineWidth: 1)
+        )
+        .onAppear {
+            updateCountdown()
+            startTimer()
+        }
+        .onDisappear {
+            stopTimer()
+        }
+    }
+
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            updateCountdown()
+        }
+    }
+
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func updateCountdown() {
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Find next 5 AM
+        var nextUnlock: Date
+        let todayAt5AM = calendar.date(bySettingHour: 5, minute: 0, second: 0, of: now)!
+
+        if now < todayAt5AM {
+            // Today's 5 AM hasn't happened yet
+            nextUnlock = todayAt5AM
+        } else {
+            // Next 5 AM is tomorrow
+            nextUnlock = calendar.date(byAdding: .day, value: 1, to: todayAt5AM)!
+        }
+
+        // Check if already unlocked
+        if now >= nextUnlock {
+            isUnlocked = true
+            timeUntilUnlock = "Ready now!"
+            return
+        }
+
+        isUnlocked = false
+
+        // Calculate time remaining
+        let components = calendar.dateComponents([.hour, .minute, .second], from: now, to: nextUnlock)
+        let hours = components.hour ?? 0
+        let minutes = components.minute ?? 0
+        let seconds = components.second ?? 0
+
+        if hours > 0 {
+            timeUntilUnlock = "\(hours)h \(minutes)m \(seconds)s remaining"
+        } else if minutes > 0 {
+            timeUntilUnlock = "\(minutes)m \(seconds)s remaining"
+        } else {
+            timeUntilUnlock = "\(seconds)s remaining"
+        }
     }
 }
 

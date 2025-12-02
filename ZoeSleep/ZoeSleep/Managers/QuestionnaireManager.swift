@@ -9,6 +9,11 @@ import Foundation
 import SwiftUI
 import Combine
 
+// Notification posted when questionnaire progress changes (section completion, day change, etc.)
+extension Notification.Name {
+    static let questionnaireProgressDidChange = Notification.Name("questionnaireProgressDidChange")
+}
+
 @MainActor
 class QuestionnaireManager: ObservableObject {
     static let shared = QuestionnaireManager()
@@ -623,23 +628,50 @@ class QuestionnaireManager: ObservableObject {
     // MARK: - Load Progress
 
     func loadJourneyProgress() async {
-        guard convexService.isAuthenticated else { return }
+        guard convexService.isAuthenticated else {
+            print("[iOS] loadJourneyProgress: Not authenticated, skipping Convex fetch")
+            return
+        }
 
         isLoading = true
         defer { isLoading = false }
+        print("[iOS] loadJourneyProgress: Fetching from Convex...")
 
         do {
             let progress = try await convexService.getJourneyProgress()
             currentDay = progress.currentDay
-            journeyProgress = JourneyProgressData(
+            // Handle optional startedAt - use current date if not provided
+            let startDate: Date
+            if let startedAt = progress.startedAt {
+                startDate = Date(timeIntervalSince1970: TimeInterval(startedAt))
+            } else {
+                startDate = Date()
+            }
+            let newProgress = JourneyProgressData(
                 currentDay: progress.currentDay,
                 completedDays: progress.completedDays,
                 totalDays: progress.totalDays,
-                startedAt: Date(timeIntervalSince1970: TimeInterval(progress.startedAt)),
-                gatewayStates: gatewayStates
+                startedAt: startDate,
+                gatewayStates: gatewayStates,
+                sleepLogCompleted: progress.sleepLogCompleted ?? false,
+                assessmentCompleted: progress.assessmentCompleted ?? false
             )
+
+            // Check if anything changed to notify observers
+            let progressChanged = journeyProgress?.sleepLogCompleted != newProgress.sleepLogCompleted ||
+                                  journeyProgress?.assessmentCompleted != newProgress.assessmentCompleted ||
+                                  journeyProgress?.currentDay != newProgress.currentDay
+
+            journeyProgress = newProgress
+            print("[iOS] Loaded progress: Day \(progress.currentDay), sleepLog=\(progress.sleepLogCompleted ?? false), assessment=\(progress.assessmentCompleted ?? false)")
+
+            // Post notification if progress changed
+            if progressChanged {
+                NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+            }
         } catch {
             self.error = error.localizedDescription
+            print("[iOS] Error loading journey progress: \(error.localizedDescription)")
         }
     }
 }
