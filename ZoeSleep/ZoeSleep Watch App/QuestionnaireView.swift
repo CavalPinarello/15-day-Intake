@@ -18,6 +18,7 @@ enum QuestionMode {
 
 struct QuestionnaireView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
+    @EnvironmentObject var themeManager: WatchThemeManager
     @ObservedObject private var convexService = WatchConvexService.shared
 
     // Question mode - determines what to show
@@ -281,16 +282,18 @@ struct QuestionnaireView: View {
                     }
                 }
 
-                Divider()
-                    .padding(.vertical, 4)
+                // Debug: Reset button only shown in debug mode
+                if themeManager.debugMode {
+                    Divider()
+                        .padding(.vertical, 4)
 
-                // Debug: Reset button right on completed view
-                Button("Reset & Start Over") {
-                    resetAllProgress()
+                    Button("Reset & Start Over") {
+                        resetAllProgress()
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.red)
+                    .font(.caption2)
                 }
-                .buttonStyle(.bordered)
-                .tint(.red)
-                .font(.caption2)
             }
             .padding()
         }
@@ -1148,4 +1151,5 @@ extension Color {
 #Preview {
     QuestionnaireView()
         .environmentObject(WatchConnectivityManager())
+        .environmentObject(WatchThemeManager.shared)
 }

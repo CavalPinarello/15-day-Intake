@@ -155,13 +155,13 @@ export const calculateStandardizedScore = action({
 
     switch (args.questionnaireName.toUpperCase()) {
       case "ISI": // Insomnia Severity Index
-        result = await calculateISI(allResponses, openai);
+        result = await calculateISI(allResponses);
         break;
       case "PSQI": // Pittsburgh Sleep Quality Index
-        result = await calculatePSQI(allResponses, openai);
+        result = await calculatePSQI(allResponses);
         break;
       case "ESS": // Epworth Sleepiness Scale
-        result = await calculateESS(allResponses, openai);
+        result = await calculateESS(allResponses);
         break;
       default:
         result = {
@@ -232,7 +232,7 @@ Recommend 3-5 evidence-based sleep interventions with:
 Format as JSON array with objects containing: interventionName, rationale, priority.`;
 
     try {
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAI().chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -266,8 +266,7 @@ Format as JSON array with objects containing: interventionName, rationale, prior
 // ============================================
 
 async function calculateISI(
-  responses: Record<string, string>,
-  openai: OpenAI
+  responses: Record<string, string>
 ): Promise<{
   score: number;
   maxScore: number;
@@ -318,8 +317,7 @@ async function calculateISI(
 }
 
 async function calculatePSQI(
-  responses: Record<string, string>,
-  openai: OpenAI
+  responses: Record<string, string>
 ): Promise<{
   score: number;
   maxScore: number;
@@ -368,8 +366,7 @@ async function calculatePSQI(
 }
 
 async function calculateESS(
-  responses: Record<string, string>,
-  openai: OpenAI
+  responses: Record<string, string>
 ): Promise<{
   score: number;
   maxScore: number;
