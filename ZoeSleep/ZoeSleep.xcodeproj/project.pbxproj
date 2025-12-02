@@ -43,6 +43,8 @@
 		4A5E3BE62C8E123456789D07 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE72C8E123456789D08 /* WatchHomeView.swift */; };
 		4A5E3BF02C8E123456789E01 /* CircadianWaveBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF12C8E123456789E02 /* CircadianWaveBackground.swift */; };
 		4A5E3BF22C8E123456789E03 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */; };
+		4A5E3BF42C8E123456789F01 /* SharedQuestionBank.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */; };
+		4A5E3BF62C8E123456789F03 /* SharedQuestionBank.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,17 +58,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		4A5E3BB12C8E123456789A16 /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				4A5E3BB02C8E123456789A0D /* ZoeSleep Watch App.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -111,6 +102,7 @@
 		4A5E3BE72C8E123456789D08 /* WatchHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
 		4A5E3BF12C8E123456789E02 /* CircadianWaveBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircadianWaveBackground.swift; sourceTree = "<group>"; };
 		4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
+		4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedQuestionBank.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -134,10 +126,20 @@
 		4A5E3B7C2C8E123456789A1E = {
 			isa = PBXGroup;
 			children = (
+				4A5E3BF72C8E123456789F04 /* Shared */,
 				4A5E3B872C8E123456789A1F /* ZoeSleep */,
 				4A5E3BA62C8E123456789A20 /* ZoeSleep Watch App */,
 				4A5E3B852C8E123456789A21 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		4A5E3BF72C8E123456789F04 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */,
+			);
+			name = Shared;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		4A5E3B852C8E123456789A21 /* Products */ = {
@@ -252,12 +254,10 @@
 				4A5E3B802C8E123456789A28 /* Sources */,
 				4A5E3B812C8E123456789A1C /* Frameworks */,
 				4A5E3B822C8E123456789A29 /* Resources */,
-				4A5E3BB12C8E123456789A16 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				4A5E3BB02C8E123456789A2A /* PBXTargetDependency */,
 			);
 			name = ZoeSleep;
 			productName = ZoeSleep;
@@ -365,6 +365,7 @@
 				4A5E3BE22C8E123456789D03 /* WatchConnectivityManager.swift in Sources */,
 				4A5E3BF02C8E123456789E01 /* CircadianWaveBackground.swift in Sources */,
 				4A5E3BF22C8E123456789E03 /* SplashScreenView.swift in Sources */,
+				4A5E3BF42C8E123456789F01 /* SharedQuestionBank.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -372,6 +373,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4A5E3BF62C8E123456789F03 /* SharedQuestionBank.swift in Sources */,
 				4A5E3BB52C8E123456789A0F /* HealthKitWatchManager.swift in Sources */,
 				4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */,
 				4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */,
