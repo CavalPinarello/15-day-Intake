@@ -680,6 +680,98 @@ class ConvexService {
 
         let _: SuccessResponse = try await client.mutation("ios:trackEvent", args: args)
     }
+
+    // MARK: - Cross-Device Question Progress Sync
+
+    struct QuestionProgress: Codable {
+        let currentQuestionIndex: Int
+        let totalQuestions: Int
+        let lastDevice: String
+        let lastUpdatedAt: Double
+        let completed: Bool
+    }
+
+    struct SavedResponses: Codable {
+        // Dynamic dictionary - will be decoded manually
+    }
+
+    /// Get the current question progress for a section (to resume where user left off)
+    func getQuestionProgress(dayNumber: Int, section: String) async throws -> QuestionProgress? {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("watch:getQuestionProgress", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "section": section
+        ])
+    }
+
+    /// Update question progress after answering a question
+    func updateQuestionProgress(dayNumber: Int, section: String, questionIndex: Int, totalQuestions: Int) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let _: SuccessResponse = try await client.mutation("watch:updateQuestionProgress", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "section": section,
+            "currentQuestionIndex": questionIndex,
+            "totalQuestions": totalQuestions,
+            "device": "ios"
+        ])
+    }
+
+    /// Mark a section's question progress as complete
+    func completeQuestionProgress(dayNumber: Int, section: String) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let _: SuccessResponse = try await client.mutation("watch:completeQuestionProgress", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "section": section,
+            "device": "ios"
+        ])
+    }
+
+    struct ResponseValue: Codable {
+        let stringValue: String?
+        let numberValue: Double?
+        let arrayValue: [String]?
+    }
+
+    /// Get all saved responses for a day (to pre-fill answers when resuming)
+    func getSavedResponses(dayNumber: Int) async throws -> [String: QuestionResponseValue] {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        // Query returns a dictionary of questionId -> response values
+        let rawResponse: [String: ResponseValue] = try await client.query("watch:getSavedResponses", args: [
+            "userId": userId,
+            "dayNumber": dayNumber
+        ])
+
+        var result: [String: QuestionResponseValue] = [:]
+        for (questionId, values) in rawResponse {
+            result[questionId] = QuestionResponseValue(
+                stringValue: values.stringValue,
+                numberValue: values.numberValue,
+                arrayValue: values.arrayValue
+            )
+        }
+        return result
+    }
+}
+
+struct QuestionResponseValue {
+    let stringValue: String?
+    let numberValue: Double?
+    let arrayValue: [String]?
 }
 
 // MARK: - Device Info

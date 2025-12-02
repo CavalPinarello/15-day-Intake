@@ -597,6 +597,70 @@ class QuestionnaireManager: ObservableObject {
         // Could show a comparison view after user enters their data
     }
 
+    /// Pre-fills demographic questions (D2, D4, D5, D6) with data from Apple Health
+    /// This should be called when Day 1 questionnaire is loaded
+    func prefillDemographicsFromHealthKit(_ healthKitManager: HealthKitManager) {
+        let demographicResponses = healthKitManager.getDemographicResponses()
+
+        for (questionId, value) in demographicResponses {
+            // Only pre-fill if not already answered
+            guard responses[questionId] == nil else { continue }
+
+            var response = QuestionResponse(
+                questionId: questionId,
+                dayNumber: 1
+            )
+
+            if let stringValue = value as? String {
+                response.stringValue = stringValue
+            } else if let intValue = value as? Int {
+                response.numberValue = Double(intValue)
+            } else if let doubleValue = value as? Double {
+                response.numberValue = doubleValue
+            }
+
+            responses[questionId] = response
+            print("[QuestionnaireManager] Pre-filled \(questionId) from HealthKit: \(value)")
+        }
+    }
+
+    /// Check if a question can be auto-filled from HealthKit
+    func canAutoFillFromHealthKit(_ questionId: String, healthKitManager: HealthKitManager) -> Bool {
+        // Only auto-fill if not already answered
+        guard responses[questionId] == nil else { return false }
+        return healthKitManager.hasDemographicData(for: questionId)
+    }
+
+    /// Get the HealthKit pre-filled value for display (with source indicator)
+    func getHealthKitPrefillValue(_ questionId: String, healthKitManager: HealthKitManager) -> (value: Any, source: String)? {
+        let demographics = healthKitManager.demographics
+
+        switch questionId {
+        case "D2":
+            if let dob = demographics.dateOfBirth {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .long
+                return (formatter.string(from: dob), "Apple Health")
+            }
+        case "D4":
+            if let sex = demographics.biologicalSex {
+                return (sex, "Apple Health")
+            }
+        case "D5":
+            if let height = demographics.heightCm {
+                return (Int(round(height)), "Apple Health")
+            }
+        case "D6":
+            if let weight = demographics.weightKg {
+                return (Int(round(weight)), "Apple Health")
+            }
+        default:
+            break
+        }
+
+        return nil
+    }
+
     // MARK: - Day Completion
 
     func completeDay(_ dayNumber: Int) async throws {
@@ -627,6 +691,7 @@ class QuestionnaireManager: ObservableObject {
 
     // MARK: - Load Progress
 
+    @MainActor
     func loadJourneyProgress() async {
         guard convexService.isAuthenticated else {
             print("[iOS] loadJourneyProgress: Not authenticated, skipping Convex fetch")
@@ -634,7 +699,6 @@ class QuestionnaireManager: ObservableObject {
         }
 
         isLoading = true
-        defer { isLoading = false }
         print("[iOS] loadJourneyProgress: Fetching from Convex...")
 
         do {
@@ -663,6 +727,7 @@ class QuestionnaireManager: ObservableObject {
                                   journeyProgress?.currentDay != newProgress.currentDay
 
             journeyProgress = newProgress
+            isLoading = false
             print("[iOS] Loaded progress: Day \(progress.currentDay), sleepLog=\(progress.sleepLogCompleted ?? false), assessment=\(progress.assessmentCompleted ?? false)")
 
             // Post notification if progress changed
@@ -671,6 +736,7 @@ class QuestionnaireManager: ObservableObject {
             }
         } catch {
             self.error = error.localizedDescription
+            isLoading = false
             print("[iOS] Error loading journey progress: \(error.localizedDescription)")
         }
     }

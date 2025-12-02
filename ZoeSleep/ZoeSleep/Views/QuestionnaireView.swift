@@ -114,8 +114,8 @@ struct QuestionnaireView: View {
 
     private var mainQuestionnaireView: some View {
         ZStack {
-            // Animated wave background with subtle intensity
-            CircadianWaveBackground(intensity: 0.5)
+            // Simplified wave background for questionnaire (reduced animations for performance)
+            QuestionnaireWaveBackground()
 
             VStack(spacing: 0) {
                 // Section Header
@@ -158,7 +158,6 @@ struct QuestionnaireView: View {
                     }
                     .padding(.vertical)
                 }
-                .background(currentSection.backgroundColor.opacity(0.2))
 
                 // Navigation Buttons
                 navigationButtons
@@ -446,6 +445,106 @@ struct QuestionnaireView: View {
         assessmentIndex = 0
         startTime = Date()
         questionStartTime = Date()
+
+        // Pre-fill demographics from HealthKit (Day 1 only)
+        if currentDay == 1 {
+            prefillDemographicsFromHealthKit()
+        }
+
+        // Load saved progress from Convex (cross-device sync)
+        loadSavedProgress()
+    }
+
+    /// Pre-fill demographic questions (D2, D4, D5, D6) from Apple Health
+    private func prefillDemographicsFromHealthKit() {
+        // Get HealthKit demographic data
+        let demographicResponses = healthKitManager.getDemographicResponses()
+
+        for (questionId, value) in demographicResponses {
+            // Only pre-fill assessment responses (demographics are in assessment, not sleep log)
+            if assessmentResponses[questionId] == nil {
+                assessmentResponses[questionId] = value
+                print("[iOS] Pre-filled \(questionId) from Apple Health")
+            }
+        }
+
+        // Also update the questionnaire manager's responses
+        questionnaireManager.prefillDemographicsFromHealthKit(healthKitManager)
+    }
+
+    /// Load saved progress and responses from Convex for cross-device sync
+    private func loadSavedProgress() {
+        Task {
+            do {
+                let section = startSection == .sleepLog ? "sleepLog" : "assessment"
+
+                // Load question progress (which question user was on)
+                if let progress = try await ConvexService.shared.getQuestionProgress(dayNumber: currentDay, section: section) {
+                    await MainActor.run {
+                        // Only resume if not completed
+                        if !progress.completed {
+                            let resumeIndex = progress.currentQuestionIndex
+                            if startSection == .sleepLog && resumeIndex < sleepLogQuestions.count {
+                                sleepLogIndex = resumeIndex
+                                print("[iOS] Resuming sleep log at question \(resumeIndex + 1)/\(sleepLogQuestions.count) (last device: \(progress.lastDevice))")
+                            } else if startSection == .assessment && resumeIndex < assessmentQuestions.count {
+                                assessmentIndex = resumeIndex
+                                print("[iOS] Resuming assessment at question \(resumeIndex + 1)/\(assessmentQuestions.count) (last device: \(progress.lastDevice))")
+                            }
+                        }
+                    }
+                }
+
+                // Load saved responses to pre-fill answers
+                let savedResponses = try await ConvexService.shared.getSavedResponses(dayNumber: currentDay)
+                await MainActor.run {
+                    for (questionId, value) in savedResponses {
+                        // Determine which section this question belongs to
+                        if sleepLogQuestions.contains(where: { $0.id == questionId }) {
+                            if let str = value.stringValue {
+                                sleepLogResponses[questionId] = str
+                            } else if let num = value.numberValue {
+                                sleepLogResponses[questionId] = num
+                            } else if let arr = value.arrayValue {
+                                sleepLogResponses[questionId] = arr
+                            }
+                        } else {
+                            if let str = value.stringValue {
+                                assessmentResponses[questionId] = str
+                            } else if let num = value.numberValue {
+                                assessmentResponses[questionId] = num
+                            } else if let arr = value.arrayValue {
+                                assessmentResponses[questionId] = arr
+                            }
+                        }
+                    }
+                    print("[iOS] Loaded \(savedResponses.count) saved responses from Convex")
+                }
+            } catch {
+                print("[iOS] Failed to load saved progress: \(error)")
+            }
+        }
+    }
+
+    /// Save question progress to Convex after each question
+    private func syncProgressToConvex() {
+        let section = currentSection == .sleepLog ? "sleepLog" : "assessment"
+        let index = currentSection == .sleepLog ? sleepLogIndex : assessmentIndex
+        let total = currentSection == .sleepLog ? sleepLogQuestions.count : assessmentQuestions.count
+
+        Task {
+            do {
+                try await ConvexService.shared.updateQuestionProgress(
+                    dayNumber: currentDay,
+                    section: section,
+                    questionIndex: index,
+                    totalQuestions: total
+                )
+                print("[iOS] Synced progress: \(section) question \(index + 1)/\(total)")
+            } catch {
+                print("[iOS] Failed to sync progress: \(error)")
+            }
+        }
     }
 
     private func fetchHealthKitSleepData() {
@@ -527,6 +626,8 @@ struct QuestionnaireView: View {
             } else {
                 sleepLogIndex += 1
                 questionStartTime = Date()
+                // Sync progress to Convex for cross-device sync
+                syncProgressToConvex()
             }
         } else {
             if isLastQuestionInSection {
@@ -538,6 +639,8 @@ struct QuestionnaireView: View {
             } else {
                 assessmentIndex += 1
                 questionStartTime = Date()
+                // Sync progress to Convex for cross-device sync
+                syncProgressToConvex()
             }
         }
     }

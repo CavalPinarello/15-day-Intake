@@ -3,77 +3,202 @@
 //  Zoe Sleep - Sleep Better, Live Longer
 //
 //  Animated flowing wave background inspired by EEG and circadian rhythms
-//  Features subtle, gentle sine waves that flow continuously
+//  Features glassy, shaded waves that flow continuously
 //
 
 import SwiftUI
 
-// MARK: - Wave Configuration
+// MARK: - Glassy Wave Shape (Filled with gradient)
 
-struct WaveConfig {
-    let amplitude: CGFloat      // Height of the wave
-    let frequency: CGFloat      // How many waves fit horizontally
-    let speed: CGFloat          // Animation speed (lower = slower)
-    let opacity: Double         // Wave transparency
-    let yOffset: CGFloat        // Vertical position offset (0-1 range)
-    let color: Color            // Wave color
+struct GlassyWaveShape: Shape {
+    var phase: CGFloat
+    var amplitude: CGFloat
+    var frequency: CGFloat
+    var fillDown: Bool = true // Whether to fill downward or upward
 
-    static func defaultWaves(for colorScheme: ColorScheme) -> [WaveConfig] {
-        let baseColor = colorScheme == .dark
-            ? Color(red: 0.31, green: 0.80, blue: 0.77) // Teal for dark mode
-            : Color(red: 0.20, green: 0.55, blue: 0.65) // Deeper teal for light mode
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
 
-        return [
-            // Background layer - slowest, most subtle
-            WaveConfig(
-                amplitude: 30,
-                frequency: 0.8,
-                speed: 0.02,
-                opacity: 0.08,
-                yOffset: 0.3,
-                color: baseColor
-            ),
-            // Mid layer - medium speed
-            WaveConfig(
-                amplitude: 25,
-                frequency: 1.2,
-                speed: 0.025,
-                opacity: 0.06,
-                yOffset: 0.5,
-                color: baseColor
-            ),
-            // Upper layer
-            WaveConfig(
-                amplitude: 20,
-                frequency: 1.5,
-                speed: 0.03,
-                opacity: 0.05,
-                yOffset: 0.35,
-                color: baseColor
-            ),
-            // Lower layer
-            WaveConfig(
-                amplitude: 22,
-                frequency: 1.0,
-                speed: 0.022,
-                opacity: 0.07,
-                yOffset: 0.65,
-                color: baseColor
-            ),
-            // Accent layer - faster, thinner
-            WaveConfig(
-                amplitude: 15,
-                frequency: 1.8,
-                speed: 0.035,
-                opacity: 0.04,
-                yOffset: 0.45,
-                color: baseColor
-            )
-        ]
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let width = rect.width
+        let height = rect.height
+        let midY = height / 2
+
+        // Start at bottom-left or top-left depending on fill direction
+        if fillDown {
+            path.move(to: CGPoint(x: 0, y: height))
+            path.addLine(to: CGPoint(x: 0, y: midY + sin(phase) * amplitude))
+        } else {
+            path.move(to: CGPoint(x: 0, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: midY + sin(phase) * amplitude))
+        }
+
+        // Draw the wave curve
+        for x in stride(from: 0, through: width, by: 2) {
+            let relativeX = x / width
+            let normalizedX = relativeX * frequency * .pi * 2 + phase
+            let y = midY + sin(normalizedX) * amplitude
+            path.addLine(to: CGPoint(x: x, y: y))
+        }
+
+        // Close the path
+        if fillDown {
+            path.addLine(to: CGPoint(x: width, y: height))
+            path.addLine(to: CGPoint(x: 0, y: height))
+        } else {
+            path.addLine(to: CGPoint(x: width, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: 0))
+        }
+        path.closeSubpath()
+
+        return path
     }
 }
 
-// MARK: - Single Wave Shape
+// MARK: - Glassy Wave Layer with Gradient Fill
+
+struct GlassyWaveLayer: View {
+    let index: Int
+    let colorScheme: ColorScheme
+    @State private var phase: CGFloat = 0
+
+    // Wave configurations for each layer
+    private var config: (amplitude: CGFloat, frequency: CGFloat, speed: Double, yOffset: CGFloat, opacity: Double, blur: CGFloat) {
+        switch index {
+        case 0: // Back layer - largest, slowest, most diffuse
+            return (amplitude: 50, frequency: 0.6, speed: 35, yOffset: 0.55, opacity: 0.15, blur: 8)
+        case 1: // Mid-back layer
+            return (amplitude: 40, frequency: 0.8, speed: 28, yOffset: 0.50, opacity: 0.18, blur: 5)
+        case 2: // Middle layer - main visual
+            return (amplitude: 35, frequency: 1.0, speed: 22, yOffset: 0.45, opacity: 0.22, blur: 3)
+        case 3: // Mid-front layer
+            return (amplitude: 28, frequency: 1.2, speed: 18, yOffset: 0.40, opacity: 0.20, blur: 2)
+        default: // Front layer - sharpest, fastest
+            return (amplitude: 22, frequency: 1.5, speed: 15, yOffset: 0.35, opacity: 0.16, blur: 1)
+        }
+    }
+
+    private var waveGradient: LinearGradient {
+        let baseColor = colorScheme == .dark
+            ? Color(red: 0.30, green: 0.85, blue: 0.80) // Bright teal for dark mode
+            : Color(red: 0.15, green: 0.60, blue: 0.70) // Deeper teal for light mode
+
+        let highlightColor = colorScheme == .dark
+            ? Color(red: 0.40, green: 0.95, blue: 0.90) // Lighter teal highlight
+            : Color(red: 0.25, green: 0.75, blue: 0.85)
+
+        return LinearGradient(
+            colors: [
+                highlightColor.opacity(config.opacity * 1.5),
+                baseColor.opacity(config.opacity),
+                baseColor.opacity(config.opacity * 0.3)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            GlassyWaveShape(
+                phase: phase + CGFloat(index) * .pi / 4,
+                amplitude: config.amplitude,
+                frequency: config.frequency,
+                fillDown: true
+            )
+            .fill(waveGradient)
+            .blur(radius: config.blur)
+            .offset(y: geometry.size.height * config.yOffset)
+        }
+        .onAppear {
+            withAnimation(
+                .linear(duration: config.speed)
+                .repeatForever(autoreverses: false)
+            ) {
+                phase = .pi * 2
+            }
+        }
+    }
+}
+
+// MARK: - Glowing Line Wave (for accent lines)
+
+struct GlowingLineWave: View {
+    let index: Int
+    let colorScheme: ColorScheme
+    @State private var phase: CGFloat = 0
+
+    private var config: (amplitude: CGFloat, frequency: CGFloat, speed: Double, yOffset: CGFloat, lineWidth: CGFloat, opacity: Double) {
+        switch index {
+        case 0:
+            return (35, 0.9, 25, 0.42, 3.0, 0.35)
+        case 1:
+            return (28, 1.1, 20, 0.48, 2.5, 0.30)
+        case 2:
+            return (22, 1.3, 16, 0.54, 2.0, 0.25)
+        default:
+            return (18, 1.6, 12, 0.60, 1.5, 0.20)
+        }
+    }
+
+    private var lineColor: Color {
+        colorScheme == .dark
+            ? Color(red: 0.45, green: 0.95, blue: 0.90) // Bright cyan-teal
+            : Color(red: 0.20, green: 0.70, blue: 0.80)
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Glow layer (blurred underneath)
+                SineWaveShape(
+                    phase: phase + CGFloat(index) * .pi / 3,
+                    amplitude: config.amplitude,
+                    frequency: config.frequency
+                )
+                .stroke(
+                    lineColor.opacity(config.opacity * 0.5),
+                    style: StrokeStyle(lineWidth: config.lineWidth * 3, lineCap: .round)
+                )
+                .blur(radius: 8)
+                .offset(y: geometry.size.height * config.yOffset)
+
+                // Main line
+                SineWaveShape(
+                    phase: phase + CGFloat(index) * .pi / 3,
+                    amplitude: config.amplitude,
+                    frequency: config.frequency
+                )
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            lineColor.opacity(config.opacity * 0.6),
+                            lineColor.opacity(config.opacity),
+                            lineColor.opacity(config.opacity * 0.6)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    style: StrokeStyle(lineWidth: config.lineWidth, lineCap: .round)
+                )
+                .offset(y: geometry.size.height * config.yOffset)
+            }
+        }
+        .onAppear {
+            withAnimation(
+                .linear(duration: config.speed)
+                .repeatForever(autoreverses: false)
+            ) {
+                phase = .pi * 2
+            }
+        }
+    }
+}
+
+// MARK: - Simple Sine Wave Shape (for lines)
 
 struct SineWaveShape: Shape {
     var phase: CGFloat
@@ -91,9 +216,8 @@ struct SineWaveShape: Shape {
         let height = rect.height
         let midY = height / 2
 
-        path.move(to: CGPoint(x: 0, y: midY))
+        path.move(to: CGPoint(x: 0, y: midY + sin(phase) * amplitude))
 
-        // Draw sine wave with smooth curves
         for x in stride(from: 0, through: width, by: 2) {
             let relativeX = x / width
             let normalizedX = relativeX * frequency * .pi * 2 + phase
@@ -102,40 +226,6 @@ struct SineWaveShape: Shape {
         }
 
         return path
-    }
-}
-
-// MARK: - Animated Wave Layer
-
-struct AnimatedWaveLayer: View {
-    let config: WaveConfig
-    @State private var phase: CGFloat = 0
-
-    var body: some View {
-        GeometryReader { geometry in
-            SineWaveShape(
-                phase: phase,
-                amplitude: config.amplitude,
-                frequency: config.frequency
-            )
-            .stroke(
-                config.color.opacity(config.opacity),
-                style: StrokeStyle(
-                    lineWidth: 2,
-                    lineCap: .round,
-                    lineJoin: .round
-                )
-            )
-            .offset(y: geometry.size.height * config.yOffset)
-        }
-        .onAppear {
-            withAnimation(
-                .linear(duration: 1 / config.speed)
-                .repeatForever(autoreverses: false)
-            ) {
-                phase = .pi * 2
-            }
-        }
     }
 }
 
@@ -164,12 +254,16 @@ struct CircadianWaveBackground: View {
 
                 // Animated wave layers (if motion is allowed)
                 if !reduceMotion {
+                    // Glassy filled waves (back to front)
                     ForEach(0..<5, id: \.self) { index in
-                        let waves = WaveConfig.defaultWaves(for: colorScheme)
-                        if index < waves.count {
-                            AnimatedWaveLayer(config: waves[index])
-                                .opacity(intensity)
-                        }
+                        GlassyWaveLayer(index: index, colorScheme: colorScheme)
+                            .opacity(intensity)
+                    }
+
+                    // Glowing accent lines on top
+                    ForEach(0..<4, id: \.self) { index in
+                        GlowingLineWave(index: index, colorScheme: colorScheme)
+                            .opacity(intensity)
                     }
                 }
             }
@@ -189,21 +283,23 @@ struct CircadianWaveBackground: View {
 
     private var defaultGradient: LinearGradient {
         if colorScheme == .dark {
-            // Dark mode: Deep navy gradient
+            // Dark mode: Deep navy gradient with subtle color variation
             LinearGradient(
                 colors: [
-                    Color(red: 0.059, green: 0.090, blue: 0.165), // #0F172A
-                    Color(red: 0.078, green: 0.118, blue: 0.200)  // Slightly lighter navy
+                    Color(red: 0.04, green: 0.06, blue: 0.12), // Very deep navy top
+                    Color(red: 0.06, green: 0.09, blue: 0.16), // #0F172A
+                    Color(red: 0.05, green: 0.10, blue: 0.18)  // Hint of teal-navy bottom
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
         } else {
-            // Light mode: Soft off-white to light blue
+            // Light mode: Soft gradient
             LinearGradient(
                 colors: [
-                    Color(red: 0.97, green: 0.98, blue: 0.99),
-                    Color(red: 0.93, green: 0.96, blue: 0.99)
+                    Color(red: 0.96, green: 0.97, blue: 0.99),
+                    Color(red: 0.92, green: 0.95, blue: 0.98),
+                    Color(red: 0.88, green: 0.94, blue: 0.98)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -219,20 +315,38 @@ struct SplashWaveBackground: View {
 
     // Colors for the splash screen
     private let waveColor = Color(red: 0.31, green: 0.80, blue: 0.77) // Teal
-    private let backgroundColor = Color(red: 0.059, green: 0.090, blue: 0.165) // Deep navy
+    private let highlightColor = Color(red: 0.45, green: 0.95, blue: 0.90) // Bright cyan
+    private let backgroundColor = Color(red: 0.04, green: 0.06, blue: 0.12) // Deep navy
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Deep navy background
-                backgroundColor
+                // Deep navy gradient background
+                LinearGradient(
+                    colors: [
+                        backgroundColor,
+                        Color(red: 0.06, green: 0.09, blue: 0.16),
+                        Color(red: 0.05, green: 0.12, blue: 0.20)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
 
-                // Multiple flowing wave layers with higher visibility
+                // Glassy wave fills
                 ForEach(0..<4, id: \.self) { index in
-                    SplashWaveLayer(
+                    SplashGlassyWave(
                         index: index,
                         size: geometry.size,
-                        animationPhase: animationPhase
+                        phase: animationPhase
+                    )
+                }
+
+                // Glowing accent lines
+                ForEach(0..<3, id: \.self) { index in
+                    SplashGlowLine(
+                        index: index,
+                        size: geometry.size,
+                        phase: animationPhase
                     )
                 }
             }
@@ -249,41 +363,297 @@ struct SplashWaveBackground: View {
     }
 }
 
-struct SplashWaveLayer: View {
+struct SplashGlassyWave: View {
     let index: Int
     let size: CGSize
-    let animationPhase: CGFloat
+    let phase: CGFloat
 
-    private let waveColor = Color(red: 0.31, green: 0.80, blue: 0.77)
+    private var config: (amplitude: CGFloat, frequency: CGFloat, phaseOffset: CGFloat, yOffset: CGFloat, opacity: Double, blur: CGFloat) {
+        switch index {
+        case 0:
+            return (55, 0.7, 0, 0.60, 0.20, 10)
+        case 1:
+            return (45, 0.9, .pi / 4, 0.52, 0.25, 6)
+        case 2:
+            return (35, 1.1, .pi / 2, 0.45, 0.22, 4)
+        default:
+            return (28, 1.4, .pi * 3/4, 0.38, 0.18, 2)
+        }
+    }
+
+    private var gradient: LinearGradient {
+        let baseColor = Color(red: 0.30, green: 0.85, blue: 0.80)
+        let highlightColor = Color(red: 0.45, green: 0.95, blue: 0.90)
+
+        return LinearGradient(
+            colors: [
+                highlightColor.opacity(config.opacity * 1.3),
+                baseColor.opacity(config.opacity),
+                baseColor.opacity(config.opacity * 0.2)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    var body: some View {
+        GlassyWaveShape(
+            phase: phase + config.phaseOffset,
+            amplitude: config.amplitude,
+            frequency: config.frequency,
+            fillDown: true
+        )
+        .fill(gradient)
+        .blur(radius: config.blur)
+        .offset(y: size.height * config.yOffset)
+    }
+}
+
+struct SplashGlowLine: View {
+    let index: Int
+    let size: CGSize
+    let phase: CGFloat
+
+    private var config: (amplitude: CGFloat, frequency: CGFloat, phaseOffset: CGFloat, yOffset: CGFloat, lineWidth: CGFloat, opacity: Double) {
+        switch index {
+        case 0:
+            return (40, 0.85, .pi / 6, 0.48, 3.5, 0.45)
+        case 1:
+            return (32, 1.05, .pi / 3, 0.52, 2.5, 0.35)
+        default:
+            return (25, 1.25, .pi / 2, 0.56, 2.0, 0.28)
+        }
+    }
+
+    private let lineColor = Color(red: 0.50, green: 1.0, blue: 0.95) // Bright cyan
+
+    var body: some View {
+        ZStack {
+            // Outer glow
+            SineWaveShape(
+                phase: phase + config.phaseOffset,
+                amplitude: config.amplitude,
+                frequency: config.frequency
+            )
+            .stroke(lineColor.opacity(config.opacity * 0.3), style: StrokeStyle(lineWidth: config.lineWidth * 4, lineCap: .round))
+            .blur(radius: 12)
+            .offset(y: size.height * config.yOffset)
+
+            // Inner glow
+            SineWaveShape(
+                phase: phase + config.phaseOffset,
+                amplitude: config.amplitude,
+                frequency: config.frequency
+            )
+            .stroke(lineColor.opacity(config.opacity * 0.5), style: StrokeStyle(lineWidth: config.lineWidth * 2, lineCap: .round))
+            .blur(radius: 4)
+            .offset(y: size.height * config.yOffset)
+
+            // Core line
+            SineWaveShape(
+                phase: phase + config.phaseOffset,
+                amplitude: config.amplitude,
+                frequency: config.frequency
+            )
+            .stroke(
+                LinearGradient(
+                    colors: [
+                        lineColor.opacity(config.opacity * 0.5),
+                        lineColor.opacity(config.opacity),
+                        lineColor.opacity(config.opacity * 0.5)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                style: StrokeStyle(lineWidth: config.lineWidth, lineCap: .round)
+            )
+            .offset(y: size.height * config.yOffset)
+        }
+    }
+}
+
+// MARK: - Questionnaire Wave Background (Simplified for performance)
+
+/// A lighter wave background for questionnaire views with fewer animations
+struct QuestionnaireWaveBackground: View {
+    @Environment(\.colorScheme) var colorScheme
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Base gradient
+                backgroundGradient
+
+                // Only 3 wave layers (reduced from 9 for performance)
+                ForEach(0..<3, id: \.self) { index in
+                    QuestionnaireWaveLayer(index: index, phase: phase, colorScheme: colorScheme)
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.linear(duration: 25).repeatForever(autoreverses: false)) {
+                phase = .pi * 2
+            }
+        }
+    }
+
+    private var backgroundGradient: LinearGradient {
+        if colorScheme == .dark {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.06, blue: 0.12),
+                    Color(red: 0.06, green: 0.09, blue: 0.16),
+                    Color(red: 0.05, green: 0.10, blue: 0.18)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        } else {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.96, green: 0.97, blue: 0.99),
+                    Color(red: 0.92, green: 0.95, blue: 0.98),
+                    Color(red: 0.88, green: 0.94, blue: 0.98)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
+}
+
+struct QuestionnaireWaveLayer: View {
+    let index: Int
+    let phase: CGFloat
+    let colorScheme: ColorScheme
 
     private var config: (amplitude: CGFloat, frequency: CGFloat, phaseOffset: CGFloat, yOffset: CGFloat, opacity: Double) {
         switch index {
         case 0:
-            return (40, 1.0, 0, 0.25, 0.15)
+            return (45, 0.7, 0, 0.55, 0.18)
         case 1:
-            return (35, 1.3, .pi / 3, 0.4, 0.12)
-        case 2:
-            return (30, 1.6, .pi / 2, 0.55, 0.10)
+            return (35, 0.9, .pi / 3, 0.45, 0.15)
         default:
-            return (25, 1.9, .pi * 2/3, 0.7, 0.08)
+            return (28, 1.1, .pi * 2/3, 0.65, 0.12)
         }
     }
 
+    private var gradient: LinearGradient {
+        let baseColor = colorScheme == .dark
+            ? Color(red: 0.30, green: 0.85, blue: 0.80)
+            : Color(red: 0.15, green: 0.60, blue: 0.70)
+
+        let highlightColor = colorScheme == .dark
+            ? Color(red: 0.40, green: 0.95, blue: 0.90)
+            : Color(red: 0.25, green: 0.75, blue: 0.85)
+
+        return LinearGradient(
+            colors: [
+                highlightColor.opacity(config.opacity * 1.2),
+                baseColor.opacity(config.opacity),
+                baseColor.opacity(config.opacity * 0.3)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
     var body: some View {
-        SineWaveShape(
-            phase: animationPhase + config.phaseOffset,
-            amplitude: config.amplitude,
-            frequency: config.frequency
-        )
-        .stroke(
-            waveColor.opacity(config.opacity),
-            style: StrokeStyle(
-                lineWidth: 3,
-                lineCap: .round,
-                lineJoin: .round
+        GeometryReader { geometry in
+            GlassyWaveShape(
+                phase: phase + config.phaseOffset,
+                amplitude: config.amplitude,
+                frequency: config.frequency,
+                fillDown: true
             )
-        )
-        .offset(y: size.height * config.yOffset)
+            .fill(gradient)
+            .blur(radius: 6)
+            .offset(y: geometry.size.height * config.yOffset)
+        }
+    }
+}
+
+// MARK: - Glassy Card Background
+
+/// A frosted glass-style background for cards that lets the waves show through
+struct GlassyCardBackground: View {
+    @Environment(\.colorScheme) var colorScheme
+    var opacity: Double = 0.65
+    var tint: Color? = nil
+    var blur: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            // Base frosted layer
+            if colorScheme == .dark {
+                // Dark mode: semi-transparent dark with subtle tint
+                RoundedRectangle(cornerRadius: 0)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.08, green: 0.10, blue: 0.18).opacity(opacity),
+                                Color(red: 0.06, green: 0.08, blue: 0.14).opacity(opacity * 0.9)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                // Optional color tint
+                if let tint = tint {
+                    RoundedRectangle(cornerRadius: 0)
+                        .fill(tint.opacity(0.08))
+                }
+
+                // Subtle inner highlight (glassy effect)
+                RoundedRectangle(cornerRadius: 0)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.06),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .center
+                        )
+                    )
+            } else {
+                // Light mode: semi-transparent white
+                RoundedRectangle(cornerRadius: 0)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(opacity * 0.95),
+                                Color.white.opacity(opacity * 0.85)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                // Optional color tint
+                if let tint = tint {
+                    RoundedRectangle(cornerRadius: 0)
+                        .fill(tint.opacity(0.06))
+                }
+
+                // Light mode highlight
+                RoundedRectangle(cornerRadius: 0)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.5),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .center
+                        )
+                    )
+            }
+        }
+        .blur(radius: blur)
     }
 }
 
@@ -301,7 +671,7 @@ struct CircadianWaveBackgroundModifier: ViewModifier {
 }
 
 extension View {
-    /// Adds a subtle animated circadian wave background
+    /// Adds an animated circadian wave background with glassy effect
     func circadianWaveBackground(intensity: Double = 1.0) -> some View {
         modifier(CircadianWaveBackgroundModifier(intensity: intensity))
     }

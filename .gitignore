@@ -62,3 +62,4 @@ __pycache__/
 # Linear client (optional - remove if you want to track)
 linear_client.py
 
+ZoeSleep/build/

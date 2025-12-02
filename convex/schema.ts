@@ -735,5 +735,26 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_watch", ["watch_device_id"])
     .index("by_phone", ["phone_device_id"]),
+
+  // ============================================
+  // Cross-Device Question Progress Tracking
+  // ============================================
+
+  // Tracks exact question progress for seamless cross-device sync
+  questionnaire_session: defineTable({
+    user_id: v.id("users"),
+    day_number: v.number(),
+    section: v.string(), // "sleepLog" or "assessment"
+    current_question_index: v.number(), // 0-based index of current question
+    total_questions: v.number(), // Total questions in this section
+    started_at: v.number(),
+    last_updated_at: v.number(),
+    last_device: v.string(), // "ios", "watch", "web" - which device last updated
+    completed: v.boolean(),
+    completed_at: v.optional(v.number()),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_day", ["user_id", "day_number"])
+    .index("by_user_day_section", ["user_id", "day_number", "section"]),
 });
 

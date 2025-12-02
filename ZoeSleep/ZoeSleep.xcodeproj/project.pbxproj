@@ -390,11 +390,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		4A5E3BB02C8E123456789A2A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 4A5E3BA42C8E123456789A15 /* ZoeSleep Watch App */;
-			targetProxy = 4A5E3BAF2C8E123456789A13 /* PBXContainerItemProxy */;
-		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */

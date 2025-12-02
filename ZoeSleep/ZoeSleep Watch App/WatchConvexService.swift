@@ -56,6 +56,20 @@ struct WatchSaveResponseResult: Codable {
     let savedCount: Int?
 }
 
+struct WatchQuestionProgress: Codable {
+    let currentQuestionIndex: Int
+    let totalQuestions: Int
+    let lastDevice: String
+    let lastUpdatedAt: Double
+    let completed: Bool
+}
+
+struct WatchResponseValue: Codable {
+    let stringValue: String?
+    let numberValue: Double?
+    let arrayValue: [String]?
+}
+
 struct WatchUserInfo: Codable {
     let userId: String
     let username: String
@@ -292,6 +306,15 @@ class WatchConvexService: ObservableObject {
             // Convex wraps response in { "value": ... }
             if let wrapper = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 if let value = wrapper["value"] {
+                    // Handle null values - check if value is NSNull
+                    if value is NSNull {
+                        // For optional types, this will fail gracefully
+                        throw WatchConvexError.invalidResponse
+                    }
+                    // Ensure value is JSON-serializable before proceeding
+                    guard JSONSerialization.isValidJSONObject(value) || value is String || value is NSNumber || value is Bool else {
+                        throw WatchConvexError.decodingError("Response value is not JSON-serializable")
+                    }
                     let valueData = try JSONSerialization.data(withJSONObject: value)
                     return try decoder.decode(T.self, from: valueData)
                 }
@@ -585,5 +608,53 @@ class WatchConvexService: ObservableObject {
         ])
 
         return result.savedCount ?? responses.count
+    }
+
+    // MARK: - Cross-Device Question Progress Sync
+
+    /// Get the current question progress for a section (to resume where user left off)
+    func getQuestionProgress(dayNumber: Int, section: String) async throws -> WatchQuestionProgress? {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        return try await query("watch:getQuestionProgress", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "section": section
+        ])
+    }
+
+    /// Update question progress after answering a question
+    func updateQuestionProgress(dayNumber: Int, section: String, questionIndex: Int, totalQuestions: Int) async throws {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        struct SuccessResult: Codable {
+            let success: Bool
+            let questionIndex: Int
+        }
+
+        let _: SuccessResult = try await mutation("watch:updateQuestionProgress", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "section": section,
+            "currentQuestionIndex": questionIndex,
+            "totalQuestions": totalQuestions,
+            "device": "watch"
+        ])
+    }
+
+    /// Get all saved responses for a day (to pre-fill answers when resuming)
+    func getSavedResponses(dayNumber: Int) async throws -> [String: WatchResponseValue] {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        return try await query("watch:getSavedResponses", args: [
+            "userId": userId,
+            "dayNumber": dayNumber
+        ])
     }
 }

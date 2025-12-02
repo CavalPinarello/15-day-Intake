@@ -207,6 +207,72 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-12-01)
 
+**Smart Default Times for Time Pickers & Shared Question Bank**
+
+This session implemented intelligent default values for time pickers and number inputs across iOS and watchOS, and created a shared question bank for cross-platform consistency.
+
+### Smart Default Times
+
+**Problem:** Time pickers were defaulting to the current time (e.g., 5:13 PM), which is unrealistic for questions like "What time did you fall asleep last night?"
+
+**Solution:** Implemented smart defaults based on question context:
+
+| Question | iOS Default | Watch Default |
+|----------|-------------|---------------|
+| Bedtime (SL_BEDTIME) | 10:00 PM | 10:00 PM |
+| Fall Asleep (SL_ASLEEP_TIME) | 10:30 PM | 10:30 PM |
+| Wake Time (SL_WAKE_TIME) | 7:00 AM | 7:00 AM |
+| PSQI Bedtime (PSQI_1) | 10:30 PM | - |
+| PSQI Wake Time (PSQI_3) | 7:00 AM | - |
+
+**Smart Number Defaults:**
+- Age: 35 years (median adult)
+- Height: 170 cm (average)
+- Weight: 70 kg (average)
+- Night Awakenings: 1
+- Sleep Latency: 15 minutes
+- Sleep Hours: 7 hours
+
+**Scale Defaults:**
+- Sleep Quality: 6/10 (neutral-positive)
+- Stress Level: 5/10 (moderate)
+- Pain Level: 2/10 (low/optimistic)
+
+### Apple Watch Time Picker Redesign
+
+**Problem:** Watch time picker showed 24-hour format (17:25) with redundant time display above.
+
+**Solution:** Completely redesigned with:
+- 12-hour format (1-12) with separate AM/PM picker wheel
+- Removed redundant time display at top
+- Smart defaults based on question ID
+- Compact layout optimized for small watch screens
+
+### Shared Question Bank
+
+Created `/ZoeSleep/Shared/SharedQuestionBank.swift`:
+- Single source of truth for all questions (iOS + Watch)
+- Stanford Sleep Log questions with proper IDs
+- Day-specific assessment questions (Days 1-15)
+- Consistent question IDs across platforms
+
+### Files Modified
+- `/ZoeSleep/ZoeSleep/Views/QuestionComponents.swift` - iOS smart defaults for TimeInput, NumberInput, ScaleInput
+- `/ZoeSleep/ZoeSleep Watch App/QuestionnaireView.swift` - Watch WatchTimePickerView redesign, WatchQuestionBank uses SharedQuestionBank
+- `/ZoeSleep/ZoeSleep Watch App/WatchConvexService.swift` - Fixed null response handling to prevent crashes
+- `/ZoeSleep/Shared/SharedQuestionBank.swift` - NEW: Shared question definitions
+
+### Web Client Changes (also updated)
+- `/client/src/components/questions/types.ts` - Added questionKey and defaultValue to configs
+- `/client/src/components/questions/TimePicker.tsx` - Smart time defaults
+- `/client/src/components/questions/NumberInput.tsx` - Smart number defaults
+- `/client/src/components/questions/SliderScale.tsx` - Smart scale defaults
+- `/client/src/app/journey/page.tsx` - Pass questionKey to config builders
+
+---
+
+## Previous Session Context (2025-12-01)
+
 **Animated Circadian Wave Background & Splash Screen**
 
 This session implemented animated flowing wave backgrounds inspired by EEG/circadian rhythms, similar to Apple Watch sleep tracking visuals.

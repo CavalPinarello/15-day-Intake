@@ -690,3 +690,165 @@ export const getUserState = query({
     };
   },
 });
+
+// ============================================
+// Cross-Device Question Progress Sync
+// ============================================
+
+/**
+ * Get current question progress for a section
+ * Returns where the user left off so they can continue on any device
+ */
+export const getQuestionProgress = query({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+    section: v.string(), // "sleepLog" or "assessment"
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("questionnaire_session")
+      .withIndex("by_user_day_section", (q) =>
+        q.eq("user_id", args.userId)
+          .eq("day_number", args.dayNumber)
+          .eq("section", args.section)
+      )
+      .first();
+
+    if (!session) {
+      return null;
+    }
+
+    return {
+      currentQuestionIndex: session.current_question_index,
+      totalQuestions: session.total_questions,
+      lastDevice: session.last_device,
+      lastUpdatedAt: session.last_updated_at,
+      completed: session.completed,
+    };
+  },
+});
+
+/**
+ * Update question progress when user answers a question
+ * Called after each question to enable seamless cross-device sync
+ */
+export const updateQuestionProgress = mutation({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+    section: v.string(), // "sleepLog" or "assessment"
+    currentQuestionIndex: v.number(),
+    totalQuestions: v.number(),
+    device: v.string(), // "ios", "watch", "web"
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Check if session exists
+    const existingSession = await ctx.db
+      .query("questionnaire_session")
+      .withIndex("by_user_day_section", (q) =>
+        q.eq("user_id", args.userId)
+          .eq("day_number", args.dayNumber)
+          .eq("section", args.section)
+      )
+      .first();
+
+    if (existingSession) {
+      // Update existing session
+      await ctx.db.patch(existingSession._id, {
+        current_question_index: args.currentQuestionIndex,
+        total_questions: args.totalQuestions,
+        last_updated_at: now,
+        last_device: args.device,
+      });
+    } else {
+      // Create new session
+      await ctx.db.insert("questionnaire_session", {
+        user_id: args.userId,
+        day_number: args.dayNumber,
+        section: args.section,
+        current_question_index: args.currentQuestionIndex,
+        total_questions: args.totalQuestions,
+        started_at: now,
+        last_updated_at: now,
+        last_device: args.device,
+        completed: false,
+      });
+    }
+
+    return { success: true, questionIndex: args.currentQuestionIndex };
+  },
+});
+
+/**
+ * Mark a section as completed in the question progress tracker
+ */
+export const completeQuestionProgress = mutation({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+    section: v.string(),
+    device: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    const session = await ctx.db
+      .query("questionnaire_session")
+      .withIndex("by_user_day_section", (q) =>
+        q.eq("user_id", args.userId)
+          .eq("day_number", args.dayNumber)
+          .eq("section", args.section)
+      )
+      .first();
+
+    if (session) {
+      await ctx.db.patch(session._id, {
+        completed: true,
+        completed_at: now,
+        last_updated_at: now,
+        last_device: args.device,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+/**
+ * Get all responses for a user's current day
+ * Useful for loading saved responses when continuing on a different device
+ */
+export const getSavedResponses = query({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const responses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user_day", (q) =>
+        q.eq("user_id", args.userId).eq("day_number", args.dayNumber)
+      )
+      .collect();
+
+    // Convert to a map of questionId -> response for easy lookup
+    const responseMap: Record<string, {
+      stringValue?: string;
+      numberValue?: number;
+      arrayValue?: string[];
+    }> = {};
+
+    for (const r of responses) {
+      responseMap[r.question_id] = {
+        stringValue: r.response_value ?? undefined,
+        numberValue: r.response_number ?? undefined,
+        arrayValue: r.response_array ? JSON.parse(r.response_array) : undefined,
+      };
+    }
+
+    return responseMap;
+  },
+});

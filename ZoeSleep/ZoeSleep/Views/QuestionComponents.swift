@@ -399,7 +399,6 @@ struct TimeInput: View {
     let question: Question
     @Binding var value: Date
     @ObservedObject private var themeManager = ThemeManager.shared
-    @State private var hasSetInitialValue = false
 
     // Smart default times based on question context
     private var smartDefaultTime: Date {
@@ -454,12 +453,10 @@ struct TimeInput: View {
             .frame(height: themeManager.largeIconsMode ? 180 : 150)
             .scaleEffect(themeManager.largeIconsMode ? 1.15 : 1.0)
         }
+        .id(question.id) // Force view recreation when question changes
         .onAppear {
-            // Only set smart default once on first appear
-            if !hasSetInitialValue {
-                hasSetInitialValue = true
-                value = smartDefaultTime
-            }
+            // Always set smart default when view appears for this question
+            value = smartDefaultTime
         }
     }
 }

@@ -43,11 +43,11 @@ struct MainDashboardView: View {
 
     var body: some View {
         ZStack {
-            // Animated wave background
-            CircadianWaveBackground(intensity: 0.7)
+            // Animated wave background - increased intensity
+            CircadianWaveBackground(intensity: 1.0)
 
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     // Header
                     headerView
 
@@ -269,7 +269,7 @@ struct MainDashboardView: View {
             }
         }
         .padding()
-        .background(theme.backgroundTint)
+        .background(GlassyCardBackground())
         .cornerRadius(16)
     }
 
@@ -317,7 +317,7 @@ struct MainDashboardView: View {
             }
         }
         .padding()
-        .background(Color(.secondarySystemBackground))
+        .background(GlassyCardBackground(opacity: 0.6))
         .cornerRadius(12)
     }
 
@@ -388,9 +388,8 @@ struct MainDashboardView: View {
             .disabled(questionnaireManager.journeyProgress?.assessmentCompleted ?? false)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(GlassyCardBackground(opacity: 0.7))
         .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
     }
 
     private func advanceToNextDay() {
@@ -466,7 +465,7 @@ struct MainDashboardView: View {
                 }
             }
             .padding()
-            .background(theme.warning.opacity(0.1))
+            .background(GlassyCardBackground(opacity: 0.6, tint: theme.warning))
             .cornerRadius(12)
         }
     }
@@ -588,7 +587,7 @@ struct TaskRow: View {
             }
         }
         .padding(12)
-        .background(Color(.secondarySystemBackground))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(12)
     }
 }
@@ -627,7 +626,7 @@ struct QuickActionRow: View {
                 .foregroundColor(.secondary)
         }
         .padding(12)
-        .background(Color(.secondarySystemBackground))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(12)
     }
 }
@@ -705,11 +704,21 @@ struct SectionTaskCard: View {
             }
         }
         .padding(16)
-        .background(section.backgroundColor)
+        .background(GlassyCardBackground(opacity: 0.55, tint: section.accentColor))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(section.accentColor.opacity(0.3), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            section.accentColor.opacity(0.5),
+                            section.accentColor.opacity(0.2)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
         .opacity(isCompleted ? 0.7 : 1.0)
     }

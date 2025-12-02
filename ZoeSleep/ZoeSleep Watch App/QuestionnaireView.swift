@@ -186,6 +186,8 @@ struct QuestionnaireView: View {
                                     completeQuestionnaire()
                                 } else {
                                     currentQuestionIndex += 1
+                                    // Sync progress to Convex for cross-device sync
+                                    syncProgressToConvex()
                                 }
                             } label: {
                                 if currentQuestionIndex == questions.count - 1 {
@@ -479,7 +481,8 @@ struct QuestionnaireView: View {
                     },
                     set: { responses[question.id] = $0 }
                 ),
-                theme: theme
+                theme: theme,
+                questionId: question.id
             )
 
         case .yesNo:
@@ -520,41 +523,16 @@ struct QuestionnaireView: View {
             .padding(.horizontal, 4)
 
         case .number:
-            // Number input with large display and +/- buttons for easier control
-            VStack(spacing: 6) {
-                Text("\(Int(responses[question.id] as? Double ?? 0))")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundColor(theme.primary)
-
-                // +/- stepper buttons
-                HStack(spacing: 20) {
-                    Button {
-                        let current = responses[question.id] as? Double ?? 0
-                        if current > 0 {
-                            responses[question.id] = current - 1
-                            WKInterfaceDevice.current().play(.click)
-                        }
-                    } label: {
-                        Image(systemName: "minus.circle.fill")
-                            .font(.system(size: 32))
-                            .foregroundColor(theme.primary)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        let current = responses[question.id] as? Double ?? 0
-                        if current < 20 {
-                            responses[question.id] = current + 1
-                            WKInterfaceDevice.current().play(.click)
-                        }
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 32))
-                            .foregroundColor(theme.primary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            // Number input with progress bar, Digital Crown, and +/- buttons
+            WatchNumberInputView(
+                value: Binding(
+                    get: { Int(responses[question.id] as? Double ?? 0) },
+                    set: { responses[question.id] = Double($0) }
+                ),
+                minValue: 0,
+                maxValue: 20,
+                theme: theme
+            )
         }
     }
 
@@ -601,6 +579,77 @@ struct QuestionnaireView: View {
         questions = WatchQuestionBank.getQuestions(for: currentDay, mode: mode)
         currentQuestionIndex = 0
         responses = [:]
+
+        // Load saved progress from Convex for cross-device sync
+        loadSavedProgress()
+    }
+
+    /// Load saved progress and responses from Convex for cross-device sync
+    /// Note: This is best-effort - failures are logged but don't block the user
+    private func loadSavedProgress() {
+        guard convexService.isAuthenticated else { return }
+
+        Task {
+            let section = mode == .sleepLog ? "sleepLog" : "assessment"
+
+            // Load question progress (which question user was on)
+            // Wrapped in separate do-catch to not block response loading
+            do {
+                if let progress = try await convexService.getQuestionProgress(dayNumber: currentDay, section: section) {
+                    await MainActor.run {
+                        // Only resume if not completed
+                        if !progress.completed && progress.currentQuestionIndex < questions.count {
+                            currentQuestionIndex = progress.currentQuestionIndex
+                            print("[Watch] Resuming \(section) at question \(currentQuestionIndex + 1)/\(questions.count) (last device: \(progress.lastDevice))")
+                        }
+                    }
+                }
+            } catch {
+                print("[Watch] Could not load question progress (may not exist yet): \(error.localizedDescription)")
+            }
+
+            // Load saved responses to pre-fill answers
+            do {
+                let savedResponses = try await convexService.getSavedResponses(dayNumber: currentDay)
+                await MainActor.run {
+                    for (questionId, value) in savedResponses {
+                        if let str = value.stringValue {
+                            responses[questionId] = str
+                        } else if let num = value.numberValue {
+                            responses[questionId] = num
+                        } else if let arr = value.arrayValue {
+                            responses[questionId] = arr
+                        }
+                    }
+                    if !savedResponses.isEmpty {
+                        print("[Watch] Loaded \(savedResponses.count) saved responses")
+                    }
+                }
+            } catch {
+                print("[Watch] Could not load saved responses (may not exist yet): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Sync question progress to Convex after each question
+    private func syncProgressToConvex() {
+        guard convexService.isAuthenticated else { return }
+
+        let section = mode == .sleepLog ? "sleepLog" : "assessment"
+
+        Task {
+            do {
+                try await convexService.updateQuestionProgress(
+                    dayNumber: currentDay,
+                    section: section,
+                    questionIndex: currentQuestionIndex,
+                    totalQuestions: questions.count
+                )
+                print("[Watch] Synced progress: \(section) question \(currentQuestionIndex + 1)/\(questions.count)")
+            } catch {
+                print("[Watch] Failed to sync progress: \(error)")
+            }
+        }
     }
 
     private func isCurrentQuestionAnswered() -> Bool {
@@ -757,150 +806,64 @@ enum WatchQuestionType: String, CaseIterable {
     case number
 }
 
-// MARK: - Watch Question Bank (Built-in Questions)
+// MARK: - Watch Question Bank (Uses Shared Question Definitions)
 
 struct WatchQuestionBank {
 
-    // Stanford Sleep Log - asked every day (blue section)
-    static let sleepLogQuestions: [WatchQuestion] = [
-        WatchQuestion(
-            id: "SL_BEDTIME",
-            text: "What time did you go to bed last night?",
-            type: .time
-        ),
-        WatchQuestion(
-            id: "SL_ASLEEP_TIME",
-            text: "What time did you fall asleep?",
-            type: .time
-        ),
-        WatchQuestion(
-            id: "SL_AWAKENINGS",
-            text: "How many times did you wake up?",
-            type: .number
-        ),
-        WatchQuestion(
-            id: "SL_WAKE_TIME",
-            text: "What time did you wake up this morning?",
-            type: .time
-        ),
-        WatchQuestion(
-            id: "SL_QUALITY",
-            text: "Rate your sleep quality (1-10)",
-            type: .scale
-        ),
-        WatchQuestion(
-            id: "SL_REFRESHED",
-            text: "How refreshed do you feel? (1-10)",
-            type: .scale
-        )
-    ]
+    // MARK: - Convert SharedQuestion to WatchQuestion
 
-    // Day-specific assessment questions (purple section)
-    static let day1Questions: [WatchQuestion] = [
-        WatchQuestion(
-            id: "D1_SLEEP_PROBLEM",
-            text: "Do you have trouble sleeping?",
-            type: .yesNo
-        ),
-        WatchQuestion(
-            id: "D1_CAFFEINE",
-            text: "Do you consume caffeine?",
-            type: .yesNo
-        )
-    ]
+    /// Converts a SharedQuestion from the shared question bank to a WatchQuestion
+    private static func convertToWatchQuestion(_ shared: SharedQuestion) -> WatchQuestion {
+        let watchType: WatchQuestionType
+        switch shared.type {
+        case .text:
+            watchType = .text
+        case .number, .numberScroll, .minutesScroll:
+            watchType = .number
+        case .time, .date:
+            watchType = .time
+        case .scale:
+            watchType = .scale
+        case .yesNo, .yesNoDontKnow:
+            watchType = .yesNo
+        case .singleSelect:
+            watchType = .radio
+        case .multiSelect:
+            watchType = .checkbox
+        case .info:
+            watchType = .text  // Display as text on watch
+        }
 
-    static let day2Questions: [WatchQuestion] = [
-        WatchQuestion(
-            id: "D2_NAPS",
-            text: "Do you take naps during the day?",
-            type: .yesNo
-        ),
-        WatchQuestion(
-            id: "D2_EXERCISE",
-            text: "Do you exercise regularly?",
-            type: .yesNo
+        return WatchQuestion(
+            id: shared.id,
+            text: shared.text,
+            type: watchType,
+            options: shared.options
         )
-    ]
+    }
 
-    static let day3Questions: [WatchQuestion] = [
-        WatchQuestion(
-            id: "D3_SCREENS",
-            text: "Do you use screens before bed?",
-            type: .yesNo
-        ),
-        WatchQuestion(
-            id: "D3_STRESS",
-            text: "Rate your stress level (1-10)",
-            type: .scale
-        )
-    ]
-
-    static let day4Questions: [WatchQuestion] = [
-        WatchQuestion(
-            id: "D4_ALCOHOL",
-            text: "Did you consume alcohol yesterday?",
-            type: .yesNo
-        ),
-        WatchQuestion(
-            id: "D4_BEDROOM_TEMP",
-            text: "Is your bedroom comfortable?",
-            type: .yesNo
-        )
-    ]
-
-    static let day5Questions: [WatchQuestion] = [
-        WatchQuestion(
-            id: "D5_WORRY",
-            text: "Do you worry about sleep?",
-            type: .yesNo
-        ),
-        WatchQuestion(
-            id: "D5_ENERGY",
-            text: "Rate your energy level (1-10)",
-            type: .scale
-        )
-    ]
+    /// Convert an array of SharedQuestions to WatchQuestions
+    private static func convertToWatchQuestions(_ sharedQuestions: [SharedQuestion]) -> [WatchQuestion] {
+        return sharedQuestions.map { convertToWatchQuestion($0) }
+    }
 
     // MARK: - Get Sleep Log Questions Only
+    /// Returns Stanford Sleep Log questions from the shared question bank
     static func getSleepLogQuestions() -> [WatchQuestion] {
-        return sleepLogQuestions
+        return convertToWatchQuestions(SharedQuestionBank.stanfordSleepLog)
     }
 
     // MARK: - Get Assessment Questions Only (day-specific)
+    /// Returns day-specific assessment questions from the shared question bank
     static func getAssessmentQuestionsForDay(_ day: Int) -> [WatchQuestion] {
-        switch day {
-        case 1:
-            return day1Questions
-        case 2:
-            return day2Questions
-        case 3:
-            return day3Questions
-        case 4:
-            return day4Questions
-        case 5:
-            return day5Questions
-        default:
-            // Days 6+ - return generic daily check-in questions
-            return [
-                WatchQuestion(
-                    id: "D\(day)_MOOD",
-                    text: "How is your mood today? (1-10)",
-                    type: .scale
-                ),
-                WatchQuestion(
-                    id: "D\(day)_ENERGY",
-                    text: "How is your energy? (1-10)",
-                    type: .scale
-                )
-            ]
-        }
+        let sharedQuestions = SharedQuestionBank.getAssessmentQuestionsForDay(day)
+        return convertToWatchQuestions(sharedQuestions)
     }
 
     // MARK: - Get All Questions (legacy - combines both)
     static func getQuestionsForDay(_ day: Int) -> [WatchQuestion] {
-        var questions = sleepLogQuestions
-        questions.append(contentsOf: getAssessmentQuestionsForDay(day))
-        return questions
+        let sharedQuestions = SharedQuestionBank.getQuestionsForDay(day)
+        return convertToWatchQuestions(sharedQuestions)
     }
 
     // MARK: - Get Questions by Mode
@@ -916,61 +879,208 @@ struct WatchQuestionBank {
     }
 }
 
+// MARK: - Watch Number Input View (with progress bar + Digital Crown)
+
+struct WatchNumberInputView: View {
+    @Binding var value: Int
+    let minValue: Int
+    let maxValue: Int
+    let theme: WatchColorTheme
+
+    // Digital Crown state
+    @State private var crownValue: Double = 0
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // Progress bar showing value position
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    // Background track
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(height: 6)
+
+                    // Filled portion based on value
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(theme.primary)
+                        .frame(
+                            width: geo.size.width * CGFloat(value - minValue) / CGFloat(max(1, maxValue - minValue)),
+                            height: 6
+                        )
+                        .animation(.easeInOut(duration: 0.15), value: value)
+                }
+            }
+            .frame(height: 6)
+            .padding(.horizontal, 8)
+
+            // Large number display
+            Text("\(value)")
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .foregroundColor(theme.primary)
+                .contentTransition(.numericText())
+                .animation(.easeInOut(duration: 0.1), value: value)
+
+            // +/- stepper buttons
+            HStack(spacing: 20) {
+                Button {
+                    if value > minValue {
+                        value -= 1
+                        crownValue = Double(value)
+                        WKInterfaceDevice.current().play(.click)
+                    }
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(value > minValue ? theme.primary : theme.primary.opacity(0.3))
+                }
+                .buttonStyle(.plain)
+                .disabled(value <= minValue)
+
+                Button {
+                    if value < maxValue {
+                        value += 1
+                        crownValue = Double(value)
+                        WKInterfaceDevice.current().play(.click)
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(value < maxValue ? theme.primary : theme.primary.opacity(0.3))
+                }
+                .buttonStyle(.plain)
+                .disabled(value >= maxValue)
+            }
+
+            // Hint text
+            Text("Rotate Crown or tap ±")
+                .font(.system(size: 9))
+                .foregroundColor(.secondary)
+        }
+        .focusable(true)
+        .digitalCrownRotation(
+            $crownValue,
+            from: Double(minValue),
+            through: Double(maxValue),
+            by: 1.0,
+            sensitivity: .medium,
+            isContinuous: false,
+            isHapticFeedbackEnabled: true
+        )
+        .onChange(of: crownValue) { _, newValue in
+            let newInt = Int(newValue.rounded())
+            if newInt != value && newInt >= minValue && newInt <= maxValue {
+                value = newInt
+            }
+        }
+        .onAppear {
+            crownValue = Double(value)
+        }
+    }
+}
+
 // MARK: - Watch Time Picker View
 
 struct WatchTimePickerView: View {
     @Binding var selectedTime: Date
     let theme: WatchColorTheme
+    var questionId: String = ""
 
-    @State private var hour: Int = 12
+    @State private var hour12: Int = 10      // 1-12 format
     @State private var minute: Int = 0
+    @State private var isPM: Bool = true     // AM/PM toggle
+    @State private var hasInitialized: Bool = false
 
-    private let hours = Array(0...23)
+    private let hours12 = Array(1...12)
     private let minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 
-    var body: some View {
-        VStack(spacing: 4) {
-            // Display current selection - large and prominent
-            Text(formattedTime)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(theme.primary)
+    // Smart defaults based on question
+    private var smartDefault: (hour24: Int, minute: Int) {
+        switch questionId {
+        case "SL_BEDTIME":
+            return (22, 0)   // 10:00 PM
+        case "SL_ASLEEP_TIME":
+            return (22, 30)  // 10:30 PM
+        case "SL_WAKE_TIME":
+            return (7, 0)    // 7:00 AM
+        default:
+            // Infer from question text would be passed separately
+            return (22, 0)   // Default to 10 PM for sleep-related
+        }
+    }
 
-            // Large, easy-to-use pickers
-            HStack(spacing: 6) {
-                Picker("Hour", selection: $hour) {
-                    ForEach(hours, id: \.self) { h in
-                        Text(String(format: "%02d", h))
-                            .font(.system(size: 20, weight: .semibold))
+    var body: some View {
+        VStack(spacing: 2) {
+            // 12-hour picker with AM/PM
+            HStack(spacing: 2) {
+                // Hour picker (1-12)
+                Picker("Hour", selection: $hour12) {
+                    ForEach(hours12, id: \.self) { h in
+                        Text("\(h)")
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                             .tag(h)
                     }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 60, height: 65)
+                .frame(width: 50, height: 70)
                 .clipped()
 
                 Text(":")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(theme.primary)
 
+                // Minute picker
                 Picker("Minute", selection: $minute) {
                     ForEach(minutes, id: \.self) { m in
                         Text(String(format: "%02d", m))
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                             .tag(m)
                     }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 60, height: 65)
+                .frame(width: 50, height: 70)
+                .clipped()
+
+                // AM/PM picker
+                Picker("Period", selection: $isPM) {
+                    Text("AM")
+                        .font(.system(size: 16, weight: .semibold))
+                        .tag(false)
+                    Text("PM")
+                        .font(.system(size: 16, weight: .semibold))
+                        .tag(true)
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 44, height: 70)
                 .clipped()
             }
         }
         .onAppear {
-            let calendar = Calendar.current
-            hour = calendar.component(.hour, from: selectedTime)
-            let currentMinute = calendar.component(.minute, from: selectedTime)
-            minute = (currentMinute / 5) * 5
+            guard !hasInitialized else { return }
+            hasInitialized = true
+
+            // Set smart default based on question
+            let (defaultHour24, defaultMinute) = smartDefault
+
+            // Convert 24h to 12h format
+            if defaultHour24 == 0 {
+                hour12 = 12
+                isPM = false
+            } else if defaultHour24 == 12 {
+                hour12 = 12
+                isPM = true
+            } else if defaultHour24 > 12 {
+                hour12 = defaultHour24 - 12
+                isPM = true
+            } else {
+                hour12 = defaultHour24
+                isPM = false
+            }
+            minute = defaultMinute
+
+            // Apply the default immediately
+            updateSelectedTime()
         }
-        .onChange(of: hour) { _, _ in
+        .onChange(of: hour12) { _, _ in
             updateSelectedTime()
             WKInterfaceDevice.current().play(.click)
         }
@@ -978,17 +1088,23 @@ struct WatchTimePickerView: View {
             updateSelectedTime()
             WKInterfaceDevice.current().play(.click)
         }
-    }
-
-    private var formattedTime: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: selectedTime)
+        .onChange(of: isPM) { _, _ in
+            updateSelectedTime()
+            WKInterfaceDevice.current().play(.click)
+        }
     }
 
     private func updateSelectedTime() {
+        // Convert 12h to 24h
+        var hour24: Int
+        if hour12 == 12 {
+            hour24 = isPM ? 12 : 0
+        } else {
+            hour24 = isPM ? hour12 + 12 : hour12
+        }
+
         var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        components.hour = hour
+        components.hour = hour24
         components.minute = minute
         if let newDate = Calendar.current.date(from: components) {
             selectedTime = newDate

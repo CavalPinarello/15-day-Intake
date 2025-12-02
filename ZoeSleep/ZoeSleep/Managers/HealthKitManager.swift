@@ -8,15 +8,33 @@
 import Foundation
 import HealthKit
 
+/// Demographics data fetched from Apple Health
+struct HealthKitDemographics {
+    var dateOfBirth: Date?
+    var biologicalSex: String?
+    var heightCm: Double?
+    var weightKg: Double?
+
+    /// Calculate age from date of birth
+    var age: Int? {
+        guard let dob = dateOfBirth else { return nil }
+        let calendar = Calendar.current
+        let now = Date()
+        let ageComponents = calendar.dateComponents([.year], from: dob, to: now)
+        return ageComponents.year
+    }
+}
+
 @MainActor
 class HealthKitManager: ObservableObject {
     let healthStore = HKHealthStore()
     @Published var isAuthorized = false
-    
+    @Published var demographics: HealthKitDemographics = HealthKitDemographics()
+
     // API Configuration
     private let apiService = APIService.shared
     private var authManager: AuthenticationManager?
-    
+
     init(authManager: AuthenticationManager? = nil) {
         self.authManager = authManager
     }
@@ -83,18 +101,199 @@ class HealthKitManager: ObservableObject {
         
         // Workouts
         readTypes.insert(HKObjectType.workoutType())
-        
+
+        // MARK: - Demographics (for auto-filling questionnaire)
+
+        // Date of Birth (Characteristic - read-only)
+        if let dobType = HKObjectType.characteristicType(forIdentifier: .dateOfBirth) {
+            readTypes.insert(dobType)
+        }
+
+        // Biological Sex (Characteristic - read-only)
+        if let sexType = HKObjectType.characteristicType(forIdentifier: .biologicalSex) {
+            readTypes.insert(sexType)
+        }
+
+        // Height (Quantity - can change over time)
+        if let heightType = HKObjectType.quantityType(forIdentifier: .height) {
+            readTypes.insert(heightType)
+        }
+
+        // Body Mass / Weight (Quantity - can change over time)
+        if let weightType = HKObjectType.quantityType(forIdentifier: .bodyMass) {
+            readTypes.insert(weightType)
+        }
+
         // Request authorization
         healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, error in
             DispatchQueue.main.async {
                 self.isAuthorized = success
+                if success {
+                    // Automatically fetch demographics after authorization
+                    self.fetchDemographics()
+                }
                 completion(success, error)
             }
         }
     }
     
+    // MARK: - Demographics Data (for auto-filling questionnaire)
+
+    /// Fetches all available demographic data from HealthKit
+    /// This includes: Date of Birth, Biological Sex, Height, and Weight
+    func fetchDemographics() {
+        var newDemographics = HealthKitDemographics()
+
+        // Fetch Date of Birth (characteristic - set once in Health app)
+        do {
+            let dobComponents = try healthStore.dateOfBirthComponents()
+            newDemographics.dateOfBirth = Calendar.current.date(from: dobComponents)
+        } catch {
+            print("[HealthKit] Could not fetch date of birth: \(error.localizedDescription)")
+        }
+
+        // Fetch Biological Sex (characteristic - set once in Health app)
+        do {
+            let biologicalSex = try healthStore.biologicalSex()
+            switch biologicalSex.biologicalSex {
+            case .female:
+                newDemographics.biologicalSex = "Female"
+            case .male:
+                newDemographics.biologicalSex = "Male"
+            case .other:
+                newDemographics.biologicalSex = "Other"
+            case .notSet:
+                newDemographics.biologicalSex = nil
+            @unknown default:
+                newDemographics.biologicalSex = nil
+            }
+        } catch {
+            print("[HealthKit] Could not fetch biological sex: \(error.localizedDescription)")
+        }
+
+        // Fetch Height (most recent sample)
+        fetchMostRecentHeight { height in
+            DispatchQueue.main.async {
+                self.demographics.heightCm = height
+            }
+        }
+
+        // Fetch Weight (most recent sample)
+        fetchMostRecentWeight { weight in
+            DispatchQueue.main.async {
+                self.demographics.weightKg = weight
+            }
+        }
+
+        // Update published demographics (DOB and Sex are synchronous)
+        DispatchQueue.main.async {
+            self.demographics.dateOfBirth = newDemographics.dateOfBirth
+            self.demographics.biologicalSex = newDemographics.biologicalSex
+        }
+    }
+
+    /// Fetches the most recent height measurement from HealthKit
+    private func fetchMostRecentHeight(completion: @escaping (Double?) -> Void) {
+        guard let heightType = HKQuantityType.quantityType(forIdentifier: .height) else {
+            completion(nil)
+            return
+        }
+
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let query = HKSampleQuery(
+            sampleType: heightType,
+            predicate: nil,
+            limit: 1,
+            sortDescriptors: [sortDescriptor]
+        ) { _, samples, error in
+            guard let sample = samples?.first as? HKQuantitySample, error == nil else {
+                print("[HealthKit] Could not fetch height: \(error?.localizedDescription ?? "Unknown error")")
+                completion(nil)
+                return
+            }
+
+            let heightInCm = sample.quantity.doubleValue(for: HKUnit.meterUnit(with: .centi))
+            completion(heightInCm)
+        }
+
+        healthStore.execute(query)
+    }
+
+    /// Fetches the most recent weight measurement from HealthKit
+    private func fetchMostRecentWeight(completion: @escaping (Double?) -> Void) {
+        guard let weightType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else {
+            completion(nil)
+            return
+        }
+
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let query = HKSampleQuery(
+            sampleType: weightType,
+            predicate: nil,
+            limit: 1,
+            sortDescriptors: [sortDescriptor]
+        ) { _, samples, error in
+            guard let sample = samples?.first as? HKQuantitySample, error == nil else {
+                print("[HealthKit] Could not fetch weight: \(error?.localizedDescription ?? "Unknown error")")
+                completion(nil)
+                return
+            }
+
+            let weightInKg = sample.quantity.doubleValue(for: HKUnit.gramUnit(with: .kilo))
+            completion(weightInKg)
+        }
+
+        healthStore.execute(query)
+    }
+
+    /// Returns pre-filled responses for demographic questions based on HealthKit data
+    /// Use this to auto-populate the questionnaire
+    func getDemographicResponses() -> [String: Any] {
+        var responses: [String: Any] = [:]
+
+        // D2: Date of Birth
+        if let dob = demographics.dateOfBirth {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            responses["D2"] = formatter.string(from: dob)
+        }
+
+        // D4: Biological Sex
+        if let sex = demographics.biologicalSex {
+            responses["D4"] = sex
+        }
+
+        // D5: Height in cm
+        if let height = demographics.heightCm {
+            responses["D5"] = Int(round(height))
+        }
+
+        // D6: Weight in kg
+        if let weight = demographics.weightKg {
+            responses["D6"] = Int(round(weight))
+        }
+
+        return responses
+    }
+
+    /// Check if a specific demographic field is available from HealthKit
+    func hasDemographicData(for questionId: String) -> Bool {
+        switch questionId {
+        case "D2":
+            return demographics.dateOfBirth != nil
+        case "D4":
+            return demographics.biologicalSex != nil
+        case "D5":
+            return demographics.heightCm != nil
+        case "D6":
+            return demographics.weightKg != nil
+        default:
+            return false
+        }
+    }
+
     // MARK: - Sleep Data
-    
+
     func fetchSleepData(daysBack: Int = 90, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
             completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Sleep analysis type not available"])))
