@@ -207,6 +207,103 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-12-01)
 
+**Cross-Device Question-by-Question Sync & Day Completion UI**
+
+This session implemented seamless question-level progress sync across iOS, Watch, and Web, plus day completion celebration UI.
+
+### Features Implemented
+
+#### 1. Question-by-Question Cross-Device Sync
+Users can now start a questionnaire on one device and seamlessly continue on another, picking up at the exact question they left off.
+
+**New Convex Schema (`/convex/schema.ts`):**
+- Added `questionnaire_session` table tracking:
+  - `user_id`, `day_number`, `section` (sleepLog/assessment)
+  - `current_question_index` - exact question position
+  - `total_questions`, `last_device` ("ios", "watch", "web")
+  - `completed` status with timestamps
+
+**New Convex Functions (`/convex/watch.ts`):**
+- `watch:getQuestionProgress` - Get where user left off
+- `watch:updateQuestionProgress` - Save progress after each question
+- `watch:completeQuestionProgress` - Mark section complete
+- `watch:getSavedResponses` - Get all saved answers for pre-filling
+
+**iOS Integration (`ConvexService.swift`, `QuestionnaireView.swift`):**
+- `getQuestionProgress()`, `updateQuestionProgress()`, `getSavedResponses()`
+- Loads saved progress on questionnaire open
+- Syncs position after each "Next" tap
+- Pre-fills previously answered questions
+
+**Watch Integration (`WatchConvexService.swift`, `QuestionnaireView.swift`):**
+- Same sync functions with `device: "watch"`
+- Auto-resumes from where user left off
+- Robust error handling for network issues
+
+**Web Integration (`/client/src/lib/convexService.ts`, `journey/page.tsx`):**
+- New HTTP-based Convex client for browser
+- Loads progress and responses on page load
+- Syncs after each question advancement
+
+#### 2. Day Completion Celebration UI
+
+**iOS (`ContentView.swift`):**
+- `DayCompleteCelebrationView` component showing:
+  - Star icon with "Day X Complete!" message
+  - **Debug mode**: "Advance to Day X" button for instant progression
+  - **Normal mode**: Countdown timer to 5 AM unlock
+  - Live countdown (hours/minutes/seconds)
+  - Journey complete message for Day 15
+- "Complete" badge with checkmark in Today's Tasks header
+
+**Watch (`WatchHomeView.swift`):**
+- Celebration card when both sleep log and assessment complete
+- "Day X+1 unlocks at 5 AM" message
+- Green checkmark styling on completed tasks
+
+#### 3. Watch Sync Improvements
+
+**Settings (`SettingsView.swift`):**
+- New "Sync" section with:
+  - "Sync from Cloud" button - manual refresh from Convex
+  - "Login as user3" button - dev auto-login for simulator testing
+  - Shows current logged-in username and day
+
+**Auto-Login (`WatchConvexService.swift`):**
+- Watch auto-logs in as user3 on launch if not authenticated
+- Enables simulator testing without manual login
+
+### Key Files Modified
+- `/convex/schema.ts` - Added `questionnaire_session` table
+- `/convex/watch.ts` - Question progress sync functions
+- `/ZoeSleep/ZoeSleep/Services/ConvexService.swift` - iOS sync methods
+- `/ZoeSleep/ZoeSleep/Views/QuestionnaireView.swift` - Progress load/save
+- `/ZoeSleep/ZoeSleep/ContentView.swift` - Day completion UI
+- `/ZoeSleep/ZoeSleep Watch App/WatchConvexService.swift` - Watch sync methods
+- `/ZoeSleep/ZoeSleep Watch App/QuestionnaireView.swift` - Watch progress sync
+- `/ZoeSleep/ZoeSleep Watch App/WatchHomeView.swift` - Celebration card
+- `/ZoeSleep/ZoeSleep Watch App/SettingsView.swift` - Sync controls
+- `/client/src/lib/convexService.ts` - NEW: Web Convex HTTP client
+- `/client/src/app/journey/page.tsx` - Web progress sync
+
+### Cross-Device Sync Flow
+1. User starts questionnaire on iPhone, answers 3 questions
+2. Progress synced to Convex: `{ section: "sleepLog", currentQuestionIndex: 2 }`
+3. User opens Watch app, starts Sleep Log
+4. Watch fetches progress, resumes at question 3
+5. User answers 2 more questions on Watch
+6. User opens Web app, continues from question 5
+
+### Testing Notes
+- All devices must use same user account (user3 for simulators)
+- Watch auto-logs in as user3 for simulator testing
+- Debug mode allows instant day advancement
+- Normal mode shows 5 AM unlock countdown
+
+---
+
+## Previous Session Context (2025-12-01 - Earlier)
+
 **Smart Default Times for Time Pickers & Shared Question Bank**
 
 This session implemented intelligent default values for time pickers and number inputs across iOS and watchOS, and created a shared question bank for cross-platform consistency.
@@ -268,6 +365,9 @@ Created `/ZoeSleep/Shared/SharedQuestionBank.swift`:
 - `/client/src/components/questions/NumberInput.tsx` - Smart number defaults
 - `/client/src/components/questions/SliderScale.tsx` - Smart scale defaults
 - `/client/src/app/journey/page.tsx` - Pass questionKey to config builders
+
+- **Commit Hash:** `25ad5ae` - "Implement smart default times for time pickers and shared question bank"
+- **Repository:** Successfully pushed to https://github.com/CavalPinarello/15-day-Intake.git
 
 ---
 
