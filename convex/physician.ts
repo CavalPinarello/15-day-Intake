@@ -26,8 +26,8 @@ const SLEEP_LOG_QUESTIONS: Record<string, { text: string; type: string }> = {
 };
 
 // Stanford Sleep Diary questions (SD_ prefix - full diary from SharedQuestionBank)
+// NOTE: SD_DATE was removed - the system knows the date from the day being logged
 const SLEEP_DIARY_QUESTIONS: Record<string, { text: string; type: string }> = {
-  "SD_DATE": { text: "Date", type: "date" },
   "SD_DAY_TYPE": { text: "What type of day is today?", type: "single_select" },
   "SD_MEDICATION_TAKEN": { text: "Did you take any sleep medication last night?", type: "yes_no" },
   "SD_MEDICATION_TIME": { text: "If yes, what time did you take it?", type: "time" },
@@ -1271,6 +1271,212 @@ export const deleteUserIntervention = mutation({
   handler: async (ctx, args) => {
     await ctx.db.delete(args.interventionId);
     return null;
+  },
+});
+
+// ============================================
+// Dynamic Questionnaire Scoring
+// ============================================
+
+/**
+ * Calculate all questionnaire scores dynamically from patient responses
+ * This includes ISI, PHQ-9, GAD-7, ESS, STOP-BANG, and gateway analysis
+ */
+export const calculatePatientScores = query({
+  args: {
+    userId: v.id("users"),
+    sessionToken: v.optional(v.string()),
+  },
+  returns: v.object({
+    scores: v.array(
+      v.object({
+        name: v.string(),
+        abbreviation: v.string(),
+        score: v.union(v.number(), v.null()),
+        maxScore: v.number(),
+        interpretation: v.string(),
+        severity: v.string(),
+        questionsAnswered: v.number(),
+        questionsRequired: v.number(),
+      })
+    ),
+    sleepMetrics: v.object({
+      avgBedtime: v.optional(v.string()),
+      avgWakeTime: v.optional(v.string()),
+      avgSleepQuality: v.optional(v.number()),
+      avgAwakenings: v.optional(v.number()),
+      daysLogged: v.number(),
+    }),
+    gateways: v.object({
+      insomnia: v.boolean(),
+      depression: v.boolean(),
+      anxiety: v.boolean(),
+      sleepApnea: v.boolean(),
+      excessiveSleepiness: v.boolean(),
+      pain: v.boolean(),
+    }),
+  }),
+  handler: async (ctx, args) => {
+    // Validate physician role if session token provided
+    if (args.sessionToken) {
+      const session = await validatePhysicianRole(ctx, args.sessionToken);
+      if (!session.valid) {
+        throw new Error(session.error || "Unauthorized: Physician access required");
+      }
+    }
+
+    // Get all responses for this user
+    const allResponses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Build a map of question_id -> numeric value for scoring
+    const responseMap = new Map<string, number>();
+    const stringResponseMap = new Map<string, string>();
+
+    for (const r of allResponses) {
+      // Get numeric value
+      if (r.response_number !== undefined && r.response_number !== null) {
+        responseMap.set(r.question_id, r.response_number);
+      } else if (r.response_value !== undefined) {
+        // Try to parse as number
+        const num = parseFloat(r.response_value);
+        if (!isNaN(num)) {
+          responseMap.set(r.question_id, num);
+        }
+        // Also map string values for yes/no questions
+        const val = r.response_value.toLowerCase();
+        if (val === "yes" || val === "true" || val === "1") {
+          responseMap.set(r.question_id, 1);
+        } else if (val === "no" || val === "false" || val === "0") {
+          responseMap.set(r.question_id, 0);
+        }
+        // Map select index (0-based)
+        if (val === "not at all") responseMap.set(r.question_id, 0);
+        else if (val === "several days") responseMap.set(r.question_id, 1);
+        else if (val === "more than half the days") responseMap.set(r.question_id, 2);
+        else if (val === "nearly every day") responseMap.set(r.question_id, 3);
+        // ESS/other scale options
+        else if (val === "never") responseMap.set(r.question_id, 0);
+        else if (val === "rarely") responseMap.set(r.question_id, 1);
+        else if (val === "sometimes") responseMap.set(r.question_id, 2);
+        else if (val === "often") responseMap.set(r.question_id, 3);
+        else if (val === "always") responseMap.set(r.question_id, 4);
+      }
+      // Store string value
+      if (r.response_value) {
+        stringResponseMap.set(r.question_id, r.response_value);
+      }
+    }
+
+    // Get demographics for STOP-BANG
+    const user = await ctx.db.get(args.userId);
+    const dobResponse = stringResponseMap.get("D2");
+    const sexResponse = stringResponseMap.get("D4");
+    const heightResponse = stringResponseMap.get("D5");
+    const weightResponse = stringResponseMap.get("D6");
+
+    let age: number | undefined;
+    if (dobResponse) {
+      const birthYear = parseInt(dobResponse.split("-")[0] || dobResponse);
+      if (!isNaN(birthYear)) {
+        age = new Date().getFullYear() - birthYear;
+      }
+    }
+
+    let bmi: number | undefined;
+    if (heightResponse && weightResponse) {
+      const heightCm = parseFloat(heightResponse);
+      const weightKg = parseFloat(weightResponse);
+      if (!isNaN(heightCm) && !isNaN(weightKg) && heightCm > 0) {
+        bmi = weightKg / ((heightCm / 100) ** 2);
+      }
+    }
+
+    const demographics = { age, sex: sexResponse, bmi };
+
+    // Calculate all scores
+    const scores = [
+      calculateISI(responseMap),
+      calculatePHQ9(responseMap),
+      calculateGAD7(responseMap),
+      calculateESS(responseMap),
+      calculateSTOPBANG(responseMap, demographics),
+    ];
+
+    // Calculate sleep log metrics
+    const sleepLogResponses = allResponses.filter(r =>
+      r.question_id.startsWith("SL_") || r.question_id.startsWith("SD_")
+    );
+
+    let totalQuality = 0;
+    let qualityCount = 0;
+    let totalAwakenings = 0;
+    let awakeningsCount = 0;
+    const bedtimes: string[] = [];
+    const wakeTimes: string[] = [];
+
+    for (const r of sleepLogResponses) {
+      if (r.question_id === "SL_QUALITY" || r.question_id === "SD_SLEEP_QUALITY") {
+        const val = r.response_number ?? parseFloat(r.response_value || "");
+        if (!isNaN(val)) {
+          totalQuality += val;
+          qualityCount++;
+        }
+      }
+      if (r.question_id === "SL_AWAKENINGS" || r.question_id === "SD_AWAKENINGS_COUNT") {
+        const val = r.response_number ?? parseFloat(r.response_value || "");
+        if (!isNaN(val)) {
+          totalAwakenings += val;
+          awakeningsCount++;
+        }
+      }
+      if (r.question_id === "SL_BEDTIME" || r.question_id === "SD_GOT_INTO_BED") {
+        if (r.response_value) bedtimes.push(r.response_value);
+      }
+      if (r.question_id === "SL_WAKE_TIME" || r.question_id === "SD_FINAL_WAKE") {
+        if (r.response_value) wakeTimes.push(r.response_value);
+      }
+    }
+
+    // Get unique days logged
+    const daysLogged = new Set(sleepLogResponses.map(r => r.day_number)).size;
+
+    const sleepMetrics = {
+      avgBedtime: bedtimes.length > 0 ? bedtimes[Math.floor(bedtimes.length / 2)] : undefined, // median
+      avgWakeTime: wakeTimes.length > 0 ? wakeTimes[Math.floor(wakeTimes.length / 2)] : undefined,
+      avgSleepQuality: qualityCount > 0 ? Math.round((totalQuality / qualityCount) * 10) / 10 : undefined,
+      avgAwakenings: awakeningsCount > 0 ? Math.round((totalAwakenings / awakeningsCount) * 10) / 10 : undefined,
+      daysLogged,
+    };
+
+    // Determine gateway triggers
+    const gateways = {
+      insomnia: (responseMap.get("3") === 1) || // trouble falling/staying asleep
+                (responseMap.get("1") !== undefined && responseMap.get("1")! <= 5), // poor sleep quality
+      depression: (responseMap.get("15") !== undefined && responseMap.get("15")! >= 2), // felt down/hopeless
+      anxiety: (responseMap.get("16") !== undefined && responseMap.get("16")! >= 2), // felt nervous/anxious
+      sleepApnea: (responseMap.get("19") === 1) || // loud snoring
+                  (responseMap.get("20") === 1), // observed apnea
+      excessiveSleepiness: (responseMap.get("17") !== undefined && responseMap.get("17")! >= 3), // often/always tired
+      pain: (responseMap.get("22") === 1), // pain affects sleep
+    };
+
+    return {
+      scores: scores.map(s => ({
+        name: s.name,
+        abbreviation: s.abbreviation,
+        score: s.score,
+        maxScore: s.maxScore,
+        interpretation: s.interpretation,
+        severity: s.severity,
+        questionsAnswered: s.questionsAnswered,
+        questionsRequired: s.questionsRequired,
+      })),
+      sleepMetrics,
+      gateways,
+    };
   },
 });
 

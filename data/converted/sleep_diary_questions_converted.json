@@ -1,21 +1,5 @@
 [
   {
-    "id": "SD_DATE",
-    "question_text": "Date",
-    "help_text": "Tap to edit if logging a past day",
-    "group_key": "metadata",
-    "pillar": "Sleep Diary",
-    "answer_format": "date_auto",
-    "format_config": {},
-    "validation_rules": {
-      "required": true
-    },
-    "order_index": 1,
-    "estimated_time_seconds": 6,
-    "created_at": 1763104572237,
-    "updated_at": 1763104572237
-  },
-  {
     "id": "SD_DAY_TYPE",
     "question_text": "What type of day is today?",
     "group_key": "metadata",
@@ -49,7 +33,7 @@
     "validation_rules": {
       "required": true
     },
-    "order_index": 2,
+    "order_index": 1,
     "estimated_time_seconds": 12,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -64,7 +48,7 @@
     "validation_rules": {
       "required": true
     },
-    "order_index": 3,
+    "order_index": 2,
     "estimated_time_seconds": 12,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -86,7 +70,7 @@
         "value": "Yes"
       }
     },
-    "order_index": 4,
+    "order_index": 3,
     "estimated_time_seconds": 18,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -101,7 +85,7 @@
     "validation_rules": {
       "required": true
     },
-    "order_index": 5,
+    "order_index": 4,
     "estimated_time_seconds": 18,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -117,7 +101,7 @@
     "validation_rules": {
       "required": true
     },
-    "order_index": 6,
+    "order_index": 5,
     "estimated_time_seconds": 18,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -132,7 +116,7 @@
     "validation_rules": {
       "required": true
     },
-    "order_index": 7,
+    "order_index": 6,
     "estimated_time_seconds": 18,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -158,7 +142,7 @@
       "min": 0,
       "max": 200
     },
-    "order_index": 8,
+    "order_index": 7,
     "estimated_time_seconds": 12,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -181,7 +165,7 @@
       "min": 0,
       "max": 20
     },
-    "order_index": 9,
+    "order_index": 8,
     "estimated_time_seconds": 12,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -210,7 +194,7 @@
         "value": 0
       }
     },
-    "order_index": 10,
+    "order_index": 9,
     "estimated_time_seconds": 12,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -225,7 +209,7 @@
     "validation_rules": {
       "required": true
     },
-    "order_index": 11,
+    "order_index": 10,
     "estimated_time_seconds": 18,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -240,7 +224,7 @@
     "validation_rules": {
       "required": true
     },
-    "order_index": 12,
+    "order_index": 11,
     "estimated_time_seconds": 18,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -255,7 +239,7 @@
     "validation_rules": {
       "required": true
     },
-    "order_index": 13,
+    "order_index": 12,
     "estimated_time_seconds": 12,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -270,7 +254,7 @@
     "validation_rules": {
       "required": true
     },
-    "order_index": 14,
+    "order_index": 13,
     "estimated_time_seconds": 12,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -300,7 +284,7 @@
         "value": "Yes"
       }
     },
-    "order_index": 15,
+    "order_index": 14,
     "estimated_time_seconds": 12,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
@@ -322,7 +306,7 @@
         "value": "Yes"
       }
     },
-    "order_index": 16,
+    "order_index": 15,
     "estimated_time_seconds": 36,
     "created_at": 1763104572237,
     "updated_at": 1763104572237

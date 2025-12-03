@@ -1124,9 +1124,9 @@ struct WatchQuestionBank {
     }
 
     // MARK: - Get Sleep Log Questions Only
-    /// Returns Stanford Sleep Log questions (streamlined Watch version - 5 questions)
+    /// Returns the FULL Stanford Sleep Log questions (same as iPhone/Web for data interchangeability)
     static func getSleepLogQuestions() -> [WatchQuestion] {
-        return convertToWatchQuestions(SharedQuestionBank.getSleepLogQuestionsForWatch())
+        return convertToWatchQuestions(SharedQuestionBank.getSleepLogQuestions())
     }
 
     // MARK: - Get Assessment Questions Only (day-specific)
