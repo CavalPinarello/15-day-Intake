@@ -274,6 +274,44 @@ WatchHomeView
 
 ---
 
+## iOS Onboarding Flow Fix (2025-12-02)
+
+**Removed Welcome Step - Onboarding Starts Directly with Name Input**
+
+Fixed the onboarding flow confusion where the "Welcome to Zoe Sleep" screen appeared to be a second splash screen. The correct flow should be:
+
+### Correct App Flow
+```
+Splash (0.6s) → Authentication (Login/SignUp) → Onboarding → Main App
+```
+
+### Problem
+The onboarding had a "Welcome" step that looked identical to a splash screen, creating confusion:
+- Users saw: Splash → "Welcome to Zoe Sleep" → Name input
+- Users expected: Splash → Login → Name input
+
+### Solution
+1. **Removed `welcome` case from `OnboardingStep` enum**
+2. **Onboarding now starts at `.name` step**
+3. **Deleted `WelcomeStepView` component**
+4. **The splash screen already serves as the welcome**
+
+### Updated Onboarding Steps (8 total, was 9)
+1. **Name** - Text input with auto-focus
+2. **Measurement System** - Metric/Imperial selection
+3. **Height & Weight** - Sliders or wheel pickers
+4. **Gender & Age** - 2x2 grid + birth year picker
+5. **Wearables** - Multi-select device grid
+6. **Health Connect** - Apple Health authorization
+7. **Sleep Philosophy** - Our approach explanation
+8. **Ready** - Summary and "Start My Journey"
+
+### Key Files Modified
+- `/ZoeSleep/ZoeSleep/Managers/OnboardingManager.swift` - Removed welcome step from enum
+- `/ZoeSleep/ZoeSleep/Views/OnboardingView.swift` - Removed WelcomeStepView
+
+---
+
 ## Previous Session Context (2025-12-02)
 
 **Complete Onboarding Redesign with User-Account-Aware State**

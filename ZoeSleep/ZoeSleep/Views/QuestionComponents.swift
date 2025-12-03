@@ -467,31 +467,52 @@ struct TimeInput: View {
     var previousBedtime: Date? = nil  // Used to calculate smart defaults for wake/asleep times
     @ObservedObject private var themeManager = ThemeManager.shared
 
-    // Smart default times based on question context and previous answers
+    // Smart default times based on question context and previous answers (Stanford Sleep Diary)
     private var smartDefaultTime: Date {
         let calendar = Calendar.current
         var components = DateComponents()
         components.minute = 0
 
         switch question.id {
-        // Stanford Sleep Log questions
-        case "SL_BEDTIME":
-            components.hour = 22  // 10:00 PM - typical bedtime
+        // Stanford Sleep Diary - New question IDs
+        case "SD_GOT_INTO_BED":
+            components.hour = 22  // 10:00 PM - when you got into bed
+
+        case "SD_LIGHTS_OUT":
+            // Typically 5-15 min after getting into bed
+            if let gotIntoBed = previousBedtime {
+                return calendar.date(byAdding: .minute, value: 10, to: gotIntoBed) ?? gotIntoBed
+            }
+            components.hour = 22
+            components.minute = 15
 
         case "SL_ASLEEP_TIME":
-            // If we have a bedtime answer, default to 15-30 min after
-            if let bedtime = previousBedtime {
-                return calendar.date(byAdding: .minute, value: 15, to: bedtime) ?? bedtime
+            // Typically 10-20 min after lights out
+            if let lightsOut = previousBedtime {
+                return calendar.date(byAdding: .minute, value: 15, to: lightsOut) ?? lightsOut
             }
-            components.hour = 22  // 10:30 PM - slightly after bedtime
+            components.hour = 22
             components.minute = 30
 
         case "SL_WAKE_TIME":
-            // If we have a bedtime answer, default to ~8 hours after
-            if let bedtime = previousBedtime {
-                return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? Date()
+            // Typically ~7-8 hours after asleep time
+            if let asleepTime = previousBedtime {
+                return calendar.date(byAdding: .hour, value: 8, to: asleepTime) ?? Date()
             }
-            components.hour = 7   // 7:00 AM - typical wake time
+            components.hour = 6
+            components.minute = 30
+
+        case "SD_OUT_OF_BED":
+            // Typically 5-15 min after final wake
+            if let wakeTime = previousBedtime {
+                return calendar.date(byAdding: .minute, value: 10, to: wakeTime) ?? wakeTime
+            }
+            components.hour = 6
+            components.minute = 45
+
+        // Legacy Stanford Sleep Log IDs (backward compatibility)
+        case "SL_BEDTIME":
+            components.hour = 22  // 10:00 PM - typical bedtime
 
         // PSQI questions
         case "PSQI_1":
@@ -507,7 +528,7 @@ struct TimeInput: View {
         default:
             // Smart inference based on question text
             let lowerText = question.text.lowercased()
-            if lowerText.contains("wake") || lowerText.contains("morning") || lowerText.contains("get up") {
+            if lowerText.contains("wake") || lowerText.contains("morning") || lowerText.contains("get up") || lowerText.contains("out of bed") {
                 // Wake-related: use bedtime + 8 hours if available
                 if let bedtime = previousBedtime {
                     return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? Date()
@@ -520,6 +541,13 @@ struct TimeInput: View {
                 }
                 components.hour = 22  // 10:30 PM for fall asleep
                 components.minute = 30
+            } else if lowerText.contains("lights") || lowerText.contains("try to sleep") {
+                // Lights out: use bedtime + 10 min if available
+                if let bedtime = previousBedtime {
+                    return calendar.date(byAdding: .minute, value: 10, to: bedtime) ?? bedtime
+                }
+                components.hour = 22
+                components.minute = 15
             } else if lowerText.contains("bed") || lowerText.contains("sleep") || lowerText.contains("night") {
                 components.hour = 22  // 10:00 PM for bedtime-related
             } else {

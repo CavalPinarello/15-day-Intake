@@ -343,11 +343,23 @@ struct QuestionnaireView: View {
 
     /// Returns the previously answered bedtime to help set smart defaults for subsequent time questions
     private func getPreviousBedtime(for questionId: String) -> Date? {
-        // For sleep log questions, check if bedtime was already answered
+        // For Stanford Sleep Diary questions, chain the time dependencies
         if currentSection == .sleepLog {
-            // SL_ASLEEP_TIME and SL_WAKE_TIME should use SL_BEDTIME
-            if questionId == "SL_ASLEEP_TIME" || questionId == "SL_WAKE_TIME" {
-                return sleepLogResponses["SL_BEDTIME"] as? Date
+            switch questionId {
+            case "SD_LIGHTS_OUT":
+                // Lights out is typically same as or shortly after getting into bed
+                return sleepLogResponses["SD_GOT_INTO_BED"] as? Date
+            case "SL_ASLEEP_TIME":
+                // Fall asleep time is typically after lights out
+                return sleepLogResponses["SD_LIGHTS_OUT"] as? Date ?? sleepLogResponses["SD_GOT_INTO_BED"] as? Date
+            case "SL_WAKE_TIME":
+                // Wake time is typically 7-8 hours after asleep time
+                return sleepLogResponses["SL_ASLEEP_TIME"] as? Date ?? sleepLogResponses["SD_LIGHTS_OUT"] as? Date
+            case "SD_OUT_OF_BED":
+                // Out of bed is typically same or shortly after wake time
+                return sleepLogResponses["SL_WAKE_TIME"] as? Date
+            default:
+                break
             }
         }
 
