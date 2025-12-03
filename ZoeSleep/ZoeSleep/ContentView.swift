@@ -500,7 +500,7 @@ struct MainDashboardView: View {
 
                 Text("Based on your responses, the following specialized assessments have been added to your journey:")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.textSecondary)
 
                 ForEach(triggeredGateways, id: \.id) { gateway in
                     HStack {
@@ -845,7 +845,7 @@ struct DayOverviewCard: View {
                     .fontWeight(.medium)
                 Text(config.description)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.textSecondary)
                     .lineLimit(2)
 
                 if config.isExpansionDay {
@@ -855,7 +855,7 @@ struct DayOverviewCard: View {
                         Text("Expansion Day")
                             .font(.caption2)
                     }
-                    .foregroundColor(theme.secondary)
+                    .foregroundColor(theme.textSecondary)
                 }
             }
 
@@ -863,7 +863,7 @@ struct DayOverviewCard: View {
 
             Text("~\(config.estimatedMinutes) min")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundColor(theme.textSecondary)
         }
         .padding()
         .background(backgroundColor)
@@ -896,7 +896,7 @@ struct SleepDiaryHistoryView: View {
                 .padding()
 
             Text("Your sleep log entries will appear here")
-                .foregroundColor(.secondary)
+                .foregroundColor(ColorTheme.shared.textSecondary)
 
             Spacer()
         }
@@ -913,7 +913,7 @@ struct InsightsView: View {
                 .padding()
 
             Text("Personalized insights will appear after completing the assessment")
-                .foregroundColor(.secondary)
+                .foregroundColor(ColorTheme.shared.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding()
 
@@ -962,7 +962,7 @@ struct DayCompleteCelebrationView: View {
                         .foregroundColor(theme.success)
                     Text(currentDay < 15 ? "Great progress on your sleep journey" : "Congratulations! Journey complete!")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.textSecondary)
                 }
 
                 Spacer()
@@ -991,7 +991,7 @@ struct DayCompleteCelebrationView: View {
 
                     Text("Debug mode: Time check bypassed")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.textSecondary)
                 } else if isUnlocked {
                     // Day unlocked (past 4 AM) - show advance button
                     Button(action: onAdvanceDay) {
@@ -1012,14 +1012,14 @@ struct DayCompleteCelebrationView: View {
                     // Countdown to 4 AM
                     HStack {
                         Image(systemName: "clock.fill")
-                            .foregroundColor(theme.secondary)
+                            .foregroundColor(theme.textSecondary)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Day \(currentDay + 1) unlocks at 4:00 AM")
                                 .font(.subheadline)
-                                .foregroundColor(.primary)
+                                .foregroundColor(theme.textPrimary)
                             Text(timeUntilUnlock)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(theme.textSecondary)
                                 .monospacedDigit()
                         }
                         Spacer()

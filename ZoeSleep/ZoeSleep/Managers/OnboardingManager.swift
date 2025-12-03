@@ -192,15 +192,26 @@ class OnboardingManager: ObservableObject {
         print("[Onboarding] Checking state for user: \(userId)")
 
         let lastUserId = UserDefaults.standard.string(forKey: lastUserIdKey)
+        print("[Onboarding] Last user ID from storage: \(lastUserId ?? "nil")")
+        print("[Onboarding] Current profile name before check: '\(profile.name)'")
 
         // If this is a different user than before, reset local state
         if lastUserId != userId {
-            print("[Onboarding] New user detected, resetting local state")
+            print("[Onboarding] ⚠️ Different user detected! Last: \(lastUserId ?? "nil"), New: \(userId)")
+            print("[Onboarding] 🔄 Resetting local state...")
             resetLocalState()
+            // Also reset questionnaire state for the new user
+            QuestionnaireManager.shared.resetForNewUser()
             UserDefaults.standard.set(userId, forKey: lastUserIdKey)
+            print("[Onboarding] ✅ Local state reset. Profile name is now: '\(profile.name)'")
+        } else {
+            print("[Onboarding] Same user, keeping local state")
         }
 
         // Check server-side onboarding state
+        print("[Onboarding] Server onboarding completed: \(String(describing: serverOnboardingCompleted))")
+        print("[Onboarding] Server profile data: name=\(serverProfile?.fullName ?? "nil")")
+
         if let completed = serverOnboardingCompleted, completed {
             print("[Onboarding] User has completed onboarding (server)")
             isOnboardingComplete = true

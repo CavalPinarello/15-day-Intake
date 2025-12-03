@@ -17,6 +17,7 @@ import type * as http from "../http.js";
 import type * as ios from "../ios.js";
 import type * as llm from "../llm.js";
 import type * as physician from "../physician.js";
+import type * as physicianAuth from "../physicianAuth.js";
 import type * as questions from "../questions.js";
 import type * as responses from "../responses.js";
 import type * as seedModules from "../seedModules.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   ios: typeof ios;
   llm: typeof llm;
   physician: typeof physician;
+  physicianAuth: typeof physicianAuth;
   questions: typeof questions;
   responses: typeof responses;
   seedModules: typeof seedModules;

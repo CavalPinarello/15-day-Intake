@@ -61,6 +61,9 @@ struct ProfileSettingsView: View {
             // MARK: - Confirmations
             .confirmationDialog("Sign Out?", isPresented: $showingSignOutConfirmation) {
                 Button("Sign Out", role: .destructive) {
+                    // Dismiss this view first, then sign out
+                    // This ensures we navigate back before auth state changes
+                    dismiss()
                     authManager.signOut()
                 }
                 Button("Cancel", role: .cancel) {}

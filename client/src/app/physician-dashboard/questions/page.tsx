@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
-import { UserButton } from "@clerk/nextjs";
+import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
 import {
   Moon,
   Users,
@@ -133,13 +133,7 @@ export default function QuestionManagerPage() {
                 <Settings className="w-5 h-5" />
                 Settings
               </Link>
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: "w-9 h-9",
-                  },
-                }}
-              />
+              <PhysicianLogoutButton />
             </nav>
           </div>
         </div>

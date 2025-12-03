@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { NumberInputConfig } from './types';
+import { useCircadianTheme } from '@/hooks/useCircadianTheme';
 
 // Smart default values for common questions
 // These are realistic starting positions to make user input easier
@@ -40,6 +41,7 @@ export function NumberInput({
   const [isFocused, setIsFocused] = useState(false);
   const [inputValue, setInputValue] = useState(value?.toString() || '');
   const hasSetInitialValue = useRef(false);
+  const { isWarm, textClasses } = useCircadianTheme();
 
   // Set smart default on mount if no value exists
   useEffect(() => {
@@ -149,15 +151,25 @@ export function NumberInput({
           placeholder={config.placeholder}
           className={`
             ${showStepButtons ? 'pr-16' : 'pr-12'} w-full px-4 py-3 text-lg border-2 rounded-xl transition-all duration-200
-            ${error 
-              ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
+            ${error
+              ? isWarm
+                ? 'border-[#F87171] focus:border-[#F87171] focus:ring-[#F87171]/20'
+                : 'border-red-300 focus:border-red-500 focus:ring-red-200'
               : isFocused || value !== null
-                ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-200'
-                : 'border-gray-200 focus:border-gray-400'
+                ? isWarm
+                  ? 'border-[#F28C40] focus:border-[#F28C40] focus:ring-[#F28C40]/20'
+                  : 'border-blue-300 focus:border-blue-500 focus:ring-blue-200'
+                : isWarm
+                  ? 'border-[#5C3D2E] focus:border-[#7A5240]'
+                  : 'border-gray-200 focus:border-gray-400'
             }
-            ${disabled 
-              ? 'bg-gray-50 text-gray-400 cursor-not-allowed' 
-              : 'bg-white hover:border-gray-300 focus:ring-4'
+            ${disabled
+              ? isWarm
+                ? 'bg-[#2D1A14] text-[#F59E0B]/50 cursor-not-allowed'
+                : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+              : isWarm
+                ? 'bg-[#3D2418] text-[#FEF3C7] hover:border-[#7A5240] focus:ring-4'
+                : 'bg-white hover:border-gray-300 focus:ring-4'
             }
             [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
           `}
@@ -165,7 +177,7 @@ export function NumberInput({
 
         {/* Unit Label */}
         {config.unit && (
-          <div className="absolute right-4 text-gray-500 pointer-events-none">
+          <div className={`absolute right-4 pointer-events-none ${textClasses.muted}`}>
             {config.unit}
           </div>
         )}
@@ -176,7 +188,7 @@ export function NumberInput({
             <button
               type="button"
               onClick={handleIncrement}
-              className="px-2 py-1 text-gray-400 hover:text-gray-600 transition-colors"
+              className={`px-2 py-1 ${isWarm ? 'text-[#F59E0B] hover:text-[#FCD34D]' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
               disabled={config.max_value !== undefined && (value || 0) >= config.max_value}
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,7 +198,7 @@ export function NumberInput({
             <button
               type="button"
               onClick={handleDecrement}
-              className="px-2 py-1 text-gray-400 hover:text-gray-600 transition-colors"
+              className={`px-2 py-1 ${isWarm ? 'text-[#F59E0B] hover:text-[#FCD34D]' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
               disabled={config.min_value !== undefined && (value || 0) <= config.min_value}
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,7 +211,7 @@ export function NumberInput({
 
       {/* Error Message */}
       {error && (
-        <p className="text-sm text-red-600 flex items-center">
+        <p className={`text-sm ${isWarm ? 'text-[#F87171]' : 'text-red-600'} flex items-center`}>
           <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
@@ -209,14 +221,14 @@ export function NumberInput({
 
       {/* Help Text */}
       {config.help_text && !error && (
-        <p className="text-sm text-gray-500">
+        <p className={`text-sm ${textClasses.muted}`}>
           {config.help_text}
         </p>
       )}
 
       {/* Value Range Info */}
       {(config.min_value !== undefined || config.max_value !== undefined) && !error && (
-        <p className="text-xs text-gray-400">
+        <p className={`text-xs ${isWarm ? 'text-[#B45309]' : 'text-gray-400'}`}>
           Range: {config.min_value ?? '∞'} - {config.max_value ?? '∞'}
           {config.step && ` (step: ${config.step})`}
         </p>

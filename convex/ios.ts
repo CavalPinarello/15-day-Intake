@@ -107,6 +107,13 @@ export const signIn = mutation({
         role: user.role,
         onboardingCompleted: user.onboarding_completed,
         appleHealthConnected: user.apple_health_connected,
+        // Profile data - essential for user isolation
+        fullName: user.full_name,
+        measurementSystem: user.measurement_system,
+        heightCm: user.height_cm,
+        weightKg: user.weight_kg,
+        gender: user.gender,
+        birthYear: user.birth_year,
       },
     };
   },
@@ -242,6 +249,13 @@ export const signInWithApple = mutation({
         role: user.role,
         onboardingCompleted: user.onboarding_completed,
         appleHealthConnected: user.apple_health_connected,
+        // Profile data - essential for user isolation
+        fullName: user.full_name,
+        measurementSystem: user.measurement_system,
+        heightCm: user.height_cm,
+        weightKg: user.weight_kg,
+        gender: user.gender,
+        birthYear: user.birth_year,
       },
     };
   },

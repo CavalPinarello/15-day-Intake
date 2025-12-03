@@ -5,7 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { useState, use } from "react";
-import { UserButton } from "@clerk/nextjs";
+import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
 import {
   ArrowLeft,
   Pill,
@@ -214,13 +214,7 @@ export default function PrescriptionPage({
                 <Settings className="w-5 h-5" />
                 Settings
               </Link>
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: "w-9 h-9",
-                  },
-                }}
-              />
+              <PhysicianLogoutButton />
             </nav>
           </div>
         </div>

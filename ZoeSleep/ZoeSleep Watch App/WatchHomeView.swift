@@ -150,7 +150,6 @@ struct WatchHomeView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var showingSleepLog = false
-    @State private var showingAssessment = false
     @State private var showingTreatmentTasks = false
     @State private var animateContent = false
     @State private var lastRefreshTime: Date = Date.distantPast
@@ -205,9 +204,6 @@ struct WatchHomeView: View {
             .navigationDestination(isPresented: $showingSleepLog) {
                 QuestionnaireView(mode: .sleepLog)
             }
-            .navigationDestination(isPresented: $showingAssessment) {
-                QuestionnaireView(mode: .assessment)
-            }
             .navigationDestination(isPresented: $showingTreatmentTasks) {
                 TreatmentTasksView()
             }
@@ -237,12 +233,6 @@ struct WatchHomeView: View {
         }
         .onChange(of: showingSleepLog) { _, isShowing in
             // Refresh when returning from sleep log
-            if !isShowing {
-                refreshFromConvex()
-            }
-        }
-        .onChange(of: showingAssessment) { _, isShowing in
-            // Refresh when returning from assessment
             if !isShowing {
                 refreshFromConvex()
             }
@@ -373,7 +363,7 @@ struct WatchHomeView: View {
                 dayCompleteCelebration
             }
 
-            // Sleep Log Button
+            // Sleep Log Button (the primary Watch action)
             Button {
                 if !sleepLogCompleted {
                     showingSleepLog = true
@@ -414,46 +404,44 @@ struct WatchHomeView: View {
             .buttonStyle(.plain)
             .opacity(sleepLogCompleted ? 0.8 : 1.0)
 
-            // Assessment Button
-            Button {
+            // Assessment - Display only (complete on iPhone)
+            HStack {
+                Image(systemName: assessmentCompleted ? "checkmark.circle.fill" : "iphone")
+                    .font(.system(size: 18))
+                    .foregroundColor(assessmentCompleted ? .green : palette.accent)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Assessment")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(assessmentCompleted ? "Completed" : "Complete on iPhone")
+                        .font(.system(size: 10))
+                        .foregroundColor(assessmentCompleted ? .green.opacity(0.8) : palette.textSecondary)
+                }
+
+                Spacer()
+
                 if !assessmentCompleted {
-                    showingAssessment = true
+                    Image(systemName: "arrow.up.forward.square")
+                        .font(.system(size: 12))
+                        .foregroundColor(palette.textSecondary.opacity(0.5))
                 }
-            } label: {
-                HStack {
-                    Image(systemName: assessmentCompleted ? "checkmark.circle.fill" : "list.clipboard.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(assessmentCompleted ? .green : palette.textPrimary)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Assessment")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text(assessmentCompleted ? "Completed" : "Day \(currentDay) questions")
-                            .font(.system(size: 10))
-                            .foregroundColor(assessmentCompleted ? .green.opacity(0.8) : palette.textSecondary)
-                    }
-
-                    Spacer()
-
-                    if !assessmentCompleted {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12))
-                            .foregroundColor(palette.textSecondary.opacity(0.5))
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(assessmentCompleted ? Color.green.opacity(0.2) : incompleteAssessmentColor)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(assessmentCompleted ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1)
-                        )
-                )
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(assessmentCompleted ? Color.green.opacity(0.2) : incompleteAssessmentColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(assessmentCompleted ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1)
+                    )
+            )
             .opacity(assessmentCompleted ? 0.8 : 1.0)
+
+            // Treatment tasks (if any pending after journey starts)
+            if pendingTasksCount > 0 && !isDayComplete {
+                treatmentTasksCard
+            }
         }
         .foregroundColor(palette.textPrimary)
     }

@@ -576,6 +576,7 @@ struct CircadianPalette {
         // ========================================
         // EVENING/NIGHT MODE (after dusk start)
         // NO BLUE, NO TEAL, NO GREEN - only warm colors
+        // HIGH CONTRAST text for visibility!
         // ========================================
         if currentHour >= duskStart || currentHour < dawnStart {
             // Deep warm amber/brown background - zero blue
@@ -588,8 +589,8 @@ struct CircadianPalette {
                 wave: Color(red: 0.85, green: 0.45, blue: 0.20),      // Warm amber
                 accent: Color(red: 0.95, green: 0.55, blue: 0.25),    // Bright amber/orange
                 isDark: true,
-                textPrimary: Color(red: 1.0, green: 0.92, blue: 0.85),   // Warm white
-                textSecondary: Color(red: 0.85, green: 0.70, blue: 0.55) // Warm tan
+                textPrimary: Color(red: 0.996, green: 0.953, blue: 0.780),   // Bright warm cream #FEF3C7
+                textSecondary: Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
             )
         }
         // ========================================

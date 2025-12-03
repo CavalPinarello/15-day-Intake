@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { TimePickerConfig } from './types';
 import { formatTime } from './utils';
+import { useCircadianTheme } from '@/hooks/useCircadianTheme';
 
 // Smart default times for sleep log and assessment questions
 // These are realistic starting positions for each question type
@@ -28,6 +29,7 @@ interface TimePickerProps {
 export function TimePicker({ config, value, onChange, error, disabled, previousResponses }: TimePickerProps) {
   const { allowCrossMidnight = true, questionKey, defaultValue } = config;
   const hasSetInitialValue = useRef(false);
+  const { isWarm, textClasses } = useCircadianTheme();
 
   // Set smart default on mount if no value exists
   useEffect(() => {
@@ -83,12 +85,12 @@ export function TimePicker({ config, value, onChange, error, disabled, previousR
       {/* Current Time Display */}
       {value && (
         <div className="text-center">
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-blue-50 border border-blue-200 rounded-xl">
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className={`inline-flex items-center gap-3 px-6 py-3 ${isWarm ? 'bg-[#4A3020] border-[#5C3D2E]' : 'bg-blue-50 border-blue-200'} border rounded-xl`}>
+            <svg className={`w-5 h-5 ${isWarm ? 'text-[#F28C40]' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12,6 12,12 16,14"/>
             </svg>
-            <span className="text-xl font-semibold text-blue-800">
+            <span className={`text-xl font-semibold ${isWarm ? 'text-[#FEF3C7]' : 'text-blue-800'}`}>
               {formatTime(value)}
             </span>
           </div>
@@ -105,13 +107,17 @@ export function TimePicker({ config, value, onChange, error, disabled, previousR
             disabled={disabled}
             className={`
               px-4 py-3 text-lg font-medium rounded-xl border-2 transition-all duration-200
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+              focus:outline-none focus:ring-2 ${isWarm ? 'focus:ring-[#F28C40]' : 'focus:ring-blue-500'} focus:ring-offset-2
               disabled:cursor-not-allowed disabled:opacity-50
-              ${error 
-                ? 'border-red-300 bg-red-50 text-red-900'
-                : 'border-gray-300 bg-white text-gray-900 focus:border-blue-500'
+              ${error
+                ? isWarm
+                  ? 'border-[#F87171] bg-[#3D2418] text-[#F87171]'
+                  : 'border-red-300 bg-red-50 text-red-900'
+                : isWarm
+                  ? 'border-[#5C3D2E] bg-[#3D2418] text-[#FEF3C7] focus:border-[#F28C40]'
+                  : 'border-gray-300 bg-white text-gray-900 focus:border-blue-500'
               }
-              
+
               /* Custom time picker styling */
               [&::-webkit-datetime-edit]:px-2
               [&::-webkit-datetime-edit-fields-wrapper]:py-1
@@ -119,12 +125,12 @@ export function TimePicker({ config, value, onChange, error, disabled, previousR
               [&::-webkit-datetime-edit-hour-field]:px-1
               [&::-webkit-datetime-edit-minute-field]:px-1
               [&::-webkit-datetime-edit-ampm-field]:px-1
-              
+
               /* Hide spinner arrows */
               [&::-webkit-outer-spin-button]:appearance-none
               [&::-webkit-inner-spin-button]:appearance-none
               [&::-webkit-calendar-picker-indicator]:cursor-pointer
-              [&::-webkit-calendar-picker-indicator]:hover:bg-gray-100
+              ${isWarm ? '[&::-webkit-calendar-picker-indicator]:hover:bg-[#5C3D2E]' : '[&::-webkit-calendar-picker-indicator]:hover:bg-gray-100'}
               [&::-webkit-calendar-picker-indicator]:rounded
               [&::-webkit-calendar-picker-indicator]:p-1
             `}
@@ -134,14 +140,14 @@ export function TimePicker({ config, value, onChange, error, disabled, previousR
 
       {/* Cross-midnight help text */}
       {allowCrossMidnight && (
-        <p className="text-sm text-gray-500 text-center">
-          💡 If this is a bedtime that occurs after midnight, just select the normal time
+        <p className={`text-sm text-center ${textClasses.muted}`}>
+          If this is a bedtime that occurs after midnight, just select the normal time
         </p>
       )}
 
       {/* Error Message */}
       {error && (
-        <div className="text-red-500 text-sm flex items-center justify-center gap-2">
+        <div className={`${isWarm ? 'text-[#F87171]' : 'text-red-500'} text-sm flex items-center justify-center gap-2`}>
           <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>

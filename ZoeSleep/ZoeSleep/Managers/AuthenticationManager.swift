@@ -70,6 +70,9 @@ class AuthenticationManager: ObservableObject {
                         birthYear: user.birthYearInt
                     )
                 )
+
+                // Load journey progress for this user
+                await QuestionnaireManager.shared.loadJourneyProgress()
             } else {
                 // Session invalid, clear it
                 convexService.clearSession()
@@ -116,11 +119,23 @@ class AuthenticationManager: ObservableObject {
             self.isAuthenticated = true
             print("✅ Sign in successful for user: \(response.user.username)")
 
-            // Check onboarding state for this user
+            // Check onboarding state for this user with full profile data
             await OnboardingManager.shared.checkUserOnboardingState(
                 userId: response.userId,
-                serverOnboardingCompleted: response.user.onboardingCompleted
+                serverOnboardingCompleted: response.user.onboardingCompleted,
+                serverProfile: (
+                    fullName: response.user.fullName,
+                    measurementSystem: response.user.measurementSystem,
+                    heightCm: response.user.heightCm,
+                    weightKg: response.user.weightKg,
+                    gender: response.user.gender,
+                    birthYear: response.user.birthYearInt
+                )
             )
+
+            // Load journey progress for this user from server
+            await QuestionnaireManager.shared.loadJourneyProgress()
+            print("✅ Loaded journey progress for user: \(response.user.username)")
 
         } catch let error as ConvexError {
             print("Sign in error: \(error)")
@@ -174,11 +189,15 @@ class AuthenticationManager: ObservableObject {
             self.isAuthenticated = true
             print("✅ Registration successful for user: \(response.user.username)")
 
-            // New user always needs onboarding
+            // New user always needs onboarding - pass empty profile
             await OnboardingManager.shared.checkUserOnboardingState(
                 userId: response.userId,
-                serverOnboardingCompleted: false // New user hasn't completed onboarding
+                serverOnboardingCompleted: false, // New user hasn't completed onboarding
+                serverProfile: nil // New user has no profile yet
             )
+
+            // New user starts at Day 1 - load journey progress
+            await QuestionnaireManager.shared.loadJourneyProgress()
 
         } catch let error as ConvexError {
             print("Sign up error: \(error)")
@@ -277,8 +296,19 @@ class AuthenticationManager: ObservableObject {
                     // Check onboarding state - new users need onboarding
                     await OnboardingManager.shared.checkUserOnboardingState(
                         userId: response.userId,
-                        serverOnboardingCompleted: response.isNewUser ? false : response.user.onboardingCompleted
+                        serverOnboardingCompleted: response.isNewUser ? false : response.user.onboardingCompleted,
+                        serverProfile: response.isNewUser ? nil : (
+                            fullName: response.user.fullName,
+                            measurementSystem: response.user.measurementSystem,
+                            heightCm: response.user.heightCm,
+                            weightKg: response.user.weightKg,
+                            gender: response.user.gender,
+                            birthYear: response.user.birthYearInt
+                        )
                     )
+
+                    // Load journey progress for this user
+                    await QuestionnaireManager.shared.loadJourneyProgress()
 
                 } catch let error as ConvexError {
                     print("Apple Sign In error: \(error)")

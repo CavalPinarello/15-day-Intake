@@ -744,6 +744,30 @@ export default defineSchema({
     .index("by_phone", ["phone_device_id"]),
 
   // ============================================
+  // Physician Master Password System
+  // ============================================
+
+  // Stores the hashed master password for physician access
+  physician_master_password: defineTable({
+    password_hash: v.string(), // SHA256 hash of the master password
+    created_at: v.number(),
+    updated_at: v.number(),
+    created_by: v.optional(v.string()), // Admin who set the password
+  }),
+
+  // Tracks active physician sessions (browser-based)
+  physician_sessions: defineTable({
+    session_token: v.string(), // Random UUID
+    created_at: v.number(),
+    expires_at: v.number(), // 24 hours from creation
+    is_active: v.boolean(),
+    ip_address: v.optional(v.string()),
+    user_agent: v.optional(v.string()),
+  })
+    .index("by_session_token", ["session_token"])
+    .index("by_active", ["is_active"]),
+
+  // ============================================
   // Cross-Device Question Progress Tracking
   // ============================================
 

@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
 import {
   Moon,
   Users,
@@ -11,11 +14,91 @@ import {
   Bell,
   Shield,
   Palette,
-  Mail,
+  Lock,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 
+// SHA256 hash function for browser
+async function sha256(message: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default function PhysicianSettingsPage() {
-  const { user } = useUser();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const changeMasterPassword = useMutation(api.physicianAuth.changeMasterPassword);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordMessage(null);
+
+    if (newPassword.length < 8) {
+      setPasswordMessage({
+        type: "error",
+        text: "New password must be at least 8 characters long",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordMessage({
+        type: "error",
+        text: "New passwords do not match",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      const currentHash = await sha256(currentPassword);
+      const newHash = await sha256(newPassword);
+
+      const result = await changeMasterPassword({
+        currentPasswordHash: currentHash,
+        newPasswordHash: newHash,
+      });
+
+      if (result.success) {
+        setPasswordMessage({
+          type: "success",
+          text: "Password changed successfully. You will need to login again.",
+        });
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+        // Clear session and redirect to login after a short delay
+        setTimeout(() => {
+          localStorage.removeItem("physician_session");
+          window.location.href = "/physician-login";
+        }, 2000);
+      } else {
+        setPasswordMessage({
+          type: "error",
+          text: result.error || "Failed to change password",
+        });
+      }
+    } catch (err) {
+      console.error("Password change error:", err);
+      setPasswordMessage({
+        type: "error",
+        text: "An unexpected error occurred",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -55,13 +138,7 @@ export default function PhysicianSettingsPage() {
                 <Settings className="w-5 h-5" />
                 Settings
               </Link>
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: "w-9 h-9",
-                  },
-                }}
-              />
+              <PhysicianLogoutButton />
             </nav>
           </div>
         </div>
@@ -84,13 +161,13 @@ export default function PhysicianSettingsPage() {
 
           <div className="flex items-center gap-6">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-bold text-2xl">
-              {user?.firstName?.[0] || user?.username?.[0] || "?"}
+              P
             </div>
             <div>
               <h4 className="text-xl font-semibold text-gray-900">
-                {user?.fullName || user?.username || "Physician"}
+                Physician Access
               </h4>
-              <p className="text-gray-500">{user?.primaryEmailAddress?.emailAddress}</p>
+              <p className="text-gray-500">Shared master password authentication</p>
               <span className="inline-block mt-2 px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm font-medium">
                 Physician
               </span>
@@ -181,45 +258,92 @@ export default function PhysicianSettingsPage() {
           </div>
         </div>
 
-        {/* Security Section */}
+        {/* Security Section - Master Password Change */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-6">
             <Shield className="w-5 h-5 text-gray-400" />
             <h3 className="text-lg font-semibold text-gray-900">Security</h3>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900">Two-Factor Authentication</p>
-                <p className="text-sm text-gray-500">
-                  Add an extra layer of security to your account
-                </p>
+          <div className="space-y-6">
+            {/* Change Master Password */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Lock className="w-4 h-4 text-gray-500" />
+                <h4 className="font-medium text-gray-900">Change Master Password</h4>
               </div>
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                Enable
-              </button>
-            </div>
+              <p className="text-sm text-gray-500 mb-4">
+                This will change the master password for all physicians. All active sessions will be invalidated.
+              </p>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900">Session Management</p>
-                <p className="text-sm text-gray-500">
-                  Manage your active sessions and devices
-                </p>
-              </div>
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                View Sessions
-              </button>
+              <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    minLength={8}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    required
+                  />
+                </div>
+
+                {passwordMessage && (
+                  <div
+                    className={`p-3 rounded-lg flex items-center gap-2 ${
+                      passwordMessage.type === "success"
+                        ? "bg-green-50 text-green-700 border border-green-200"
+                        : "bg-red-50 text-red-700 border border-red-200"
+                    }`}
+                  >
+                    {passwordMessage.type === "success" ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4" />
+                    )}
+                    {passwordMessage.text}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isChangingPassword ? "Changing..." : "Change Password"}
+                </button>
+              </form>
             </div>
           </div>
-        </div>
-
-        {/* Save Button */}
-        <div className="mt-8 flex justify-end">
-          <button className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium">
-            Save Changes
-          </button>
         </div>
       </main>
     </div>

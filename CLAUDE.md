@@ -212,6 +212,67 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-12-02)
 
+**Fix: Circadian Text Color Contrast for Evening/Night Mode**
+
+This session fixed a critical visibility issue where text was invisible on the warm brown circadian background during evening/night hours.
+
+### Problem
+At 4:31 PM (or any time after seasonal dusk), the app displayed warm brown backgrounds correctly, but the text remained gray (system `.secondary` color), making it completely invisible. Users could not read any secondary text on the dashboard.
+
+### Root Cause
+Two separate time calculation systems were out of sync:
+1. **`CircadianPalette.current`** (backgrounds) used **seasonal sunrise/sunset** calculation
+2. **`TimePeriod.current`** (text colors) used **fixed hour boundaries** (12-17 = afternoon)
+
+In December with early sunset (~4:30 PM), the background switched to evening mode at ~3 PM, but text colors stayed in "afternoon" mode until 5 PM.
+
+### Solution
+
+#### 1. Synchronized Time Period Calculation (`QuestionModels.swift`)
+Updated `TimePeriod.current` to use the **same seasonal calculation** as `CircadianPalette`:
+```swift
+// Seasonal sunrise/sunset calculation (SAME as CircadianPalette!)
+let seasonalOffset = sin(Double(dayOfYear - 80) / 365.0 * .pi * 2)
+let sunriseHour = 6.5 - seasonalOffset * 1.0   // 5:30 to 7:30 AM
+let sunsetHour = 18.5 + seasonalOffset * 2.0   // 4:30 to 8:30 PM
+let duskStart = sunsetHour - 1.5  // Evening starts 1.5 hours before sunset
+```
+
+#### 2. Brighter Text Colors for Dark Backgrounds (`QuestionModels.swift`)
+| Property | Old Value | New Value | Color |
+|----------|-----------|-----------|-------|
+| `textPrimary` (evening/night) | `rgb(1.0, 0.92, 0.85)` | `#FEF3C7` | Bright warm cream |
+| `textSecondary` (evening/night) | `rgb(0.85, 0.70, 0.55)` | `#FCD34D` | Golden yellow |
+| `textMuted` (NEW) | - | `#F59E0B` | Amber |
+
+#### 3. Fixed Hardcoded `.secondary` Colors (`ContentView.swift`)
+Replaced 11 instances of `foregroundColor(.secondary)` with `foregroundColor(theme.textSecondary)`.
+
+#### 4. Web Client Circadian Theme (NEW FILES)
+Created complete circadian theme system for the web client:
+- `/client/src/lib/circadianTheme.ts` - Color palette and utilities
+- `/client/src/hooks/useCircadianTheme.ts` - React hook for components
+- Updated `journey/page.tsx` and all question components with circadian support
+
+### Key Files Modified
+- `/ZoeSleep/ZoeSleep/Models/QuestionModels.swift` - TimePeriod sync, brighter text colors
+- `/ZoeSleep/ZoeSleep/Views/CircadianWaveBackground.swift` - Updated CircadianPalette text colors
+- `/ZoeSleep/ZoeSleep/ContentView.swift` - Replaced .secondary with theme.textSecondary
+- `/client/src/lib/circadianTheme.ts` - NEW: Web circadian color system
+- `/client/src/hooks/useCircadianTheme.ts` - NEW: React hook for circadian theme
+- `/client/src/app/journey/page.tsx` - Web circadian theme integration
+- `/client/src/components/questions/*.tsx` - All question components updated
+
+### Result
+Text is now **high contrast** on dark brown backgrounds:
+- Primary text: Bright cream (`#FEF3C7`)
+- Secondary text: Golden yellow (`#FCD34D`)
+- Both iOS and Web apps now have synchronized circadian themes
+
+---
+
+## Previous Session Context (2025-12-02)
+
 **Watch UI Fix: Hide Debug Reset Button & Add Assessment Navigation**
 
 This session fixed two issues on the Watch questionnaire completion screen:

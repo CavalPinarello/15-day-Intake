@@ -42,6 +42,17 @@ class QuestionnaireManager: ObservableObject {
         gatewayStates = GatewayType.allCases.map { GatewayState(gatewayType: $0) }
     }
 
+    /// Reset local questionnaire state for a new user
+    /// Called when a different user logs in
+    func resetForNewUser() {
+        print("[QuestionnaireManager] Resetting state for new user")
+        currentDay = 1
+        journeyProgress = nil
+        responses = [:]
+        error = nil
+        initializeGatewayStates()
+    }
+
     // MARK: - Day Configuration
 
     static let dayConfigurations: [DayConfiguration] = [

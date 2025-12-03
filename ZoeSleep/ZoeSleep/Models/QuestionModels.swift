@@ -11,22 +11,46 @@ import SwiftUI
 // MARK: - Time Period Enum
 
 enum TimePeriod {
-    case morning    // 5 AM - 12 PM: Bright, energetic
-    case afternoon  // 12 PM - 5 PM: Transitioning warmth
-    case evening    // 5 PM - 9 PM: Full sunset warmth
-    case night      // 9 PM - 5 AM: Deep, calming
+    case morning    // After dawn until noon: Bright, energetic
+    case afternoon  // Noon until dusk start: Transitioning warmth
+    case evening    // Dusk start until night: Full sunset warmth (NO blue light!)
+    case night      // Night until dawn: Deep, calming (NO blue light!)
 
+    /// Returns current time period using SEASONAL sunrise/sunset calculation
+    /// MUST match CircadianPalette.current logic for consistency!
     static var current: TimePeriod {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 5..<12:
+        let now = Date()
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 180
+
+        // Seasonal sunrise/sunset calculation (SAME as CircadianPalette!)
+        let seasonalOffset = sin(Double(dayOfYear - 80) / 365.0 * .pi * 2)
+        let sunriseHour = 6.5 - seasonalOffset * 1.0   // 5:30 to 7:30 AM depending on season
+        let sunsetHour = 18.5 + seasonalOffset * 2.0   // 4:30 to 8:30 PM depending on season
+
+        let currentHour = Double(hour) + Double(minute) / 60.0
+
+        // Time boundaries (SAME as CircadianPalette!)
+        let dawnStart = sunriseHour - 0.5
+        let dawnEnd = sunriseHour + 1.5
+        let duskStart = sunsetHour - 1.5  // Evening starts 1.5 hours before sunset
+
+        // Determine period
+        if currentHour >= duskStart || currentHour < dawnStart {
+            // After dusk or before dawn = evening/night (warm colors only!)
+            if currentHour >= duskStart && currentHour < sunsetHour + 2 {
+                return .evening
+            } else {
+                return .night
+            }
+        } else if currentHour >= dawnStart && currentHour < dawnEnd {
+            return .morning  // Dawn transition
+        } else if currentHour >= dawnEnd && currentHour < 12 {
             return .morning
-        case 12..<17:
-            return .afternoon
-        case 17..<21:
-            return .evening
-        default:
-            return .night
+        } else {
+            return .afternoon  // Noon until dusk start
         }
     }
 }
@@ -192,6 +216,7 @@ struct ColorTheme {
     }
 
     // MARK: - Text Colors (Sleep-Optimized for dark evening backgrounds)
+    // CRITICAL: Must be HIGH CONTRAST on dark brown backgrounds in evening/night!
 
     var textPrimary: Color {
         guard let period = period else { return Color.primary }
@@ -199,7 +224,8 @@ struct ColorTheme {
         case .morning, .afternoon:
             return Color.primary  // System default
         case .evening, .night:
-            return Color(red: 1.0, green: 0.92, blue: 0.85)  // Warm white (sleep-safe)
+            // Bright warm cream - HIGH CONTRAST on dark brown (#FEF3C7)
+            return Color(red: 0.996, green: 0.953, blue: 0.780)
         }
     }
 
@@ -209,7 +235,20 @@ struct ColorTheme {
         case .morning, .afternoon:
             return Color.secondary  // System default
         case .evening, .night:
-            return Color(red: 0.85, green: 0.70, blue: 0.55)  // Warm tan (sleep-safe)
+            // Golden yellow - VISIBLE on dark brown (#FCD34D)
+            return Color(red: 0.988, green: 0.827, blue: 0.302)
+        }
+    }
+
+    /// Muted text for hints, timestamps, etc.
+    var textMuted: Color {
+        guard let period = period else { return Color.secondary.opacity(0.7) }
+        switch period {
+        case .morning, .afternoon:
+            return Color.secondary.opacity(0.7)
+        case .evening, .night:
+            // Amber - still visible on dark brown (#F59E0B)
+            return Color(red: 0.961, green: 0.620, blue: 0.043)
         }
     }
 

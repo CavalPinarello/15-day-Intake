@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SliderScaleConfig } from './types';
+import { useCircadianTheme } from '@/hooks/useCircadianTheme';
 
 // Smart default values for scale questions
 // These represent neutral/typical positions to start from
@@ -26,6 +27,7 @@ interface SliderScaleProps {
 export function SliderScale({ config, value, onChange, error, disabled }: SliderScaleProps) {
   const [isActive, setIsActive] = useState(false);
   const hasSetInitialValue = useRef(false);
+  const { isWarm, textClasses } = useCircadianTheme();
 
   const { min, max, step = 1, labels, showQuickSelect = true, questionKey, defaultValue } = config;
 
@@ -74,7 +76,7 @@ export function SliderScale({ config, value, onChange, error, disabled }: Slider
       {/* Value Display */}
       {value !== null && (
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 text-white text-2xl font-bold rounded-full shadow-lg">
+          <div className={`inline-flex items-center justify-center w-16 h-16 ${isWarm ? 'bg-[#F28C40]' : 'bg-blue-500'} text-white text-2xl font-bold rounded-full shadow-lg`}>
             {value}
           </div>
         </div>
@@ -84,9 +86,9 @@ export function SliderScale({ config, value, onChange, error, disabled }: Slider
       <div className="relative px-2">
         <div className="relative">
           {/* Progress Track */}
-          <div className="absolute top-1/2 left-0 right-0 h-2 bg-gray-200 rounded-full transform -translate-y-1/2">
-            <div 
-              className="h-full bg-blue-500 rounded-full transition-all duration-200"
+          <div className={`absolute top-1/2 left-0 right-0 h-2 ${isWarm ? 'bg-[#5C3D2E]' : 'bg-gray-200'} rounded-full transform -translate-y-1/2`}>
+            <div
+              className={`h-full ${isWarm ? 'bg-[#F28C40]' : 'bg-blue-500'} rounded-full transition-all duration-200`}
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -138,7 +140,7 @@ export function SliderScale({ config, value, onChange, error, disabled }: Slider
 
         {/* Labels */}
         {labels && (
-          <div className="flex justify-between mt-3 text-sm text-gray-600">
+          <div className={`flex justify-between mt-3 text-sm ${textClasses.secondary}`}>
             <span className="text-left">{labels.min}</span>
             {labels.mid && (
               <span className="text-center">{labels.mid}</span>
@@ -160,11 +162,15 @@ export function SliderScale({ config, value, onChange, error, disabled }: Slider
                 w-10 h-10 rounded-full text-sm font-medium transition-all duration-200
                 border-2 active:scale-95
                 ${value === num
-                  ? 'bg-blue-500 text-white border-blue-500'
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300'
+                  ? isWarm
+                    ? 'bg-[#F28C40] text-white border-[#F28C40]'
+                    : 'bg-blue-500 text-white border-blue-500'
+                  : isWarm
+                    ? 'bg-[#3D2418] text-[#FCD34D] border-[#5C3D2E] hover:border-[#F28C40]'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300'
                 }
                 disabled:cursor-not-allowed disabled:opacity-50
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
+                ${isWarm ? 'focus:ring-[#F28C40]' : 'focus:ring-blue-500'} focus:outline-none focus:ring-2 focus:ring-offset-1
               `}
             >
               {num}
@@ -175,7 +181,7 @@ export function SliderScale({ config, value, onChange, error, disabled }: Slider
 
       {/* Error Message */}
       {error && (
-        <div className="text-red-500 text-sm mt-2 flex items-center gap-2">
+        <div className={`${isWarm ? 'text-[#F87171]' : 'text-red-500'} text-sm mt-2 flex items-center gap-2`}>
           <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>
