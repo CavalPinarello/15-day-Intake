@@ -212,6 +212,66 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-12-02)
 
+**Watch UI Fix: Hide Debug Reset Button & Add Assessment Navigation**
+
+This session fixed two issues on the Watch questionnaire completion screen:
+
+### Problem 1: "Reset & Start Over" Always Visible
+The "Reset & Start Over" button was showing on the completion screen unconditionally, even when debug mode was disabled. This debug feature should only be visible to developers.
+
+### Problem 2: No Way to Proceed to Day Assessment
+After completing the Sleep Log, the screen showed "Day Assessment still remaining" but there was no way to actually navigate to the assessment questions.
+
+### Solution
+
+#### 1. Debug Mode Gate for Reset Button (`QuestionnaireView.swift` lines 285-296)
+```swift
+// Debug: Reset button only shown in debug mode
+if themeManager.debugMode {
+    Divider()
+        .padding(.vertical, 4)
+
+    Button("Reset & Start Over") {
+        resetAllProgress()
+    }
+    .buttonStyle(.bordered)
+    .tint(.red)
+    .font(.caption2)
+}
+```
+
+#### 2. Assessment Navigation Button (`QuestionnaireView.swift` lines 246-259)
+Added a `NavigationLink` to the Day Assessment after sleep log completion:
+```swift
+NavigationLink(destination: QuestionnaireView(mode: .assessment)) {
+    HStack {
+        Image(systemName: "list.clipboard.fill")
+        Text("Start Assessment")
+    }
+    .font(.system(size: 14, weight: .semibold))
+    .foregroundColor(.white)
+    .padding(.vertical, 10)
+    .padding(.horizontal, 16)
+    .background(theme.primary)
+    .cornerRadius(10)
+}
+```
+
+### Other Changes in This Commit
+
+#### Year Picker for Date of Birth (`QuestionnaireView.swift`)
+- Added `WatchYearPickerView` component for year selection (1920-present)
+- Shows scrollable year picker with live age indicator
+- Added `.year` case to `WatchQuestionType` enum
+- Converts `.date` type questions to year picker on Watch
+
+### Key Files Modified
+- `/ZoeSleep/ZoeSleep Watch App/QuestionnaireView.swift` - Debug gate, navigation button, year picker
+
+---
+
+## Previous Session Context (2025-12-02)
+
 **Fix: Questionnaire Jumping to Last Question on Day 1**
 
 This session fixed a critical bug where starting the sleep log on Day 1 would immediately jump to the last question, skipping all previous questions.

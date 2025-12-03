@@ -1410,18 +1410,29 @@ export const getQuestionsForUserDay = query({
 function mapAnswerFormatToType(answerFormat: string): string {
   const mapping: Record<string, string> = {
     time: "time",
+    time_picker: "time",
     scale: "scale",
     number: "number",
+    number_input: "number",
+    number_scroll: "number",
     yes_no: "yesNo",
     single_select: "singleSelect",
+    single_select_chips: "singleSelect",
     multi_select: "multiSelect",
+    multi_select_chips: "multiSelect",
     text: "text",
-    likert_5: "scale",
-    likert_7: "scale",
     text_short: "text",
     text_long: "text",
+    likert_5: "scale",
+    likert_7: "scale",
+    slider_scale: "scale",
     duration_minutes: "number",
+    minutes_scroll: "number",
     percentage: "number",
+    // Date types - use year picker for birth dates
+    date: "year",
+    date_picker: "year",
+    date_auto: "text",  // Auto-fill dates shown as text
   };
   return mapping[answerFormat] || "text";
 }

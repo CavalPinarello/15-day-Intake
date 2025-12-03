@@ -10,6 +10,7 @@ import {
   CheckCircle, Home, X, Sparkles
 } from 'lucide-react';
 import * as convexService from '@/lib/convexService';
+import { useCircadianTheme } from '@/hooks/useCircadianTheme';
 
 // Section types matching iOS
 type QuestionnaireSection = 'sleepLog' | 'assessment';
@@ -109,6 +110,9 @@ function normalizeSection(section: string | null): QuestionnaireSection {
 export default function JourneyPage() {
   const searchParams = useSearchParams();
   const initialSection = normalizeSection(searchParams.get('section'));
+
+  // Circadian theme for time-aware colors
+  const { textClasses, bgClasses, cardClasses, buttonClasses, isWarm, colors } = useCircadianTheme();
 
   const [currentDay, setCurrentDay] = useState(1);
   const [currentSection, setCurrentSection] = useState<QuestionnaireSection>(initialSection);

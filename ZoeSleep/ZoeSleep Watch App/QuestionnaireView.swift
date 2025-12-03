@@ -648,6 +648,24 @@ struct QuestionnaireView: View {
                 markQuestionInteracted(question.id)
                 responses[question.id] = "acknowledged"
             }
+
+        case .year:
+            // Year picker for date of birth
+            WatchYearPickerView(
+                selectedYear: Binding(
+                    get: {
+                        if let yearValue = responses[question.id] as? Int {
+                            return yearValue
+                        }
+                        return 1990  // Default year
+                    },
+                    set: { newValue in
+                        responses[question.id] = newValue
+                        markQuestionInteracted(question.id)
+                    }
+                ),
+                theme: theme
+            )
         }
     }
 
@@ -745,6 +763,7 @@ struct QuestionnaireView: View {
         case "multiSelect": questionType = .multiSelect
         case "text": questionType = .text
         case "info": questionType = .info
+        case "year": questionType = .year
         default: questionType = .text
         }
 
@@ -912,6 +931,9 @@ struct QuestionnaireView: View {
 
                 if let stringValue = value as? String {
                     response["responseValue"] = stringValue
+                } else if let intValue = value as? Int {
+                    // Year values (e.g., birth year) - store as string for date of birth
+                    response["responseValue"] = String(intValue)
                 } else if let numberValue = value as? Double {
                     response["responseNumber"] = numberValue
                 } else if let dateValue = value as? Date {
@@ -1015,6 +1037,7 @@ enum WatchQuestionType: String, CaseIterable {
     case singleSelect  // Same as radio, but named consistently with Convex
     case multiSelect   // Same as checkbox, but named consistently with Convex
     case info          // Display-only information, no input required
+    case year          // Year picker for date of birth
 }
 
 // MARK: - Watch Question Bank (Uses Shared Question Definitions)
@@ -1031,8 +1054,10 @@ struct WatchQuestionBank {
             watchType = .text
         case .number, .numberScroll, .minutesScroll:
             watchType = .number
-        case .time, .date:
+        case .time:
             watchType = .time
+        case .date:
+            watchType = .year  // Date of birth uses year picker
         case .scale:
             watchType = .scale
         case .yesNo, .yesNoDontKnow:
@@ -1337,6 +1362,54 @@ struct WatchTimePickerView: View {
         components.minute = minute
         if let newDate = Calendar.current.date(from: components) {
             selectedTime = newDate
+        }
+    }
+}
+
+// MARK: - Watch Year Picker View (for Date of Birth)
+
+struct WatchYearPickerView: View {
+    @Binding var selectedYear: Int
+    let theme: WatchColorTheme
+
+    @State private var hasInitialized: Bool = false
+
+    // Years from 1920 to current year
+    private var years: [Int] {
+        let currentYear = Calendar.current.component(.year, from: Date())
+        return Array((1920...currentYear).reversed())
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // Year display with scroll wheel
+            Picker("Year", selection: $selectedYear) {
+                ForEach(years, id: \.self) { year in
+                    Text("\(year)")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .tag(year)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(height: 80)
+
+            // Age indicator
+            let currentYear = Calendar.current.component(.year, from: Date())
+            let age = currentYear - selectedYear
+            Text("Age: \(age)")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(theme.primary)
+        }
+        .onAppear {
+            guard !hasInitialized else { return }
+            hasInitialized = true
+            // Default to 1990 if not set (age ~34)
+            if selectedYear == 0 {
+                selectedYear = 1990
+            }
+        }
+        .onChange(of: selectedYear) { _, _ in
+            WKInterfaceDevice.current().play(.click)
         }
     }
 }

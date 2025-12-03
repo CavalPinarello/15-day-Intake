@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Question, QuestionComponentProps, ResponseValue, TextareaConfig, SliderScaleConfig, SingleSelectChipsConfig, MultiSelectChipsConfig, TimePickerConfig, DatePickerConfig, MinutesScrollConfig, NumberScrollConfig, NumberInputConfig } from './types';
 import { parseConfig, validateResponse, shouldShowQuestion } from './utils';
+import { useCircadianTheme } from '@/hooks/useCircadianTheme';
 
 // Import individual components
 import { SliderScale } from './SliderScale';
@@ -46,24 +47,27 @@ interface QuestionRendererProps {
   disabled?: boolean;
 }
 
-export function QuestionRenderer({ 
-  question, 
-  value, 
-  onChange, 
+export function QuestionRenderer({
+  question,
+  value,
+  onChange,
   previousResponses = new Map(),
-  disabled = false 
+  disabled = false
 }: QuestionRendererProps) {
-  
+
+  // Circadian theme for time-aware colors
+  const { textClasses, isWarm, cardClasses } = useCircadianTheme();
+
   // Check if question should be shown based on conditional logic
   const isVisible = shouldShowQuestion(question, previousResponses);
-  
+
   // Validate current response
   const validationErrors = useMemo(() => {
     return validateResponse(question, value);
   }, [question, value]);
-  
+
   const error = validationErrors.length > 0 ? validationErrors[0] : undefined;
-  
+
   // Parse configuration
   const config = parseConfig(question.format_config);
   
@@ -197,21 +201,21 @@ export function QuestionRenderer({
       {/* Question Header */}
       <div className="space-y-3">
         {/* Question Text */}
-        <h3 className="text-xl md:text-2xl font-semibold text-gray-900 leading-relaxed">
+        <h3 className={`text-xl md:text-2xl font-semibold leading-relaxed ${textClasses.primary}`}>
           {question.question_text}
-          {question.required && <span className="text-red-500 ml-1">*</span>}
+          {question.required && <span className={isWarm ? 'text-[#F87171] ml-1' : 'text-red-500 ml-1'}>*</span>}
         </h3>
-        
+
         {/* Help Text */}
         {question.help_text && (
-          <p className="text-sm text-gray-600 leading-relaxed">
+          <p className={`text-sm leading-relaxed ${textClasses.secondary}`}>
             {question.help_text}
           </p>
         )}
-        
+
         {/* Estimated Time */}
         {question.estimated_time_seconds > 0 && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className={`flex items-center gap-2 text-xs ${textClasses.muted}`}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12,6 12,12 16,14"/>
@@ -222,7 +226,7 @@ export function QuestionRenderer({
       </div>
 
       {/* Question Component */}
-      <div className="bg-white">
+      <div className={isWarm ? cardClasses.bg : 'bg-white'}>
         {renderComponent()}
       </div>
     </div>
