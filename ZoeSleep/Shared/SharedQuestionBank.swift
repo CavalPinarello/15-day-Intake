@@ -109,9 +109,10 @@ struct SharedQuestion: Identifiable, Codable {
 /// Central repository of all questions - THE SINGLE SOURCE OF TRUTH
 struct SharedQuestionBank {
 
-    // MARK: - Stanford Sleep Log (Asked Every Day on ALL Platforms)
+    // MARK: - Stanford Sleep Log (Full Version for iPhone/Web)
     // Based on Stanford Sleep Health and Insomnia Program: Two Week Sleep Diary
     // Adapted from the American Academy of Sleep Medicine
+    // This is the COMPLETE protocol - use on iPhone and Web
 
     static let stanfordSleepLog: [SharedQuestion] = [
         // Q1: Day Type - CRITICAL for Stanford protocol
@@ -208,6 +209,62 @@ struct SharedQuestionBank {
             type: .yesNo
         )
         // Note: SD_NAPS_COUNT and SD_NAP_DETAILS are conditional - only shown if naps = Yes
+    ]
+
+    // MARK: - Stanford Sleep Log (Watch Version - Streamlined)
+    // Simplified 5-question version for Apple Watch (~60 seconds)
+    // Captures the essential data points while keeping it quick
+
+    static let stanfordSleepLogWatch: [SharedQuestion] = [
+        // Q1: Day Type - Essential for schedule-based analysis
+        SharedQuestion(
+            id: "SD_DAY_TYPE",
+            text: "What type of day is today?",
+            pillar: .sleepLog,
+            type: .singleSelect,
+            options: ["Workday", "School Day", "Day Off", "Vacation", "Holiday"],
+            helpText: "This helps track how your schedule affects your sleep"
+        ),
+
+        // Q2: Bedtime (combined - when you tried to sleep)
+        SharedQuestion(
+            id: "SD_GOT_INTO_BED",
+            text: "What time did you go to bed?",
+            pillar: .sleepLog,
+            type: .time,
+            helpText: "When you got into bed to sleep"
+        ),
+
+        // Q3: Night Awakenings
+        SharedQuestion(
+            id: "SL_AWAKENINGS",
+            text: "How many times did you wake up?",
+            pillar: .sleepLog,
+            type: .numberScroll,
+            minValue: 0,
+            maxValue: 20
+        ),
+
+        // Q4: Wake Time
+        SharedQuestion(
+            id: "SL_WAKE_TIME",
+            text: "What time did you wake up?",
+            pillar: .sleepLog,
+            type: .time,
+            helpText: "Final wake time this morning"
+        ),
+
+        // Q5: Sleep Quality
+        SharedQuestion(
+            id: "SL_QUALITY",
+            text: "Rate your sleep quality",
+            pillar: .sleepLog,
+            type: .scale,
+            scaleMin: 1,
+            scaleMax: 10,
+            scaleMinLabel: "Very Poor",
+            scaleMaxLabel: "Excellent"
+        )
     ]
 
     // MARK: - Day 1: Demographics + Sleep Quality Core
@@ -652,9 +709,14 @@ struct SharedQuestionBank {
         }
     }
 
-    /// Get just the Sleep Log questions
+    /// Get the full Stanford Sleep Log questions (iPhone/Web - complete protocol)
     static func getSleepLogQuestions() -> [SharedQuestion] {
         return stanfordSleepLog
+    }
+
+    /// Get the streamlined Watch version of Sleep Log (5 questions, ~60 seconds)
+    static func getSleepLogQuestionsForWatch() -> [SharedQuestion] {
+        return stanfordSleepLogWatch
     }
 
     /// Get questions that can be auto-filled from Apple Health

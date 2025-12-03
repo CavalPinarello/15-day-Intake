@@ -4,6 +4,280 @@ import { Id } from "./_generated/dataModel";
 import { validatePhysicianRole, validateIOSSession } from "./auth";
 
 // ============================================
+// Question Definitions - Single Source of Truth
+// ============================================
+
+// Stanford Sleep Log questions (SL_ prefix - used by Watch quick log)
+const SLEEP_LOG_QUESTIONS: Record<string, { text: string; type: string }> = {
+  // Watch/iPhone quick sleep log (SL_ prefix)
+  "SL_BEDTIME": { text: "What time did you go to bed last night?", type: "time" },
+  "SL_ASLEEP_TIME": { text: "What time did you fall asleep?", type: "time" },
+  "SL_AWAKENINGS": { text: "How many times did you wake up during the night?", type: "number" },
+  "SL_WAKE_TIME": { text: "What time did you wake up this morning?", type: "time" },
+  "SL_QUALITY": { text: "How would you rate your sleep quality?", type: "scale" },
+  "SL_OUT_OF_BED": { text: "What time did you get out of bed?", type: "time" },
+  "SL_REFRESHED": { text: "How refreshed do you feel this morning?", type: "scale" },
+  "SL_NAPS": { text: "Did you take any naps yesterday?", type: "yes_no" },
+  "SL_NAP_DURATION": { text: "How long were your naps in total?", type: "duration" },
+  "SL_CAFFEINE": { text: "Did you have caffeine after 2pm?", type: "yes_no" },
+  "SL_ALCOHOL": { text: "Did you have alcohol last night?", type: "yes_no" },
+  "SL_EXERCISE": { text: "Did you exercise yesterday?", type: "yes_no" },
+  "SL_NOTES": { text: "Any notes about your sleep?", type: "text" },
+};
+
+// Stanford Sleep Diary questions (SD_ prefix - full diary from SharedQuestionBank)
+const SLEEP_DIARY_QUESTIONS: Record<string, { text: string; type: string }> = {
+  "SD_DATE": { text: "Date", type: "date" },
+  "SD_DAY_TYPE": { text: "What type of day is today?", type: "single_select" },
+  "SD_MEDICATION_TAKEN": { text: "Did you take any sleep medication last night?", type: "yes_no" },
+  "SD_MEDICATION_TIME": { text: "If yes, what time did you take it?", type: "time" },
+  "SD_GOT_INTO_BED": { text: "What time did you get into bed last night?", type: "time" },
+  "SD_LIGHTS_OUT": { text: "What time did you turn off the lights to sleep?", type: "time" },
+  "SD_SLEEP_ONSET": { text: "What time do you think you fell asleep?", type: "time" },
+  "SD_SLEEP_LATENCY": { text: "How long did it take you to fall asleep? (minutes)", type: "minutes" },
+  "SD_AWAKENINGS_COUNT": { text: "How many times did you wake up during the night?", type: "number" },
+  "SD_AWAKENINGS_DURATION": { text: "Total time awake during the night (minutes)", type: "minutes" },
+  "SD_FINAL_WAKE": { text: "What time did you wake up for the final time?", type: "time" },
+  "SD_OUT_OF_BED": { text: "What time did you get out of bed this morning?", type: "time" },
+  "SD_SLEEP_QUALITY": { text: "How would you rate your sleep quality?", type: "scale" },
+  "SD_NAPS_TAKEN": { text: "Did you take any naps yesterday?", type: "yes_no" },
+  "SD_NAPS_COUNT": { text: "How many naps did you take?", type: "number" },
+  "SD_NAP_DETAILS": { text: "For each nap, record the start time and duration.", type: "repeating_group" },
+};
+
+// Combined lookup function
+function getQuestionDefinition(questionId: string): { text: string; type: string; pillar: string } | null {
+  if (questionId.startsWith("SL_")) {
+    const q = SLEEP_LOG_QUESTIONS[questionId];
+    return q ? { ...q, pillar: "Sleep Log" } : null;
+  }
+  if (questionId.startsWith("SD_")) {
+    const q = SLEEP_DIARY_QUESTIONS[questionId];
+    return q ? { ...q, pillar: "Sleep Diary" } : null;
+  }
+  return null;
+}
+
+// ============================================
+// Questionnaire Scoring Functions
+// ============================================
+
+interface QuestionnaireScore {
+  name: string;
+  abbreviation: string;
+  score: number | null;
+  maxScore: number;
+  interpretation: string;
+  severity: "normal" | "mild" | "moderate" | "severe" | "unknown";
+  questionsAnswered: number;
+  questionsRequired: number;
+}
+
+// ISI (Insomnia Severity Index) - 7 questions, each 0-4
+function calculateISI(responses: Map<string, number>): QuestionnaireScore {
+  const isiQuestions = ["ISI_1", "ISI_2", "ISI_3", "ISI_4", "ISI_5", "ISI_6", "ISI_7"];
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of isiQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 5) { // Allow partial scoring
+    const score = Math.round(total * (7 / answered)); // Prorate
+    if (score <= 7) { interpretation = "No clinically significant insomnia"; severity = "normal"; }
+    else if (score <= 14) { interpretation = "Subthreshold insomnia"; severity = "mild"; }
+    else if (score <= 21) { interpretation = "Clinical insomnia (moderate)"; severity = "moderate"; }
+    else { interpretation = "Clinical insomnia (severe)"; severity = "severe"; }
+
+    return { name: "Insomnia Severity Index", abbreviation: "ISI", score, maxScore: 28, interpretation, severity, questionsAnswered: answered, questionsRequired: 7 };
+  }
+
+  return { name: "Insomnia Severity Index", abbreviation: "ISI", score: null, maxScore: 28, interpretation, severity, questionsAnswered: answered, questionsRequired: 7 };
+}
+
+// PHQ-9 (Depression) - 9 questions, each 0-3
+function calculatePHQ9(responses: Map<string, number>): QuestionnaireScore {
+  const phqQuestions = ["PHQ9_1", "PHQ9_2", "PHQ9_3", "PHQ9_4", "PHQ9_5", "PHQ9_6", "PHQ9_7", "PHQ9_8", "PHQ9_9"];
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of phqQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  // Also check gateway questions (15 = depression gateway from Day 3)
+  const gatewayVal = responses.get("15");
+  if (gatewayVal !== undefined && answered === 0) {
+    // Map gateway to PHQ-2 equivalent
+    if (gatewayVal >= 2) { // "More than half the days" or "Nearly every day"
+      return { name: "Patient Health Questionnaire", abbreviation: "PHQ-9", score: null, maxScore: 27,
+        interpretation: "Gateway triggered - full PHQ-9 recommended", severity: "mild", questionsAnswered: 1, questionsRequired: 9 };
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 7) {
+    const score = Math.round(total * (9 / answered));
+    if (score <= 4) { interpretation = "Minimal depression"; severity = "normal"; }
+    else if (score <= 9) { interpretation = "Mild depression"; severity = "mild"; }
+    else if (score <= 14) { interpretation = "Moderate depression"; severity = "moderate"; }
+    else if (score <= 19) { interpretation = "Moderately severe depression"; severity = "moderate"; }
+    else { interpretation = "Severe depression"; severity = "severe"; }
+
+    return { name: "Patient Health Questionnaire", abbreviation: "PHQ-9", score, maxScore: 27, interpretation, severity, questionsAnswered: answered, questionsRequired: 9 };
+  }
+
+  return { name: "Patient Health Questionnaire", abbreviation: "PHQ-9", score: null, maxScore: 27, interpretation, severity, questionsAnswered: answered, questionsRequired: 9 };
+}
+
+// GAD-7 (Anxiety) - 7 questions, each 0-3
+function calculateGAD7(responses: Map<string, number>): QuestionnaireScore {
+  const gadQuestions = ["GAD7_1", "GAD7_2", "GAD7_3", "GAD7_4", "GAD7_5", "GAD7_6", "GAD7_7"];
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of gadQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  // Check gateway (16 = anxiety gateway from Day 3)
+  const gatewayVal = responses.get("16");
+  if (gatewayVal !== undefined && answered === 0) {
+    if (gatewayVal >= 2) {
+      return { name: "Generalized Anxiety Disorder", abbreviation: "GAD-7", score: null, maxScore: 21,
+        interpretation: "Gateway triggered - full GAD-7 recommended", severity: "mild", questionsAnswered: 1, questionsRequired: 7 };
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 5) {
+    const score = Math.round(total * (7 / answered));
+    if (score <= 4) { interpretation = "Minimal anxiety"; severity = "normal"; }
+    else if (score <= 9) { interpretation = "Mild anxiety"; severity = "mild"; }
+    else if (score <= 14) { interpretation = "Moderate anxiety"; severity = "moderate"; }
+    else { interpretation = "Severe anxiety"; severity = "severe"; }
+
+    return { name: "Generalized Anxiety Disorder", abbreviation: "GAD-7", score, maxScore: 21, interpretation, severity, questionsAnswered: answered, questionsRequired: 7 };
+  }
+
+  return { name: "Generalized Anxiety Disorder", abbreviation: "GAD-7", score: null, maxScore: 21, interpretation, severity, questionsAnswered: answered, questionsRequired: 7 };
+}
+
+// ESS (Epworth Sleepiness Scale) - 8 questions, each 0-3
+function calculateESS(responses: Map<string, number>): QuestionnaireScore {
+  const essQuestions = ["ESS_1", "ESS_2", "ESS_3", "ESS_4", "ESS_5", "ESS_6", "ESS_7", "ESS_8"];
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of essQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  // Check daytime sleepiness gateway (17)
+  const gatewayVal = responses.get("17");
+  if (gatewayVal !== undefined && answered === 0) {
+    if (gatewayVal >= 3) { // "Often" or "Always"
+      return { name: "Epworth Sleepiness Scale", abbreviation: "ESS", score: null, maxScore: 24,
+        interpretation: "Gateway triggered - full ESS recommended", severity: "mild", questionsAnswered: 1, questionsRequired: 8 };
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 6) {
+    const score = Math.round(total * (8 / answered));
+    if (score <= 10) { interpretation = "Normal daytime sleepiness"; severity = "normal"; }
+    else if (score <= 14) { interpretation = "Mild excessive daytime sleepiness"; severity = "mild"; }
+    else if (score <= 18) { interpretation = "Moderate excessive daytime sleepiness"; severity = "moderate"; }
+    else { interpretation = "Severe excessive daytime sleepiness"; severity = "severe"; }
+
+    return { name: "Epworth Sleepiness Scale", abbreviation: "ESS", score, maxScore: 24, interpretation, severity, questionsAnswered: answered, questionsRequired: 8 };
+  }
+
+  return { name: "Epworth Sleepiness Scale", abbreviation: "ESS", score: null, maxScore: 24, interpretation, severity, questionsAnswered: answered, questionsRequired: 8 };
+}
+
+// STOP-BANG (Sleep Apnea Risk) - 8 yes/no questions
+function calculateSTOPBANG(responses: Map<string, number>, demographics: { age?: number; sex?: string; bmi?: number }): QuestionnaireScore {
+  let score = 0;
+  let answered = 0;
+
+  // S - Snore (question 19)
+  const snore = responses.get("19");
+  if (snore !== undefined) { if (snore === 1) score++; answered++; }
+
+  // T - Tired (question 21)
+  const tired = responses.get("21");
+  if (tired !== undefined) { if (tired === 1) score++; answered++; }
+
+  // O - Observed apnea (question 20)
+  const observed = responses.get("20");
+  if (observed !== undefined) { if (observed === 1) score++; answered++; }
+
+  // P - Pressure (high blood pressure, question 27)
+  const pressure = responses.get("27");
+  if (pressure !== undefined) { if (pressure === 1) score++; answered++; }
+
+  // B - BMI > 35
+  if (demographics.bmi !== undefined) {
+    if (demographics.bmi > 35) score++;
+    answered++;
+  }
+
+  // A - Age > 50
+  if (demographics.age !== undefined) {
+    if (demographics.age > 50) score++;
+    answered++;
+  }
+
+  // N - Neck circumference > 40cm (usually not collected, skip)
+
+  // G - Gender = Male
+  if (demographics.sex !== undefined) {
+    if (demographics.sex.toLowerCase() === "male") score++;
+    answered++;
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 4) {
+    if (score <= 2) { interpretation = "Low risk of OSA"; severity = "normal"; }
+    else if (score <= 4) { interpretation = "Intermediate risk of OSA"; severity = "mild"; }
+    else { interpretation = "High risk of OSA"; severity = "moderate"; }
+
+    return { name: "STOP-BANG Sleep Apnea Screening", abbreviation: "STOP-BANG", score, maxScore: 8, interpretation, severity, questionsAnswered: answered, questionsRequired: 8 };
+  }
+
+  return { name: "STOP-BANG Sleep Apnea Screening", abbreviation: "STOP-BANG", score: null, maxScore: 8, interpretation, severity, questionsAnswered: answered, questionsRequired: 8 };
+}
+
+// ============================================
 // Patient List & Overview Queries
 // ============================================
 
@@ -305,59 +579,22 @@ export const getPatientDayData = query({
       )
       .collect();
 
-    // Stanford Sleep Log question definitions (SL_ prefix used by Watch/iOS apps)
-    // These match the IDs in SharedQuestionBank.swift
-    const sleepLogQuestionMap: Record<string, { text: string; type: string }> = {
-      // Core sleep log questions (from SharedQuestionBank.swift)
-      "SL_BEDTIME": { text: "What time did you go to bed last night?", type: "time" },
-      "SL_ASLEEP_TIME": { text: "What time did you fall asleep?", type: "time" },
-      "SL_AWAKENINGS": { text: "How many times did you wake up during the night?", type: "number" },
-      "SL_WAKE_TIME": { text: "What time did you wake up this morning?", type: "time" },
-      "SL_QUALITY": { text: "How would you rate your sleep quality?", type: "scale" },
-      // Additional possible sleep log questions
-      "SL_OUT_OF_BED": { text: "What time did you get out of bed?", type: "time" },
-      "SL_SLEEP_QUALITY": { text: "How would you rate your sleep quality?", type: "scale" }, // Alias
-      "SL_REFRESHED": { text: "How refreshed do you feel this morning?", type: "scale" },
-      "SL_NAPS": { text: "Did you take any naps yesterday?", type: "yes_no" },
-      "SL_NAP_DURATION": { text: "How long were your naps in total?", type: "duration" },
-      "SL_CAFFEINE": { text: "Did you have caffeine after 2pm?", type: "yes_no" },
-      "SL_ALCOHOL": { text: "Did you have alcohol last night?", type: "yes_no" },
-      "SL_EXERCISE": { text: "Did you exercise yesterday?", type: "yes_no" },
-      "SL_NOTES": { text: "Any notes about your sleep?", type: "text" },
-    };
-
-    // Enrich with question details (check hardcoded SL_ questions, then assessment_questions, then sleep_diary_questions)
+    // Enrich with question details using global definitions + database fallback
     const enrichedResponses = await Promise.all(
       responses.map(async (response) => {
         let questionText: string | undefined;
         let questionType: string | undefined;
         let pillar: string | undefined;
-        let tier: string | undefined;
+        let tier: string | undefined = "core";
 
-        // Check if it's a sleep log question (SL_ prefix) - use hardcoded definitions first
-        if (response.question_id.startsWith("SL_")) {
-          const sleepLogDef = sleepLogQuestionMap[response.question_id];
-          if (sleepLogDef) {
-            questionText = sleepLogDef.text;
-            questionType = sleepLogDef.type;
-            pillar = "Sleep Log";
-            tier = "core";
-          } else {
-            // Fallback: try to find in sleep_diary_questions table
-            const sleepQuestion = await ctx.db
-              .query("sleep_diary_questions")
-              .withIndex("by_question_id", (q) => q.eq("id", response.question_id))
-              .first();
-
-            if (sleepQuestion) {
-              questionText = sleepQuestion.question_text;
-              questionType = sleepQuestion.answer_format;
-              pillar = "Sleep";
-              tier = "core";
-            }
-          }
-        } else if (response.question_id.startsWith("SD_")) {
-          // SD_ prefix questions from sleep_diary_questions table
+        // First check global hardcoded definitions (SL_ and SD_ prefixes)
+        const hardcodedDef = getQuestionDefinition(response.question_id);
+        if (hardcodedDef) {
+          questionText = hardcodedDef.text;
+          questionType = hardcodedDef.type;
+          pillar = hardcodedDef.pillar;
+        } else if (response.question_id.startsWith("SL_") || response.question_id.startsWith("SD_")) {
+          // Fallback: try to find in sleep_diary_questions table
           const sleepQuestion = await ctx.db
             .query("sleep_diary_questions")
             .withIndex("by_question_id", (q) => q.eq("id", response.question_id))
@@ -366,11 +603,10 @@ export const getPatientDayData = query({
           if (sleepQuestion) {
             questionText = sleepQuestion.question_text;
             questionType = sleepQuestion.answer_format;
-            pillar = "Sleep Diary";
-            tier = "core";
+            pillar = response.question_id.startsWith("SL_") ? "Sleep Log" : "Sleep Diary";
           }
         } else {
-          // Check assessment_questions table
+          // Check assessment_questions table for all other questions
           const question = await ctx.db
             .query("assessment_questions")
             .withIndex("by_question_id", (q) =>
