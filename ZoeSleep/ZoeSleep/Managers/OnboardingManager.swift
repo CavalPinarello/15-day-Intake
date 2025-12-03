@@ -79,20 +79,19 @@ enum WearableDevice: String, CaseIterable, Identifiable {
 }
 
 /// Onboarding step enum
+/// NOTE: No welcome step - splash screen serves as welcome, onboarding starts with name
 enum OnboardingStep: Int, CaseIterable {
-    case welcome = 0
-    case name = 1
-    case measurementSystem = 2
-    case heightWeight = 3
-    case genderAge = 4
-    case wearables = 5
-    case healthConnect = 6
-    case sleepPhilosophy = 7
-    case ready = 8
+    case name = 0
+    case measurementSystem = 1
+    case heightWeight = 2
+    case genderAge = 3
+    case wearables = 4
+    case healthConnect = 5
+    case sleepPhilosophy = 6
+    case ready = 7
 
     var title: String {
         switch self {
-        case .welcome: return "Welcome"
         case .name: return "Your Name"
         case .measurementSystem: return "Units"
         case .heightWeight: return "Body Metrics"
@@ -148,7 +147,7 @@ class OnboardingManager: ObservableObject {
 
     // MARK: - Published Properties
 
-    @Published var currentStep: OnboardingStep = .welcome
+    @Published var currentStep: OnboardingStep = .name
     @Published var profile: OnboardingProfile = OnboardingProfile()
     @Published var isOnboardingComplete: Bool = false
     @Published var isCheckingServerState: Bool = false
@@ -293,7 +292,7 @@ class OnboardingManager: ObservableObject {
     /// Reset local state for a new user
     private func resetLocalState() {
         profile = OnboardingProfile()
-        currentStep = .welcome
+        currentStep = .name  // Start at name step (no welcome step)
         isOnboardingComplete = false
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
@@ -304,7 +303,7 @@ class OnboardingManager: ObservableObject {
     /// This resets local state without touching server data
     func clearForSignOut() {
         profile = OnboardingProfile()
-        currentStep = .welcome
+        currentStep = .name  // Start at name step (no welcome step)
         isOnboardingComplete = false
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
@@ -345,27 +344,101 @@ class OnboardingManager: ObservableObject {
         profile.weightKg = tempWeightLbs / 2.20462
     }
 
+    // MARK: - Pre-fill from Sign Up / Login
+
+    /// Pre-fill profile with data from authentication
+    /// Call this after user signs up or logs in with Apple
+    func prefillFromAuth(name: String?, email: String?) {
+        // Extract first name from full name or email
+        if let fullName = name, !fullName.isEmpty {
+            // Use first word as display name (e.g., "John Doe" -> "John")
+            let firstName = fullName.components(separatedBy: " ").first ?? fullName
+            profile.name = firstName
+            print("[Onboarding] Pre-filled name from auth: \(firstName)")
+        } else if let email = email {
+            // Extract name from email (e.g., "john.doe@email.com" -> "John")
+            let localPart = email.components(separatedBy: "@").first ?? ""
+            let namePart = localPart.components(separatedBy: CharacterSet(charactersIn: "._-")).first ?? localPart
+            if !namePart.isEmpty {
+                profile.name = namePart.capitalized
+                print("[Onboarding] Pre-filled name from email: \(profile.name)")
+            }
+        }
+    }
+
+    /// Pre-fill from HealthKit data on app start
+    func prefillFromSystemData() {
+        // Measurement system from locale (already done in init)
+        // Height/weight will come from HealthKit when connected
+        print("[Onboarding] System data pre-filled (measurement system: \(profile.measurementSystem))")
+    }
+
     // MARK: - Navigation
 
+    /// Move to next step, skipping steps with pre-filled data
     func nextStep() {
-        guard let nextIndex = OnboardingStep(rawValue: currentStep.rawValue + 1) else {
+        var nextIndex = currentStep.rawValue + 1
+
+        // Find the next step that needs user input
+        while let step = OnboardingStep(rawValue: nextIndex) {
+            if shouldSkipStep(step) {
+                nextIndex += 1
+                continue
+            }
+            break
+        }
+
+        guard let nextStep = OnboardingStep(rawValue: nextIndex) else {
             completeOnboarding()
             return
         }
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            currentStep = nextIndex
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            currentStep = nextStep
+        }
+    }
+
+    /// Check if a step should be skipped (has pre-filled data)
+    func shouldSkipStep(_ step: OnboardingStep) -> Bool {
+        switch step {
+        case .name:
+            // Skip if name is already filled
+            return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .measurementSystem:
+            // Don't skip - user might want to change the auto-detected value
+            return false
+        case .heightWeight:
+            // Skip if we got data from HealthKit
+            return profile.hasConnectedHealthKit && profile.heightCm > 100 && profile.weightKg > 30
+        case .genderAge:
+            // Skip if we got complete data from HealthKit
+            return profile.hasConnectedHealthKit &&
+                   profile.gender != Gender.preferNotToSay.rawValue &&
+                   profile.birthYear > 1920 && profile.birthYear < Calendar.current.component(.year, from: Date()) - 10
+        default:
+            return false
         }
     }
 
     func previousStep() {
-        guard let prevIndex = OnboardingStep(rawValue: currentStep.rawValue - 1) else { return }
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            currentStep = prevIndex
+        var prevIndex = currentStep.rawValue - 1
+
+        // Find the previous step that wasn't skipped
+        while prevIndex >= 0 {
+            if let step = OnboardingStep(rawValue: prevIndex), !shouldSkipStep(step) {
+                break
+            }
+            prevIndex -= 1
+        }
+
+        guard let prevStep = OnboardingStep(rawValue: max(0, prevIndex)) else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            currentStep = prevStep
         }
     }
 
     func goToStep(_ step: OnboardingStep) {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             currentStep = step
         }
     }
@@ -374,8 +447,6 @@ class OnboardingManager: ObservableObject {
 
     var canProceed: Bool {
         switch currentStep {
-        case .welcome:
-            return true
         case .name:
             return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .measurementSystem:

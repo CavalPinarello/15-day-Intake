@@ -196,6 +196,9 @@ class AuthenticationManager: ObservableObject {
                 serverProfile: nil // New user has no profile yet
             )
 
+            // Pre-fill onboarding data from registration info
+            OnboardingManager.shared.prefillFromAuth(name: username, email: email)
+
             // New user starts at Day 1 - load journey progress
             await QuestionnaireManager.shared.loadJourneyProgress()
 
@@ -306,6 +309,14 @@ class AuthenticationManager: ObservableObject {
                             birthYear: response.user.birthYearInt
                         )
                     )
+
+                    // Pre-fill onboarding data for new Apple Sign In users
+                    if response.isNewUser {
+                        OnboardingManager.shared.prefillFromAuth(
+                            name: fullName.isEmpty ? nil : fullName,
+                            email: email
+                        )
+                    }
 
                     // Load journey progress for this user
                     await QuestionnaireManager.shared.loadJourneyProgress()

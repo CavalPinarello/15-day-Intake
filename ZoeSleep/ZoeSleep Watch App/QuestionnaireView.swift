@@ -232,34 +232,43 @@ struct QuestionnaireView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                // If only sleep log was completed, show button to proceed to assessment
+                // If only sleep log was completed, show reminder to complete assessment on iPhone
                 if mode == .sleepLog && !convexService.assessmentCompleted {
                     Divider()
                         .padding(.vertical, 4)
 
-                    Text("Day Assessment")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(theme.primary)
+                    HStack(spacing: 6) {
+                        Image(systemName: "iphone")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.primary)
+                        Text("Assessment")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(theme.primary)
 
-                    Text("still remaining")
+                    Text("Complete on iPhone")
                         .font(.caption2)
                         .foregroundColor(.secondary)
+                } else if mode == .sleepLog && convexService.assessmentCompleted {
+                    // Both done - day complete!
+                    Divider()
+                        .padding(.vertical, 4)
 
-                    NavigationLink(destination: QuestionnaireView(mode: .assessment)) {
-                        HStack {
-                            Image(systemName: "list.clipboard.fill")
-                            Text("Start Assessment")
-                        }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 16)
-                        .background(theme.primary)
-                        .cornerRadius(10)
+                    if currentDay < 15 {
+                        Text("Day \(currentDay) Complete!")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(theme.success)
+
+                        Text("See you tomorrow")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Journey Complete!")
+                            .font(.caption)
+                            .foregroundColor(theme.success)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.top, 8)
                 } else if mode == .assessment || mode == .all {
                     // Day fully complete or assessment done
                     if currentDay < 15 {
@@ -713,7 +722,16 @@ struct QuestionnaireView: View {
         responses = [:]
         userInteractedQuestions = []
 
-        // Fetch questions from Convex (THE SINGLE SOURCE OF TRUTH)
+        // For Sleep Log, ALWAYS use the local SharedQuestionBank
+        // (Convex sleep_diary_questions table may be empty or have wrong data)
+        if mode == .sleepLog {
+            questions = WatchQuestionBank.getSleepLogQuestions()
+            print("[Watch] Loaded \(questions.count) Sleep Log questions from SharedQuestionBank")
+            loadSavedProgress()
+            return
+        }
+
+        // For Assessment, try Convex first but fall back to local questions
         Task {
             do {
                 print("[Watch] Fetching questions from Convex for Day \(currentDay), mode: \(mode)...")
@@ -728,6 +746,17 @@ struct QuestionnaireView: View {
                 }
                 if mode == .assessment || mode == .all {
                     convertedQuestions.append(contentsOf: questionsResponse.assessment.map { convertConvexToWatchQuestion($0) })
+                }
+
+                // If Convex returned empty questions, fall back to local
+                if convertedQuestions.isEmpty {
+                    print("[Watch] Convex returned empty questions, using local fallback")
+                    await MainActor.run {
+                        questions = WatchQuestionBank.getQuestions(for: currentDay, mode: mode)
+                        print("[Watch] Fallback: Using local questions (\(questions.count) questions)")
+                        loadSavedProgress()
+                    }
+                    return
                 }
 
                 await MainActor.run {
@@ -881,12 +910,23 @@ struct QuestionnaireView: View {
 
     /// Returns the previously answered bedtime to help set smart defaults for subsequent time questions
     private func getPreviousBedtime(for questionId: String) -> Date? {
-        // For sleep log questions, check if bedtime was already answered
-        // SL_ASLEEP_TIME and SL_WAKE_TIME should use SL_BEDTIME
-        if questionId == "SL_ASLEEP_TIME" || questionId == "SL_WAKE_TIME" {
-            return responses["SL_BEDTIME"] as? Date
+        // For Stanford Sleep Diary, chain the time dependencies
+        switch questionId {
+        case "SD_LIGHTS_OUT":
+            // Lights out is typically same as or shortly after getting into bed
+            return responses["SD_GOT_INTO_BED"] as? Date
+        case "SL_ASLEEP_TIME":
+            // Fall asleep time is typically after lights out
+            return responses["SD_LIGHTS_OUT"] as? Date ?? responses["SD_GOT_INTO_BED"] as? Date
+        case "SL_WAKE_TIME":
+            // Wake time is typically 7-8 hours after asleep time
+            return responses["SL_ASLEEP_TIME"] as? Date ?? responses["SD_LIGHTS_OUT"] as? Date
+        case "SD_OUT_OF_BED":
+            // Out of bed is typically same or shortly after wake time
+            return responses["SL_WAKE_TIME"] as? Date
+        default:
+            return nil
         }
-        return nil
     }
 
     private func completeQuestionnaire() {
@@ -1230,34 +1270,58 @@ struct WatchTimePickerView: View {
     private let hours12 = Array(1...12)
     private let minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 
-    // Smart defaults based on question and previous answers
+    // Smart defaults based on question and previous answers (Stanford Sleep Diary)
     private var smartDefault: (hour24: Int, minute: Int) {
         let calendar = Calendar.current
 
         switch questionId {
-        case "SL_BEDTIME":
-            return (22, 0)   // 10:00 PM
+        // Q3: Bedtime Routine
+        case "SD_GOT_INTO_BED":
+            return (22, 0)   // 10:00 PM - when you got into bed
 
+        case "SD_LIGHTS_OUT":
+            // Typically 5-15 min after getting into bed
+            if let gotIntoBed = previousBedtime {
+                let adjustedTime = calendar.date(byAdding: .minute, value: 10, to: gotIntoBed) ?? gotIntoBed
+                let components = calendar.dateComponents([.hour, .minute], from: adjustedTime)
+                return (components.hour ?? 22, components.minute ?? 15)
+            }
+            return (22, 15)  // 10:15 PM
+
+        // Q4: Sleep Onset
         case "SL_ASLEEP_TIME":
-            // If we have a bedtime answer, default to 15 min after
-            if let bedtime = previousBedtime {
-                let adjustedTime = calendar.date(byAdding: .minute, value: 15, to: bedtime) ?? bedtime
+            // Typically 10-20 min after lights out
+            if let lightsOut = previousBedtime {
+                let adjustedTime = calendar.date(byAdding: .minute, value: 15, to: lightsOut) ?? lightsOut
                 let components = calendar.dateComponents([.hour, .minute], from: adjustedTime)
                 return (components.hour ?? 22, components.minute ?? 30)
             }
             return (22, 30)  // 10:30 PM
 
+        // Q6: Morning Wake Time
         case "SL_WAKE_TIME":
-            // If we have a bedtime answer, default to ~8 hours after
-            if let bedtime = previousBedtime {
-                let adjustedTime = calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? bedtime
+            // Typically ~7-8 hours after asleep time
+            if let asleepTime = previousBedtime {
+                let adjustedTime = calendar.date(byAdding: .hour, value: 8, to: asleepTime) ?? asleepTime
                 let components = calendar.dateComponents([.hour, .minute], from: adjustedTime)
-                return (components.hour ?? 7, components.minute ?? 0)
+                return (components.hour ?? 6, components.minute ?? 30)
             }
-            return (7, 0)    // 7:00 AM
+            return (6, 30)   // 6:30 AM
+
+        case "SD_OUT_OF_BED":
+            // Typically 5-15 min after final wake
+            if let wakeTime = previousBedtime {
+                let adjustedTime = calendar.date(byAdding: .minute, value: 10, to: wakeTime) ?? wakeTime
+                let components = calendar.dateComponents([.hour, .minute], from: adjustedTime)
+                return (components.hour ?? 6, components.minute ?? 45)
+            }
+            return (6, 45)   // 6:45 AM
+
+        // Legacy IDs (keep for backward compatibility)
+        case "SL_BEDTIME":
+            return (22, 0)   // 10:00 PM
 
         default:
-            // Infer from question text would be passed separately
             return (22, 0)   // Default to 10 PM for sleep-related
         }
     }

@@ -3,6 +3,7 @@
 //  Zoe Sleep for Longevity System
 //
 //  Distinct visual sections for Stanford Sleep Log vs Day Assessments
+//  CIRCADIAN-AWARE: Colors adapt to time of day (warm amber at night, no blue light)
 //
 
 import SwiftUI
@@ -41,37 +42,95 @@ enum QuestionnaireSection: String, CaseIterable {
         }
     }
 
-    /// Background color - Sleep Log: blue tint, Assessment: purple tint
+    // MARK: - Circadian-Aware Colors
+    // Evening/Night: Warm amber/orange colors (sleep-safe, no blue light)
+    // Morning/Afternoon: Blues/purples OK for alertness
+
+    /// Background color - Circadian aware
     var backgroundColor: Color {
-        switch self {
-        case .sleepLog: return Color(red: 0.13, green: 0.59, blue: 0.95).opacity(0.1)  // Blue
-        case .assessment: return Color(red: 0.61, green: 0.35, blue: 0.71).opacity(0.15)  // Purple
+        let isEvening = TimePeriod.current == .evening || TimePeriod.current == .night
+
+        if isEvening {
+            // Warm brown tint for both sections at night
+            switch self {
+            case .sleepLog: return Color(red: 0.4, green: 0.25, blue: 0.15).opacity(0.3)    // Warm brown
+            case .assessment: return Color(red: 0.35, green: 0.2, blue: 0.1).opacity(0.3)  // Darker brown
+            }
+        } else {
+            // Daytime: Original blue/purple tints
+            switch self {
+            case .sleepLog: return Color(red: 0.13, green: 0.59, blue: 0.95).opacity(0.1)  // Blue
+            case .assessment: return Color(red: 0.61, green: 0.35, blue: 0.71).opacity(0.15)  // Purple
+            }
         }
     }
 
-    /// Accent color - Sleep Log: blue, Assessment: purple
+    /// Accent color - Circadian aware
     var accentColor: Color {
-        switch self {
-        case .sleepLog: return Color(red: 0.13, green: 0.59, blue: 0.95)  // #2196F3
-        case .assessment: return Color(red: 0.61, green: 0.35, blue: 0.71)  // #9C27B0
+        let isEvening = TimePeriod.current == .evening || TimePeriod.current == .night
+
+        if isEvening {
+            // Warm amber/orange at night
+            switch self {
+            case .sleepLog: return Color(red: 0.95, green: 0.6, blue: 0.2)    // Warm amber #F29933
+            case .assessment: return Color(red: 0.85, green: 0.5, blue: 0.15) // Deep amber #D98026
+            }
+        } else {
+            // Daytime: Original blue/purple
+            switch self {
+            case .sleepLog: return Color(red: 0.13, green: 0.59, blue: 0.95)  // #2196F3
+            case .assessment: return Color(red: 0.61, green: 0.35, blue: 0.71)  // #9C27B0
+            }
         }
     }
 
-    /// Header gradient
+    /// Header gradient - Circadian aware
     var headerGradient: LinearGradient {
-        switch self {
-        case .sleepLog:
-            return LinearGradient(
-                colors: [Color(red: 0.13, green: 0.59, blue: 0.95), Color(red: 0.13, green: 0.59, blue: 0.95).opacity(0.7)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .assessment:
-            return LinearGradient(
-                colors: [Color(red: 0.61, green: 0.35, blue: 0.71), Color(red: 0.45, green: 0.25, blue: 0.55)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+        let isEvening = TimePeriod.current == .evening || TimePeriod.current == .night
+
+        if isEvening {
+            // Warm amber gradients at night
+            switch self {
+            case .sleepLog:
+                return LinearGradient(
+                    colors: [Color(red: 0.95, green: 0.6, blue: 0.2), Color(red: 0.85, green: 0.45, blue: 0.15)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .assessment:
+                return LinearGradient(
+                    colors: [Color(red: 0.85, green: 0.5, blue: 0.15), Color(red: 0.7, green: 0.35, blue: 0.1)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        } else {
+            // Daytime: Original gradients
+            switch self {
+            case .sleepLog:
+                return LinearGradient(
+                    colors: [Color(red: 0.13, green: 0.59, blue: 0.95), Color(red: 0.13, green: 0.59, blue: 0.95).opacity(0.7)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .assessment:
+                return LinearGradient(
+                    colors: [Color(red: 0.61, green: 0.35, blue: 0.71), Color(red: 0.45, green: 0.25, blue: 0.55)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        }
+    }
+
+    /// Text color for descriptions - high contrast on circadian backgrounds
+    var descriptionTextColor: Color {
+        let isEvening = TimePeriod.current == .evening || TimePeriod.current == .night
+        if isEvening {
+            // Bright golden yellow for visibility on dark brown
+            return Color(red: 0.988, green: 0.827, blue: 0.302)  // #FCD34D
+        } else {
+            return accentColor
         }
     }
 }
@@ -120,7 +179,8 @@ struct SectionHeaderView: View {
             HStack {
                 Text(section.description)
                     .font(.subheadline)
-                    .foregroundColor(section.accentColor)
+                    .fontWeight(.medium)
+                    .foregroundColor(section.descriptionTextColor)
 
                 Spacer()
             }
@@ -272,6 +332,35 @@ struct SectionQuestionCard<Content: View>: View {
     let question: Question
     let content: () -> Content
 
+    // Circadian text colors
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var questionTextColor: Color {
+        if isEvening {
+            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var secondaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
+        } else {
+            return Color.secondary
+        }
+    }
+
+    private var helpTextColor: Color {
+        if isEvening {
+            return Color(red: 0.961, green: 0.620, blue: 0.043)  // Amber #F59E0B
+        } else {
+            return Color.secondary
+        }
+    }
+
     init(section: QuestionnaireSection, question: Question, @ViewBuilder content: @escaping () -> Content) {
         self.section = section
         self.question = question
@@ -300,7 +389,7 @@ struct SectionQuestionCard<Content: View>: View {
                 if question.required {
                     Text("Required")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                 }
             }
 
@@ -308,7 +397,7 @@ struct SectionQuestionCard<Content: View>: View {
             Text(question.text)
                 .font(.body)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundColor(questionTextColor)
                 .fixedSize(horizontal: false, vertical: true)
 
             // Help text
@@ -319,7 +408,7 @@ struct SectionQuestionCard<Content: View>: View {
                         .font(.caption)
                     Text(helpText)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(helpTextColor)
                 }
                 .padding(10)
                 .background(section.backgroundColor)

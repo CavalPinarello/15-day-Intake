@@ -110,22 +110,57 @@ struct SharedQuestion: Identifiable, Codable {
 struct SharedQuestionBank {
 
     // MARK: - Stanford Sleep Log (Asked Every Day on ALL Platforms)
+    // Based on Stanford Sleep Health and Insomnia Program: Two Week Sleep Diary
+    // Adapted from the American Academy of Sleep Medicine
 
     static let stanfordSleepLog: [SharedQuestion] = [
+        // Q1: Day Type - CRITICAL for Stanford protocol
         SharedQuestion(
-            id: "SL_BEDTIME",
-            text: "What time did you go to bed last night?",
+            id: "SD_DAY_TYPE",
+            text: "What type of day is today?",
+            pillar: .sleepLog,
+            type: .singleSelect,
+            options: ["Workday", "School Day", "Day Off", "Vacation", "Holiday"],
+            helpText: "This helps track how your schedule affects your sleep"
+        ),
+
+        // Q2: Medication Tracking
+        SharedQuestion(
+            id: "SD_MEDICATION_TAKEN",
+            text: "Did you take any sleep medication last night?",
+            pillar: .sleepLog,
+            type: .yesNo,
+            helpText: "Including prescription, OTC, or supplements"
+        ),
+        // Note: SD_MEDICATION_TIME is conditional - only shown if medication taken = Yes
+        // The app should handle this conditional logic
+
+        // Q3: Bedtime Routine
+        SharedQuestion(
+            id: "SD_GOT_INTO_BED",
+            text: "What time did you get into bed last night?",
             pillar: .sleepLog,
             type: .time,
-            helpText: "Your subjective perception - don't check your wearable device"
+            helpText: "When you physically got into bed, not necessarily trying to sleep"
         ),
         SharedQuestion(
+            id: "SD_LIGHTS_OUT",
+            text: "What time did you turn off the lights to sleep?",
+            pillar: .sleepLog,
+            type: .time,
+            helpText: "When you started trying to fall asleep"
+        ),
+
+        // Q4: Sleep Onset
+        SharedQuestion(
             id: "SL_ASLEEP_TIME",
-            text: "What time did you fall asleep last night?",
+            text: "What time do you think you fell asleep?",
             pillar: .sleepLog,
             type: .time,
             helpText: "Your best estimate - don't check your wearable"
         ),
+
+        // Q5: Night Awakenings
         SharedQuestion(
             id: "SL_AWAKENINGS",
             text: "How many times did you wake up during the night?",
@@ -134,13 +169,26 @@ struct SharedQuestionBank {
             minValue: 0,
             maxValue: 20
         ),
+        // Note: SD_AWAKENINGS_DURATION is conditional - only shown if awakenings > 0
+        // "Approximately how much total time were you awake during the night? (minutes)"
+
+        // Q6: Morning Wake Time
         SharedQuestion(
             id: "SL_WAKE_TIME",
-            text: "What time did you wake up this morning?",
+            text: "What time did you wake up for the final time?",
             pillar: .sleepLog,
             type: .time,
-            helpText: "Final awakening - don't check your wearable"
+            helpText: "The last time you woke up and decided to get up"
         ),
+        SharedQuestion(
+            id: "SD_OUT_OF_BED",
+            text: "What time did you get out of bed this morning?",
+            pillar: .sleepLog,
+            type: .time,
+            helpText: "When you physically got out of bed"
+        ),
+
+        // Q7: Sleep Quality
         SharedQuestion(
             id: "SL_QUALITY",
             text: "How would you rate your sleep quality last night?",
@@ -150,7 +198,16 @@ struct SharedQuestionBank {
             scaleMax: 10,
             scaleMinLabel: "Very Poor",
             scaleMaxLabel: "Excellent"
+        ),
+
+        // Q8: Naps (yesterday)
+        SharedQuestion(
+            id: "SD_NAPS_TAKEN",
+            text: "Did you take any naps yesterday?",
+            pillar: .sleepLog,
+            type: .yesNo
         )
+        // Note: SD_NAPS_COUNT and SD_NAP_DETAILS are conditional - only shown if naps = Yes
     ]
 
     // MARK: - Day 1: Demographics + Sleep Quality Core

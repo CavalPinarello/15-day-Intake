@@ -2,56 +2,52 @@
 //  SplashScreenView.swift
 //  Zoe Sleep - Sleep Better, Live Longer
 //
-//  Brief splash screen with circadian-aware colors - minimal duration
-//  to avoid feeling like a double splash with system launch screen
+//  Fast, elegant splash screen with circadian-aware colors
 //
 
 import SwiftUI
 
 struct SplashScreenView: View {
+    @State private var logoScale: CGFloat = 0.8
     @State private var logoOpacity: Double = 0
     @State private var textOpacity: Double = 0
+    @State private var glowOpacity: Double = 0
 
-    // Callback when splash is complete
     var onComplete: (() -> Void)?
+    var duration: Double = 0.6  // Fast splash
 
-    // Shorter splash duration (system already shows launch screen)
-    var duration: Double = 1.2
-
-    // Use circadian colors
     private var palette: CircadianPalette { CircadianPalette.current }
 
     var body: some View {
         ZStack {
-            // Circadian-aware background gradient
+            // Background
             LinearGradient(
                 colors: palette.background,
                 startPoint: .top,
                 endPoint: .bottom
             )
+            .ignoresSafeArea()
 
-            // Center logo composition
-            VStack(spacing: 20) {
-                // Logo
+            VStack(spacing: 16) {
+                // Logo with glow effect
                 ZStack {
-                    // Subtle glow
+                    // Glow
                     Circle()
                         .fill(
                             RadialGradient(
-                                colors: [
-                                    palette.accent.opacity(0.2),
-                                    Color.clear
-                                ],
+                                colors: [palette.accent.opacity(0.4), Color.clear],
                                 center: .center,
-                                startRadius: 20,
-                                endRadius: 60
+                                startRadius: 10,
+                                endRadius: 80
                             )
                         )
-                        .frame(width: 120, height: 120)
+                        .frame(width: 160, height: 160)
+                        .opacity(glowOpacity)
+                        .scaleEffect(logoScale * 1.2)
 
-                    // Wave icon
+                    // ECG wave icon
                     Image(systemName: "waveform.path.ecg")
-                        .font(.system(size: 50, weight: .thin))
+                        .font(.system(size: 60, weight: .thin))
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [palette.accent, palette.wave],
@@ -59,47 +55,47 @@ struct SplashScreenView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
+                        .scaleEffect(logoScale)
+                        .opacity(logoOpacity)
                 }
-                .opacity(logoOpacity)
 
                 // App name
-                VStack(spacing: 6) {
+                VStack(spacing: 4) {
                     Text("Zoe Sleep")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundColor(palette.textPrimary)
 
                     Text("Sleep Better, Live Longer")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundColor(palette.accent.opacity(0.9))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(palette.accent)
                 }
                 .opacity(textOpacity)
             }
         }
-        .ignoresSafeArea()
         .onAppear {
-            startAnimations()
+            startAnimation()
         }
     }
 
-    private func startAnimations() {
-        // Quick fade in
-        withAnimation(.easeOut(duration: 0.4)) {
+    private func startAnimation() {
+        // Quick, elegant animation
+        withAnimation(.easeOut(duration: 0.25)) {
             logoOpacity = 1.0
+            logoScale = 1.0
+            glowOpacity = 1.0
         }
 
-        withAnimation(.easeOut(duration: 0.3).delay(0.15)) {
+        withAnimation(.easeOut(duration: 0.2).delay(0.1)) {
             textOpacity = 1.0
         }
 
-        // Complete callback after short duration
+        // Complete after short duration
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
             onComplete?()
         }
     }
 }
 
-// MARK: - Previews
-
-#Preview("Splash Screen") {
+#Preview {
     SplashScreenView()
 }

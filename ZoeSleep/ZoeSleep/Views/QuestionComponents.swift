@@ -3,9 +3,66 @@
 //  Zoe Sleep for Longevity System
 //
 //  Reusable UI components for different question types
+//  CIRCADIAN-AWARE: All colors adapt to time of day (warm amber at night)
 //
 
 import SwiftUI
+
+// MARK: - Circadian Color Helper
+
+/// Provides circadian-aware colors for question components
+/// Evening/Night: Warm amber/orange colors (sleep-safe, no blue light)
+/// Morning/Afternoon: Standard system colors
+struct CircadianColors {
+    static var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    /// Primary text color - high visibility
+    static var primary: Color {
+        if isEvening {
+            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
+        } else {
+            return Color.primary
+        }
+    }
+
+    /// Secondary text color - medium visibility
+    static var secondary: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
+        } else {
+            return Color.secondary
+        }
+    }
+
+    /// Muted text color - lower visibility but still readable
+    static var muted: Color {
+        if isEvening {
+            return Color(red: 0.961, green: 0.620, blue: 0.043)  // Amber #F59E0B
+        } else {
+            return Color.secondary.opacity(0.7)
+        }
+    }
+
+    /// Background for secondary elements
+    static var secondaryBackground: Color {
+        if isEvening {
+            return Color(red: 0.25, green: 0.15, blue: 0.1)  // Dark brown
+        } else {
+            return Color(.secondarySystemBackground)
+        }
+    }
+
+    /// Border color
+    static var border: Color {
+        if isEvening {
+            return Color(red: 0.4, green: 0.25, blue: 0.15)  // Warm brown border
+        } else {
+            return Color.gray.opacity(0.3)
+        }
+    }
+}
 
 // MARK: - Question Card Container
 
@@ -38,7 +95,7 @@ struct QuestionCard<Content: View>: View {
                 if question.required {
                     Text("Required")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(CircadianColors.secondary)
                 }
             }
 
@@ -46,7 +103,7 @@ struct QuestionCard<Content: View>: View {
             Text(question.text)
                 .font(.body)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundColor(CircadianColors.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
             // Help text
@@ -57,7 +114,7 @@ struct QuestionCard<Content: View>: View {
                         .font(.caption)
                     Text(helpText)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(CircadianColors.muted)
                 }
                 .padding(8)
                 .background(theme.backgroundTint)
@@ -68,7 +125,7 @@ struct QuestionCard<Content: View>: View {
             content()
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(CircadianColors.secondaryBackground)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
@@ -113,11 +170,11 @@ struct ScaleInput: View {
             HStack {
                 Text(question.scaleMinLabel ?? "\(question.scaleMin ?? 0)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(CircadianColors.secondary)
                 Spacer()
                 Text(question.scaleMaxLabel ?? "\(question.scaleMax ?? 10)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(CircadianColors.secondary)
             }
 
             Slider(
@@ -164,12 +221,12 @@ struct YesNoInput: View {
                         .fontWeight(.medium)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(value == option ? pillarColor.opacity(0.2) : Color(.secondarySystemBackground))
-                        .foregroundColor(value == option ? pillarColor : .primary)
+                        .background(value == option ? pillarColor.opacity(0.2) : CircadianColors.secondaryBackground)
+                        .foregroundColor(value == option ? pillarColor : CircadianColors.primary)
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(value == option ? pillarColor : Color.clear, lineWidth: 2)
+                                .stroke(value == option ? pillarColor : CircadianColors.border, lineWidth: value == option ? 2 : 1)
                         )
                 }
                 .buttonStyle(.plain)
@@ -213,9 +270,13 @@ struct SingleSelectInput: View {
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(value == option ? pillarColor.opacity(0.1) : Color(.secondarySystemBackground))
-                    .foregroundColor(.primary)
+                    .background(value == option ? pillarColor.opacity(0.1) : CircadianColors.secondaryBackground)
+                    .foregroundColor(CircadianColors.primary)
                     .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(value == option ? pillarColor : CircadianColors.border, lineWidth: value == option ? 2 : 1)
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -241,13 +302,17 @@ struct MultiSelectInput: View {
                             .font(.subheadline)
                         Spacer()
                         Image(systemName: values.contains(option) ? "checkmark.square.fill" : "square")
-                            .foregroundColor(values.contains(option) ? pillarColor : .secondary)
+                            .foregroundColor(values.contains(option) ? pillarColor : CircadianColors.secondary)
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(values.contains(option) ? pillarColor.opacity(0.1) : Color(.secondarySystemBackground))
-                    .foregroundColor(.primary)
+                    .background(values.contains(option) ? pillarColor.opacity(0.1) : CircadianColors.secondaryBackground)
+                    .foregroundColor(CircadianColors.primary)
                     .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(values.contains(option) ? pillarColor : CircadianColors.border, lineWidth: values.contains(option) ? 2 : 1)
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -325,17 +390,17 @@ struct NumberInput: View {
             HStack {
                 Text("\(question.minValue ?? 0)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(CircadianColors.secondary)
                 Spacer()
                 if let unit = question.unit {
                     Text(unit)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(CircadianColors.secondary)
                 }
                 Spacer()
                 Text("\(question.maxValue ?? 100)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(CircadianColors.secondary)
             }
 
             HStack(spacing: 20) {
@@ -349,6 +414,7 @@ struct NumberInput: View {
                 Text(formatValue())
                     .font(.title)
                     .fontWeight(.bold)
+                    .foregroundColor(CircadianColors.primary)
                     .frame(minWidth: 80)
 
                 Button(action: { incrementValue() }) {
@@ -508,11 +574,66 @@ struct TextInputView: View {
     @Binding var value: String
     var placeholder: String = "Enter your answer"
 
+    // Circadian-aware colors
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var textColor: Color {
+        if isEvening {
+            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var placeholderColor: Color {
+        if isEvening {
+            return Color(red: 0.961, green: 0.620, blue: 0.043)  // Amber #F59E0B
+        } else {
+            return Color.secondary
+        }
+    }
+
+    private var backgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.2, green: 0.12, blue: 0.08)  // Dark brown
+        } else {
+            return Color(.systemBackground)
+        }
+    }
+
+    private var borderColor: Color {
+        if isEvening {
+            return Color(red: 0.4, green: 0.25, blue: 0.15)  // Warm brown border
+        } else {
+            return Color.gray.opacity(0.3)
+        }
+    }
+
     var body: some View {
-        TextField(placeholder, text: $value)
-            .textFieldStyle(.roundedBorder)
-            .autocapitalization(question.questionType == .email ? .none : .words)
-            .keyboardType(question.questionType == .email ? .emailAddress : .default)
+        ZStack(alignment: .leading) {
+            // Custom placeholder for circadian visibility
+            if value.isEmpty {
+                Text(placeholder)
+                    .foregroundColor(placeholderColor)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+            }
+
+            TextField("", text: $value)
+                .foregroundColor(textColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(backgroundColor)
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(borderColor, lineWidth: 1)
+                )
+                .autocapitalization(question.questionType == .email ? .none : .words)
+                .keyboardType(question.questionType == .email ? .emailAddress : .default)
+        }
     }
 }
 
@@ -573,21 +694,24 @@ struct SleepLogSummaryCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Sleep Comparison")
                 .font(.headline)
+                .foregroundColor(CircadianColors.primary)
 
             HStack {
                 // User perception
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Your Perception")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(CircadianColors.secondary)
 
                     if let bedtime = userResponses["SL_BEDTIME"]?.stringValue {
                         Label(bedtime, systemImage: "bed.double")
                             .font(.subheadline)
+                            .foregroundColor(CircadianColors.primary)
                     }
                     if let wakeTime = userResponses["SL_WAKE_TIME"]?.stringValue {
                         Label(wakeTime, systemImage: "sun.max")
                             .font(.subheadline)
+                            .foregroundColor(CircadianColors.primary)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -599,21 +723,23 @@ struct SleepLogSummaryCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("HealthKit Data")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(CircadianColors.secondary)
 
                     if let summary = healthKitSummary {
                         if let bedtime = summary.formattedInBedTime {
                             Label(bedtime, systemImage: "bed.double")
                                 .font(.subheadline)
+                                .foregroundColor(CircadianColors.primary)
                         }
                         if let wakeTime = summary.formattedWakeTime {
                             Label(wakeTime, systemImage: "sun.max")
                                 .font(.subheadline)
+                                .foregroundColor(CircadianColors.primary)
                         }
                     } else {
                         Text("No data")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(CircadianColors.muted)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -639,20 +765,20 @@ struct QuestionnaireProgressHeader: View {
             HStack {
                 Text("Day \(dayNumber)")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(CircadianColors.primary)
 
                 Spacer()
 
                 Text("\(currentIndex + 1) of \(totalQuestions)")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(CircadianColors.secondary)
             }
 
             ProgressView(value: Double(currentIndex + 1), total: Double(totalQuestions))
                 .progressViewStyle(LinearProgressViewStyle(tint: pillarColor))
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(CircadianColors.secondaryBackground)
     }
 }
 
@@ -673,9 +799,10 @@ struct GatewayAlertBanner: View {
                     Text("\(gatewayType.displayName) Assessment Triggered")
                         .font(.caption)
                         .fontWeight(.semibold)
+                        .foregroundColor(CircadianColors.primary)
                     Text("Additional questions will be added to your journey")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(CircadianColors.muted)
                 }
 
                 Spacer()

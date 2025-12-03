@@ -371,6 +371,35 @@ struct QuestionnaireView: View {
 
     // MARK: - Navigation Buttons
 
+    // Circadian-aware button colors
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var buttonBackgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.25, green: 0.15, blue: 0.1)  // Dark brown
+        } else {
+            return Color(.secondarySystemBackground)
+        }
+    }
+
+    private var buttonTextColor: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var navBarBackgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.15, green: 0.08, blue: 0.05)  // Very dark brown
+        } else {
+            return Color(.systemBackground)
+        }
+    }
+
     private var navigationButtons: some View {
         HStack(spacing: 16) {
             // Back button
@@ -381,8 +410,8 @@ struct QuestionnaireView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color(.secondarySystemBackground))
-                .foregroundColor(.primary)
+                .background(buttonBackgroundColor)
+                .foregroundColor(buttonTextColor)
                 .cornerRadius(12)
             }
             .disabled(currentIndex == 0 && currentSection == .sleepLog)
@@ -403,7 +432,7 @@ struct QuestionnaireView: View {
             .disabled(!canProceed)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(navBarBackgroundColor)
     }
 
     private var buttonText: String {
@@ -1006,6 +1035,27 @@ struct HealthKitSleepCard: View {
     let summary: HealthKitSleepSummary
     var theme: ColorTheme = ColorTheme.shared
 
+    // Circadian-aware text colors
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var primaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var secondaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
+        } else {
+            return Color.secondary
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -1013,6 +1063,7 @@ struct HealthKitSleepCard: View {
                     .foregroundColor(theme.health)
                 Text("Last Night's Sleep (Apple Health)")
                     .font(.headline)
+                    .foregroundColor(primaryTextColor)
                 Spacer()
             }
 
@@ -1026,10 +1077,11 @@ struct HealthKitSleepCard: View {
                         Text("\(mins / 60)h \(mins % 60)m")
                             .font(.subheadline)
                             .fontWeight(.semibold)
+                            .foregroundColor(primaryTextColor)
                     }
                     Text("Total Sleep")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                 }
                 .frame(maxWidth: .infinity)
 
@@ -1042,10 +1094,11 @@ struct HealthKitSleepCard: View {
                         Text("\(Int(eff))%")
                             .font(.subheadline)
                             .fontWeight(.semibold)
+                            .foregroundColor(primaryTextColor)
                     }
                     Text("Efficiency")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                 }
                 .frame(maxWidth: .infinity)
 
@@ -1058,10 +1111,11 @@ struct HealthKitSleepCard: View {
                         Text("\(count)")
                             .font(.subheadline)
                             .fontWeight(.semibold)
+                            .foregroundColor(primaryTextColor)
                     }
                     Text("Awakenings")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -1075,18 +1129,18 @@ struct HealthKitSleepCard: View {
                 Spacer()
                 Image(systemName: "arrow.right")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(secondaryTextColor)
                 Spacer()
                 if let wake = summary.formattedWakeTime {
                     Label(wake, systemImage: "sun.max.fill")
                         .font(.caption)
                 }
             }
-            .foregroundColor(.secondary)
+            .foregroundColor(secondaryTextColor)
 
             Text("Now tell us your subjective experience - how YOU perceived your sleep")
                 .font(.caption)
-                .foregroundColor(QuestionnaireSection.sleepLog.accentColor)
+                .foregroundColor(QuestionnaireSection.sleepLog.descriptionTextColor)
                 .padding(.top, 4)
         }
         .padding(16)

@@ -305,24 +305,117 @@ export const getPatientDayData = query({
       )
       .collect();
 
-    // Enrich with question details
+    // Stanford Sleep Log question definitions (SL_ prefix used by Watch/iOS apps)
+    // These match the IDs in SharedQuestionBank.swift
+    const sleepLogQuestionMap: Record<string, { text: string; type: string }> = {
+      // Core sleep log questions (from SharedQuestionBank.swift)
+      "SL_BEDTIME": { text: "What time did you go to bed last night?", type: "time" },
+      "SL_ASLEEP_TIME": { text: "What time did you fall asleep?", type: "time" },
+      "SL_AWAKENINGS": { text: "How many times did you wake up during the night?", type: "number" },
+      "SL_WAKE_TIME": { text: "What time did you wake up this morning?", type: "time" },
+      "SL_QUALITY": { text: "How would you rate your sleep quality?", type: "scale" },
+      // Additional possible sleep log questions
+      "SL_OUT_OF_BED": { text: "What time did you get out of bed?", type: "time" },
+      "SL_SLEEP_QUALITY": { text: "How would you rate your sleep quality?", type: "scale" }, // Alias
+      "SL_REFRESHED": { text: "How refreshed do you feel this morning?", type: "scale" },
+      "SL_NAPS": { text: "Did you take any naps yesterday?", type: "yes_no" },
+      "SL_NAP_DURATION": { text: "How long were your naps in total?", type: "duration" },
+      "SL_CAFFEINE": { text: "Did you have caffeine after 2pm?", type: "yes_no" },
+      "SL_ALCOHOL": { text: "Did you have alcohol last night?", type: "yes_no" },
+      "SL_EXERCISE": { text: "Did you exercise yesterday?", type: "yes_no" },
+      "SL_NOTES": { text: "Any notes about your sleep?", type: "text" },
+    };
+
+    // Enrich with question details (check hardcoded SL_ questions, then assessment_questions, then sleep_diary_questions)
     const enrichedResponses = await Promise.all(
       responses.map(async (response) => {
-        const question = await ctx.db
-          .query("assessment_questions")
-          .withIndex("by_question_id", (q) =>
-            q.eq("question_id", response.question_id)
-          )
-          .first();
+        let questionText: string | undefined;
+        let questionType: string | undefined;
+        let pillar: string | undefined;
+        let tier: string | undefined;
+
+        // Check if it's a sleep log question (SL_ prefix) - use hardcoded definitions first
+        if (response.question_id.startsWith("SL_")) {
+          const sleepLogDef = sleepLogQuestionMap[response.question_id];
+          if (sleepLogDef) {
+            questionText = sleepLogDef.text;
+            questionType = sleepLogDef.type;
+            pillar = "Sleep Log";
+            tier = "core";
+          } else {
+            // Fallback: try to find in sleep_diary_questions table
+            const sleepQuestion = await ctx.db
+              .query("sleep_diary_questions")
+              .withIndex("by_question_id", (q) => q.eq("id", response.question_id))
+              .first();
+
+            if (sleepQuestion) {
+              questionText = sleepQuestion.question_text;
+              questionType = sleepQuestion.answer_format;
+              pillar = "Sleep";
+              tier = "core";
+            }
+          }
+        } else if (response.question_id.startsWith("SD_")) {
+          // SD_ prefix questions from sleep_diary_questions table
+          const sleepQuestion = await ctx.db
+            .query("sleep_diary_questions")
+            .withIndex("by_question_id", (q) => q.eq("id", response.question_id))
+            .first();
+
+          if (sleepQuestion) {
+            questionText = sleepQuestion.question_text;
+            questionType = sleepQuestion.answer_format;
+            pillar = "Sleep Diary";
+            tier = "core";
+          }
+        } else {
+          // Check assessment_questions table
+          const question = await ctx.db
+            .query("assessment_questions")
+            .withIndex("by_question_id", (q) =>
+              q.eq("question_id", response.question_id)
+            )
+            .first();
+
+          if (question) {
+            questionText = question.question_text;
+            questionType = question.question_type;
+            pillar = question.pillar;
+            tier = question.tier;
+          }
+        }
+
+        // Combine response_value, response_number, and response_array into a displayable value
+        let displayValue: string | undefined = response.response_value;
+
+        // If no string value, check for numeric value
+        if (!displayValue && response.response_number !== undefined && response.response_number !== null) {
+          displayValue = String(response.response_number);
+        }
+
+        // If no string or number, check for array value
+        if (!displayValue && response.response_array) {
+          try {
+            const arr = typeof response.response_array === 'string'
+              ? JSON.parse(response.response_array)
+              : response.response_array;
+            if (Array.isArray(arr) && arr.length > 0) {
+              displayValue = arr.join(", ");
+            }
+          } catch {
+            displayValue = String(response.response_array);
+          }
+        }
 
         return {
           _id: response._id,
           question_id: response.question_id,
-          response_value: response.response_value,
-          question_text: question?.question_text,
-          question_type: question?.question_type,
-          pillar: question?.pillar,
-          tier: question?.tier,
+          response_value: displayValue,
+          question_text: questionText,
+          question_type: questionType,
+          pillar: pillar,
+          tier: tier,
           created_at: response.created_at,
           updated_at: response.updated_at,
         };

@@ -20,21 +20,18 @@ struct OnboardingView: View {
                 OnboardingCircadianBackground()
 
                 VStack(spacing: 0) {
-                    // Progress indicator (compact)
-                    if onboardingManager.currentStep != .welcome && onboardingManager.currentStep != .ready {
+                    // Progress indicator (compact) - shown for all steps except ready
+                    if onboardingManager.currentStep != .ready {
                         OnboardingProgressBar(
                             currentStep: onboardingManager.currentStep.rawValue,
-                            totalSteps: OnboardingStep.allCases.count - 2
+                            totalSteps: OnboardingStep.allCases.count - 1  // Exclude ready step from count
                         )
                         .padding(.top, 8)
                         .padding(.horizontal, 20)
                     }
 
-                    // Content
+                    // Content - starts with name (no welcome step, splash serves as welcome)
                     TabView(selection: $onboardingManager.currentStep) {
-                        WelcomeStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
-                            .tag(OnboardingStep.welcome)
-
                         NameStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.name)
 
@@ -148,101 +145,8 @@ struct OnboardingProgressBar: View {
     }
 }
 
-// MARK: - Welcome Step (No splash-like animation - direct entry)
-
-struct WelcomeStepView: View {
-    @ObservedObject var onboardingManager: OnboardingManager
-    let screenHeight: CGFloat
-
-    private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
-
-    var body: some View {
-        VStack(spacing: isCompact ? 16 : 24) {
-            Spacer(minLength: isCompact ? 20 : 40)
-
-            // Logo (compact)
-            ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [palette.accent.opacity(0.25), Color.clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: isCompact ? 60 : 80
-                        )
-                    )
-                    .frame(width: isCompact ? 120 : 160, height: isCompact ? 120 : 160)
-
-                Image(systemName: "waveform.path.ecg")
-                    .font(.system(size: isCompact ? 50 : 60, weight: .thin))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [palette.accent, palette.wave],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            }
-
-            // Title
-            VStack(spacing: 8) {
-                Text("Welcome to")
-                    .font(.subheadline)
-                    .foregroundColor(palette.textSecondary)
-
-                Text("Zoe Sleep")
-                    .font(.system(size: isCompact ? 32 : 38, weight: .bold))
-                    .foregroundColor(palette.textPrimary)
-
-                Text("Sleep Better, Live Longer")
-                    .font(.callout)
-                    .foregroundColor(palette.accent)
-            }
-
-            Spacer()
-
-            // Intro text
-            VStack(spacing: 8) {
-                Text("Let's personalize your sleep journey")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(palette.textPrimary)
-
-                Text("This takes about 2 minutes")
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
-            }
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 24)
-
-            Spacer()
-
-            // Start button
-            Button(action: { onboardingManager.nextStep() }) {
-                HStack(spacing: 8) {
-                    Text("Get Started")
-                        .fontWeight(.semibold)
-                    Image(systemName: "arrow.right")
-                }
-                .foregroundColor(palette.isDark ? Color(red: 0.15, green: 0.10, blue: 0.08) : .white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    LinearGradient(
-                        colors: [palette.accent, palette.wave],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .cornerRadius(14)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, isCompact ? 24 : 32)
-        }
-    }
-}
-
 // MARK: - Name Step (Compact)
+// NOTE: Welcome step removed - splash screen serves as welcome
 
 struct NameStepView: View {
     @ObservedObject var onboardingManager: OnboardingManager

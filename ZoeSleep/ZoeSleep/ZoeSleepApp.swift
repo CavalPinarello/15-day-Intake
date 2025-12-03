@@ -64,7 +64,8 @@ struct ZoeSleepApp: App {
     }
 }
 
-/// App root that handles authentication -> onboarding -> content flow
+/// App root that handles: Splash → Auth → Onboarding → Content
+/// IMPORTANT: Onboarding only happens AFTER authentication
 struct AppRootView: View {
     @State private var showSplash = true
     @State private var splashOpacity: Double = 1.0
@@ -73,41 +74,41 @@ struct AppRootView: View {
 
     var body: some View {
         ZStack {
-            // Main content (underneath)
+            // Main content (underneath splash)
             mainContent
                 .opacity(showSplash ? 0 : 1)
 
-            // Splash screen (on top) - brief, circadian-aware
+            // Fast splash screen (0.6s)
             if showSplash {
                 SplashScreenView(onComplete: {
                     // Quick fade out
-                    withAnimation(.easeInOut(duration: 0.3)) {
+                    withAnimation(.easeOut(duration: 0.2)) {
                         splashOpacity = 0
                     }
-
-                    // Remove splash after fade
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        withAnimation {
-                            showSplash = false
-                        }
+                    // Remove splash
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        showSplash = false
                     }
-                }, duration: 1.2)
+                }, duration: 0.6)
                 .opacity(splashOpacity)
-                .transition(.opacity)
             }
         }
     }
 
     @ViewBuilder
     private var mainContent: some View {
+        // Step 1: Check authentication first
         if !authManager.isAuthenticated {
-            // User not logged in - show authentication
+            // Not logged in → Show login/signup
             AuthenticationView()
-        } else if !onboardingManager.hasCompletedOnboarding {
-            // User logged in but hasn't completed onboarding
+        }
+        // Step 2: Check onboarding (only after authenticated)
+        else if !onboardingManager.hasCompletedOnboarding {
+            // Logged in but needs onboarding → Show onboarding
             OnboardingView(onboardingManager: onboardingManager)
-        } else {
-            // User logged in and completed onboarding - show main app
+        }
+        // Step 3: Everything complete → Show main app
+        else {
             ThemedRootView()
         }
     }

@@ -4,7 +4,8 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
-import { useState, use } from "react";
+import { useState } from "react";
+import { useParams } from "next/navigation";
 import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
 import {
   ArrowLeft,
@@ -61,12 +62,9 @@ const statusConfig: Record<
   },
 };
 
-export default function PatientDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function PatientDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
   const userId = id as Id<"users">;
 
   const [activeTab, setActiveTab] = useState<TabType>("overview");
