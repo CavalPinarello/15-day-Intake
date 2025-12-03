@@ -64,22 +64,18 @@ struct ZoeSleepApp: App {
     }
 }
 
-/// App root that handles splash -> onboarding/content flow
+/// App root that handles authentication -> onboarding -> content flow
 struct AppRootView: View {
     @State private var showSplash = true
     @State private var splashOpacity: Double = 1.0
+    @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var onboardingManager: OnboardingManager
 
     var body: some View {
         ZStack {
             // Main content (underneath)
-            if onboardingManager.hasCompletedOnboarding {
-                ThemedRootView()
-                    .opacity(showSplash ? 0 : 1)
-            } else {
-                OnboardingView(onboardingManager: onboardingManager)
-                    .opacity(showSplash ? 0 : 1)
-            }
+            mainContent
+                .opacity(showSplash ? 0 : 1)
 
             // Splash screen (on top) - brief, circadian-aware
             if showSplash {
@@ -99,6 +95,20 @@ struct AppRootView: View {
                 .opacity(splashOpacity)
                 .transition(.opacity)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var mainContent: some View {
+        if !authManager.isAuthenticated {
+            // User not logged in - show authentication
+            AuthenticationView()
+        } else if !onboardingManager.hasCompletedOnboarding {
+            // User logged in but hasn't completed onboarding
+            OnboardingView(onboardingManager: onboardingManager)
+        } else {
+            // User logged in and completed onboarding - show main app
+            ThemedRootView()
         }
     }
 }

@@ -358,6 +358,23 @@ export const completeSection = mutation({
       });
     }
 
+    // Mark the questionnaire_session as completed for this section
+    const existingSession = await ctx.db
+      .query("questionnaire_session")
+      .withIndex("by_user_day_section", (q) =>
+        q.eq("user_id", args.userId)
+          .eq("day_number", args.dayNumber)
+          .eq("section", args.section)
+      )
+      .first();
+
+    if (existingSession) {
+      await ctx.db.patch(existingSession._id, {
+        completed: true,
+        last_updated_at: now,
+      });
+    }
+
     return {
       success: true,
       section: args.section,
@@ -771,6 +788,16 @@ export const resetProgress = mutation({
 
     for (const response of assessmentResponses) {
       await ctx.db.delete(response._id);
+    }
+
+    // Delete questionnaire session progress (cross-device sync state)
+    const sessions = await ctx.db
+      .query("questionnaire_session")
+      .withIndex("by_user_day_section", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    for (const session of sessions) {
+      await ctx.db.delete(session._id);
     }
 
     return {

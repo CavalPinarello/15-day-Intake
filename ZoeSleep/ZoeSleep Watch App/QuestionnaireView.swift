@@ -765,23 +765,8 @@ struct QuestionnaireView: View {
         Task {
             let section = mode == .sleepLog ? "sleepLog" : "assessment"
 
-            // Load question progress (which question user was on)
-            // Wrapped in separate do-catch to not block response loading
-            do {
-                if let progress = try await convexService.getQuestionProgress(dayNumber: currentDay, section: section) {
-                    await MainActor.run {
-                        // Only resume if not completed
-                        if !progress.completed && progress.currentQuestionIndex < questions.count {
-                            currentQuestionIndex = progress.currentQuestionIndex
-                            print("[Watch] Resuming \(section) at question \(currentQuestionIndex + 1)/\(questions.count) (last device: \(progress.lastDevice))")
-                        }
-                    }
-                }
-            } catch {
-                print("[Watch] Could not load question progress (may not exist yet): \(error.localizedDescription)")
-            }
-
-            // Load saved responses to pre-fill answers
+            // First, load saved responses so we can validate progress against them
+            var loadedResponseCount = 0
             do {
                 let savedResponses = try await convexService.getSavedResponses(dayNumber: currentDay)
                 await MainActor.run {
@@ -796,12 +781,41 @@ struct QuestionnaireView: View {
                         // Mark loaded responses as interacted (user answered on another device)
                         userInteractedQuestions.insert(questionId)
                     }
+                    loadedResponseCount = savedResponses.count
                     if !savedResponses.isEmpty {
                         print("[Watch] Loaded \(savedResponses.count) saved responses (marked as interacted)")
                     }
                 }
             } catch {
                 print("[Watch] Could not load saved responses (may not exist yet): \(error.localizedDescription)")
+            }
+
+            // Load question progress (which question user was on)
+            // Wrapped in separate do-catch to not block response loading
+            do {
+                if let progress = try await convexService.getQuestionProgress(dayNumber: currentDay, section: section) {
+                    await MainActor.run {
+                        // Only resume if:
+                        // 1. Session is not marked as completed
+                        // 2. The saved question index is valid for current question set
+                        // 3. We have at least some saved responses to support the progress
+                        //    (prevents jumping to a stale position from old sessions)
+                        let isValidProgress = !progress.completed &&
+                                              progress.currentQuestionIndex < questions.count &&
+                                              progress.currentQuestionIndex > 0 &&
+                                              loadedResponseCount > 0
+
+                        if isValidProgress {
+                            currentQuestionIndex = progress.currentQuestionIndex
+                            print("[Watch] Resuming \(section) at question \(currentQuestionIndex + 1)/\(questions.count) (last device: \(progress.lastDevice))")
+                        } else if progress.currentQuestionIndex > 0 {
+                            // Log why we're not resuming
+                            print("[Watch] Ignoring stale progress for \(section): index=\(progress.currentQuestionIndex), completed=\(progress.completed), responseCount=\(loadedResponseCount)")
+                        }
+                    }
+                }
+            } catch {
+                print("[Watch] Could not load question progress (may not exist yet): \(error.localizedDescription)")
             }
         }
     }

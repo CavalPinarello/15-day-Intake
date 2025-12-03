@@ -56,6 +56,20 @@ class AuthenticationManager: ObservableObject {
                 )
                 self.isAuthenticated = true
                 print("✅ Session restored for user: \(user.username)")
+
+                // Check onboarding state for this user with full profile data
+                await OnboardingManager.shared.checkUserOnboardingState(
+                    userId: userId,
+                    serverOnboardingCompleted: user.onboardingCompleted,
+                    serverProfile: (
+                        fullName: user.fullName,
+                        measurementSystem: user.measurementSystem,
+                        heightCm: user.heightCm,
+                        weightKg: user.weightKg,
+                        gender: user.gender,
+                        birthYear: user.birthYearInt
+                    )
+                )
             } else {
                 // Session invalid, clear it
                 convexService.clearSession()
@@ -101,6 +115,12 @@ class AuthenticationManager: ObservableObject {
 
             self.isAuthenticated = true
             print("✅ Sign in successful for user: \(response.user.username)")
+
+            // Check onboarding state for this user
+            await OnboardingManager.shared.checkUserOnboardingState(
+                userId: response.userId,
+                serverOnboardingCompleted: response.user.onboardingCompleted
+            )
 
         } catch let error as ConvexError {
             print("Sign in error: \(error)")
@@ -153,6 +173,12 @@ class AuthenticationManager: ObservableObject {
 
             self.isAuthenticated = true
             print("✅ Registration successful for user: \(response.user.username)")
+
+            // New user always needs onboarding
+            await OnboardingManager.shared.checkUserOnboardingState(
+                userId: response.userId,
+                serverOnboardingCompleted: false // New user hasn't completed onboarding
+            )
 
         } catch let error as ConvexError {
             print("Sign up error: \(error)")
@@ -248,6 +274,12 @@ class AuthenticationManager: ObservableObject {
                         print("✅ Existing user signed in via Apple: \(response.user.username)")
                     }
 
+                    // Check onboarding state - new users need onboarding
+                    await OnboardingManager.shared.checkUserOnboardingState(
+                        userId: response.userId,
+                        serverOnboardingCompleted: response.isNewUser ? false : response.user.onboardingCompleted
+                    )
+
                 } catch let error as ConvexError {
                     print("Apple Sign In error: \(error)")
                     self.errorMessage = "Apple Sign In failed. Please try again."
@@ -307,19 +339,25 @@ class AuthenticationManager: ObservableObject {
     // MARK: - Sign Out
 
     func signOut() {
+        // Clear server session asynchronously
         Task {
             do {
                 try await convexService.signOut()
+                print("✅ Server session cleared")
             } catch {
-                print("Sign out error: \(error)")
+                print("Sign out error (server): \(error)")
             }
-
-            // Clear local state regardless of server response
-            convexService.clearSession()
-            self.isAuthenticated = false
-            self.user = nil
-            self.errorMessage = nil
         }
+
+        // Clear authentication state immediately (don't wait for server)
+        // Note: We do NOT clear onboarding state - that's tied to the user account
+        // When the same user signs back in, their onboarding status will be restored from server
+        convexService.clearSession()
+        self.isAuthenticated = false
+        self.user = nil
+        self.errorMessage = nil
+
+        print("✅ Sign out complete - auth state cleared")
     }
 
     // MARK: - Helper Methods

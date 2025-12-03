@@ -265,15 +265,15 @@ struct ProfileSettingsView: View {
                 }
             }
 
-            // Edit profile button
-            Button {
-                showingResetOnboardingConfirmation = true
-            } label: {
-                Label("Edit Profile Info", systemImage: "pencil")
-            }
-            .accessibleTapTarget()
+            // Note: Profile editing requires Debug Mode > Reset Onboarding
+            // A proper profile editor could be added in the future
         } header: {
             Text("Personal Information")
+        } footer: {
+            if themeManager.debugMode {
+                Text("Enable Debug Mode in Settings to reset and edit profile.")
+                    .font(.caption)
+            }
         }
     }
 
@@ -438,6 +438,15 @@ struct ProfileSettingsView: View {
                 showingResetJourneyConfirmation = true
             } label: {
                 Label("Reset Journey Progress", systemImage: "arrow.counterclockwise")
+                    .foregroundColor(.red)
+            }
+            .accessibleTapTarget()
+
+            // Reset Onboarding (Debug only)
+            Button {
+                showingResetOnboardingConfirmation = true
+            } label: {
+                Label("Reset Onboarding", systemImage: "person.crop.circle.badge.minus")
                     .foregroundColor(.red)
             }
             .accessibleTapTarget()

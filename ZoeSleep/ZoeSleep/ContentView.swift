@@ -3,6 +3,7 @@
 //  Zoe Sleep for Longevity System
 //
 //  Main app content with dashboard and navigation
+//  Note: Authentication and onboarding routing is handled by AppRootView in ZoeSleepApp.swift
 //
 
 import SwiftUI
@@ -11,32 +12,10 @@ struct ContentView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var themeManager: ThemeManager
-    @ObservedObject private var onboardingManager = OnboardingManager.shared
 
     var body: some View {
         NavigationStack {
-            if authManager.isAuthenticated {
-                // Check if onboarding is complete
-                if onboardingManager.isOnboardingComplete {
-                    MainDashboardView()
-                } else {
-                    // Show onboarding for new users
-                    OnboardingView(onboardingManager: onboardingManager)
-                        .environmentObject(healthKitManager)
-                        .environmentObject(themeManager)
-                }
-            } else {
-                AuthenticationView()
-            }
-        }
-        .onAppear {
-            authManager.checkAuthenticationStatus()
-        }
-        .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
-            // Check onboarding status when auth state changes
-            if isAuthenticated {
-                onboardingManager.checkOnboardingStatus(isAuthenticated: isAuthenticated)
-            }
+            MainDashboardView()
         }
     }
 }

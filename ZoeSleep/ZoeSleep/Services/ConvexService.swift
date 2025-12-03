@@ -31,10 +31,23 @@ struct ConvexUser: Codable {
     let role: String?
     let onboardingCompleted: Bool?
     let appleHealthConnected: Bool?
+    // Profile data from server
+    let fullName: String?
+    let measurementSystem: String?
+    let heightCm: Double?
+    let weightKg: Double?
+    let gender: String?
+    let birthYear: Double?  // Convex returns numbers as Double
 
     // Computed property to get currentDay as Int
     var currentDayInt: Int {
         return Int(currentDay)
+    }
+
+    // Computed property to get birthYear as Int
+    var birthYearInt: Int? {
+        guard let year = birthYear else { return nil }
+        return Int(year)
     }
 }
 

@@ -212,6 +212,77 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-12-02)
 
+**Fix: Questionnaire Jumping to Last Question on Day 1**
+
+This session fixed a critical bug where starting the sleep log on Day 1 would immediately jump to the last question, skipping all previous questions.
+
+### Problem
+When starting the Sleep Log questionnaire on Day 1, the Watch app would immediately show the last question (e.g., "How would you rate your sleep quality?") instead of the first question ("What time did you go to bed?"). Users had to manually go back through all questions.
+
+### Root Cause
+The `questionnaire_session` table in Convex was storing cross-device sync progress, but:
+1. **`resetProgress` didn't clear sessions**: When users reset their progress (debug mode), the old `questionnaire_session` records weren't deleted
+2. **Stale sessions persisted**: Old sessions with high `currentQuestionIndex` values would cause the app to resume at the wrong position
+3. **No validation for orphaned progress**: The app blindly resumed progress even when no saved responses existed
+
+### Solution
+Three-part fix across backend and both client apps:
+
+#### 1. Convex Backend (`/convex/watch.ts`)
+
+**`resetProgress` mutation (lines 776-784)**:
+- Now deletes all `questionnaire_session` entries when user resets progress
+```typescript
+// Delete questionnaire session progress (cross-device sync state)
+const sessions = await ctx.db
+  .query("questionnaire_session")
+  .withIndex("by_user_day_section", (q) => q.eq("user_id", args.userId))
+  .collect();
+
+for (const session of sessions) {
+  await ctx.db.delete(session._id);
+}
+```
+
+**`completeSection` mutation (lines 361-376)**:
+- Now marks `questionnaire_session` as `completed: true` when section is finished
+- Prevents completed sessions from being incorrectly resumed
+
+#### 2. Watch App (`QuestionnaireView.swift`)
+
+**`loadSavedProgress()` rewritten (lines 760-821)**:
+- Loads saved responses FIRST, before checking progress
+- Added validation: only resumes if `loadedResponseCount > 0`
+- Added logging for stale progress detection:
+```swift
+let isValidProgress = !progress.completed &&
+                      progress.currentQuestionIndex < questions.count &&
+                      progress.currentQuestionIndex > 0 &&
+                      loadedResponseCount > 0
+```
+
+#### 3. iOS App (`QuestionnaireView.swift`)
+
+**Same fix applied (lines 593-656)**:
+- Responses loaded first for validation
+- Progress only resumed if saved responses exist
+- Stale progress is logged and ignored
+
+### Key Files Modified
+- `/convex/watch.ts` - resetProgress clears sessions, completeSection marks completed
+- `/ZoeSleep/ZoeSleep Watch App/QuestionnaireView.swift` - Stale progress validation
+- `/ZoeSleep/ZoeSleep/Views/QuestionnaireView.swift` - Same fix for iOS
+
+### Testing
+1. Reset progress via Settings > Debug Mode > Reset Progress
+2. Start Day 1 Sleep Log - should show question 1, not last question
+3. Answer 2 questions, switch to iPhone, continue from question 3
+4. Complete section, start again - should not resume old progress
+
+---
+
+## Previous Session Context (2025-12-02)
+
 **Smart Time Picker Defaults Based on Previous Answers**
 
 This session fixed the time picker pre-selection issue where subsequent time questions (like "What time did you wake up?") were showing arbitrary default times instead of logically following the previously answered bedtime.

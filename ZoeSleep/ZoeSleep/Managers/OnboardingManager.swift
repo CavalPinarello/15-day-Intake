@@ -3,6 +3,7 @@
 //  Zoe Sleep - Sleep Better, Live Longer
 //
 //  Manages user onboarding state and data collection
+//  Onboarding state is tied to the user account, not the device
 //
 
 import Foundation
@@ -116,6 +117,7 @@ struct OnboardingProfile: Codable {
     var hasConnectedHealthKit: Bool = false
     var onboardingCompleted: Bool = false
     var completedAt: Date?
+    var userId: String? // Track which user this profile belongs to
 
     /// Calculate age from birth year
     var age: Int {
@@ -149,7 +151,7 @@ class OnboardingManager: ObservableObject {
     @Published var currentStep: OnboardingStep = .welcome
     @Published var profile: OnboardingProfile = OnboardingProfile()
     @Published var isOnboardingComplete: Bool = false
-    @Published var showOnboarding: Bool = false
+    @Published var isCheckingServerState: Bool = false
 
     // Temporary editing state
     @Published var tempHeightFeet: Int = 5
@@ -160,12 +162,142 @@ class OnboardingManager: ObservableObject {
 
     private let userDefaultsKey = "onboardingProfile"
     private let onboardingCompleteKey = "onboardingComplete"
+    private let lastUserIdKey = "lastOnboardingUserId"
 
     // MARK: - Initialization
 
     private init() {
-        loadProfile()
+        loadLocalProfile()
         detectSystemMeasurementSystem()
+    }
+
+    // MARK: - User-Aware Onboarding State
+
+    /// Check if a user needs onboarding (called after login)
+    /// This checks the SERVER-SIDE state, not local storage
+    func checkUserOnboardingState(userId: String, serverOnboardingCompleted: Bool?) async {
+        await checkUserOnboardingState(
+            userId: userId,
+            serverOnboardingCompleted: serverOnboardingCompleted,
+            serverProfile: nil
+        )
+    }
+
+    /// Check if a user needs onboarding with full profile data from server
+    func checkUserOnboardingState(
+        userId: String,
+        serverOnboardingCompleted: Bool?,
+        serverProfile: (fullName: String?, measurementSystem: String?, heightCm: Double?, weightKg: Double?, gender: String?, birthYear: Int?)?
+    ) async {
+        print("[Onboarding] Checking state for user: \(userId)")
+
+        let lastUserId = UserDefaults.standard.string(forKey: lastUserIdKey)
+
+        // If this is a different user than before, reset local state
+        if lastUserId != userId {
+            print("[Onboarding] New user detected, resetting local state")
+            resetLocalState()
+            UserDefaults.standard.set(userId, forKey: lastUserIdKey)
+        }
+
+        // Check server-side onboarding state
+        if let completed = serverOnboardingCompleted, completed {
+            print("[Onboarding] User has completed onboarding (server)")
+            isOnboardingComplete = true
+            profile.onboardingCompleted = true
+            profile.userId = userId
+
+            // Load profile data from server if available
+            if let serverData = serverProfile {
+                if let name = serverData.fullName {
+                    profile.name = name
+                }
+                if let measurementSystem = serverData.measurementSystem {
+                    profile.measurementSystem = measurementSystem
+                    print("[Onboarding] Loaded measurement system from server: \(measurementSystem)")
+                }
+                if let heightCm = serverData.heightCm {
+                    profile.heightCm = heightCm
+                }
+                if let weightKg = serverData.weightKg {
+                    profile.weightKg = weightKg
+                }
+                if let gender = serverData.gender {
+                    profile.gender = gender
+                }
+                if let birthYear = serverData.birthYear {
+                    profile.birthYear = birthYear
+                }
+                // Update imperial conversion values
+                updateImperialFromMetric()
+            }
+
+            saveLocalProfile()
+        } else {
+            print("[Onboarding] User needs onboarding")
+            isOnboardingComplete = false
+            profile.onboardingCompleted = false
+            profile.userId = userId
+        }
+    }
+
+    /// Complete onboarding and save to server
+    func completeOnboarding() {
+        profile.onboardingCompleted = true
+        profile.completedAt = Date()
+        saveLocalProfile()
+
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            isOnboardingComplete = true
+        }
+
+        // Save to server
+        Task {
+            await saveOnboardingToServer()
+        }
+    }
+
+    /// Save onboarding completion and profile to server
+    private func saveOnboardingToServer() async {
+        do {
+            // Save onboarding completion flag
+            try await ConvexService.shared.updateUserProfile(updates: [
+                "onboardingCompleted": true,
+                "displayName": profile.name,
+                "heightCm": profile.heightCm,
+                "weightKg": profile.weightKg,
+                "gender": profile.gender,
+                "birthYear": profile.birthYear,
+                "wearables": profile.wearables,
+                "appleHealthConnected": profile.hasConnectedHealthKit,
+                "measurementSystem": profile.measurementSystem
+            ])
+            print("[Onboarding] ✅ Saved to server")
+        } catch {
+            print("[Onboarding] ⚠️ Failed to save to server: \(error)")
+            // Profile is saved locally, will retry on next app launch
+        }
+    }
+
+    /// Reset local state for a new user
+    private func resetLocalState() {
+        profile = OnboardingProfile()
+        currentStep = .welcome
+        isOnboardingComplete = false
+        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
+        detectSystemMeasurementSystem()
+    }
+
+    /// Clear onboarding state when user signs out
+    /// This resets local state without touching server data
+    func clearForSignOut() {
+        profile = OnboardingProfile()
+        currentStep = .welcome
+        isOnboardingComplete = false
+        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
+        print("[Onboarding] Cleared for sign out")
     }
 
     // MARK: - System Detection
@@ -274,15 +406,16 @@ class OnboardingManager: ObservableObject {
         profile.wearables.contains(device.rawValue)
     }
 
-    // MARK: - Persistence
+    // MARK: - Local Persistence (backup for offline use)
 
-    func saveProfile() {
+    private func saveLocalProfile() {
         if let encoded = try? JSONEncoder().encode(profile) {
             UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
         }
+        UserDefaults.standard.set(isOnboardingComplete, forKey: onboardingCompleteKey)
     }
 
-    func loadProfile() {
+    private func loadLocalProfile() {
         if let data = UserDefaults.standard.data(forKey: userDefaultsKey),
            let decoded = try? JSONDecoder().decode(OnboardingProfile.self, from: data) {
             self.profile = decoded
@@ -296,36 +429,28 @@ class OnboardingManager: ObservableObject {
         }
     }
 
-    func completeOnboarding() {
-        profile.onboardingCompleted = true
-        profile.completedAt = Date()
-        saveProfile()
-
-        UserDefaults.standard.set(true, forKey: onboardingCompleteKey)
-
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-            isOnboardingComplete = true
-            showOnboarding = false
-        }
-    }
-
+    /// Reset onboarding for testing purposes
     func resetOnboarding() {
-        profile = OnboardingProfile()
-        currentStep = .welcome
-        isOnboardingComplete = false
-        showOnboarding = true
+        resetLocalState()
 
-        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
-        UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
-
-        detectSystemMeasurementSystem()
+        // Also clear on server
+        Task {
+            do {
+                try await ConvexService.shared.updateUserProfile(updates: [
+                    "onboardingCompleted": false
+                ])
+                print("[Onboarding] Reset on server")
+            } catch {
+                print("[Onboarding] Failed to reset on server: \(error)")
+            }
+        }
     }
 
     // MARK: - HealthKit Integration
 
     func markHealthKitConnected() {
         profile.hasConnectedHealthKit = true
-        saveProfile()
+        saveLocalProfile()
     }
 
     /// Populate profile from HealthKit demographics if available
@@ -349,7 +474,7 @@ class OnboardingManager: ObservableObject {
         }
 
         updateImperialFromMetric()
-        saveProfile()
+        saveLocalProfile()
     }
 
     // MARK: - Check If Should Show Onboarding
@@ -357,11 +482,5 @@ class OnboardingManager: ObservableObject {
     /// Whether onboarding has been completed (for app root view)
     var hasCompletedOnboarding: Bool {
         return isOnboardingComplete || profile.onboardingCompleted
-    }
-
-    func checkOnboardingStatus(isAuthenticated: Bool) {
-        if isAuthenticated && !isOnboardingComplete {
-            showOnboarding = true
-        }
     }
 }

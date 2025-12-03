@@ -22,6 +22,13 @@ export default defineSchema({
     apple_health_connected: v.optional(v.boolean()),
     onboarding_completed: v.optional(v.boolean()),
     onboarding_completed_at: v.optional(v.number()),
+    // Profile fields from onboarding
+    measurement_system: v.optional(v.string()), // "Metric" or "Imperial"
+    height_cm: v.optional(v.number()), // Height in centimeters
+    weight_kg: v.optional(v.number()), // Weight in kilograms
+    gender: v.optional(v.string()),
+    birth_year: v.optional(v.number()),
+    full_name: v.optional(v.string()), // User's display name
     // Email verification fields
     email_verified: v.optional(v.boolean()),
     email_verification_token: v.optional(v.string()),

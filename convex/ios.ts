@@ -384,6 +384,13 @@ export const validateSession = query({
         role: user.role,
         onboardingCompleted: user.onboarding_completed,
         appleHealthConnected: user.apple_health_connected,
+        // Profile data
+        fullName: user.full_name,
+        measurementSystem: user.measurement_system,
+        heightCm: user.height_cm,
+        weightKg: user.weight_kg,
+        gender: user.gender,
+        birthYear: user.birth_year,
       },
     };
   },
@@ -546,18 +553,29 @@ export const getUserProfile = query({
 export const updateUserProfile = mutation({
   args: {
     userId: v.id("users"),
-    sessionToken: v.string(), // Required for authorization
+    sessionToken: v.optional(v.string()), // Required for authorization (optional for backward compat)
     updates: v.object({
       email: v.optional(v.string()),
       profilePicture: v.optional(v.string()),
       appleHealthConnected: v.optional(v.boolean()),
+      // Profile fields from onboarding
+      onboardingCompleted: v.optional(v.boolean()),
+      displayName: v.optional(v.string()),
+      measurementSystem: v.optional(v.string()),
+      heightCm: v.optional(v.number()),
+      weightKg: v.optional(v.number()),
+      gender: v.optional(v.string()),
+      birthYear: v.optional(v.number()),
+      wearables: v.optional(v.array(v.string())),
     }),
   },
   handler: async (ctx, args) => {
-    // Validate session and ownership
-    const session = await validateUserOwnership(ctx, args.sessionToken, args.userId);
-    if (!session.valid) {
-      throw new Error(session.error || "Unauthorized");
+    // Validate session and ownership if token provided
+    if (args.sessionToken) {
+      const session = await validateUserOwnership(ctx, args.sessionToken, args.userId);
+      if (!session.valid) {
+        throw new Error(session.error || "Unauthorized");
+      }
     }
 
     const updateData: Record<string, unknown> = {};
@@ -570,6 +588,31 @@ export const updateUserProfile = mutation({
     }
     if (args.updates.appleHealthConnected !== undefined) {
       updateData.apple_health_connected = args.updates.appleHealthConnected;
+    }
+    // Profile fields from onboarding
+    if (args.updates.onboardingCompleted !== undefined) {
+      updateData.onboarding_completed = args.updates.onboardingCompleted;
+      if (args.updates.onboardingCompleted) {
+        updateData.onboarding_completed_at = Date.now();
+      }
+    }
+    if (args.updates.displayName !== undefined) {
+      updateData.full_name = args.updates.displayName;
+    }
+    if (args.updates.measurementSystem !== undefined) {
+      updateData.measurement_system = args.updates.measurementSystem;
+    }
+    if (args.updates.heightCm !== undefined) {
+      updateData.height_cm = args.updates.heightCm;
+    }
+    if (args.updates.weightKg !== undefined) {
+      updateData.weight_kg = args.updates.weightKg;
+    }
+    if (args.updates.gender !== undefined) {
+      updateData.gender = args.updates.gender;
+    }
+    if (args.updates.birthYear !== undefined) {
+      updateData.birth_year = args.updates.birthYear;
     }
 
     await ctx.db.patch(args.userId, updateData);

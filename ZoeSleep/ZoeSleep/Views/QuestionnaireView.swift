@@ -596,24 +596,8 @@ struct QuestionnaireView: View {
             do {
                 let section = startSection == .sleepLog ? "sleepLog" : "assessment"
 
-                // Load question progress (which question user was on)
-                if let progress = try await ConvexService.shared.getQuestionProgress(dayNumber: currentDay, section: section) {
-                    await MainActor.run {
-                        // Only resume if not completed
-                        if !progress.completed {
-                            let resumeIndex = progress.currentQuestionIndex
-                            if startSection == .sleepLog && resumeIndex < sleepLogQuestions.count {
-                                sleepLogIndex = resumeIndex
-                                print("[iOS] Resuming sleep log at question \(resumeIndex + 1)/\(sleepLogQuestions.count) (last device: \(progress.lastDevice))")
-                            } else if startSection == .assessment && resumeIndex < assessmentQuestions.count {
-                                assessmentIndex = resumeIndex
-                                print("[iOS] Resuming assessment at question \(resumeIndex + 1)/\(assessmentQuestions.count) (last device: \(progress.lastDevice))")
-                            }
-                        }
-                    }
-                }
-
-                // Load saved responses to pre-fill answers
+                // First, load saved responses so we can validate progress against them
+                var loadedResponseCount = 0
                 let savedResponses = try await ConvexService.shared.getSavedResponses(dayNumber: currentDay)
                 await MainActor.run {
                     for (questionId, value) in savedResponses {
@@ -636,7 +620,34 @@ struct QuestionnaireView: View {
                             }
                         }
                     }
+                    loadedResponseCount = savedResponses.count
                     print("[iOS] Loaded \(savedResponses.count) saved responses from Convex")
+                }
+
+                // Load question progress (which question user was on)
+                if let progress = try await ConvexService.shared.getQuestionProgress(dayNumber: currentDay, section: section) {
+                    await MainActor.run {
+                        // Only resume if:
+                        // 1. Session is not marked as completed
+                        // 2. The saved question index is valid for current question set
+                        // 3. We have at least some saved responses to support the progress
+                        //    (prevents jumping to a stale position from old sessions)
+                        let resumeIndex = progress.currentQuestionIndex
+                        let hasResponses = loadedResponseCount > 0
+
+                        if !progress.completed && resumeIndex > 0 && hasResponses {
+                            if startSection == .sleepLog && resumeIndex < sleepLogQuestions.count {
+                                sleepLogIndex = resumeIndex
+                                print("[iOS] Resuming sleep log at question \(resumeIndex + 1)/\(sleepLogQuestions.count) (last device: \(progress.lastDevice))")
+                            } else if startSection == .assessment && resumeIndex < assessmentQuestions.count {
+                                assessmentIndex = resumeIndex
+                                print("[iOS] Resuming assessment at question \(resumeIndex + 1)/\(assessmentQuestions.count) (last device: \(progress.lastDevice))")
+                            }
+                        } else if resumeIndex > 0 {
+                            // Log why we're not resuming
+                            print("[iOS] Ignoring stale progress for \(section): index=\(resumeIndex), completed=\(progress.completed), responseCount=\(loadedResponseCount)")
+                        }
+                    }
                 }
             } catch {
                 print("[iOS] Failed to load saved progress: \(error)")
