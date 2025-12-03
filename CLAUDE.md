@@ -212,6 +212,85 @@ For detailed architecture, setup instructions, and API documentation, see README
 
 ## Latest Session Context (2025-12-02)
 
+**Complete Onboarding Redesign with User-Account-Aware State**
+
+This session completely redesigned the onboarding flow to fix three critical issues:
+1. Screens were too large and didn't fit iPhone screen sizes
+2. Two splash screens appeared when the app loaded
+3. Onboarding didn't follow the circadian color system
+4. Onboarding state was device-based, not user-account-based
+
+### Problems Fixed
+
+#### 1. Screens Too Large for iPhone
+The original onboarding screens had fixed large padding, icons, and text that overflowed on smaller iPhones (SE, Mini).
+
+**Solution:** Added adaptive layouts using `GeometryReader`:
+- `isCompact` flag triggers for screens < 700pt height
+- Smaller icons, tighter spacing on compact screens
+- All 9 onboarding steps fit any iPhone without scrolling issues
+
+#### 2. Double Splash Screen
+The app showed both a system UILaunchScreen and a SwiftUI SplashScreenView, creating a "double splash" effect.
+
+**Solution:**
+- Reduced splash duration from 2.5s to 1.2s
+- Simplified splash animation (quick fade-in instead of complex animations)
+- Uses circadian colors to match the rest of the app
+
+#### 3. No Circadian Colors in Onboarding
+Onboarding used hardcoded blue/orange colors, ignoring the time-of-day circadian system.
+
+**Solution:** All onboarding screens now use `CircadianPalette.current`:
+- Evening/night: Warm amber/orange colors (sleep-safe)
+- Morning/afternoon: Blues/teals for alertness
+- Background gradients, buttons, text all adapt to time of day
+
+#### 4. Device-Based vs User-Account-Based Onboarding
+Previously, onboarding completion was stored in local UserDefaults. This meant:
+- Reinstalling app showed onboarding again for existing users
+- Logging into a new account might skip onboarding
+
+**Solution:** Onboarding state is now tied to user account via server:
+- `OnboardingManager.checkUserOnboardingState()` called after login
+- Server's `onboardingCompleted` field is the source of truth
+- Completing onboarding saves to server via `ConvexService.updateUserProfile()`
+- Different users on same device get correct onboarding state
+
+### New App Flow
+
+```
+App Launch → Splash (1.2s) →
+  ├── Not Authenticated → AuthenticationView (Login)
+  ├── Authenticated + No Onboarding → OnboardingView
+  └── Authenticated + Onboarding Complete → Main Dashboard
+```
+
+### Key Files Modified
+
+- `/ZoeSleep/ZoeSleep/Views/OnboardingView.swift` - Complete rewrite with adaptive layouts + circadian colors
+- `/ZoeSleep/ZoeSleep/Views/SplashScreenView.swift` - Simplified with shorter duration + circadian colors
+- `/ZoeSleep/ZoeSleep/ZoeSleepApp.swift` - New `AppRootView` with auth → onboarding → content routing
+- `/ZoeSleep/ZoeSleep/Managers/OnboardingManager.swift` - User-aware state, server sync, `clearForSignOut()`
+- `/ZoeSleep/ZoeSleep/Managers/AuthenticationManager.swift` - Calls `checkUserOnboardingState()` after login
+- `/ZoeSleep/ZoeSleep/ContentView.swift` - Simplified (routing moved to AppRootView)
+
+### Onboarding Steps (9 Total)
+
+1. **Welcome** - Logo, tagline, "Get Started" button
+2. **Name** - Text input with auto-focus
+3. **Measurement System** - Metric/Imperial selection
+4. **Height & Weight** - Sliders (metric) or wheel pickers (imperial)
+5. **Gender & Age** - 2x2 grid + birth year picker
+6. **Wearables** - Multi-select device grid
+7. **Health Connect** - Apple Health authorization
+8. **Sleep Philosophy** - Our approach explanation
+9. **Ready** - Summary and "Start My Journey"
+
+---
+
+## Previous Session Context (2025-12-02)
+
 **Fix: Circadian Text Color Contrast for Evening/Night Mode**
 
 This session fixed a critical visibility issue where text was invisible on the warm brown circadian background during evening/night hours.
