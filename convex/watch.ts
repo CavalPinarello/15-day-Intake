@@ -1297,6 +1297,8 @@ export const getQuestionsForUserDay = query({
         required: true,
         helpText: q.help_text ?? undefined,
         formatConfig: q.format_config ? JSON.parse(q.format_config) : undefined,
+        options: q.format_config ? parseOptions(q.format_config) : undefined,
+        conditionalLogic: q.conditional_logic ? parseConditionalLogic(q.conditional_logic) : undefined,
       }));
 
       result.metadata.sleepLogCount = result.sleepLog.length;
@@ -1416,6 +1418,7 @@ function mapAnswerFormatToType(answerFormat: string): string {
     number_input: "number",
     number_scroll: "number",
     yes_no: "yesNo",
+    yes_no_chips: "yesNo",
     single_select: "singleSelect",
     single_select_chips: "singleSelect",
     multi_select: "multiSelect",
@@ -1447,6 +1450,26 @@ function parseOptions(formatConfig: string): string[] | undefined {
       return config.options.map((opt: { value: string; label: string } | string) =>
         typeof opt === "string" ? opt : opt.label || opt.value
       );
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Parse conditional logic from format_config JSON
+ * Returns a normalized structure for the iOS app
+ */
+function parseConditionalLogic(conditionalLogicJson: string): { question_id: string; equals?: string; greater_than?: number } | undefined {
+  try {
+    const logic = JSON.parse(conditionalLogicJson);
+    if (logic.show_if) {
+      return {
+        question_id: logic.show_if.question_id,
+        equals: logic.show_if.value,
+        greater_than: logic.show_if.operator === "greater_than" ? Number(logic.show_if.value) : undefined,
+      };
     }
     return undefined;
   } catch {
@@ -1888,3 +1911,31 @@ function getDayExplanation(dayNumber: number): string {
   };
   return explanations[dayNumber] || "These questions help us understand your unique sleep needs.";
 }
+
+// ============================================
+// Database Maintenance
+// ============================================
+
+/**
+ * Remove the SD_DATE question from sleep diary
+ * This question is redundant on digital devices - we can auto-detect the date.
+ * Run with: npx convex run watch:removeDateQuestion
+ */
+export const removeDateQuestion = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Find and delete the SD_DATE question
+    const allQuestions = await ctx.db
+      .query("sleep_diary_questions")
+      .collect();
+
+    const dateQuestion = allQuestions.find(q => q.id === "SD_DATE");
+
+    if (dateQuestion) {
+      await ctx.db.delete(dateQuestion._id);
+      return { deleted: true, message: "SD_DATE question removed successfully" };
+    }
+
+    return { deleted: false, message: "SD_DATE question not found in database" };
+  },
+});

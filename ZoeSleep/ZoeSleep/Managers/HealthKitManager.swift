@@ -25,6 +25,44 @@ struct HealthKitDemographics {
     }
 }
 
+// MARK: - Sleep Data Source Tracking
+
+/// Tracks the source device/app that contributed sleep data
+struct SleepDataSource: Codable, Equatable {
+    let name: String           // e.g., "Apple Watch", "Oura", "Fitbit"
+    let bundleIdentifier: String
+    let priority: Int          // 1 = highest (Apple Watch), 2 = iPhone, 3 = third-party
+
+    /// Create a SleepDataSource from an HKSourceRevision
+    static func from(sourceRevision: HKSourceRevision) -> SleepDataSource {
+        let name = sourceRevision.source.name
+        let bundleId = sourceRevision.source.bundleIdentifier
+
+        // Priority assignment: Apple Watch > iPhone native > third-party
+        let priority: Int
+        if name.lowercased().contains("apple watch") ||
+           name.lowercased().contains("watch") {
+            priority = 1  // Apple Watch = highest priority
+        } else if bundleId.hasPrefix("com.apple") {
+            priority = 2  // iPhone native apps
+        } else {
+            priority = 3  // Third-party (Oura, Fitbit, WHOOP, Garmin, etc.)
+        }
+
+        return SleepDataSource(name: name, bundleIdentifier: bundleId, priority: priority)
+    }
+}
+
+/// Enhanced sleep sample with source metadata for deduplication
+struct SourcedSleepSample {
+    let sample: HKCategorySample
+    let source: SleepDataSource
+    let stage: String
+    let durationMins: Int
+    let startTime: Date
+    let endTime: Date
+}
+
 @MainActor
 class HealthKitManager: ObservableObject {
     let healthStore = HKHealthStore()
@@ -338,48 +376,127 @@ class HealthKitManager: ObservableObject {
         healthStore.execute(query)
     }
     
+    /// Maps HKCategoryValueSleepAnalysis to stage string
+    private nonisolated func mapSleepStage(_ value: Int) -> String {
+        switch value {
+        case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
+            return "light"
+        case HKCategoryValueSleepAnalysis.asleepCore.rawValue:
+            return "light"
+        case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
+            return "deep"
+        case HKCategoryValueSleepAnalysis.asleepREM.rawValue:
+            return "rem"
+        case HKCategoryValueSleepAnalysis.awake.rawValue:
+            return "awake"
+        case HKCategoryValueSleepAnalysis.inBed.rawValue:
+            return "inBed"
+        default:
+            return "unknown"
+        }
+    }
+
+    /// Deduplicates overlapping sleep samples by prioritizing higher-priority sources
+    /// Priority: Apple Watch (1) > iPhone native (2) > Third-party apps (3)
+    private nonisolated func deduplicateSleepSamples(_ samples: [SourcedSleepSample]) -> [SourcedSleepSample] {
+        // Group by date first
+        let calendar = Calendar.current
+        let byDate = Dictionary(grouping: samples) { sample in
+            calendar.startOfDay(for: sample.startTime)
+        }
+
+        var result: [SourcedSleepSample] = []
+
+        for (_, dateSamples) in byDate {
+            // Sort by start time
+            let sorted = dateSamples.sorted { $0.startTime < $1.startTime }
+            var deduped: [SourcedSleepSample] = []
+
+            for sample in sorted {
+                // Check for overlap with existing samples
+                let overlappingIndex = deduped.firstIndex { existing in
+                    sample.startTime < existing.endTime && sample.endTime > existing.startTime
+                }
+
+                if let idx = overlappingIndex {
+                    // Keep higher priority (lower number = higher priority)
+                    if sample.source.priority < deduped[idx].source.priority {
+                        deduped.remove(at: idx)
+                        deduped.append(sample)
+                    }
+                    // else: keep existing, discard this sample
+                } else {
+                    deduped.append(sample)
+                }
+            }
+            result.append(contentsOf: deduped)
+        }
+
+        return result
+    }
+
     private nonisolated func processSleepSamples(_ samples: [HKCategorySample]) -> [[String: Any]] {
-        var processedStages: [[String: Any]] = []
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
-        // Process individual sleep stages
-        for sample in samples {
-            let dateKey = dateFormatter.string(from: sample.startDate).prefix(10) // YYYY-MM-DD
-            
-            let value = sample.value
-            let stage: String
-            
-            switch value {
-            case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
-                stage = "light"
-            case HKCategoryValueSleepAnalysis.asleepCore.rawValue:
-                stage = "light"
-            case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
-                stage = "deep"
-            case HKCategoryValueSleepAnalysis.asleepREM.rawValue:
-                stage = "rem"
-            case HKCategoryValueSleepAnalysis.awake.rawValue:
-                stage = "awake"
-            default:
-                stage = "unknown"
+
+        // Step 1: Convert to SourcedSleepSample with source metadata
+        let sourcedSamples: [SourcedSleepSample] = samples.compactMap { sample in
+            let source = SleepDataSource.from(sourceRevision: sample.sourceRevision)
+            let stage = mapSleepStage(sample.value)
+            let duration = Int(sample.endDate.timeIntervalSince(sample.startDate) / 60)
+
+            // Skip "inBed" samples for sleep stage calculations
+            guard stage != "inBed" && stage != "unknown" else { return nil }
+
+            return SourcedSleepSample(
+                sample: sample,
+                source: source,
+                stage: stage,
+                durationMins: duration,
+                startTime: sample.startDate,
+                endTime: sample.endDate
+            )
+        }
+
+        // Step 2: Deduplicate overlapping samples from multiple sources
+        let deduplicatedSamples = deduplicateSleepSamples(sourcedSamples)
+
+        // Step 3: Track unique sources per date for metadata
+        var sourcesByDate: [String: Set<String>] = [:]
+        var primarySourceByDate: [String: SleepDataSource] = [:]
+
+        for sample in deduplicatedSamples {
+            let dateKey = String(dateFormatter.string(from: sample.startTime).prefix(10))
+            sourcesByDate[dateKey, default: Set()].insert(sample.source.name)
+
+            // Track the highest priority source as primary
+            if let existing = primarySourceByDate[dateKey] {
+                if sample.source.priority < existing.priority {
+                    primarySourceByDate[dateKey] = sample.source
+                }
+            } else {
+                primarySourceByDate[dateKey] = sample.source
             }
-            
-            let duration = Int(sample.endDate.timeIntervalSince(sample.startDate) / 60) // minutes
-            
+        }
+
+        // Step 4: Convert to processed stages format
+        var processedStages: [[String: Any]] = []
+        for sample in deduplicatedSamples {
+            let dateKey = String(dateFormatter.string(from: sample.startTime).prefix(10))
             processedStages.append([
-                "date": String(dateKey),
-                "start_time": dateFormatter.string(from: sample.startDate),
-                "end_time": dateFormatter.string(from: sample.endDate),
-                "stage": stage,
-                "duration_mins": duration
+                "date": dateKey,
+                "start_time": dateFormatter.string(from: sample.startTime),
+                "end_time": dateFormatter.string(from: sample.endTime),
+                "stage": sample.stage,
+                "duration_mins": sample.durationMins,
+                "source_name": sample.source.name
             ])
         }
-        
-        // Group by date and calculate totals
+
+        // Step 5: Group by date and calculate totals
         let grouped = Dictionary(grouping: processedStages) { $0["date"] as! String }
         var sleepData: [[String: Any]] = []
-        
+
         for (date, stages) in grouped {
             let totalMins = stages.reduce(0) { $0 + ($1["duration_mins"] as! Int) }
             let deepMins = stages.filter { ($0["stage"] as! String) == "deep" }
@@ -390,7 +507,7 @@ class HealthKitManager: ObservableObject {
                 .reduce(0) { $0 + ($1["duration_mins"] as! Int) }
             let awakeMins = stages.filter { ($0["stage"] as! String) == "awake" }
                 .reduce(0) { $0 + ($1["duration_mins"] as! Int) }
-            
+
             // Find in-bed and wake times
             let sortedStages = stages.sorted {
                 ($0["start_time"] as! String) < ($1["start_time"] as! String)
@@ -398,10 +515,10 @@ class HealthKitManager: ObservableObject {
             let inBedTime = sortedStages.first?["start_time"] as? String
             let asleepTime = sortedStages.first(where: { ($0["stage"] as! String) != "awake" })?["start_time"] as? String
             let wakeTime = sortedStages.last?["end_time"] as? String
-            
+
             let sleepMins = totalMins - awakeMins
             let efficiency = totalMins > 0 ? Double(sleepMins) / Double(totalMins) * 100.0 : 0.0
-            
+
             // Calculate sleep latency (time from in-bed to asleep)
             var sleepLatencyMins: Int? = nil
             if let inBedStr = inBedTime, let asleepStr = asleepTime {
@@ -409,23 +526,33 @@ class HealthKitManager: ObservableObject {
                 let asleepDate = dateFormatter.date(from: asleepStr) ?? Date()
                 sleepLatencyMins = Int(asleepDate.timeIntervalSince(inBedDate) / 60)
             }
-            
+
+            // Get source metadata
+            let allSources = Array(sourcesByDate[date] ?? Set())
+            let primarySource = primarySourceByDate[date]
+            let isMultiSource = allSources.count > 1
+
             sleepData.append([
                 "date": date,
                 "in_bed_time": inBedTime ?? "",
                 "asleep_time": asleepTime ?? "",
                 "wake_time": wakeTime ?? "",
                 "total_sleep_mins": sleepMins,
-                "sleep_efficiency": round(efficiency * 10) / 10, // Round to 1 decimal
+                "sleep_efficiency": round(efficiency * 10) / 10,
                 "deep_sleep_mins": deepMins,
                 "light_sleep_mins": lightMins,
                 "rem_sleep_mins": remMins,
                 "awake_mins": awakeMins,
                 "interruptions_count": stages.filter { ($0["stage"] as! String) == "awake" }.count,
-                "sleep_latency_mins": sleepLatencyMins ?? 0
+                "sleep_latency_mins": sleepLatencyMins ?? 0,
+                // Source tracking fields
+                "primary_source": primarySource?.name ?? "Unknown",
+                "source_bundle_id": primarySource?.bundleIdentifier ?? "",
+                "all_sources": allSources,
+                "is_multi_source": isMultiSource
             ])
         }
-        
+
         return sleepData
     }
     

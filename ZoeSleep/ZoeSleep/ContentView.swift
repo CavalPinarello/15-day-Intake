@@ -906,21 +906,11 @@ struct SleepDiaryHistoryView: View {
 }
 
 struct InsightsView: View {
+    @EnvironmentObject var themeManager: ThemeManager
+
     var body: some View {
-        VStack {
-            Text("Sleep Insights")
-                .font(.title)
-                .padding()
-
-            Text("Personalized insights will appear after completing the assessment")
-                .foregroundColor(ColorTheme.shared.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding()
-
-            Spacer()
-        }
-        .navigationTitle("Insights")
-        .navigationBarTitleDisplayMode(.inline)
+        SleepInsightsDashboardView()
+            .environmentObject(themeManager)
     }
 }
 

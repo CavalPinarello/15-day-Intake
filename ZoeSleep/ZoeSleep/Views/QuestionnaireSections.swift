@@ -198,6 +198,9 @@ struct SectionProgressView: View {
     let currentIndex: Int
     let totalQuestions: Int
 
+    // Maximum dots to show before switching to compact view
+    private let maxDotsToShow = 15
+
     var body: some View {
         VStack(spacing: 8) {
             // Progress bar
@@ -209,22 +212,30 @@ struct SectionProgressView: View {
 
                     RoundedRectangle(cornerRadius: 4)
                         .fill(section.accentColor)
-                        .frame(width: geometry.size.width * CGFloat(currentIndex + 1) / CGFloat(totalQuestions), height: 8)
+                        .frame(width: geometry.size.width * CGFloat(currentIndex + 1) / CGFloat(max(totalQuestions, 1)), height: 8)
                 }
             }
             .frame(height: 8)
 
-            // Progress dots
-            HStack(spacing: 6) {
-                ForEach(0..<totalQuestions, id: \.self) { index in
-                    Circle()
-                        .fill(index <= currentIndex ? section.accentColor : section.backgroundColor)
-                        .frame(width: 8, height: 8)
-                        .overlay(
-                            Circle()
-                                .stroke(section.accentColor.opacity(0.3), lineWidth: 1)
-                        )
+            // Progress indicator - dots for small sets, text for large
+            if totalQuestions <= maxDotsToShow {
+                // Progress dots for smaller question sets
+                HStack(spacing: 6) {
+                    ForEach(0..<totalQuestions, id: \.self) { index in
+                        Circle()
+                            .fill(index <= currentIndex ? section.accentColor : section.backgroundColor)
+                            .frame(width: 8, height: 8)
+                            .overlay(
+                                Circle()
+                                    .stroke(section.accentColor.opacity(0.3), lineWidth: 1)
+                            )
+                    }
                 }
+            } else {
+                // Compact text progress for larger question sets
+                Text("\(currentIndex + 1) of \(totalQuestions) questions")
+                    .font(.caption)
+                    .foregroundColor(section.accentColor)
             }
         }
         .padding(.horizontal)

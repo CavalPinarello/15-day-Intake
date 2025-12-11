@@ -3,7 +3,7 @@
  * Run with: npx convex run seedQuestions:seedAll
  */
 
-import { internalMutation } from "./_generated/server";
+import { internalMutation, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // Import converted questions
@@ -202,6 +202,33 @@ export const clearAll = internalMutation({
       deletedAssessment: assessmentQuestions.length,
       deletedSleepDiary: sleepDiaryQuestions.length
     };
+  },
+});
+
+/**
+ * Remove the SD_DATE question from sleep diary
+ * This question is redundant on digital devices - we can auto-detect the date.
+ * Run with: npx convex run seedQuestions:removeDateQuestion
+ */
+export const removeDateQuestion = mutation({
+  args: {},
+  returns: v.object({
+    deleted: v.boolean(),
+    message: v.string()
+  }),
+  handler: async (ctx) => {
+    // Find and delete the SD_DATE question
+    const dateQuestion = await ctx.db
+      .query("sleep_diary_questions")
+      .withIndex("by_question_id", (query) => query.eq("id", "SD_DATE"))
+      .first();
+
+    if (dateQuestion) {
+      await ctx.db.delete(dateQuestion._id);
+      return { deleted: true, message: "SD_DATE question removed successfully" };
+    }
+
+    return { deleted: false, message: "SD_DATE question not found in database" };
   },
 });
 

@@ -929,6 +929,52 @@ struct ConvexQuestion: Codable {
     let helpText: String?
     let moduleName: String?
     let formatConfig: [String: AnyCodable]?
+    let conditionalLogic: ConvexConditionalLogic?
+}
+
+struct ConvexConditionalLogic: Codable {
+    let questionId: String
+    let equals: String?
+    let greaterThan: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case questionId = "question_id"
+        case equals
+        case greaterThan = "greater_than"
+    }
+
+    // Also support snake_case "show_if" format from database
+    init(from decoder: Decoder) throws {
+        // Try direct format first
+        if let container = try? decoder.container(keyedBy: CodingKeys.self) {
+            self.questionId = try container.decode(String.self, forKey: .questionId)
+            self.equals = try container.decodeIfPresent(String.self, forKey: .equals)
+            self.greaterThan = try container.decodeIfPresent(Double.self, forKey: .greaterThan)
+        } else {
+            // Try show_if format
+            let showIfContainer = try decoder.container(keyedBy: ShowIfKeys.self)
+            let showIf = try showIfContainer.decode(ShowIfContent.self, forKey: .showIf)
+            self.questionId = showIf.questionId
+            self.equals = showIf.value
+            self.greaterThan = showIf.greaterThan
+        }
+    }
+
+    private enum ShowIfKeys: String, CodingKey {
+        case showIf = "show_if"
+    }
+
+    private struct ShowIfContent: Codable {
+        let questionId: String
+        let value: String?
+        let greaterThan: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case questionId = "question_id"
+            case value
+            case greaterThan = "greater_than"
+        }
+    }
 }
 
 struct QuestionsForDayResponse: Codable {

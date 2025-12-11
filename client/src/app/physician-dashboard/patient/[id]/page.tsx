@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
+import { Patient360Tab } from "@/components/patient";
 import {
   ArrowLeft,
   Calendar,
@@ -27,6 +28,7 @@ import {
   MessageSquare,
   CheckCircle,
   AlertTriangle,
+  LayoutDashboard,
 } from "lucide-react";
 
 type TabType = "overview" | "responses" | "scores" | "interventions" | "notes";
@@ -145,7 +147,7 @@ export default function PatientDetailPage() {
   const status = statusConfig[patient.reviewStatus?.status || "intake_in_progress"];
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
-    { id: "overview", label: "Overview", icon: <User className="w-4 h-4" /> },
+    { id: "overview", label: "360° View", icon: <LayoutDashboard className="w-4 h-4" /> },
     {
       id: "responses",
       label: "Responses",
@@ -332,114 +334,10 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tab Content */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          {/* Overview Tab */}
+        <div className={`rounded-2xl border ${activeTab === "overview" ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"} p-6`}>
+          {/* Overview Tab - Patient 360° View */}
           {activeTab === "overview" && (
-            <div className="space-y-6">
-              {/* AI Analysis */}
-              <div className="border border-gray-200 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Brain className="w-5 h-5 text-purple-600" />
-                    AI Analysis
-                  </h3>
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={isAnalyzing}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        Generate Analysis
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {analysis ? (
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium text-gray-700 mb-2">Summary</h4>
-                      <p className="text-gray-600">{analysis.summary}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-700 mb-2">
-                        Risk Factors
-                      </h4>
-                      <ul className="space-y-1">
-                        {analysis.riskFactors.map((factor, i) => (
-                          <li
-                            key={i}
-                            className="flex items-start gap-2 text-gray-600"
-                          >
-                            <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                            {factor}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-700 mb-2">
-                        Recommendations
-                      </h4>
-                      <ul className="space-y-1">
-                        {analysis.recommendations.map((rec, i) => (
-                          <li
-                            key={i}
-                            className="flex items-start gap-2 text-gray-600"
-                          >
-                            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            {rec}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-8">
-                    Click &quot;Generate Analysis&quot; to get AI-powered
-                    insights about this patient&apos;s sleep data.
-                  </p>
-                )}
-              </div>
-
-              {/* Demographics */}
-              <div className="border border-gray-200 rounded-xl p-6">
-                <h3 className="text-lg font-semibold mb-4">Demographics</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Date of Birth</p>
-                    <p className="font-medium">
-                      {patient.demographics.dateOfBirth || "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Sex</p>
-                    <p className="font-medium">
-                      {patient.demographics.sex || "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Height</p>
-                    <p className="font-medium">
-                      {patient.demographics.height || "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Weight</p>
-                    <p className="font-medium">
-                      {patient.demographics.weight || "Not provided"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Patient360Tab userId={userId} patient={patient} />
           )}
 
           {/* Responses Tab */}

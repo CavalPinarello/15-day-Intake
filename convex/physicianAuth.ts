@@ -217,6 +217,36 @@ export const cleanupExpiredSessions = mutation({
   },
 });
 
+/**
+ * Reset master password (DANGER - for development only)
+ * This deletes the existing password so a new one can be set
+ */
+export const resetMasterPassword = mutation({
+  args: {},
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx) => {
+    // Delete existing master password
+    const existing = await ctx.db.query("physician_master_password").first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+
+    // Invalidate all sessions
+    const sessions = await ctx.db.query("physician_sessions").collect();
+    for (const session of sessions) {
+      await ctx.db.delete(session._id);
+    }
+
+    return {
+      success: true,
+      message: "Master password reset. Visit /physician-login to set a new one."
+    };
+  },
+});
+
 // Helper function to generate a random session token
 function generateSessionToken(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

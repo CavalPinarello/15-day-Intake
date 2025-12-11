@@ -44,6 +44,10 @@ struct QuestionnaireView: View {
     @State private var startTime: Date = Date()
     @State private var questionStartTime: Date = Date()
 
+    // Reward Moments
+    @StateObject private var rewardManager = RewardMomentManager()
+    @State private var showingRewardCard: Bool = false
+
     @Environment(\.presentationMode) var presentationMode
 
     private var theme: ColorTheme { themeManager.currentTheme }
@@ -89,6 +93,19 @@ struct QuestionnaireView: View {
                     onProceedToNextSection: sectionOnly && completedSectionAtFinish == .sleepLog ? {
                         proceedToAssessment()
                     } : nil
+                )
+            } else if showingRewardCard, let fact = rewardManager.currentFact {
+                // Reward moment with sleep fact
+                SleepFactRewardCard(
+                    fact: fact,
+                    onDismiss: {
+                        withAnimation {
+                            showingRewardCard = false
+                            rewardManager.dismissReward()
+                            // Continue to next question after dismissing reward
+                            advanceToNextQuestion()
+                        }
+                    }
                 )
             } else {
                 mainQuestionnaireView
@@ -593,6 +610,16 @@ struct QuestionnaireView: View {
             if let maxLabel = config["maxLabel"]?.value as? String { scaleMaxLabel = maxLabel }
         }
 
+        // Convert conditional logic if present
+        var conditionalLogic: ConditionalLogic? = nil
+        if let convexLogic = cq.conditionalLogic {
+            conditionalLogic = ConditionalLogic(
+                questionId: convexLogic.questionId,
+                equals: convexLogic.equals,
+                greaterThan: convexLogic.greaterThan
+            )
+        }
+
         return Question(
             id: cq.id,
             text: cq.text,
@@ -610,6 +637,7 @@ struct QuestionnaireView: View {
             maxValue: maxValue,
             helpText: cq.helpText,
             isGateway: false,
+            conditionalLogic: conditionalLogic,
             group: isSleepLog ? "sleep_log" : nil
         )
     }
@@ -779,7 +807,22 @@ struct QuestionnaireView: View {
         saveCurrentResponse()
 
         if currentSection == .sleepLog {
-            if isLastQuestionInSection {
+            // SLEEP LOG SECTION - Check for reward moment (calibration encouragement)
+            let isFirst = sleepLogIndex == 0
+            let isLast = isLastQuestionInSection
+
+            // Notify reward manager for encouragement during calibration period
+            if !isFirst && !isLast && !sleepLogQuestions.isEmpty {
+                let currentQuestion = sleepLogQuestions[sleepLogIndex]
+                rewardManager.onQuestionAnswered(
+                    question: currentQuestion,
+                    isFirstInSection: isFirst,
+                    isLastInSection: isLast,
+                    section: currentSection
+                )
+            }
+
+            if isLast {
                 // Finished sleep log
                 if sectionOnly || assessmentQuestions.isEmpty {
                     // Sleep log only mode OR no assessment questions - complete section
@@ -794,25 +837,105 @@ struct QuestionnaireView: View {
                     }
                 }
             } else {
-                sleepLogIndex += 1
-                questionStartTime = Date()
-                // Sync progress to Convex for cross-device sync
-                syncProgressToConvex()
+                // Check if reward should show BEFORE advancing
+                if rewardManager.shouldShowReward {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        showingRewardCard = true
+                    }
+                } else {
+                    advanceToNextQuestion()
+                }
             }
         } else {
-            if isLastQuestionInSection {
+            // ASSESSMENT SECTION - Check for reward moment
+            let isFirst = assessmentIndex == 0
+            let isLast = isLastQuestionInSection
+
+            // Notify reward manager (only for non-first, non-last questions)
+            if !isFirst && !isLast {
+                let currentQuestion = assessmentQuestions[assessmentIndex]
+                rewardManager.onQuestionAnswered(
+                    question: currentQuestion,
+                    isFirstInSection: isFirst,
+                    isLastInSection: isLast,
+                    section: currentSection
+                )
+            }
+
+            if isLast {
                 // Finished assessment - show completion
                 withAnimation {
                     completedSectionAtFinish = .assessment  // Capture which section we completed
                     showingCompletion = true
                 }
             } else {
-                assessmentIndex += 1
-                questionStartTime = Date()
-                // Sync progress to Convex for cross-device sync
-                syncProgressToConvex()
+                // Check if reward should show BEFORE advancing
+                if rewardManager.shouldShowReward {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        showingRewardCard = true
+                    }
+                } else {
+                    advanceToNextQuestion()
+                }
             }
         }
+    }
+
+    /// Check if a question should be shown based on its conditional logic
+    private func shouldShowQuestion(_ question: Question, responses: [String: Any]) -> Bool {
+        guard let condition = question.conditionalLogic else {
+            return true // No condition = always show
+        }
+
+        // Get the response to the dependent question
+        guard let dependentResponse = responses[condition.questionId] else {
+            return false // No response to dependent question = hide
+        }
+
+        // Check equals condition
+        if let equalsValue = condition.equals {
+            if let stringResponse = dependentResponse as? String {
+                return stringResponse.lowercased() == equalsValue.lowercased()
+            }
+            return false
+        }
+
+        // Check greaterThan condition
+        if let greaterThanValue = condition.greaterThan {
+            if let numResponse = dependentResponse as? Double {
+                return numResponse > greaterThanValue
+            } else if let numResponse = dependentResponse as? Int {
+                return Double(numResponse) > greaterThanValue
+            } else if let stringResponse = dependentResponse as? String,
+                      let numValue = Double(stringResponse) {
+                return numValue > greaterThanValue
+            }
+            return false
+        }
+
+        return true
+    }
+
+    /// Advance to the next question (called after reward dismissal or directly)
+    /// Skips questions whose conditional logic is not met
+    private func advanceToNextQuestion() {
+        let questions = currentSection == .sleepLog ? sleepLogQuestions : assessmentQuestions
+        let responses = currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
+        var nextIndex = (currentSection == .sleepLog ? sleepLogIndex : assessmentIndex) + 1
+
+        // Skip questions whose conditions are not met
+        while nextIndex < questions.count && !shouldShowQuestion(questions[nextIndex], responses: responses) {
+            print("[iOS] Skipping question \(questions[nextIndex].id) - conditional logic not met")
+            nextIndex += 1
+        }
+
+        if currentSection == .sleepLog {
+            sleepLogIndex = nextIndex
+        } else {
+            assessmentIndex = nextIndex
+        }
+        questionStartTime = Date()
+        syncProgressToConvex()
     }
 
     /// Proceed from sleep log to assessment section

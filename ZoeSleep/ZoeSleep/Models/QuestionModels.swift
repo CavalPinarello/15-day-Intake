@@ -318,6 +318,42 @@ struct ColorTheme {
         }
     }
 
+    // MARK: - Chart Colors (Sleep-Optimized for Insights Dashboard)
+    // CRITICAL: NO blue light after dusk - warm colors only for evening/night
+
+    /// Objective data line color (HealthKit data) - adapts to time of day
+    var chartLineObjective: Color {
+        guard let period = period else { return Color(hex: "#3B82F6")! }
+        switch period {
+        case .morning, .afternoon:
+            return Color(hex: "#3B82F6")!  // Blue (safe during day)
+        case .evening, .night:
+            return Color(hex: "#F28C40")!  // Amber (sleep-safe)
+        }
+    }
+
+    /// Subjective data line color (User rating) - adapts to time of day
+    var chartLineSubjective: Color {
+        guard let period = period else { return Color(hex: "#8B5CF6")! }
+        switch period {
+        case .morning, .afternoon:
+            return Color(hex: "#8B5CF6")!  // Purple (safe during day)
+        case .evening, .night:
+            return Color(hex: "#D97706")!  // Orange (sleep-safe)
+        }
+    }
+
+    /// Positive insight color (warm-tinted at night)
+    var insightPositive: Color {
+        guard let period = period else { return Color(hex: "#10B981")! }
+        switch period {
+        case .morning, .afternoon:
+            return Color(hex: "#10B981")!  // Emerald green
+        case .evening, .night:
+            return Color(hex: "#A3BE8C")!  // Muted sage (warm-tinted)
+        }
+    }
+
     // MARK: - Phase Colors
 
     /// Core assessment phase (Days 1-5)

@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
 import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
+import { DashboardOverview } from "@/components/physician/DashboardOverview";
 import {
   Users,
   Search,
@@ -17,7 +18,20 @@ import {
   ClipboardList,
   Settings,
   Moon,
+  LayoutDashboard,
+  List,
 } from "lucide-react";
+
+interface PatientData {
+  _id: string;
+  username: string;
+  name?: string;
+  current_day: number;
+  started_at: number;
+  last_accessed: number;
+  progress_percentage: number;
+  review_status?: string;
+}
 
 type ReviewStatus =
   | "all"
@@ -63,7 +77,10 @@ const statusConfig: Record<
   },
 };
 
+type ViewMode = "overview" | "list";
+
 export default function PhysicianDashboard() {
+  const [viewMode, setViewMode] = useState<ViewMode>("overview");
   const [statusFilter, setStatusFilter] = useState<ReviewStatus>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -148,195 +165,239 @@ export default function PhysicianDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          {[
-            {
-              key: "intake_in_progress",
-              label: "In Progress",
-              count: statusCounts?.intake_in_progress || 0,
-            },
-            {
-              key: "pending_review",
-              label: "Pending Review",
-              count: statusCounts?.pending_review || 0,
-            },
-            {
-              key: "under_review",
-              label: "Under Review",
-              count: statusCounts?.under_review || 0,
-            },
-            {
-              key: "interventions_prepared",
-              label: "Ready",
-              count: statusCounts?.interventions_prepared || 0,
-            },
-            {
-              key: "interventions_active",
-              label: "Active",
-              count: statusCounts?.interventions_active || 0,
-            },
-          ].map((stat) => {
-            const config = statusConfig[stat.key];
-            return (
-              <button
-                key={stat.key}
-                onClick={() => setStatusFilter(stat.key as ReviewStatus)}
-                className={`p-4 rounded-xl border transition-all ${
-                  statusFilter === stat.key
-                    ? `${config.bgColor} border-current ${config.color}`
-                    : "bg-white border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span
-                    className={
-                      statusFilter === stat.key ? config.color : "text-gray-400"
-                    }
-                  >
-                    {config.icon}
-                  </span>
-                  <span className="text-2xl font-bold text-gray-900">
-                    {stat.count}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600">{stat.label}</p>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search patients by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as ReviewStatus)}
-              className="px-4 py-3 rounded-xl border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none bg-white"
+        {/* View Toggle */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-xl">
+            <button
+              onClick={() => setViewMode("overview")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                viewMode === "overview"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
             >
-              <option value="all">All Patients</option>
-              <option value="intake_in_progress">In Progress</option>
-              <option value="pending_review">Pending Review</option>
-              <option value="under_review">Under Review</option>
-              <option value="interventions_prepared">Interventions Ready</option>
-              <option value="interventions_active">Active Treatment</option>
-            </select>
+              <LayoutDashboard className="w-4 h-4" />
+              Overview
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                viewMode === "list"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <List className="w-4 h-4" />
+              Patient List
+            </button>
           </div>
+
+          {viewMode === "list" && (
+            <p className="text-sm text-gray-500">
+              {allPatients?.length || 0} total patients
+            </p>
+          )}
         </div>
 
-        {/* Patient List */}
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {statusFilter === "all"
-                ? "All Patients"
-                : statusConfig[statusFilter]?.label || "Patients"}
-              {patients && (
-                <span className="ml-2 text-gray-400 font-normal">
-                  ({patients.length})
-                </span>
-              )}
-            </h2>
-          </div>
+        {/* Overview Dashboard */}
+        {viewMode === "overview" && (
+          <DashboardOverview patients={allPatients || []} />
+        )}
 
-          {!patients ? (
-            <div className="p-12 text-center">
-              <div className="animate-spin w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-gray-500">Loading patients...</p>
-            </div>
-          ) : patients.length === 0 ? (
-            <div className="p-12 text-center">
-              <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No patients found</p>
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="mt-2 text-teal-600 hover:text-teal-700"
-                >
-                  Clear search
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {patients.map((patient) => {
-                const status =
-                  statusConfig[patient.review_status || "intake_in_progress"];
+        {/* List View */}
+        {viewMode === "list" && (
+          <div className="space-y-6">
+            {/* Stats Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[
+                {
+                  key: "intake_in_progress",
+                  label: "In Progress",
+                  count: statusCounts?.intake_in_progress || 0,
+                },
+                {
+                  key: "pending_review",
+                  label: "Pending Review",
+                  count: statusCounts?.pending_review || 0,
+                },
+                {
+                  key: "under_review",
+                  label: "Under Review",
+                  count: statusCounts?.under_review || 0,
+                },
+                {
+                  key: "interventions_prepared",
+                  label: "Ready",
+                  count: statusCounts?.interventions_prepared || 0,
+                },
+                {
+                  key: "interventions_active",
+                  label: "Active",
+                  count: statusCounts?.interventions_active || 0,
+                },
+              ].map((stat) => {
+                const config = statusConfig[stat.key];
                 return (
-                  <Link
-                    key={patient._id}
-                    href={`/physician-dashboard/patient/${patient._id}`}
-                    className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+                  <button
+                    key={stat.key}
+                    onClick={() => setStatusFilter(stat.key as ReviewStatus)}
+                    className={`p-4 rounded-xl border transition-all ${
+                      statusFilter === stat.key
+                        ? `${config.bgColor} border-current ${config.color}`
+                        : "bg-white border-gray-200 hover:border-gray-300"
+                    }`}
                   >
-                    {/* Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-semibold text-lg">
-                      {(patient.name || patient.username)?.[0]?.toUpperCase() ||
-                        "?"}
+                    <div className="flex items-center justify-between mb-2">
+                      <span
+                        className={
+                          statusFilter === stat.key ? config.color : "text-gray-400"
+                        }
+                      >
+                        {config.icon}
+                      </span>
+                      <span className="text-2xl font-bold text-gray-900">
+                        {stat.count}
+                      </span>
                     </div>
-
-                    {/* Patient Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900 truncate">
-                          {patient.name || patient.username}
-                        </h3>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}
-                        >
-                          {status.icon}
-                          {status.label}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        Day {patient.current_day} of 15 &bull; Started{" "}
-                        {formatDate(patient.started_at)}
-                      </p>
-                    </div>
-
-                    {/* Progress */}
-                    <div className="hidden sm:block w-32">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-500">Progress</span>
-                        <span className="text-xs font-medium text-gray-700">
-                          {patient.progress_percentage}%
-                        </span>
-                      </div>
-                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-teal-500 to-blue-500 rounded-full transition-all"
-                          style={{ width: `${patient.progress_percentage}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Last Active */}
-                    <div className="hidden md:block text-right">
-                      <p className="text-xs text-gray-500">Last Active</p>
-                      <p className="text-sm font-medium text-gray-700">
-                        {formatTimeAgo(patient.last_accessed)}
-                      </p>
-                    </div>
-
-                    {/* Arrow */}
-                    <ArrowRight className="w-5 h-5 text-gray-400" />
-                  </Link>
+                    <p className="text-sm text-gray-600">{stat.label}</p>
+                  </button>
                 );
               })}
             </div>
-          )}
-        </div>
+
+            {/* Search and Filter */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search patients by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5 text-gray-400" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as ReviewStatus)}
+                  className="px-4 py-3 rounded-xl border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none bg-white"
+                >
+                  <option value="all">All Patients</option>
+                  <option value="intake_in_progress">In Progress</option>
+                  <option value="pending_review">Pending Review</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="interventions_prepared">Interventions Ready</option>
+                  <option value="interventions_active">Active Treatment</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Patient List */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {statusFilter === "all"
+                    ? "All Patients"
+                    : statusConfig[statusFilter]?.label || "Patients"}
+                  {patients && (
+                    <span className="ml-2 text-gray-400 font-normal">
+                      ({patients.length})
+                    </span>
+                  )}
+                </h2>
+              </div>
+
+              {!patients ? (
+                <div className="p-12 text-center">
+                  <div className="animate-spin w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full mx-auto mb-4" />
+                  <p className="text-gray-500">Loading patients...</p>
+                </div>
+              ) : patients.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No patients found</p>
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="mt-2 text-teal-600 hover:text-teal-700"
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {patients.map((patient: PatientData) => {
+                    const status =
+                      statusConfig[patient.review_status || "intake_in_progress"];
+                    return (
+                      <Link
+                        key={patient._id}
+                        href={`/physician-dashboard/patient/${patient._id}`}
+                        className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+                      >
+                        {/* Avatar */}
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-semibold text-lg">
+                          {(patient.name || patient.username)?.[0]?.toUpperCase() ||
+                            "?"}
+                        </div>
+
+                        {/* Patient Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-900 truncate">
+                              {patient.name || patient.username}
+                            </h3>
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}
+                            >
+                              {status.icon}
+                              {status.label}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            Day {patient.current_day} of 15 &bull; Started{" "}
+                            {formatDate(patient.started_at)}
+                          </p>
+                        </div>
+
+                        {/* Progress */}
+                        <div className="hidden sm:block w-32">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-500">Progress</span>
+                            <span className="text-xs font-medium text-gray-700">
+                              {patient.progress_percentage}%
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-teal-500 to-blue-500 rounded-full transition-all"
+                              style={{ width: `${patient.progress_percentage}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Last Active */}
+                        <div className="hidden md:block text-right">
+                          <p className="text-xs text-gray-500">Last Active</p>
+                          <p className="text-sm font-medium text-gray-700">
+                            {formatTimeAgo(patient.last_accessed)}
+                          </p>
+                        </div>
+
+                        {/* Arrow */}
+                        <ArrowRight className="w-5 h-5 text-gray-400" />
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

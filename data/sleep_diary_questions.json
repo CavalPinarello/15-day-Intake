@@ -1,15 +1,5 @@
 [
   {
-    "id": "SD_DATE",
-    "text": "Date",
-    "type": "date_auto",
-    "group": "metadata",
-    "pillar": "Sleep Diary",
-    "estimatedMinutes": 0.1,
-    "autoFill": true,
-    "helpText": "Tap to edit if logging a past day"
-  },
-  {
     "id": "SD_DAY_TYPE",
     "text": "What type of day is today?",
     "type": "single_select_chips",

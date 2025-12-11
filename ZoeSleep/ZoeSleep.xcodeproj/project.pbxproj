@@ -48,6 +48,17 @@
 		4A5E3C002C8E123456789G01 /* OnboardingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C012C8E123456789G02 /* OnboardingManager.swift */; };
 		4A5E3C022C8E123456789G03 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C032C8E123456789G04 /* OnboardingView.swift */; };
 		4A5E3C042C8E123456789G05 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */; };
+		4A5E3C102C8E123456789H01 /* SleepFactModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C112C8E123456789H02 /* SleepFactModels.swift */; };
+		4A5E3C122C8E123456789H03 /* RewardMomentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C132C8E123456789H04 /* RewardMomentManager.swift */; };
+		4A5E3C142C8E123456789H05 /* SleepFactRewardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C152C8E123456789H06 /* SleepFactRewardCard.swift */; };
+		4A5E3C202C8E123456789I01 /* SleepInsightsDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C212C8E123456789I02 /* SleepInsightsDashboardView.swift */; };
+		4A5E3C222C8E123456789I03 /* DataRequirementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C232C8E123456789I04 /* DataRequirementView.swift */; };
+		4A5E3C242C8E123456789I05 /* InsightCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C252C8E123456789I06 /* InsightCard.swift */; };
+		4A5E3C262C8E123456789I07 /* PatternDetectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C272C8E123456789I08 /* PatternDetectionView.swift */; };
+		4A5E3C282C8E123456789I09 /* PerceptionVsRealityCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C292C8E123456789I0A /* PerceptionVsRealityCard.swift */; };
+		4A5E3C2A2C8E123456789I0B /* TrendChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C2B2C8E123456789I0C /* TrendChartView.swift */; };
+		4A5E3C502C8E123456789K01 /* SleepInsightModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C512C8E123456789K02 /* SleepInsightModels.swift */; };
+		4A5E3C602C8E123456789L01 /* SleepInsightsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C612C8E123456789L02 /* SleepInsightsViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -109,6 +120,17 @@
 		4A5E3C012C8E123456789G02 /* OnboardingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingManager.swift; sourceTree = "<group>"; };
 		4A5E3C032C8E123456789G04 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
+		4A5E3C112C8E123456789H02 /* SleepFactModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepFactModels.swift; sourceTree = "<group>"; };
+		4A5E3C132C8E123456789H04 /* RewardMomentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RewardMomentManager.swift; sourceTree = "<group>"; };
+		4A5E3C152C8E123456789H06 /* SleepFactRewardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepFactRewardCard.swift; sourceTree = "<group>"; };
+		4A5E3C212C8E123456789I02 /* SleepInsightsDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepInsightsDashboardView.swift; sourceTree = "<group>"; };
+		4A5E3C232C8E123456789I04 /* DataRequirementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataRequirementView.swift; sourceTree = "<group>"; };
+		4A5E3C252C8E123456789I06 /* InsightCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightCard.swift; sourceTree = "<group>"; };
+		4A5E3C272C8E123456789I08 /* PatternDetectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternDetectionView.swift; sourceTree = "<group>"; };
+		4A5E3C292C8E123456789I0A /* PerceptionVsRealityCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerceptionVsRealityCard.swift; sourceTree = "<group>"; };
+		4A5E3C2B2C8E123456789I0C /* TrendChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendChartView.swift; sourceTree = "<group>"; };
+		4A5E3C512C8E123456789K02 /* SleepInsightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepInsightModels.swift; sourceTree = "<group>"; };
+		4A5E3C612C8E123456789L02 /* SleepInsightsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepInsightsViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -169,6 +191,7 @@
 				4A5E3BBC2C8E123456789A22 /* Managers */,
 				4A5E3BBD2C8E123456789A23 /* Services */,
 				4A5E3BBE2C8E123456789A24 /* Views */,
+				4A5E3C622C8E123456789L03 /* ViewModels */,
 				4A5E3B8D2C8E123456789A03 /* Assets.xcassets */,
 				4A5E3B8F2C8E123456789A25 /* Preview Content */,
 			);
@@ -212,6 +235,7 @@
 				4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */,
 				4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */,
 				4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */,
+				4A5E3C132C8E123456789H04 /* RewardMomentManager.swift */,
 				4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */,
 				4A5E3C012C8E123456789G02 /* OnboardingManager.swift */,
 			);
@@ -237,6 +261,8 @@
 				4A5E3BD92C8E123456789C0A /* TreatmentView.swift */,
 				4A5E3BDD2C8E123456789C0E /* SettingsView.swift */,
 				4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */,
+				4A5E3C152C8E123456789H06 /* SleepFactRewardCard.swift */,
+				4A5E3C302C8E123456789I0D /* Insights */,
 				4A5E3BF12C8E123456789E02 /* CircadianWaveBackground.swift */,
 				4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */,
 				4A5E3C032C8E123456789G04 /* OnboardingView.swift */,
@@ -249,8 +275,31 @@
 			isa = PBXGroup;
 			children = (
 				4A5E3BC62C8E123456789B02 /* QuestionModels.swift */,
+				4A5E3C112C8E123456789H02 /* SleepFactModels.swift */,
+				4A5E3C512C8E123456789K02 /* SleepInsightModels.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		4A5E3C302C8E123456789I0D /* Insights */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3C212C8E123456789I02 /* SleepInsightsDashboardView.swift */,
+				4A5E3C232C8E123456789I04 /* DataRequirementView.swift */,
+				4A5E3C252C8E123456789I06 /* InsightCard.swift */,
+				4A5E3C272C8E123456789I08 /* PatternDetectionView.swift */,
+				4A5E3C292C8E123456789I0A /* PerceptionVsRealityCard.swift */,
+				4A5E3C2B2C8E123456789I0C /* TrendChartView.swift */,
+			);
+			path = Insights;
+			sourceTree = "<group>";
+		};
+		4A5E3C622C8E123456789L03 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3C612C8E123456789L02 /* SleepInsightsViewModel.swift */,
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -363,6 +412,16 @@
 				4A5E3BA22C8E123456789A0A /* HealthKitIntegrationView.swift in Sources */,
 				4A5E3B8A2C8E123456789A01 /* ZoeSleepApp.swift in Sources */,
 				4A5E3BC52C8E123456789B01 /* QuestionModels.swift in Sources */,
+				4A5E3C102C8E123456789H01 /* SleepFactModels.swift in Sources */,
+				4A5E3C502C8E123456789K01 /* SleepInsightModels.swift in Sources */,
+				4A5E3C122C8E123456789H03 /* RewardMomentManager.swift in Sources */,
+				4A5E3C142C8E123456789H05 /* SleepFactRewardCard.swift in Sources */,
+				4A5E3C202C8E123456789I01 /* SleepInsightsDashboardView.swift in Sources */,
+				4A5E3C222C8E123456789I03 /* DataRequirementView.swift in Sources */,
+				4A5E3C242C8E123456789I05 /* InsightCard.swift in Sources */,
+				4A5E3C262C8E123456789I07 /* PatternDetectionView.swift in Sources */,
+				4A5E3C282C8E123456789I09 /* PerceptionVsRealityCard.swift in Sources */,
+				4A5E3C2A2C8E123456789I0B /* TrendChartView.swift in Sources */,
 				4A5E3BC72C8E123456789B03 /* QuestionnaireManager.swift in Sources */,
 				4A5E3BC92C8E123456789B05 /* QuestionComponents.swift in Sources */,
 				4A5E3BCB2C8E123456789B07 /* QuestionnaireView.swift in Sources */,
@@ -378,6 +437,7 @@
 				4A5E3C002C8E123456789G01 /* OnboardingManager.swift in Sources */,
 				4A5E3C022C8E123456789G03 /* OnboardingView.swift in Sources */,
 				4A5E3C042C8E123456789G05 /* ProfileSettingsView.swift in Sources */,
+				4A5E3C602C8E123456789L01 /* SleepInsightsViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

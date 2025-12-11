@@ -274,6 +274,11 @@ export default defineSchema({
     interruptions_count: v.optional(v.number()),
     sleep_latency_mins: v.optional(v.number()),
     synced_at: v.number(),
+    // Source tracking fields
+    primary_source: v.optional(v.string()), // "Apple Watch", "Oura", "Fitbit", etc.
+    source_bundle_id: v.optional(v.string()), // Bundle ID of the primary source app
+    all_sources_json: v.optional(v.string()), // JSON array of all contributing sources
+    is_multi_source: v.optional(v.boolean()), // True if data came from multiple sources
   })
     .index("by_user", ["user_id"])
     .index("by_user_date", ["user_id", "date"])
@@ -440,6 +445,52 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_user_date", ["user_id", "metric_date"])
     .index("by_date", ["metric_date"]),
+
+  // ============================================
+  // Sleep Insights Tables
+  // ============================================
+
+  // Pre-computed sleep insights (updated when new data syncs)
+  sleep_insights: defineTable({
+    user_id: v.id("users"),
+    insight_type: v.string(), // "perception_gap", "bedtime_optimal", "weekend_pattern", "sleep_latency"
+    insight_key: v.string(), // Unique key for this insight (e.g., "bedtime_optimal_2230")
+    insight_title: v.string(), // Short title: "Optimal Bedtime Found"
+    insight_text: v.string(), // Full insight: "You fall asleep 18 minutes faster..."
+    confidence_score: v.number(), // 0-100 statistical confidence
+    data_points: v.number(), // Number of data points used in calculation
+    is_actionable: v.boolean(), // True if user can act on this insight
+    computed_at: v.number(), // Timestamp when insight was generated
+    expires_at: v.optional(v.number()), // Optional expiration timestamp
+    metadata_json: v.optional(v.string()), // Additional data for UI (e.g., optimal time, percentage)
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_type", ["user_id", "insight_type"])
+    .index("by_expires", ["expires_at"]),
+
+  // Daily perception gap tracking (subjective vs objective sleep)
+  perception_gaps: defineTable({
+    user_id: v.id("users"),
+    date: v.string(), // YYYY-MM-DD
+    // Subjective data (from Sleep Log questionnaire)
+    subjective_quality: v.optional(v.number()), // 1-10 rating from SD_SLEEP_QUALITY
+    subjective_latency_mins: v.optional(v.number()), // From SD_SLEEP_LATENCY
+    subjective_awakenings: v.optional(v.number()), // From SD_AWAKENINGS_COUNT
+    // Objective data (from HealthKit)
+    objective_total_sleep_mins: v.optional(v.number()),
+    objective_efficiency: v.optional(v.number()), // 0-100 percentage
+    objective_deep_mins: v.optional(v.number()),
+    objective_rem_mins: v.optional(v.number()),
+    objective_latency_mins: v.optional(v.number()),
+    objective_awakenings: v.optional(v.number()),
+    // Computed gap metrics
+    gap_score: v.optional(v.number()), // Normalized gap (-100 to +100)
+    gap_direction: v.optional(v.string()), // "underestimate", "overestimate", "accurate"
+    computed_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "date"])
+    .index("by_date", ["date"]),
 
   // ============================================
   // Assessment System Tables

@@ -728,6 +728,11 @@ export const syncSleepData = mutation({
       awakeMins: v.optional(v.number()),
       interruptionsCount: v.optional(v.number()),
       sleepLatencyMins: v.optional(v.number()),
+      // Source tracking fields
+      primarySource: v.optional(v.string()), // "Apple Watch", "Oura", etc.
+      sourceBundleId: v.optional(v.string()),
+      allSourcesJson: v.optional(v.string()), // JSON array of source names
+      isMultiSource: v.optional(v.boolean()),
     })),
   },
   handler: async (ctx, args) => {
@@ -765,6 +770,11 @@ export const syncSleepData = mutation({
           interruptions_count: data.interruptionsCount,
           sleep_latency_mins: data.sleepLatencyMins,
           synced_at: now,
+          // Source tracking fields
+          primary_source: data.primarySource,
+          source_bundle_id: data.sourceBundleId,
+          all_sources_json: data.allSourcesJson,
+          is_multi_source: data.isMultiSource,
         });
       } else {
         await ctx.db.insert("user_sleep_data", {
@@ -782,6 +792,11 @@ export const syncSleepData = mutation({
           interruptions_count: data.interruptionsCount,
           sleep_latency_mins: data.sleepLatencyMins,
           synced_at: now,
+          // Source tracking fields
+          primary_source: data.primarySource,
+          source_bundle_id: data.sourceBundleId,
+          all_sources_json: data.allSourcesJson,
+          is_multi_source: data.isMultiSource,
         });
       }
       recordsSynced++;
@@ -824,10 +839,12 @@ export const syncSleepData = mutation({
 
 /**
  * Sync heart rate data from HealthKit
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const syncHeartRateData = mutation({
   args: {
     userId: v.id("users"),
+    sessionToken: v.optional(v.string()), // Session token for authorization
     deviceId: v.string(),
     heartRateData: v.array(v.object({
       date: v.string(),
@@ -838,6 +855,14 @@ export const syncHeartRateData = mutation({
     })),
   },
   handler: async (ctx, args) => {
+    // Validate session token if provided
+    if (args.sessionToken) {
+      const session = await validateUserOwnership(ctx, args.sessionToken, args.userId);
+      if (!session.valid) {
+        throw new Error(session.error || "Unauthorized");
+      }
+    }
+
     const now = Date.now();
     let recordsSynced = 0;
 
@@ -877,10 +902,12 @@ export const syncHeartRateData = mutation({
 
 /**
  * Sync activity data from HealthKit
+ * SECURITY: Requires sessionToken to validate user ownership
  */
 export const syncActivityData = mutation({
   args: {
     userId: v.id("users"),
+    sessionToken: v.optional(v.string()), // Session token for authorization
     deviceId: v.string(),
     activityData: v.array(v.object({
       date: v.string(),
@@ -891,6 +918,14 @@ export const syncActivityData = mutation({
     })),
   },
   handler: async (ctx, args) => {
+    // Validate session token if provided
+    if (args.sessionToken) {
+      const session = await validateUserOwnership(ctx, args.sessionToken, args.userId);
+      if (!session.valid) {
+        throw new Error(session.error || "Unauthorized");
+      }
+    }
+
     const now = Date.now();
     let recordsSynced = 0;
 

@@ -1,4 +1,4 @@
-# ZOE Sleep Coaching Platform - 15-Day Intake Journey
+# Zoe Sleep V1 - 15-Day Intake Journey
 
 ## Project Overview
 
@@ -51,7 +51,7 @@ This is a sleep coaching platform implementing a 15-day intake journey with **iO
 - **WatchConnectivity**: Real-time sync between iPhone and Apple Watch
 - **Convex HTTP Integration**: Direct HTTP calls to Convex backend via `/api/query` and `/api/mutation`
 - **ConvexService.swift**: Type-safe Swift service with Keychain-based session management
-- **Xcode Project**: Complete project structure at `/Sleep360/Sleep360.xcodeproj`
+- **Xcode Project**: Complete project structure at `/ZoeSleep/ZoeSleep.xcodeproj`
 
 ### Web Application (Debug/Dev Only)
 - Next.js 14 (App Router)
@@ -115,10 +115,10 @@ This will start both Convex and the client concurrently.
 
 ```bash
 # Open Xcode project
-open Sleep360/Sleep360.xcodeproj
+open ZoeSleep/ZoeSleep.xcodeproj
 
 # Or navigate to the project in Finder
-# Location: /Sleep360/Sleep360.xcodeproj
+# Location: /ZoeSleep/ZoeSleep.xcodeproj
 ```
 
 **iOS Setup Requirements:**
