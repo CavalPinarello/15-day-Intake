@@ -75,6 +75,8 @@ iPhone ←→ Convex ←→ Dashboard
 
 **Latest Updates:**
 - Repository renamed: `15-day-Intake` → `Zoe-Sleep-V1` (Dec 11, 2025)
+- Fixed questionnaire navigation: Back button now properly respects section boundaries (Dec 12, 2025)
+- Added save error handling: Retry dialogs for failed Convex syncs (Dec 12, 2025)
 - Circadian picker styling: Time/date pickers now use warm amber colors at night (Dec 12, 2025)
 - Onboarding: 8 steps, account-aware, circadian colors
 - Cross-device sync: Question-by-question resume
