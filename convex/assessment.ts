@@ -204,6 +204,225 @@ export const getDayAssignments = query({
   },
 });
 
+// Enhanced day assignments with computed question counts and gateway info
+export const getDayAssignmentsEnhanced = query({
+  args: {},
+  handler: async (ctx) => {
+    const assignments = await ctx.db
+      .query("day_modules")
+      .withIndex("by_day_order")
+      .collect();
+
+    // Get all gateways for reference
+    const allGateways = await ctx.db.query("module_gateways").collect();
+
+    // Group by day number and enrich with computed data
+    const dayAssignments: Record<
+      number,
+      {
+        modules: any[];
+        total_questions: number;
+        total_minutes: number;
+        gateways: any[];
+      }
+    > = {};
+
+    for (const assignment of assignments) {
+      if (!dayAssignments[assignment.day_number]) {
+        dayAssignments[assignment.day_number] = {
+          modules: [],
+          total_questions: 0,
+          total_minutes: 0,
+          gateways: [],
+        };
+      }
+
+      const module = await ctx.db
+        .query("assessment_modules")
+        .withIndex("by_module_id", (q) => q.eq("module_id", assignment.module_id))
+        .first();
+
+      if (!module) continue;
+
+      // COUNT questions from module_questions table (the fix!)
+      const moduleQuestions = await ctx.db
+        .query("module_questions")
+        .withIndex("by_module", (q) => q.eq("module_id", assignment.module_id))
+        .collect();
+
+      const questionCount = moduleQuestions.length;
+
+      // Check if this is an expansion module
+      const isExpansion = module.tier === "EXPANSION";
+
+      // Find which gateways can trigger this expansion module
+      const relatedGateways = allGateways.filter((g) => {
+        try {
+          const targetModules = JSON.parse(g.target_modules_json || "[]");
+          return targetModules.includes(assignment.module_id);
+        } catch {
+          return false;
+        }
+      });
+
+      dayAssignments[assignment.day_number].modules.push({
+        ...assignment,
+        module: {
+          ...module,
+          question_count: questionCount, // Computed value!
+        },
+        is_expansion: isExpansion,
+        required_gateways: relatedGateways.map((g) => g.gateway_id),
+      });
+
+      dayAssignments[assignment.day_number].total_questions += questionCount;
+      dayAssignments[assignment.day_number].total_minutes +=
+        module.estimated_minutes || 0;
+    }
+
+    // Sort each day's modules by order_index
+    for (const dayNumber in dayAssignments) {
+      dayAssignments[dayNumber].modules.sort(
+        (a, b) => a.order_index - b.order_index
+      );
+    }
+
+    // Find gateways that have trigger questions in each day
+    for (const dayNumber in dayAssignments) {
+      const dayGatewayIds = new Set<string>();
+
+      // Get all question IDs for this day
+      const dayQuestionIds = new Set<string>();
+      for (const mod of dayAssignments[dayNumber].modules) {
+        const moduleQuestions = await ctx.db
+          .query("module_questions")
+          .withIndex("by_module", (q) => q.eq("module_id", mod.module.module_id))
+          .collect();
+        moduleQuestions.forEach((mq) => dayQuestionIds.add(mq.question_id));
+      }
+
+      // Check which gateways have trigger questions in this day
+      for (const gateway of allGateways) {
+        try {
+          const triggerIds = JSON.parse(gateway.trigger_question_ids_json || "[]");
+          if (triggerIds.some((id: string) => dayQuestionIds.has(id))) {
+            dayGatewayIds.add(gateway.gateway_id);
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      // Add gateway details
+      dayAssignments[dayNumber].gateways = allGateways
+        .filter((g) => dayGatewayIds.has(g.gateway_id))
+        .map((g) => ({
+          gateway_id: g.gateway_id,
+          name: g.name,
+          description: g.description,
+          trigger_question_ids: JSON.parse(g.trigger_question_ids_json || "[]"),
+          target_modules: JSON.parse(g.target_modules_json || "[]"),
+        }));
+    }
+
+    return dayAssignments;
+  },
+});
+
+// Get all questions for a specific module (for expandable preview)
+export const getQuestionsForModule = query({
+  args: { moduleId: v.string() },
+  handler: async (ctx, args) => {
+    const moduleQuestions = await ctx.db
+      .query("module_questions")
+      .withIndex("by_module", (q) => q.eq("module_id", args.moduleId))
+      .collect();
+
+    moduleQuestions.sort((a, b) => a.order_index - b.order_index);
+
+    const questions = await Promise.all(
+      moduleQuestions.map(async (mq) => {
+        const question = await ctx.db
+          .query("assessment_questions")
+          .withIndex("by_question_id", (q) => q.eq("question_id", mq.question_id))
+          .first();
+        return question
+          ? {
+              question_id: question.question_id,
+              question_text: question.question_text,
+              pillar: question.pillar,
+              tier: question.tier,
+              answer_format: question.answer_format,
+              estimated_time_seconds: question.estimated_time_seconds,
+              order_index: mq.order_index,
+            }
+          : null;
+      })
+    );
+
+    return questions.filter((q) => q !== null);
+  },
+});
+
+// Get all gateway definitions with their expansion module info
+export const getAllGateways = query({
+  args: {},
+  handler: async (ctx) => {
+    const gateways = await ctx.db.query("module_gateways").collect();
+
+    return Promise.all(
+      gateways.map(async (gateway) => {
+        let targetModuleIds: string[] = [];
+        let triggerQuestionIds: string[] = [];
+        let condition = {};
+
+        try {
+          targetModuleIds = JSON.parse(gateway.target_modules_json || "[]");
+          triggerQuestionIds = JSON.parse(gateway.trigger_question_ids_json || "[]");
+          condition = JSON.parse(gateway.condition_json || "{}");
+        } catch {
+          // Ignore parse errors
+        }
+
+        // Get expansion module details
+        const expansionModules = await Promise.all(
+          targetModuleIds.map(async (moduleId: string) => {
+            const module = await ctx.db
+              .query("assessment_modules")
+              .withIndex("by_module_id", (q) => q.eq("module_id", moduleId))
+              .first();
+
+            if (!module) return null;
+
+            // Count questions
+            const questions = await ctx.db
+              .query("module_questions")
+              .withIndex("by_module", (q) => q.eq("module_id", moduleId))
+              .collect();
+
+            return {
+              module_id: moduleId,
+              name: module.name,
+              pillar: module.pillar,
+              question_count: questions.length,
+              estimated_minutes: module.estimated_minutes,
+            };
+          })
+        );
+
+        return {
+          gateway_id: gateway.gateway_id,
+          name: gateway.name,
+          description: gateway.description,
+          condition,
+          trigger_question_ids: triggerQuestionIds,
+          expansion_modules: expansionModules.filter((m) => m !== null),
+        };
+      })
+    );
+  },
+});
+
 // Assign module to day
 export const assignModuleToDay = mutation({
   args: {

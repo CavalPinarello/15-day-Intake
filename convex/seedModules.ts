@@ -110,91 +110,83 @@ export const seedModuleQuestions = internalMutation({
 /**
  * Define 15-day intake plan
  * Each day has specific modules assigned
+ * Target: 10-15 base questions per day, expansion packs add when triggered
  */
 const FIFTEEN_DAY_PLAN = [
-  // Day 1: Demographics & Core Sleep
+  // Day 1: Social demographics (15 questions, ~8.5 min)
   {
     day: 1,
-    modules: ["core_social", "core_metabolic", "core_sleep_quality"]
+    modules: ["core_social"]
   },
-  // Day 2: Sleep patterns & timing
+  // Day 2: Sleep Quality Part 1 (12 questions, ~10 min)
   {
     day: 2,
-    modules: [
-      "core_sleep_quantity",
-      "core_sleep_regularity",
-      "core_sleep_timing"
-    ]
+    modules: ["core_sleep_quality_1"]
   },
-  // Day 3: Gateway questions
+  // Day 3: Sleep Quality Part 2 (11 questions, ~9.5 min)
   {
     day: 3,
-    modules: [
-      "gateway_sleep_quality",
-      "gateway_mental_health",
-      "gateway_cognitive",
-      "gateway_physical"
-    ]
+    modules: ["core_sleep_quality_2"]
   },
-  // Day 4: Physical & nutritional core
+  // Day 4: Metabolic (17 questions, ~13.5 min)
   {
     day: 4,
-    modules: ["core_physical", "core_nutritional"]
+    modules: ["core_metabolic"]
   },
-  // Day 5: First expansion based on gateways
+  // Day 5: Sleep patterns (15 questions, ~9 min)
   {
     day: 5,
-    modules: ["expansion_sleep_quality"] // If insomnia gateway triggered
+    modules: ["core_sleep_quantity", "core_sleep_regularity", "core_sleep_timing"]
   },
-  // Day 6: Sleep diary start
+  // Day 6: Physical health (11 questions, ~5.5 min)
   {
     day: 6,
-    modules: [] // Sleep diary questions (separate table)
+    modules: ["core_physical"]
   },
-  // Day 7: Continue diary + mental health expansion
+  // Day 7: Nutritional (11 questions, ~5.5 min)
   {
     day: 7,
-    modules: ["expansion_mental_health"] // If mental health gateway triggered
+    modules: ["core_nutritional"]
   },
-  // Day 8: Continue diary
+  // Day 8: Sleep Quality Expansion Part 1 (17 questions if triggered, ~8.5 min)
   {
     day: 8,
-    modules: []
+    modules: ["expansion_sleep_quality_1"]
   },
-  // Day 9: Continue diary + cognitive expansion
+  // Day 9: Sleep Quality Expansion Part 2 (17 questions if triggered, ~8.5 min)
   {
     day: 9,
-    modules: ["expansion_cognitive"] // If cognitive gateway triggered
+    modules: ["expansion_sleep_quality_2"]
   },
-  // Day 10: Continue diary + physical expansion
+  // Day 10: Mental Health Expansion Part 1 (16 questions if triggered, ~8 min)
   {
     day: 10,
-    modules: ["expansion_physical"] // If physical gateway triggered
+    modules: ["expansion_mental_health_1"]
   },
-  // Day 11: Continue diary
+  // Day 11: Mental Health Expansion Part 2 (16 questions if triggered, ~8 min)
   {
     day: 11,
-    modules: []
+    modules: ["expansion_mental_health_2"]
   },
-  // Day 12: Continue diary + timing expansion
+  // Day 12: Mental Health Expansion Part 3 (16 questions if triggered, ~8 min)
   {
     day: 12,
-    modules: ["expansion_sleep_timing"] // If timing differences detected
+    modules: ["expansion_mental_health_3"]
   },
-  // Day 13: Continue diary + nutritional expansion
+  // Day 13: Cognitive Expansion (17 + 16 = 33 questions if triggered, split across day)
   {
     day: 13,
-    modules: ["expansion_nutritional"] // If diet impacts detected
+    modules: ["expansion_cognitive_1", "expansion_cognitive_2"]
   },
-  // Day 14: Final diary + wrap-up
+  // Day 14: Physical Expansion (16 + 15 = 31 questions if triggered)
   {
     day: 14,
-    modules: []
+    modules: ["expansion_physical_1", "expansion_physical_2"]
   },
-  // Day 15: Review & generate report
+  // Day 15: Timing + Nutritional Expansion (19 + 14 = 33 questions if triggered)
   {
     day: 15,
-    modules: [] // Report generation day
+    modules: ["expansion_sleep_timing", "expansion_nutritional"]
   }
 ];
 

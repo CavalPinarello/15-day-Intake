@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
 import { Patient360Tab } from "@/components/patient";
+import { ScoreDetailModal } from "@/components/physician";
 import {
   ArrowLeft,
   Calendar,
@@ -29,6 +30,8 @@ import {
   CheckCircle,
   AlertTriangle,
   LayoutDashboard,
+  Eye,
+  Zap,
 } from "lucide-react";
 
 type TabType = "overview" | "responses" | "scores" | "interventions" | "notes";
@@ -73,6 +76,15 @@ export default function PatientDetailPage() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [noteText, setNoteText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedScore, setSelectedScore] = useState<{
+    _id: string;
+    questionnaire_name: string;
+    score: number;
+    max_score?: number;
+    category?: string;
+    interpretation?: string;
+    calculated_at: number;
+  } | null>(null);
 
   // Queries
   const patient = useQuery(api.physician.getPatientDetails, { userId });
@@ -84,6 +96,7 @@ export default function PatientDetailPage() {
     selectedDay ? { userId, dayNumber: selectedDay } : "skip"
   );
   const scores = useQuery(api.physician.getQuestionnaireScores, { userId });
+  const calculatedScores = useQuery(api.physician.calculatePatientScores, { userId });
   const interventions = useQuery(api.physician.getPatientInterventions, {
     userId,
   });
@@ -383,9 +396,17 @@ export default function PatientDetailPage() {
               <div className="md:col-span-2">
                 {selectedDay ? (
                   <>
-                    <h3 className="text-lg font-semibold mb-4">
-                      Day {selectedDay} Responses
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">
+                        Day {selectedDay} Responses
+                      </h3>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="flex items-center gap-1.5 px-2 py-1 bg-green-50 text-green-600 rounded-full">
+                          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                          Live
+                        </span>
+                      </div>
+                    </div>
                     {dayData ? (
                       <div className="space-y-4">
                         {dayData.responses.length === 0 ? (
@@ -393,29 +414,53 @@ export default function PatientDetailPage() {
                             No responses for this day yet.
                           </p>
                         ) : (
-                          dayData.responses.map((response) => (
-                            <div
-                              key={response._id}
-                              className="border border-gray-200 rounded-lg p-4"
-                            >
-                              <div className="flex items-start justify-between mb-2">
-                                <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                                  {response.question_id}
-                                </span>
-                                {response.pillar && (
-                                  <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
-                                    {response.pillar}
-                                  </span>
+                          dayData.responses.map((response) => {
+                            const isRecent = response.updated_at &&
+                              (Date.now() - response.updated_at) < 5 * 60 * 1000; // Within 5 minutes
+                            return (
+                              <div
+                                key={response._id}
+                                className={`border rounded-lg p-4 transition-all ${
+                                  isRecent
+                                    ? "border-teal-300 bg-teal-50/30 ring-1 ring-teal-200"
+                                    : "border-gray-200"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                                      {response.question_id}
+                                    </span>
+                                    {isRecent && (
+                                      <span className="text-xs text-teal-600 bg-teal-100 px-2 py-0.5 rounded flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-pulse" />
+                                        Just received
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {response.pillar && (
+                                      <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
+                                        {response.pillar}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <p className="text-gray-700 mb-2">
+                                  {response.question_text || "Question text not available"}
+                                </p>
+                                <p className="font-medium text-gray-900 bg-gray-50 p-2 rounded">
+                                  {response.response_value || "No response"}
+                                </p>
+                                {response.updated_at && (
+                                  <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {new Date(response.updated_at).toLocaleString()}
+                                  </p>
                                 )}
                               </div>
-                              <p className="text-gray-700 mb-2">
-                                {response.question_text || "Question text not available"}
-                              </p>
-                              <p className="font-medium text-gray-900 bg-gray-50 p-2 rounded">
-                                {response.response_value || "No response"}
-                              </p>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     ) : (
@@ -437,48 +482,197 @@ export default function PatientDetailPage() {
           {/* Scores Tab */}
           {activeTab === "scores" && (
             <div>
-              <h3 className="text-lg font-semibold mb-4">
-                Questionnaire Scores
-              </h3>
-              {scores && scores.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {scores.map((score) => (
-                    <div
-                      key={score._id}
-                      className="border border-gray-200 rounded-xl p-4"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">
-                          {score.questionnaire_name}
-                        </h4>
-                        <span className="text-2xl font-bold text-teal-600">
-                          {score.score}
-                          {score.max_score && (
-                            <span className="text-lg text-gray-400">
-                              /{score.max_score}
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      {score.category && (
-                        <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-sm mb-2">
-                          {score.category}
-                        </span>
-                      )}
-                      {score.interpretation && (
-                        <p className="text-gray-600 text-sm">
-                          {score.interpretation}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  Questionnaire Scores
+                </h3>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Zap className="w-4 h-4 text-teal-500" />
+                  <span>Real-time updates enabled</span>
                 </div>
-              ) : (
+              </div>
+
+              {/* Calculated Scores (real-time from responses) */}
+              {calculatedScores && calculatedScores.scores.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    Live Calculated Scores
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {calculatedScores.scores.map((score) => {
+                      const severityColors: Record<string, string> = {
+                        normal: "border-green-200 bg-green-50",
+                        mild: "border-yellow-200 bg-yellow-50",
+                        moderate: "border-orange-200 bg-orange-50",
+                        severe: "border-red-200 bg-red-50",
+                        unknown: "border-gray-200 bg-gray-50",
+                      };
+                      const severityTextColors: Record<string, string> = {
+                        normal: "text-green-600",
+                        mild: "text-yellow-600",
+                        moderate: "text-orange-600",
+                        severe: "text-red-600",
+                        unknown: "text-gray-600",
+                      };
+                      return (
+                        <div
+                          key={score.abbreviation}
+                          onClick={() => score.score !== null && setSelectedScore({
+                            _id: score.abbreviation,
+                            questionnaire_name: score.name,
+                            score: score.score,
+                            max_score: score.maxScore,
+                            category: score.severity,
+                            interpretation: score.interpretation,
+                            calculated_at: Date.now(),
+                          })}
+                          className={`border rounded-xl p-4 cursor-pointer hover:shadow-md transition-all ${severityColors[score.severity] || severityColors.unknown}`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold text-gray-500">{score.abbreviation}</span>
+                            {score.score !== null ? (
+                              <span className={`text-2xl font-bold ${severityTextColors[score.severity]}`}>
+                                {score.score}
+                                <span className="text-sm text-gray-400">/{score.maxScore}</span>
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-400">
+                                {score.questionsAnswered}/{score.questionsRequired} answered
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-gray-900 mb-1">{score.name}</p>
+                          <p className="text-xs text-gray-600">{score.interpretation}</p>
+                          {score.score !== null && (
+                            <div className="mt-2 pt-2 border-t border-gray-200/50 flex items-center justify-between">
+                              <span className={`text-xs font-medium capitalize ${severityTextColors[score.severity]}`}>
+                                {score.severity}
+                              </span>
+                              <span className="text-xs text-teal-600 flex items-center gap-1">
+                                <Eye className="w-3 h-3" />
+                                View details
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Gateway Triggers */}
+              {calculatedScores && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Gateway Triggers</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(calculatedScores.gateways).map(([key, triggered]) => (
+                      <span
+                        key={key}
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          triggered
+                            ? "bg-amber-100 text-amber-700 border border-amber-200"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {key.replace(/([A-Z])/g, " $1").trim()}
+                        {triggered && " ✓"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sleep Metrics */}
+              {calculatedScores?.sleepMetrics && calculatedScores.sleepMetrics.daysLogged > 0 && (
+                <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <h4 className="text-sm font-medium text-blue-700 mb-3">Sleep Log Metrics ({calculatedScores.sleepMetrics.daysLogged} days)</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {calculatedScores.sleepMetrics.avgBedtime && (
+                      <div>
+                        <p className="text-xs text-blue-600">Avg Bedtime</p>
+                        <p className="text-lg font-semibold text-blue-900">{calculatedScores.sleepMetrics.avgBedtime}</p>
+                      </div>
+                    )}
+                    {calculatedScores.sleepMetrics.avgWakeTime && (
+                      <div>
+                        <p className="text-xs text-blue-600">Avg Wake Time</p>
+                        <p className="text-lg font-semibold text-blue-900">{calculatedScores.sleepMetrics.avgWakeTime}</p>
+                      </div>
+                    )}
+                    {calculatedScores.sleepMetrics.avgSleepQuality !== undefined && (
+                      <div>
+                        <p className="text-xs text-blue-600">Avg Quality</p>
+                        <p className="text-lg font-semibold text-blue-900">{calculatedScores.sleepMetrics.avgSleepQuality.toFixed(1)}/10</p>
+                      </div>
+                    )}
+                    {calculatedScores.sleepMetrics.avgAwakenings !== undefined && (
+                      <div>
+                        <p className="text-xs text-blue-600">Avg Awakenings</p>
+                        <p className="text-lg font-semibold text-blue-900">{calculatedScores.sleepMetrics.avgAwakenings.toFixed(1)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Saved Scores (from database) */}
+              {scores && scores.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-3">Saved Scores History</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {scores.map((score) => (
+                      <div
+                        key={score._id}
+                        onClick={() => setSelectedScore(score)}
+                        className="border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-teal-300 hover:bg-teal-50/30 transition-all group"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-gray-900">
+                              {score.questionnaire_name}
+                            </h4>
+                            <Eye className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <span className="text-2xl font-bold text-teal-600">
+                            {score.score}
+                            {score.max_score && (
+                              <span className="text-lg text-gray-400">
+                                /{score.max_score}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        {score.category && (
+                          <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-sm mb-2">
+                            {score.category}
+                          </span>
+                        )}
+                        {score.interpretation && (
+                          <p className="text-gray-600 text-sm">
+                            {score.interpretation}
+                          </p>
+                        )}
+                        <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+                          <span>Saved {new Date(score.calculated_at).toLocaleDateString()}</span>
+                          <span className="text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                            Click for detailed analysis
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state - only show if no calculated scores either */}
+              {(!calculatedScores || calculatedScores.scores.every(s => s.score === null)) && (!scores || scores.length === 0) && (
                 <div className="text-center py-12 text-gray-500">
                   <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No scores calculated yet.</p>
+                  <p>No scores available yet.</p>
                   <p className="text-sm mt-1">
-                    Scores are calculated when questionnaires are completed.
+                    Scores are calculated as the patient answers standardized questionnaires (ISI, PHQ-9, GAD-7, ESS).
                   </p>
                 </div>
               )}
@@ -487,74 +681,155 @@ export default function PatientDetailPage() {
 
           {/* Interventions Tab */}
           {activeTab === "interventions" && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Active Interventions</h3>
+            <div className="space-y-6">
+              {/* Header with Action Button */}
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Treatment Plan</h3>
                 <Link
                   href={`/physician-dashboard/patient/${id}/prescription`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-teal-600 text-white rounded-lg hover:opacity-90 transition-opacity"
                 >
-                  <Plus className="w-4 h-4" />
-                  Add Intervention
+                  <Sparkles className="w-4 h-4" />
+                  Prescribe Interventions
                 </Link>
               </div>
-              {interventions && interventions.length > 0 ? (
-                <div className="space-y-4">
-                  {interventions.map((intervention) => (
-                    <div
-                      key={intervention._id}
-                      className="border border-gray-200 rounded-xl p-4"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">
-                          {intervention.intervention_name}
-                        </h4>
-                        <span
-                          className={`px-2 py-0.5 rounded text-sm ${
-                            intervention.status === "active"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {intervention.status}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
-                        <div>
-                          <span className="text-gray-400">Start:</span>{" "}
-                          {intervention.start_date}
+
+              {/* Active Interventions */}
+              {interventions && interventions.filter(i => i.status === "active").length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    Active Interventions ({interventions.filter(i => i.status === "active").length})
+                  </h4>
+                  <div className="grid gap-3">
+                    {interventions.filter(i => i.status === "active").map((intervention) => (
+                      <div
+                        key={intervention._id}
+                        className="border border-green-200 bg-green-50/50 rounded-xl p-4"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">
+                              {intervention.intervention_name}
+                            </h4>
+                            <div className="flex items-center gap-3 mt-1 text-sm text-gray-600">
+                              {intervention.frequency && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {intervention.frequency}
+                                </span>
+                              )}
+                              {intervention.timing && (
+                                <span className="px-2 py-0.5 bg-white rounded text-xs">
+                                  {intervention.timing}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                            Active
+                          </span>
                         </div>
-                        {intervention.end_date && (
-                          <div>
-                            <span className="text-gray-400">End:</span>{" "}
-                            {intervention.end_date}
-                          </div>
-                        )}
-                        {intervention.frequency && (
-                          <div>
-                            <span className="text-gray-400">Frequency:</span>{" "}
-                            {intervention.frequency}
-                          </div>
-                        )}
-                        {intervention.timing && (
-                          <div>
-                            <span className="text-gray-400">Timing:</span>{" "}
-                            {intervention.timing}
-                          </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                          <span>Started: {intervention.start_date}</span>
+                          {intervention.end_date && (
+                            <span>Ends: {intervention.end_date}</span>
+                          )}
+                        </div>
+                        {intervention.custom_instructions && (
+                          <p className="mt-3 text-sm text-gray-600 bg-white p-2 rounded border border-gray-100">
+                            {intervention.custom_instructions}
+                          </p>
                         )}
                       </div>
-                      {intervention.custom_instructions && (
-                        <p className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                          {intervention.custom_instructions}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
+              )}
+
+              {/* Draft Interventions */}
+              {interventions && interventions.filter(i => i.status === "draft").length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    Pending Activation ({interventions.filter(i => i.status === "draft").length})
+                  </h4>
+                  <div className="grid gap-3">
+                    {interventions.filter(i => i.status === "draft").map((intervention) => (
+                      <div
+                        key={intervention._id}
+                        className="border border-amber-200 bg-amber-50/50 rounded-xl p-4"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-gray-900">
+                            {intervention.intervention_name}
+                          </h4>
+                          <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-medium">
+                            Draft
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                          {intervention.frequency && (
+                            <span>{intervention.frequency}</span>
+                          )}
+                          {intervention.timing && (
+                            <span>{intervention.timing}</span>
+                          )}
+                          <span className="text-gray-400">•</span>
+                          <span>Scheduled: {intervention.start_date}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Link
+                    href={`/physician-dashboard/patient/${id}/prescription`}
+                    className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
+                  >
+                    Review & Activate
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {(!interventions || interventions.length === 0) && (
+                <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
                   <Pill className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No interventions prescribed yet.</p>
+                  <p className="text-gray-600 font-medium">No interventions prescribed yet</p>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">
+                    Create a personalized treatment plan for this patient
+                  </p>
+                  <Link
+                    href={`/physician-dashboard/patient/${id}/prescription`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create Treatment Plan
+                  </Link>
+                </div>
+              )}
+
+              {/* Completed/Cancelled Interventions */}
+              {interventions && interventions.filter(i => i.status === "completed" || i.status === "cancelled").length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-3">
+                    Past Interventions
+                  </h4>
+                  <div className="grid gap-2">
+                    {interventions.filter(i => i.status === "completed" || i.status === "cancelled").map((intervention) => (
+                      <div
+                        key={intervention._id}
+                        className="border border-gray-200 bg-gray-50 rounded-lg p-3 opacity-70"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-700">{intervention.intervention_name}</span>
+                          <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-xs">
+                            {intervention.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -618,6 +893,16 @@ export default function PatientDetailPage() {
           )}
         </div>
       </main>
+
+      {/* Score Detail Modal */}
+      {selectedScore && (
+        <ScoreDetailModal
+          isOpen={!!selectedScore}
+          onClose={() => setSelectedScore(null)}
+          userId={userId}
+          score={selectedScore}
+        />
+      )}
     </div>
   );
 }

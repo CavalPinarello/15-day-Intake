@@ -22,6 +22,8 @@ import {
   Calendar,
   FileText,
   Layers,
+  Zap,
+  Clock,
 } from "lucide-react";
 
 type ViewMode = "days" | "modules" | "questions";
@@ -52,11 +54,20 @@ export default function QuestionManagerPage() {
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set([1]));
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null);
+  const [expandedDayModuleId, setExpandedDayModuleId] = useState<string | null>(null);
 
   // Queries
   const allQuestions = useQuery(api.assessment.getMasterQuestions, {});
   const allModules = useQuery(api.assessment.getModules, {});
-  const dayAssignments = useQuery(api.assessment.getDayAssignments, {});
+  // Use enhanced query with computed question counts
+  const dayAssignments = useQuery(api.assessment.getDayAssignmentsEnhanced, {});
+  // Lazy-load questions when a module is expanded
+  const moduleQuestions = useQuery(
+    api.assessment.getQuestionsForModule,
+    expandedDayModuleId ? { moduleId: expandedDayModuleId } : "skip"
+  );
+  // Get all gateways for expansion preview
+  const allGateways = useQuery(api.assessment.getAllGateways, {});
 
   // Mutations
   const updateQuestion = useMutation(api.assessment.updateAssessmentQuestion);
@@ -191,12 +202,12 @@ export default function QuestionManagerPage() {
           {viewMode === "days" && (
             <div className="divide-y divide-gray-100">
               {Array.from({ length: 15 }, (_, i) => i + 1).map((day) => {
-                const dayModules = dayAssignments?.[day] || [];
+                const dayData = dayAssignments?.[day];
+                const dayModules = dayData?.modules || [];
                 const isExpanded = expandedDays.has(day);
-                const totalQuestions = dayModules.reduce(
-                  (sum: number, dm: any) => sum + (dm.module?.question_count || 0),
-                  0
-                );
+                const totalQuestions = dayData?.total_questions || 0;
+                const totalMinutes = dayData?.total_minutes || 0;
+                const dayGateways = dayData?.gateways || [];
 
                 return (
                   <div key={day}>
@@ -209,9 +220,20 @@ export default function QuestionManagerPage() {
                           {day}
                         </div>
                         <div className="text-left">
-                          <h3 className="font-semibold text-gray-900">Day {day}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-900">Day {day}</h3>
+                            {dayGateways.length > 0 && (
+                              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">
+                                <Zap className="w-3 h-3" />
+                                {dayGateways.length} gateway{dayGateways.length > 1 ? "s" : ""}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">
                             {dayModules.length} modules &bull; {totalQuestions} questions
+                            {totalMinutes > 0 && (
+                              <span> &bull; ~{Math.ceil(totalMinutes)} min</span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -225,34 +247,162 @@ export default function QuestionManagerPage() {
                     {isExpanded && dayModules.length > 0 && (
                       <div className="bg-gray-50 px-4 pb-4">
                         <div className="space-y-2">
-                          {dayModules.map((dm: any, index: number) => (
-                            <div
-                              key={dm.module.module_id}
-                              className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200"
-                            >
-                              <GripVertical className="w-4 h-4 text-gray-400 cursor-grab" />
-                              <span className="text-sm text-gray-500 w-6">
-                                {index + 1}.
-                              </span>
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-900">
-                                  {dm.module.name}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {dm.module.question_count} questions &bull;{" "}
-                                  {dm.module.estimated_time_minutes} min
-                                </p>
+                          {dayModules.map((dm: any, index: number) => {
+                            const isModuleExpanded = expandedDayModuleId === dm.module.module_id;
+
+                            return (
+                              <div key={dm.module.module_id}>
+                                <div
+                                  onClick={() =>
+                                    setExpandedDayModuleId(
+                                      isModuleExpanded ? null : dm.module.module_id
+                                    )
+                                  }
+                                  className={`flex items-center gap-3 p-3 bg-white rounded-lg border cursor-pointer transition-colors ${
+                                    dm.is_expansion
+                                      ? "border-dashed border-purple-300 bg-purple-50/50 hover:bg-purple-50"
+                                      : "border-gray-200 hover:border-teal-300"
+                                  }`}
+                                >
+                                  <GripVertical className="w-4 h-4 text-gray-400 cursor-grab" />
+                                  <span className="text-sm text-gray-500 w-6">
+                                    {index + 1}.
+                                  </span>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium text-gray-900">
+                                        {dm.module.name}
+                                      </p>
+                                      {dm.is_expansion && (
+                                        <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 text-xs rounded font-medium">
+                                          EXPANSION
+                                        </span>
+                                      )}
+                                      {dm.module.tier === "GATEWAY" && (
+                                        <span className="px-1.5 py-0.5 bg-amber-100 text-amber-600 text-xs rounded font-medium">
+                                          GATEWAY
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-500">
+                                      {dm.module.question_count} questions
+                                      {dm.module.estimated_minutes && (
+                                        <span> &bull; ~{dm.module.estimated_minutes} min</span>
+                                      )}
+                                    </p>
+                                  </div>
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                      pillarColors[dm.module.pillar]?.bg || "bg-gray-100"
+                                    } ${pillarColors[dm.module.pillar]?.text || "text-gray-700"}`}
+                                  >
+                                    {dm.module.pillar}
+                                  </span>
+                                  {isModuleExpanded ? (
+                                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                                  ) : (
+                                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                                  )}
+                                </div>
+
+                                {/* Expanded Question List */}
+                                {isModuleExpanded && moduleQuestions && (
+                                  <div className="ml-10 mt-2 space-y-1 border-l-2 border-gray-200 pl-4">
+                                    {moduleQuestions.map((q: any) => (
+                                      <div
+                                        key={q.question_id}
+                                        className="p-2 bg-white rounded text-sm border border-gray-100"
+                                      >
+                                        <div className="flex items-start gap-2">
+                                          <span className="font-mono text-xs text-gray-400 bg-gray-50 px-1 rounded shrink-0">
+                                            {q.question_id}
+                                          </span>
+                                          <span className="text-gray-700">{q.question_text}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1 ml-8">
+                                          <span className="text-xs text-gray-400">
+                                            {q.answer_format}
+                                          </span>
+                                          {q.estimated_time_seconds && (
+                                            <span className="text-xs text-gray-400 flex items-center gap-0.5">
+                                              <Clock className="w-3 h-3" />
+                                              {q.estimated_time_seconds}s
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                              <span
-                                className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                  pillarColors[dm.module.pillar]?.bg || "bg-gray-100"
-                                } ${pillarColors[dm.module.pillar]?.text || "text-gray-700"}`}
-                              >
-                                {dm.module.pillar}
-                              </span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
+
+                        {/* Gateway/Expansion Preview */}
+                        {dayGateways.length > 0 && (
+                          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                            <h4 className="text-sm font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                              <Zap className="w-4 h-4" />
+                              Gateway Triggers on This Day
+                            </h4>
+                            <div className="space-y-3">
+                              {dayGateways.map((gateway: any) => {
+                                const gatewayDetail = allGateways?.find(
+                                  (g: any) => g.gateway_id === gateway.gateway_id
+                                );
+
+                                return (
+                                  <div
+                                    key={gateway.gateway_id}
+                                    className="p-3 bg-white rounded border border-amber-100"
+                                  >
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded font-medium">
+                                        GATEWAY
+                                      </span>
+                                      <span className="font-medium text-gray-900">
+                                        {gateway.name}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-2">
+                                      {gateway.description}
+                                    </p>
+                                    <div className="text-xs text-gray-500 mb-2">
+                                      Trigger questions: {gateway.trigger_question_ids?.join(", ")}
+                                    </div>
+
+                                    {/* Expansion modules that this gateway can trigger */}
+                                    {gatewayDetail?.expansion_modules?.map((em: any) => (
+                                      <div
+                                        key={em.module_id}
+                                        className="mt-2 p-2 bg-purple-50 rounded border border-dashed border-purple-200"
+                                      >
+                                        <div className="flex items-center justify-between mb-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 text-xs rounded font-medium">
+                                              EXPANSION
+                                            </span>
+                                            <span className="text-sm font-medium text-purple-700">
+                                              {em.name}
+                                            </span>
+                                          </div>
+                                          <span className="text-xs text-purple-500">
+                                            {em.question_count} questions
+                                            {em.estimated_minutes && ` • ~${em.estimated_minutes} min`}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-purple-600 italic">
+                                          Unlocks if gateway condition is met
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 

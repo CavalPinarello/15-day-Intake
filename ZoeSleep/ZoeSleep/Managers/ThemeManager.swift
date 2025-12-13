@@ -555,3 +555,55 @@ struct ProgressDots: View {
         }
     }
 }
+
+/// Interactive progress dots - tap completed days to navigate to Sleep Diary
+struct InteractiveProgressDots: View {
+    let current: Int
+    let total: Int
+    let completedDays: [Int]
+    let onDayTapped: (Int) -> Void
+
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    private var isEveningOrNight: Bool {
+        let period = themeManager.currentTimePeriod
+        return period == .evening || period == .night
+    }
+
+    var body: some View {
+        HStack(spacing: Spacing.xs) {
+            ForEach(0..<total, id: \.self) { index in
+                let day = index + 1
+                let isCompleted = completedDays.contains(day)
+                let isCurrent = day == current
+
+                Circle()
+                    .fill(dotColor(for: index))
+                    .frame(width: isCurrent ? 10 : 8, height: isCurrent ? 10 : 8)
+                    .overlay(
+                        // Subtle indicator for tappable dots
+                        Circle()
+                            .stroke(isCompleted ? theme.primary.opacity(0.5) : Color.clear, lineWidth: 1)
+                            .frame(width: isCurrent ? 14 : 12, height: isCurrent ? 14 : 12)
+                    )
+                    .animation(.spring(response: 0.3), value: current)
+                    .onTapGesture {
+                        if isCompleted {
+                            onDayTapped(day)
+                        }
+                    }
+                    .contentShape(Rectangle().size(width: 20, height: 20))  // Larger tap target
+            }
+        }
+    }
+
+    private func dotColor(for index: Int) -> Color {
+        if index < current {
+            return theme.primary  // Completed - full circadian-aware color
+        } else {
+            // Inactive - more visible in dark mode
+            return theme.primary.opacity(isEveningOrNight ? 0.4 : 0.25)
+        }
+    }
+}

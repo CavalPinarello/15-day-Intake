@@ -51,10 +51,16 @@ iPhone ←→ Convex ←→ Dashboard
 
 ## 🧠 Smart Questionnaire System
 
-- **15-Day Journey:** Core (Days 1-5) + Conditional expansion (Days 6-15)
+- **15-Day Journey:** Core (Days 1-7) + Conditional expansion (Days 8-15)
 - **10 Gateways:** Insomnia, Sleep Apnea, Mental Health, Pain, etc.
 - **Daily Sleep Log:** 5 Stanford questions every morning
-- **Load Balanced:** 7-29 questions per day based on triggers
+- **Load Balanced:** 11-17 questions per day (core), expansions add when triggered
+
+### Day Distribution (Dec 13, 2025 Rebalance)
+| Days | Type | Questions/Day |
+|------|------|---------------|
+| 1-7 | Core Assessment | 11-17 |
+| 8-15 | Expansion Packs | 16-33 (conditional) |
 
 ## 📚 Documentation
 
@@ -74,6 +80,12 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Questionnaire day rebalance:** Split large modules, spread across all 15 days (Dec 13, 2025)
+  - Day 1 reduced from 55 to 15 questions
+  - No more empty days (was 0 questions on days 6, 8, 11, 14, 15)
+  - Core assessment: Days 1-7 (11-17 questions each)
+  - Expansion packs: Days 8-15 (conditional, 16-33 questions each)
+- **Intervention library system:** Physician dashboard can assign interventions to patients
 - Repository renamed: `15-day-Intake` → `Zoe-Sleep-V1` (Dec 11, 2025)
 - Fixed questionnaire navigation: Back button now properly respects section boundaries (Dec 12, 2025)
 - Added save error handling: Retry dialogs for failed Convex syncs (Dec 12, 2025)

@@ -59,6 +59,10 @@
 		4A5E3C2A2C8E123456789I0B /* TrendChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C2B2C8E123456789I0C /* TrendChartView.swift */; };
 		4A5E3C502C8E123456789K01 /* SleepInsightModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C512C8E123456789K02 /* SleepInsightModels.swift */; };
 		4A5E3C602C8E123456789L01 /* SleepInsightsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C612C8E123456789L02 /* SleepInsightsViewModel.swift */; };
+		4A5E3C702C8E123456789M01 /* MockDataTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C712C8E123456789M02 /* MockDataTypes.swift */; };
+		4A5E3C722C8E123456789M03 /* MockDataGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */; };
+		4A5E3C742C8E123456789M05 /* MockPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */; };
+		4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -131,6 +135,10 @@
 		4A5E3C2B2C8E123456789I0C /* TrendChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendChartView.swift; sourceTree = "<group>"; };
 		4A5E3C512C8E123456789K02 /* SleepInsightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepInsightModels.swift; sourceTree = "<group>"; };
 		4A5E3C612C8E123456789L02 /* SleepInsightsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepInsightsViewModel.swift; sourceTree = "<group>"; };
+		4A5E3C712C8E123456789M02 /* MockDataTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataTypes.swift; sourceTree = "<group>"; };
+		4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataGenerator.swift; sourceTree = "<group>"; };
+		4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlaybackController.swift; sourceTree = "<group>"; };
+		4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlaybackView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,6 +200,7 @@
 				4A5E3BBD2C8E123456789A23 /* Services */,
 				4A5E3BBE2C8E123456789A24 /* Views */,
 				4A5E3C622C8E123456789L03 /* ViewModels */,
+				4A5E3C782C8E123456789M09 /* DevTools */,
 				4A5E3B8D2C8E123456789A03 /* Assets.xcassets */,
 				4A5E3B8F2C8E123456789A25 /* Preview Content */,
 			);
@@ -204,6 +213,17 @@
 				4A5E3B902C8E123456789A04 /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		4A5E3C782C8E123456789M09 /* DevTools */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3C712C8E123456789M02 /* MockDataTypes.swift */,
+				4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */,
+				4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */,
+				4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */,
+			);
+			path = DevTools;
 			sourceTree = "<group>";
 		};
 		4A5E3BA62C8E123456789A20 /* ZoeSleep Watch App */ = {
@@ -438,6 +458,10 @@
 				4A5E3C022C8E123456789G03 /* OnboardingView.swift in Sources */,
 				4A5E3C042C8E123456789G05 /* ProfileSettingsView.swift in Sources */,
 				4A5E3C602C8E123456789L01 /* SleepInsightsViewModel.swift in Sources */,
+				4A5E3C702C8E123456789M01 /* MockDataTypes.swift in Sources */,
+				4A5E3C722C8E123456789M03 /* MockDataGenerator.swift in Sources */,
+				4A5E3C742C8E123456789M05 /* MockPlaybackController.swift in Sources */,
+				4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -346,23 +346,67 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_user_metric", ["user_id", "metric_name"]),
 
-  // Interventions
-  interventions: defineTable({
+  // ============================================
+  // Intervention Library (ZOE Sleep Circadian)
+  // ============================================
+
+  // Intervention categories/domains
+  intervention_categories: defineTable({
+    category_id: v.string(), // e.g., "sleep_timing", "light_dark", "chrononutrition"
     name: v.string(),
-    type: v.optional(v.string()),
-    category: v.optional(v.string()),
-    evidence_score: v.optional(v.number()),
+    description: v.optional(v.string()),
+    icon: v.optional(v.string()), // Icon name for UI
+    color: v.optional(v.string()), // Color for UI theming
+    order_index: v.number(),
+  })
+    .index("by_category_id", ["category_id"]),
+
+  // Master intervention library
+  interventions: defineTable({
+    // Core identification
+    intervention_id: v.string(), // Stable ID like "WAKE-ANCHOR-01", "LIGHT-AM-01"
+    name: v.string(), // "Fixed Wake-Time Anchor"
+    short_name: v.optional(v.string()), // "Wake Anchor" for compact display
+
+    // Categorization
+    category: v.string(), // "sleep_timing", "light_dark", "chrononutrition", etc.
+    type: v.optional(v.string()), // "behavioral", "environmental", "supplement", "medical"
+
+    // Clinical content
+    why_it_works: v.string(), // Scientific rationale
+    how_to_apply: v.string(), // Implementation rules/guidelines
+    instructions_text: v.string(), // Patient-facing instructions
+
+    // Targeting & phenotypes
+    target_phenotypes_json: v.optional(v.string()), // JSON array: ["DSPD", "irregular_rhythm"]
+    target_gateways_json: v.optional(v.string()), // JSON array: ["insomnia", "sleep_apnea"]
+
+    // Evidence & safety
+    evidence_score: v.optional(v.number()), // 1-5 evidence quality
+    safety_rating: v.optional(v.number()), // 1-5 safety rating
+    contraindications_json: v.optional(v.string()), // JSON array of contraindication strings
+    interactions_json: v.optional(v.string()), // JSON array of interactions with other interventions
+
+    // Dosing/timing configuration
+    default_frequency: v.optional(v.string()), // "daily", "twice_daily", "weekly"
+    available_frequencies_json: v.optional(v.string()), // JSON array of options
+    default_timing: v.optional(v.string()), // "morning", "evening", "pre_bed"
+    available_timings_json: v.optional(v.string()), // JSON array
     recommended_duration_weeks: v.optional(v.number()),
-    min_duration: v.optional(v.number()),
-    max_duration: v.optional(v.number()),
-    recommended_frequency: v.optional(v.string()),
-    available_frequencies_json: v.optional(v.string()), // JSON string
-    duration_impact_json: v.optional(v.string()), // JSON string
-    safety_rating: v.optional(v.number()),
-    contraindications_json: v.optional(v.string()), // JSON string
-    interactions_json: v.optional(v.string()), // JSON string
+    min_duration_days: v.optional(v.number()),
+    max_duration_days: v.optional(v.number()),
+
+    // For supplements
+    default_dosage: v.optional(v.string()), // "3g", "200-400mg"
+    dosage_notes: v.optional(v.string()),
+
+    // Bundle associations
+    bundle_ids_json: v.optional(v.string()), // JSON array: ["phase_advance", "metabolic_circadian"]
+    is_core_intervention: v.optional(v.boolean()), // True if commonly used
+    is_optional_addon: v.optional(v.boolean()), // True if optional enhancement
+
+    // Metadata
     primary_benefit: v.optional(v.string()),
-    instructions_text: v.string(),
     created_by_coach_id: v.optional(v.id("coaches")),
     status: v.string(), // 'active', 'archived', 'draft'
     version: v.number(),
@@ -371,27 +415,119 @@ export default defineSchema({
   })
     .index("by_status", ["status"])
     .index("by_category", ["category"])
+    .index("by_intervention_id", ["intervention_id"])
     .index("by_coach", ["created_by_coach_id"]),
+
+  // Intervention bundles (pre-configured treatment packages)
+  intervention_bundles: defineTable({
+    bundle_id: v.string(), // e.g., "phase_advance_regularity", "cbti_onset"
+    name: v.string(), // "Phase Advance + Regularity"
+    description: v.string(),
+    goal: v.string(), // "advance circadian phase and stabilize amplitude"
+
+    // Target conditions
+    target_phenotypes_json: v.string(), // JSON array: ["DSPD", "late_chronotype"]
+    target_gateways_json: v.optional(v.string()), // JSON array of gateway IDs
+
+    // Intervention composition
+    core_intervention_ids_json: v.string(), // JSON array of intervention_ids (required)
+    optional_intervention_ids_json: v.optional(v.string()), // JSON array (add-ons)
+
+    // Configuration
+    recommended_count: v.number(), // Recommended number of interventions (6-12)
+    min_interventions: v.optional(v.number()),
+    max_interventions: v.optional(v.number()),
+
+    // Tracking metrics
+    tracking_metrics_json: v.optional(v.string()), // JSON array: ["regularity", "light_timing"]
+
+    status: v.string(),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_bundle_id", ["bundle_id"])
+    .index("by_status", ["status"]),
 
   user_interventions: defineTable({
     user_id: v.id("users"),
     intervention_id: v.id("interventions"),
+    intervention_string_id: v.optional(v.string()), // e.g., "WAKE-ANCHOR-01" for easier lookup
     assigned_by_coach_id: v.optional(v.id("coaches")),
+    assigned_by_physician_id: v.optional(v.string()),
+
+    // Scheduling
     start_date: v.string(), // ISO date string YYYY-MM-DD
     end_date: v.optional(v.string()), // ISO date string YYYY-MM-DD
-    frequency: v.optional(v.string()),
-    schedule_json: v.optional(v.string()), // JSON string
+    frequency: v.optional(v.string()), // "daily", "weekly", "as_needed"
+    schedule_json: v.optional(v.string()), // JSON for complex schedules
+    days_of_week_json: v.optional(v.string()), // JSON array: ["monday", "wednesday", "friday"]
+
+    // Timing
+    timing: v.optional(v.string()), // "morning", "evening", "pre_bed", "post_meal"
+    specific_time: v.optional(v.string()), // HH:MM format for reminders
+    timing_relative_to: v.optional(v.string()), // "wake", "bed", "meal"
+    timing_offset_minutes: v.optional(v.number()), // e.g., -60 = 1 hour before
+
+    // Dosage (for supplements)
     dosage: v.optional(v.string()),
-    timing: v.optional(v.string()),
     form: v.optional(v.string()),
+
+    // Instructions
     custom_instructions: v.optional(v.string()),
-    status: v.string(), // 'active', 'completed', 'cancelled'
+    patient_instructions: v.optional(v.string()), // Simplified instructions for patient
+
+    // Priority & display
+    priority: v.optional(v.number()), // 1-5, higher = more important
+    display_order: v.optional(v.number()),
+
+    // Status tracking
+    status: v.string(), // 'draft', 'active', 'paused', 'completed', 'cancelled'
+    paused_reason: v.optional(v.string()),
+    completion_reason: v.optional(v.string()),
+
+    // Timestamps
     assigned_at: v.number(),
+    activated_at: v.optional(v.number()),
+    paused_at: v.optional(v.number()),
+    completed_at: v.optional(v.number()),
   })
     .index("by_user", ["user_id"])
     .index("by_user_status", ["user_id", "status"])
     .index("by_intervention", ["intervention_id"])
     .index("by_coach", ["assigned_by_coach_id"]),
+
+  // Daily tasks generated from interventions (shown in patient app)
+  user_daily_tasks: defineTable({
+    user_id: v.id("users"),
+    user_intervention_id: v.id("user_interventions"),
+    intervention_id: v.id("interventions"),
+
+    // Task details
+    task_date: v.string(), // YYYY-MM-DD
+    task_name: v.string(),
+    task_instructions: v.string(),
+    timing: v.optional(v.string()), // "morning", "evening", etc.
+    scheduled_time: v.optional(v.string()), // HH:MM
+
+    // Completion tracking
+    status: v.string(), // "pending", "completed", "skipped", "missed"
+    completed_at: v.optional(v.number()),
+    skipped_at: v.optional(v.number()),
+    skipped_reason: v.optional(v.string()),
+
+    // User feedback
+    difficulty_rating: v.optional(v.number()), // 1-5
+    notes: v.optional(v.string()),
+
+    // Metadata
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "task_date"])
+    .index("by_user_status", ["user_id", "status"])
+    .index("by_intervention", ["user_intervention_id"])
+    .index("by_date", ["task_date"]),
 
   intervention_compliance: defineTable({
     user_intervention_id: v.id("user_interventions"),

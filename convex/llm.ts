@@ -4,9 +4,11 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
-// Lazy-initialize OpenAI client to avoid deploy-time errors
+// Lazy-initialize LLM clients to avoid deploy-time errors
 let openai: OpenAI | null = null;
+let anthropic: Anthropic | null = null;
 
 function getOpenAI(): OpenAI {
   if (!openai) {
@@ -15,6 +17,58 @@ function getOpenAI(): OpenAI {
     });
   }
   return openai;
+}
+
+function getAnthropic(): Anthropic {
+  if (!anthropic) {
+    anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+  }
+  return anthropic;
+}
+
+// Dual-provider LLM call with Claude primary, OpenAI fallback
+async function callLLM(
+  systemPrompt: string,
+  userPrompt: string,
+  jsonMode: boolean = true
+): Promise<string> {
+  // Try Claude first (primary)
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const message = await getAnthropic().messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        system: systemPrompt + (jsonMode ? " Respond only with valid JSON." : ""),
+        messages: [{ role: "user", content: userPrompt }],
+      });
+
+      const content = message.content[0];
+      if (content.type === "text") {
+        return content.text;
+      }
+    } catch (error) {
+      console.error("Claude API error, falling back to OpenAI:", error);
+    }
+  }
+
+  // Fallback to OpenAI
+  try {
+    const completion = await getOpenAI().chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt + (jsonMode ? " Respond only with valid JSON." : "") },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+      ...(jsonMode && { response_format: { type: "json_object" as const } }),
+    });
+    return completion.choices[0].message.content || "{}";
+  } catch (error) {
+    console.error("OpenAI API error:", error);
+    throw new Error("Both Claude and OpenAI APIs failed");
+  }
 }
 
 /**
@@ -413,5 +467,112 @@ async function calculateESS(
   return { score, maxScore, category, interpretation };
 }
 
+// ============================================
+// Comprehensive Score Interpretation with Claude
+// ============================================
 
+/**
+ * Generate comprehensive clinical interpretation for a questionnaire score
+ * Uses Claude as primary, OpenAI as fallback
+ */
+export const interpretQuestionnaireScore = action({
+  args: {
+    userId: v.id("users"),
+    questionnaireName: v.string(),
+    score: v.number(),
+    maxScore: v.number(),
+    severity: v.string(),
+    questionResponses: v.array(
+      v.object({
+        questionId: v.string(),
+        questionText: v.string(),
+        responseValue: v.string(),
+        responseNumber: v.optional(v.number()),
+      })
+    ),
+  },
+  returns: v.object({
+    clinicalNarrative: v.string(),
+    keyFindings: v.array(v.string()),
+    riskFactors: v.array(v.string()),
+    recommendations: v.array(v.string()),
+    normativeComparison: v.string(),
+    clinicalSignificance: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Get patient details for context
+    const patientDetails = await ctx.runQuery(
+      internal.physician.getPatientDetails,
+      { userId: args.userId }
+    );
+
+    // Build detailed question response summary
+    const responsesSummary = args.questionResponses
+      .map((r) => `- ${r.questionText}: ${r.responseValue}${r.responseNumber !== undefined ? ` (${r.responseNumber})` : ""}`)
+      .join("\n");
+
+    // Get historical scores if available
+    const scores = await ctx.runQuery(internal.physician.getQuestionnaireScores, {
+      userId: args.userId,
+    });
+    const historicalScores = scores
+      .filter((s) => s.questionnaire_name === args.questionnaireName)
+      .map((s) => `Score: ${s.score}/${s.max_score} on ${new Date(s.calculated_at).toLocaleDateString()}`);
+
+    const systemPrompt = `You are an expert sleep medicine clinician reviewing standardized questionnaire results.
+Provide detailed, clinically-relevant interpretations that would help a physician understand the patient's condition.
+Be specific about what the scores mean clinically and what actions should be considered.`;
+
+    const userPrompt = `Analyze this ${args.questionnaireName} questionnaire result:
+
+**Patient Information:**
+- Name: ${patientDetails.name || "Patient"}
+- Age: ${patientDetails.demographics.dateOfBirth || "Not provided"}
+- Sex: ${patientDetails.demographics.sex || "Not provided"}
+
+**Score Summary:**
+- Total Score: ${args.score}/${args.maxScore}
+- Severity Classification: ${args.severity}
+- Completion Date: ${new Date().toLocaleDateString()}
+
+**Individual Question Responses:**
+${responsesSummary}
+
+${historicalScores.length > 0 ? `**Historical Scores:**\n${historicalScores.join("\n")}` : "**Historical Scores:** No previous assessments"}
+
+Please provide a comprehensive clinical interpretation in JSON format with these fields:
+{
+  "clinicalNarrative": "A 3-4 sentence clinical summary describing the patient's condition and what this score indicates",
+  "keyFindings": ["Array of 3-5 key clinical findings from the responses"],
+  "riskFactors": ["Array of 2-4 identified risk factors or concerns"],
+  "recommendations": ["Array of 3-5 specific, evidence-based recommendations"],
+  "normativeComparison": "How this patient compares to normative data (e.g., 'This score falls in the 85th percentile for adults with insomnia complaints')",
+  "clinicalSignificance": "Brief statement about whether this score is clinically significant and warrants intervention"
+}`;
+
+    try {
+      const response = await callLLM(systemPrompt, userPrompt, true);
+      const result = JSON.parse(response);
+
+      return {
+        clinicalNarrative: result.clinicalNarrative || "Unable to generate clinical narrative.",
+        keyFindings: result.keyFindings || [],
+        riskFactors: result.riskFactors || [],
+        recommendations: result.recommendations || [],
+        normativeComparison: result.normativeComparison || "Normative comparison not available.",
+        clinicalSignificance: result.clinicalSignificance || "Clinical significance undetermined.",
+      };
+    } catch (error) {
+      console.error("Error interpreting questionnaire score:", error);
+      return {
+        clinicalNarrative: `The patient scored ${args.score}/${args.maxScore} on the ${args.questionnaireName}, indicating ${args.severity.toLowerCase()} severity.`,
+        keyFindings: ["Score calculation completed successfully"],
+        riskFactors: args.severity === "severe" ? ["Elevated score requires clinical attention"] : [],
+        recommendations: ["Review individual question responses for detailed assessment"],
+        normativeComparison: "Manual review recommended for normative comparison.",
+        clinicalSignificance: args.severity === "normal" ? "Score within normal limits." : "Score may warrant clinical follow-up.",
+      };
+    }
+  },
+});
 

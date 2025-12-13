@@ -19,6 +19,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
     "convex": "^1.29.0",
     "openai": "^6.8.1",
     "typescript": "^5.9.3"

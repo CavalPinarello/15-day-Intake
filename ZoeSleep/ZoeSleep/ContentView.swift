@@ -38,6 +38,10 @@ struct MainDashboardView: View {
     @State private var syncStatus: SyncStatus = .synced
     @State private var lastSyncError: String? = nil
 
+    // Navigation to Sleep Diary with pre-selected day
+    @State private var navigateToSleepDiary = false
+    @State private var sleepDiarySelectedDay: Int? = nil
+
     // Poll every 5 seconds when app is active (for cross-device sync)
     private let refreshInterval: TimeInterval = 5.0
 
@@ -111,6 +115,17 @@ struct MainDashboardView: View {
             JourneyOverviewView(currentDay: $currentDay)
                 .environmentObject(themeManager)
         }
+        // Hidden NavigationLink for programmatic navigation to Sleep Diary
+        .background(
+            NavigationLink(
+                destination: SleepDiaryHistoryView(initialDay: sleepDiarySelectedDay)
+                    .environmentObject(themeManager),
+                isActive: $navigateToSleepDiary
+            ) {
+                EmptyView()
+            }
+            .hidden()
+        )
         .onAppear {
             loadProgress()
             startRefreshTimer()
@@ -341,14 +356,28 @@ struct MainDashboardView: View {
                     .foregroundColor(theme.primary)
             }
 
-            // Progress dots (cleaner than 15 circles)
-            ProgressDots(current: completedDaysCount + 1, total: 15)
+            // Interactive progress dots - tap completed days to view history
+            InteractiveProgressDots(
+                current: completedDaysCount + 1,
+                total: 15,
+                completedDays: questionnaireManager.journeyProgress?.completedDays ?? []
+            ) { day in
+                sleepDiarySelectedDay = day
+                navigateToSleepDiary = true
+            }
 
             // Encouraging message based on progress - HIGH CONTRAST
             Text(progressMessage(completedCount: completedDaysCount))
                 .font(.system(size: Typography.subheadline, weight: .regular, design: .rounded))
                 .foregroundColor(theme.textOnCardSecondary)
                 .multilineTextAlignment(.center)
+
+            // Hint text for interactive dots
+            if completedDaysCount > 0 {
+                Text("Tap a completed day to view details")
+                    .font(.system(size: Typography.caption, design: .rounded))
+                    .foregroundColor(theme.textOnCardMuted)
+            }
         }
         .padding(Spacing.lg)
         .frame(maxWidth: .infinity)
@@ -423,33 +452,44 @@ struct MainDashboardView: View {
             } else if let expansionPack = availableExpansionPack {
                 // Show expansion pack card when gateways triggered and assessment done
                 VStack(spacing: Spacing.md) {
-                    // Completed sections indicator
-                    HStack(spacing: Spacing.md) {
-                        HStack(spacing: Spacing.xs) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(theme.success)
-                                .font(.caption)
-                            Text("Sleep Log")
-                                .font(.caption)
-                                .foregroundColor(theme.textOnCardSecondary)
-                        }
-                        HStack(spacing: Spacing.xs) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(theme.success)
-                                .font(.caption)
-                            Text("Assessment")
-                                .font(.caption)
-                                .foregroundColor(theme.textOnCardSecondary)
-                        }
+                    // Header with completion status
+                    HStack {
+                        Text("Today's focus")
+                            .font(.system(size: Typography.subheadline, weight: .medium, design: .rounded))
+                            .foregroundColor(theme.textOnCardSecondary)
                         Spacer()
+                        Text("2 of 3")
+                            .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                            .foregroundColor(theme.textOnCardMuted)
                     }
+
+                    // Completed tasks
+                    TaskRowView(
+                        icon: "moon.zzz.fill",
+                        title: "Sleep Log",
+                        subtitle: "Completed",
+                        isCompleted: true
+                    )
+
+                    TaskRowView(
+                        icon: "list.bullet.clipboard",
+                        title: "Assessment",
+                        subtitle: "Completed",
+                        isCompleted: true
+                    )
 
                     // Expansion pack prompt
                     NavigationLink(destination: ExpansionPackQuestionnaireView(
                         currentDay: $currentDay,
                         expansionInfo: expansionPack
                     ).environmentObject(healthKitManager).environmentObject(themeManager)) {
-                        ExpansionPackTaskCard(expansionInfo: expansionPack)
+                        TaskRowView(
+                            icon: "sparkles",
+                            title: "Deeper Dive",
+                            subtitle: expansionPack.shortExplanation,
+                            duration: "~\(expansionPack.totalEstimatedMinutes) min",
+                            isCompleted: false
+                        )
                     }
 
                     // Skip option
@@ -462,72 +502,57 @@ struct MainDashboardView: View {
                     }
                 }
             } else {
-                // Today's focus - single prominent card
+                // Today's focus - clean task list
                 VStack(spacing: Spacing.md) {
-                    Text("Today's focus")
-                        .font(.system(size: Typography.subheadline, weight: .medium, design: .rounded))
-                        .foregroundColor(theme.textOnCardSecondary)
+                    // Header with completion counter
+                    HStack {
+                        Text("Today's focus")
+                            .font(.system(size: Typography.subheadline, weight: .medium, design: .rounded))
+                            .foregroundColor(theme.textOnCardSecondary)
+                        Spacer()
+                        Text("\(completedTaskCount) of \(totalTaskCount)")
+                            .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                            .foregroundColor(theme.textOnCardMuted)
+                    }
 
-                    // Primary action - whichever is not complete
-                    if !sleepLogDone {
+                    // Sleep Log row
+                    if sleepLogDone {
+                        TaskRowView(
+                            icon: "moon.zzz.fill",
+                            title: "Sleep Log",
+                            subtitle: "Quick check-in about last night",
+                            isCompleted: true
+                        )
+                    } else {
                         NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
-                            CalmTaskCard(
+                            TaskRowView(
                                 icon: "moon.zzz.fill",
-                                title: FriendlyCopy.sleepLogHeader,
+                                title: "Sleep Log",
                                 subtitle: "Quick check-in about last night",
-                                duration: "~3 min"
-                            )
-                        }
-                    } else if !assessmentDone {
-                        NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
-                            CalmTaskCard(
-                                icon: "list.bullet.clipboard",
-                                title: FriendlyCopy.assessmentHeader,
-                                subtitle: getDayDescription(),
-                                duration: "~\(getAssessmentMinutes()) min"
+                                duration: "~3 min",
+                                isCompleted: false
                             )
                         }
                     }
 
-                    // Secondary task (if first is done)
-                    if sleepLogDone && !assessmentDone {
-                        // Sleep log done indicator - HIGH CONTRAST on card
-                        HStack(spacing: Spacing.sm) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(theme.success)
-                            Text("Sleep log complete")
-                                .font(.system(size: Typography.subheadline, design: .rounded))
-                                .foregroundColor(theme.textOnCardSecondary)  // Circadian-aware
-                            Spacer()
-                        }
-                        .padding(.top, Spacing.xs)
-                    } else if !sleepLogDone && assessmentDone {
-                        // Assessment done indicator - HIGH CONTRAST on card
-                        HStack(spacing: Spacing.sm) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(theme.success)
-                            Text("Assessment complete")
-                                .font(.system(size: Typography.subheadline, design: .rounded))
-                                .foregroundColor(theme.textOnCardSecondary)  // Circadian-aware
-                            Spacer()
-                        }
-                        .padding(.top, Spacing.xs)
-                    } else if !sleepLogDone && !assessmentDone {
-                        // Show secondary task as smaller item - HIGH CONTRAST on card
+                    // Assessment row
+                    if assessmentDone {
+                        TaskRowView(
+                            icon: "list.bullet.clipboard",
+                            title: "Assessment",
+                            subtitle: getDayDescription(),
+                            isCompleted: true
+                        )
+                    } else {
                         NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
-                            HStack(spacing: Spacing.sm) {
-                                Image(systemName: "list.bullet.clipboard")
-                                    .foregroundColor(theme.primary.opacity(0.6))
-                                Text("Then: \(FriendlyCopy.assessmentHeader)")
-                                    .font(.system(size: Typography.subheadline, design: .rounded))
-                                    .foregroundColor(theme.textOnCardSecondary)  // Circadian-aware
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(theme.textOnCardMuted)  // Circadian-aware
-                            }
+                            TaskRowView(
+                                icon: "list.bullet.clipboard",
+                                title: "Assessment",
+                                subtitle: getDayDescription(),
+                                duration: "~\(getAssessmentMinutes()) min",
+                                isCompleted: false
+                            )
                         }
-                        .padding(.top, Spacing.xs)
                     }
                 }
             }
@@ -537,6 +562,17 @@ struct MainDashboardView: View {
             GlassyCardBackground(opacity: 0.6)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
         )
+    }
+
+    private var completedTaskCount: Int {
+        var count = 0
+        if sleepLogDone { count += 1 }
+        if assessmentDone { count += 1 }
+        return count
+    }
+
+    private var totalTaskCount: Int {
+        return 2  // Sleep Log + Assessment (expansion packs handled separately)
     }
 
     private func advanceToNextDay() {
@@ -748,11 +784,13 @@ struct TaskRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
+                    .lineLimit(1)
                 Text(subtitle)
                     .font(.caption)
                     .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
+            .layoutPriority(1)
 
             Spacer()
 
@@ -796,10 +834,13 @@ struct QuickActionRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
+                    .lineLimit(1)
                 Text(subtitle)
                     .font(.caption)
                     .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
+                    .lineLimit(1)
             }
+            .layoutPriority(1)
 
             Spacer()
 
@@ -876,12 +917,13 @@ struct SectionTaskCard: View {
             Text(title ?? section.title)
                 .font(.headline)
                 .foregroundColor(theme.textOnCard)  // Circadian-aware
+                .lineLimit(1)
 
             // Subtitle/Description - HIGH CONTRAST on card
             Text(subtitle ?? section.description)
                 .font(.subheadline)
                 .foregroundColor(theme.textOnCardSecondary)  // Circadian-aware
-                .lineLimit(2)
+                .lineLimit(1)
 
             // Why this matters (contextual explanation)
             if let why = whyExplanation, !isCompleted {
@@ -972,12 +1014,14 @@ struct CalmTaskCard: View {
                 Text(title)
                     .font(.system(size: Typography.headline, weight: .semibold, design: .rounded))
                     .foregroundColor(theme.textOnCard)  // Cream text in evening/night
+                    .lineLimit(1)
 
                 Text(subtitle)
                     .font(.system(size: Typography.subheadline, design: .rounded))
                     .foregroundColor(theme.textOnCardSecondary)  // Golden amber in evening/night
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
+            .layoutPriority(1)
 
             Spacer()
 
@@ -991,6 +1035,7 @@ struct CalmTaskCard: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(theme.textOnCard)  // Cream in evening/night
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(Spacing.lg)
         .background(
@@ -1000,6 +1045,79 @@ struct CalmTaskCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.large)
                 .stroke(theme.primary.opacity(currentPeriod == .evening || currentPeriod == .night ? 0.3 : 0.2), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Task Row View (Clean horizontal task display)
+
+struct TaskRowView: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    var duration: String? = nil
+    let isCompleted: Bool
+
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            // Icon with completion state
+            ZStack {
+                Circle()
+                    .fill(isCompleted ? theme.success.opacity(0.15) : theme.primary.opacity(0.15))
+                    .frame(width: 40, height: 40)
+
+                if isCompleted {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(theme.success)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 16))
+                        .foregroundColor(theme.primary)
+                }
+            }
+
+            // Title and subtitle - horizontal flow
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: Typography.body, weight: .semibold, design: .rounded))
+                    .foregroundColor(isCompleted ? theme.textOnCardMuted : theme.textOnCard)
+                    .strikethrough(isCompleted, color: theme.textOnCardMuted)
+                    .lineLimit(1)
+
+                Text(subtitle)
+                    .font(.system(size: Typography.caption, design: .rounded))
+                    .foregroundColor(theme.textOnCardSecondary)
+                    .lineLimit(1)
+            }
+            .layoutPriority(1)
+
+            Spacer()
+
+            // Duration and chevron (only for incomplete tasks)
+            if !isCompleted {
+                HStack(spacing: Spacing.xs) {
+                    if let duration = duration {
+                        Text(duration)
+                            .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                            .foregroundColor(theme.textOnCardMuted)
+                    }
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(theme.textOnCardMuted)
+                }
+                .fixedSize(horizontal: true, vertical: false)
+            }
+        }
+        .padding(.vertical, Spacing.sm)
+        .padding(.horizontal, Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.small)
+                .fill(isCompleted ? Color.clear : theme.backgroundTint.opacity(0.3))
         )
     }
 }
@@ -1101,9 +1219,17 @@ struct DayOverviewCard: View {
 struct SleepDiaryHistoryView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var questionnaireManager = QuestionnaireManager.shared
-    @State private var selectedDay: Int = 1
+    @State private var selectedDay: Int
     @State private var sleepEntries: [Int: SleepDiaryEntry] = [:]
     @State private var isLoading = true
+    private let hasInitialDay: Bool
+
+    /// Initialize with an optional pre-selected day
+    init(initialDay: Int? = nil) {
+        // Default to 1, will be updated in loadSleepHistory to most recent day if no initial day provided
+        _selectedDay = State(initialValue: initialDay ?? 1)
+        hasInitialDay = initialDay != nil
+    }
 
     private var theme: ColorTheme { themeManager.currentTheme }
     private var completedDays: [Int] {
@@ -1524,8 +1650,8 @@ struct SleepDiaryHistoryView: View {
     private func loadSleepHistory() {
         isLoading = true
 
-        // Set selected day to most recent completed day
-        if let lastDay = completedDays.max() {
+        // Only auto-select most recent day if no initial day was provided
+        if !hasInitialDay, let lastDay = completedDays.max() {
             selectedDay = lastDay
         }
 
@@ -1551,24 +1677,58 @@ struct SleepDiaryHistoryView: View {
         do {
             let savedResponses = try await ConvexService.shared.getSavedResponses(dayNumber: day)
 
+            #if DEBUG
+            print("[SleepDiaryHistory] Day \(day) - loaded \(savedResponses.count) responses")
+            for (key, value) in savedResponses.sorted(by: { $0.key < $1.key }) {
+                if let str = value.stringValue {
+                    print("  \(key): string=\"\(str)\"")
+                } else if let num = value.numberValue {
+                    print("  \(key): number=\(num)")
+                } else if let arr = value.arrayValue {
+                    print("  \(key): array=\(arr)")
+                }
+            }
+            #endif
+
             // Convert QuestionResponseValue to [String: Any] for SleepDiaryEntry
             var responses: [String: Any] = [:]
             for (questionId, responseValue) in savedResponses {
                 if let stringValue = responseValue.stringValue {
                     // Check if it's a time string (ISO8601) and convert to Date
-                    if let date = ISO8601DateFormatter().date(from: stringValue) {
+                    let isoFormatter = ISO8601DateFormatter()
+                    isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    if let date = isoFormatter.date(from: stringValue) {
                         responses[questionId] = date
                     } else {
-                        responses[questionId] = stringValue
+                        // Try without fractional seconds
+                        isoFormatter.formatOptions = [.withInternetDateTime]
+                        if let date = isoFormatter.date(from: stringValue) {
+                            responses[questionId] = date
+                        } else {
+                            responses[questionId] = stringValue
+                        }
                     }
                 } else if let numberValue = responseValue.numberValue {
-                    responses[questionId] = Int(numberValue)
+                    // IMPORTANT: Keep as Double to preserve timestamp precision
+                    // SleepDiaryEntry.parseDate handles both Int and Double
+                    responses[questionId] = numberValue
                 } else if let arrayValue = responseValue.arrayValue {
                     responses[questionId] = arrayValue
                 }
             }
 
-            return SleepDiaryEntry(from: responses, day: day)
+            let entry = SleepDiaryEntry(from: responses, day: day)
+
+            #if DEBUG
+            print("[SleepDiaryHistory] Day \(day) parsed entry:")
+            print("  intoBedTime: \(entry.intoBedTime?.description ?? "nil")")
+            print("  trySleepTime: \(entry.trySleepTime?.description ?? "nil")")
+            print("  finalWakeTime: \(entry.finalWakeTime?.description ?? "nil")")
+            print("  sleepQuality: \(entry.sleepQuality?.description ?? "nil")")
+            print("  awakenings: \(entry.awakenings?.description ?? "nil")")
+            #endif
+
+            return entry
         } catch {
             print("[SleepDiaryHistory] Failed to load day \(day): \(error)")
             return nil
@@ -1680,10 +1840,10 @@ struct SleepDiaryEntry {
         self.finalWakeTime = Self.parseDate(responses["CSD_FINAL_WAKE"]) ?? Self.parseDate(responses["SL_WAKE_TIME"])
         self.outOfBedTime = Self.parseDate(responses["CSD_OUT_BED"])
 
-        // Parse metrics
-        self.sleepLatency = responses["CSD_LATENCY"] as? Int
-        self.awakenings = responses["CSD_AWAKENINGS"] as? Int ?? responses["SL_AWAKENINGS"] as? Int
-        self.waso = responses["CSD_WASO"] as? Int
+        // Parse metrics (handle both Int and Double from Convex)
+        self.sleepLatency = Self.parseIntValue(responses["CSD_LATENCY"])
+        self.awakenings = Self.parseIntValue(responses["CSD_AWAKENINGS"]) ?? Self.parseIntValue(responses["SL_AWAKENINGS"])
+        self.waso = Self.parseIntValue(responses["CSD_WASO"])
 
         // Calculate total sleep and efficiency if we have timing data
         if let trySleep = self.trySleepTime, let finalWake = self.finalWakeTime {
@@ -1698,27 +1858,41 @@ struct SleepDiaryEntry {
             self.sleepEfficiency = nil
         }
 
-        // Parse ratings
-        if let quality = responses["CSD_QUALITY"] as? Int {
+        // Parse ratings (handle both Int and Double)
+        if let quality = Self.parseIntValue(responses["CSD_QUALITY"]) {
             self.sleepQuality = quality
-        } else if let quality = responses["SL_QUALITY"] as? Int {
-            // Convert 1-10 scale to 1-5
-            self.sleepQuality = max(1, min(5, (quality + 1) / 2))
-        } else if let quality = responses["SL_QUALITY"] as? Double {
-            self.sleepQuality = max(1, min(5, Int((quality + 1) / 2)))
+        } else if let quality = Self.parseIntValue(responses["SL_QUALITY"]) {
+            // SL_QUALITY is 1-5 scale (same as CSD), no conversion needed
+            self.sleepQuality = max(1, min(5, quality))
         } else {
             self.sleepQuality = nil
         }
-        self.refreshedRating = responses["CSD_REFRESHED"] as? Int
+        self.refreshedRating = Self.parseIntValue(responses["CSD_REFRESHED"])
 
-        // Parse context
+        // Parse context (handle both Int and Double for numeric fields)
         self.dayType = responses["CSD_DAY_TYPE"] as? String
-        self.caffeineCount = responses["CSD_CAFFEINE"] as? Int
+        self.caffeineCount = Self.parseIntValue(responses["CSD_CAFFEINE"])
         self.hadAlcohol = (responses["CSD_ALCOHOL"] as? String) == "Yes"
         self.tookSleepMeds = (responses["CSD_MEDS"] as? String) == "Yes"
         self.sleepMedsName = responses["CSD_MEDS_NAME"] as? String
         self.didNap = (responses["CSD_NAPS"] as? String) == "Yes"
-        self.napDuration = responses["CSD_NAP_DURATION"] as? Int
+        self.napDuration = Self.parseIntValue(responses["CSD_NAP_DURATION"])
+    }
+
+    /// Parse numeric value that could be Int or Double from Convex
+    private static func parseIntValue(_ value: Any?) -> Int? {
+        guard let value = value else { return nil }
+        if let intVal = value as? Int {
+            return intVal
+        }
+        if let doubleVal = value as? Double {
+            return Int(doubleVal)
+        }
+        // Try parsing from string
+        if let strVal = value as? String, let intVal = Int(strVal) {
+            return intVal
+        }
+        return nil
     }
 
     /// Parse various date formats (Date, timestamp, ISO8601 string)
@@ -2060,6 +2234,24 @@ struct DevPanelView: View {
                         Label("Refresh from Server", systemImage: "arrow.triangle.2.circlepath")
                             .foregroundColor(.blue)
                     }
+
+                    #if DEBUG
+                    // Generate Mock Data (14 days)
+                    NavigationLink {
+                        MockPlaybackView()
+                            .environmentObject(themeManager)
+                            .environmentObject(questionnaireManager)
+                    } label: {
+                        HStack {
+                            Label("Generate 14 Days Data", systemImage: "wand.and.stars")
+                                .foregroundColor(.purple)
+                            Spacer()
+                            Text("~2 min")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    #endif
                 } header: {
                     Text("Quick Actions")
                 } footer: {
@@ -2185,11 +2377,12 @@ struct ExpansionPackTaskCard: View {
                 Text("Deeper Dive")
                     .font(.system(size: Typography.headline, weight: .semibold, design: .rounded))
                     .foregroundColor(theme.textOnCard)
+                    .lineLimit(1)
 
                 Text(expansionInfo.shortExplanation)
                     .font(.system(size: Typography.subheadline, design: .rounded))
                     .foregroundColor(theme.textOnCardSecondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
 
                 // Gateway tags
                 HStack(spacing: 6) {
@@ -2205,6 +2398,7 @@ struct ExpansionPackTaskCard: View {
                     }
                 }
             }
+            .layoutPriority(1)
 
             Spacer()
 
@@ -2218,6 +2412,7 @@ struct ExpansionPackTaskCard: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(theme.textOnCard)
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(Spacing.lg)
         .background(
