@@ -538,20 +538,23 @@ struct MainDashboardView: View {
                     // Assessment row
                     if assessmentDone {
                         TaskRowView(
-                            icon: "list.bullet.clipboard",
-                            title: "Assessment",
+                            icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
+                            title: getAssessmentTitle(),
                             subtitle: getDayDescription(),
                             isCompleted: true
                         )
                     } else {
-                        NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
-                            TaskRowView(
-                                icon: "list.bullet.clipboard",
-                                title: "Assessment",
-                                subtitle: getDayDescription(),
-                                duration: "~\(getAssessmentMinutes()) min",
-                                isCompleted: false
-                            )
+                        let minutes = getAssessmentMinutes()
+                        if minutes > 0 {
+                            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                                TaskRowView(
+                                    icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
+                                    title: getAssessmentTitle(),
+                                    subtitle: getDayDescription(),
+                                    duration: "~\(minutes) min",
+                                    isCompleted: false
+                                )
+                            }
                         }
                     }
                 }
@@ -564,15 +567,23 @@ struct MainDashboardView: View {
         )
     }
 
+    private var hasAssessmentToday: Bool {
+        // Core days always have assessment
+        if currentDay <= 5 { return true }
+        // Expansion days only have assessment if gateways are triggered
+        return !getTriggeredGatewaysForToday().isEmpty
+    }
+
     private var completedTaskCount: Int {
         var count = 0
         if sleepLogDone { count += 1 }
-        if assessmentDone { count += 1 }
+        if hasAssessmentToday && assessmentDone { count += 1 }
         return count
     }
 
     private var totalTaskCount: Int {
-        return 2  // Sleep Log + Assessment (expansion packs handled separately)
+        // Always have sleep log (1), assessment only if content exists
+        return hasAssessmentToday ? 2 : 1
     }
 
     private func advanceToNextDay() {
@@ -621,10 +632,39 @@ struct MainDashboardView: View {
     }
 
     private func getAssessmentMinutes() -> Int {
-        guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
-            return 10
+        // For core days (1-5), use config estimates
+        if currentDay <= 5 {
+            guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
+                return 10
+            }
+            return config.estimatedMinutes
         }
-        return config.estimatedMinutes
+
+        // For expansion days (6-15), calculate based on triggered gateways for today
+        let todayGateways = getTriggeredGatewaysForToday()
+        if todayGateways.isEmpty {
+            return 0  // No expansion content if no gateways triggered
+        }
+
+        // Sum up estimated minutes for each triggered gateway
+        let totalMinutes = todayGateways.reduce(0.0) { $0 + $1.estimatedMinutes }
+        return max(Int(ceil(totalMinutes)), 3)
+    }
+
+    /// Get the gateways that are both triggered AND scheduled for today
+    private func getTriggeredGatewaysForToday() -> [GatewayType] {
+        guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }),
+              let requiredGateways = config.requiredGateways else {
+            return []
+        }
+
+        // Get user's triggered gateways
+        let triggeredGatewayTypes = Set(questionnaireManager.gatewayStates
+            .filter { $0.triggered }
+            .map { $0.gatewayType })
+
+        // Return only gateways that are both required for today AND triggered
+        return requiredGateways.filter { triggeredGatewayTypes.contains($0) }
     }
 
     /// Get contextual explanation for why the sleep log matters
@@ -740,11 +780,52 @@ struct MainDashboardView: View {
         return config.title
     }
 
-    private func getDayDescription() -> String {
-        guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
-            return "Complete today's questions"
+    /// Get the title for today's assessment task
+    private func getAssessmentTitle() -> String {
+        // For core days, use "Assessment"
+        if currentDay <= 5 {
+            return "Assessment"
         }
-        return config.description
+
+        // For expansion days, use "Deep Dive" or specific area
+        let todayGateways = getTriggeredGatewaysForToday()
+        if todayGateways.isEmpty {
+            return "Assessment"  // Fallback
+        }
+
+        if todayGateways.count == 1 {
+            return "Deep Dive: \(todayGateways[0].shortName)"
+        }
+        return "Deep Dive"
+    }
+
+    private func getDayDescription() -> String {
+        // For core days (1-5), show config description
+        if currentDay <= 5 {
+            guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
+                return "Complete today's questions"
+            }
+            return config.description
+        }
+
+        // For expansion days (6-15), show what's being assessed
+        let todayGateways = getTriggeredGatewaysForToday()
+        if todayGateways.isEmpty {
+            return "No additional assessments today"
+        }
+
+        // Show what areas are being assessed (without times - duration field handles that)
+        if todayGateways.count == 1 {
+            return "Detailed \(todayGateways[0].shortName.lowercased()) assessment"
+        } else {
+            // List areas: "Pain, Nutrition assessment"
+            let names = todayGateways.prefix(3).map { $0.shortName }
+            if todayGateways.count <= 2 {
+                return "\(names.joined(separator: " & ")) assessment"
+            } else {
+                return "\(names.dropLast().joined(separator: ", ")) & \(names.last!) assessment"
+            }
+        }
     }
 
     private func loadProgress() {
@@ -784,13 +865,12 @@ struct TaskRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
-                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)  // Title never truncates
                 Text(subtitle)
                     .font(.caption)
                     .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
                     .lineLimit(1)
             }
-            .layoutPriority(1)
 
             Spacer()
 
@@ -834,13 +914,12 @@ struct QuickActionRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
-                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)  // Title never truncates
                 Text(subtitle)
                     .font(.caption)
                     .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
                     .lineLimit(1)
             }
-            .layoutPriority(1)
 
             Spacer()
 
@@ -917,7 +996,7 @@ struct SectionTaskCard: View {
             Text(title ?? section.title)
                 .font(.headline)
                 .foregroundColor(theme.textOnCard)  // Circadian-aware
-                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)  // Title never truncates
 
             // Subtitle/Description - HIGH CONTRAST on card
             Text(subtitle ?? section.description)
@@ -1014,14 +1093,13 @@ struct CalmTaskCard: View {
                 Text(title)
                     .font(.system(size: Typography.headline, weight: .semibold, design: .rounded))
                     .foregroundColor(theme.textOnCard)  // Cream text in evening/night
-                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)  // Title never truncates
 
                 Text(subtitle)
                     .font(.system(size: Typography.subheadline, design: .rounded))
                     .foregroundColor(theme.textOnCardSecondary)  // Golden amber in evening/night
                     .lineLimit(1)
             }
-            .layoutPriority(1)
 
             Spacer()
 
@@ -1086,14 +1164,13 @@ struct TaskRowView: View {
                     .font(.system(size: Typography.body, weight: .semibold, design: .rounded))
                     .foregroundColor(isCompleted ? theme.textOnCardMuted : theme.textOnCard)
                     .strikethrough(isCompleted, color: theme.textOnCardMuted)
-                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)  // Title never truncates
 
                 Text(subtitle)
                     .font(.system(size: Typography.caption, design: .rounded))
                     .foregroundColor(theme.textOnCardSecondary)
                     .lineLimit(1)
             }
-            .layoutPriority(1)
 
             Spacer()
 
@@ -2377,7 +2454,7 @@ struct ExpansionPackTaskCard: View {
                 Text("Deeper Dive")
                     .font(.system(size: Typography.headline, weight: .semibold, design: .rounded))
                     .foregroundColor(theme.textOnCard)
-                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)  // Title never truncates
 
                 Text(expansionInfo.shortExplanation)
                     .font(.system(size: Typography.subheadline, design: .rounded))
@@ -2398,7 +2475,6 @@ struct ExpansionPackTaskCard: View {
                     }
                 }
             }
-            .layoutPriority(1)
 
             Spacer()
 

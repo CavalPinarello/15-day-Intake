@@ -902,10 +902,11 @@ export const saveResponses = mutation({
     const now = Date.now();
 
     for (const response of args.responses) {
+      // Use day-aware lookup to support repeating questions (like sleep log) across multiple days
       const existing = await ctx.db
         .query("user_assessment_responses")
-        .withIndex("by_user_question", (q) =>
-          q.eq("user_id", args.userId).eq("question_id", response.questionId)
+        .withIndex("by_user_question_day", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", response.questionId).eq("day_number", args.dayNumber)
         )
         .first();
 

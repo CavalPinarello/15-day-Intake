@@ -80,6 +80,16 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Question Manager enhancements:** Full question preview in physician dashboard (Dec 13, 2025)
+  - Fixed "0 questions" bug - now shows computed counts
+  - Expandable modules with full question lists
+  - Gateway/expansion preview with trigger conditions
+- **iOS smart task visibility:** Assessment task only shows if content exists (Dec 13, 2025)
+  - Core days (1-7): Always show assessment
+  - Expansion days (8-15): Only show if gateways triggered
+  - Dynamic title (Core Assessment vs Expansion Pack)
+- **Day-aware response storage:** Repeating questions (sleep log) now stored per day
+- **Consensus Sleep Diary (CSD):** Full iOS sleep log integration with dashboard
 - **Questionnaire day rebalance:** Split large modules, spread across all 15 days (Dec 13, 2025)
   - Day 1 reduced from 55 to 15 questions
   - No more empty days (was 0 questions on days 6, 8, 11, 14, 15)

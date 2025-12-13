@@ -24,12 +24,24 @@ export const saveResponse = mutation({
     const startTime = Date.now();
 
     // Check if response already exists
-    const existing = await ctx.db
-      .query("user_assessment_responses")
-      .withIndex("by_user_question", (q) =>
-        q.eq("user_id", args.userId).eq("question_id", args.questionId)
-      )
-      .first();
+    // Use day-aware lookup if dayNumber is provided (for repeating questions like sleep log)
+    // Fall back to user+question only for questions without day context
+    let existing;
+    if (args.dayNumber !== undefined) {
+      existing = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_question_day", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", args.questionId).eq("day_number", args.dayNumber)
+        )
+        .first();
+    } else {
+      existing = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_question", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", args.questionId)
+        )
+        .first();
+    }
 
     // Prepare response data based on answer format
     let responseData: {
@@ -77,6 +89,7 @@ export const saveResponse = mutation({
       // Update existing response
       await ctx.db.patch(existing._id, {
         ...responseData,
+        day_number: args.dayNumber,
         answered_in_seconds:
           args.answeredInSeconds ||
           Math.floor((Date.now() - startTime) / 1000),

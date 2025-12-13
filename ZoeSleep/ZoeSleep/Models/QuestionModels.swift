@@ -632,6 +632,38 @@ enum GatewayType: String, Codable, CaseIterable {
         }
     }
 
+    /// Short name for compact UI display
+    var shortName: String {
+        switch self {
+        case .insomnia: return "Insomnia"
+        case .depression: return "Mood"
+        case .anxiety: return "Anxiety"
+        case .excessiveSleepiness: return "Sleepiness"
+        case .cognitive: return "Cognitive"
+        case .osa: return "Sleep Apnea"
+        case .pain: return "Pain"
+        case .sleepTiming: return "Chronotype"
+        case .dietImpact: return "Nutrition"
+        case .poorSleepQuality: return "Sleep Quality"
+        }
+    }
+
+    /// Estimated minutes for this gateway's expansion module (based on assessment_modules.json)
+    var estimatedMinutes: Double {
+        switch self {
+        case .insomnia: return 8.5  // ISI, DBAS, Sleep Hygiene, PSAS modules
+        case .poorSleepQuality: return 8.5  // Sleep Quality expansion
+        case .depression: return 8.0  // PHQ-9, part of mental health
+        case .anxiety: return 8.0  // GAD-7, DASS-21
+        case .excessiveSleepiness: return 7.0  // ESS, FSS, FOSQ
+        case .cognitive: return 8.0  // PROMIS cognitive
+        case .osa: return 8.0  // STOP-BANG, Berlin
+        case .pain: return 8.0  // BPI
+        case .sleepTiming: return 9.5  // MEQ chronotype
+        case .dietImpact: return 7.0  // MEDAS
+        }
+    }
+
     var targetModules: [String] {
         switch self {
         case .insomnia, .poorSleepQuality:

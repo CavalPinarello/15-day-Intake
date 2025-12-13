@@ -45,6 +45,31 @@ const SLEEP_DIARY_QUESTIONS: Record<string, { text: string; type: string }> = {
   "SD_NAP_DETAILS": { text: "For each nap, record the start time and duration.", type: "repeating_group" },
 };
 
+// Consensus Sleep Diary questions (CSD_ prefix - iOS app's primary sleep log)
+const CONSENSUS_SLEEP_DIARY_QUESTIONS: Record<string, { text: string; type: string }> = {
+  "CSD_DAY_TYPE": { text: "What type of day was yesterday?", type: "single_select" },
+  "CSD_INTO_BED": { text: "What time did you get into bed?", type: "time" },
+  "CSD_TRY_SLEEP": { text: "What time did you try to go to sleep?", type: "time" },
+  "CSD_LATENCY": { text: "How long did it take you to fall asleep? (minutes)", type: "minutes" },
+  "CSD_AWAKENINGS": { text: "How many times did you wake up during the night?", type: "number" },
+  "CSD_WASO": { text: "Total time awake during the night (minutes)", type: "minutes" },
+  "CSD_FINAL_WAKE": { text: "What time was your final awakening?", type: "time" },
+  "CSD_OUT_BED": { text: "What time did you get out of bed?", type: "time" },
+  "CSD_QUALITY": { text: "How would you rate your sleep quality?", type: "scale" },
+  "CSD_REFRESHED": { text: "How refreshed did you feel upon waking?", type: "scale" },
+  "CSD_NAPS": { text: "Did you take any naps yesterday?", type: "yes_no" },
+  "CSD_NAP_COUNT": { text: "How many naps did you take?", type: "number" },
+  "CSD_NAP_DURATION": { text: "Total nap duration (minutes)", type: "minutes" },
+  "CSD_CAFFEINE": { text: "How many caffeinated drinks did you have?", type: "number" },
+  "CSD_CAFFEINE_LAST": { text: "When was your last caffeine?", type: "time" },
+  "CSD_ALCOHOL": { text: "Did you consume alcohol yesterday?", type: "yes_no" },
+  "CSD_ALCOHOL_DRINKS": { text: "How many alcoholic drinks?", type: "number" },
+  "CSD_ALCOHOL_LAST": { text: "When was your last alcoholic drink?", type: "time" },
+  "CSD_MEDS": { text: "Did you take any sleep aids or medications?", type: "yes_no" },
+  "CSD_MEDS_NAME": { text: "What sleep aids/medications did you take?", type: "text" },
+  "CSD_COMMENTS": { text: "Any additional comments about your sleep?", type: "text" },
+};
+
 // Combined lookup function
 function getQuestionDefinition(questionId: string): { text: string; type: string; pillar: string } | null {
   if (questionId.startsWith("SL_")) {
@@ -54,6 +79,10 @@ function getQuestionDefinition(questionId: string): { text: string; type: string
   if (questionId.startsWith("SD_")) {
     const q = SLEEP_DIARY_QUESTIONS[questionId];
     return q ? { ...q, pillar: "Sleep Diary" } : null;
+  }
+  if (questionId.startsWith("CSD_")) {
+    const q = CONSENSUS_SLEEP_DIARY_QUESTIONS[questionId];
+    return q ? { ...q, pillar: "Consensus Sleep Diary" } : null;
   }
   return null;
 }

@@ -738,6 +738,7 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_user_question", ["user_id", "question_id"])
     .index("by_user_day", ["user_id", "day_number"])
+    .index("by_user_question_day", ["user_id", "question_id", "day_number"])
     .index("by_question", ["question_id"]),
 
   sleep_diary_questions: defineTable({

@@ -522,12 +522,23 @@ export const saveAssessmentResponse = mutation({
     const now = Date.now();
 
     // Check if response exists
-    const existing = await ctx.db
-      .query("user_assessment_responses")
-      .withIndex("by_user_question", (q) =>
-        q.eq("user_id", args.userId).eq("question_id", args.questionId)
-      )
-      .first();
+    // Use day-aware lookup if dayNumber is provided (for repeating questions like sleep log)
+    let existing;
+    if (args.dayNumber !== undefined) {
+      existing = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_question_day", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", args.questionId).eq("day_number", args.dayNumber)
+        )
+        .first();
+    } else {
+      existing = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_question", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", args.questionId)
+        )
+        .first();
+    }
 
     if (existing) {
       await ctx.db.patch(existing._id, {
