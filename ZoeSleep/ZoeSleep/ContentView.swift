@@ -404,15 +404,63 @@ struct MainDashboardView: View {
         questionnaireManager.journeyProgress?.assessmentCompleted ?? false
     }
 
+    /// Returns expansion pack info if gateways were triggered and assessment is done
+    private var availableExpansionPack: ExpansionPackInfo? {
+        // Only show expansion pack after assessment is complete
+        guard assessmentDone else { return nil }
+        return questionnaireManager.getExpansionPackForDay(currentDay)
+    }
+
     private var todaysTasksCard: some View {
         VStack(spacing: Spacing.lg) {
-            // Day Complete Celebration
-            if isDayComplete {
+            // Day Complete Celebration (only if no expansion pack available)
+            if isDayComplete && availableExpansionPack == nil {
                 DayCompleteCelebrationView(
                     currentDay: currentDay,
                     isDebugMode: themeManager.debugMode,
                     onAdvanceDay: advanceToNextDay
                 )
+            } else if let expansionPack = availableExpansionPack {
+                // Show expansion pack card when gateways triggered and assessment done
+                VStack(spacing: Spacing.md) {
+                    // Completed sections indicator
+                    HStack(spacing: Spacing.md) {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(theme.success)
+                                .font(.caption)
+                            Text("Sleep Log")
+                                .font(.caption)
+                                .foregroundColor(theme.textOnCardSecondary)
+                        }
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(theme.success)
+                                .font(.caption)
+                            Text("Assessment")
+                                .font(.caption)
+                                .foregroundColor(theme.textOnCardSecondary)
+                        }
+                        Spacer()
+                    }
+
+                    // Expansion pack prompt
+                    NavigationLink(destination: ExpansionPackQuestionnaireView(
+                        currentDay: $currentDay,
+                        expansionInfo: expansionPack
+                    ).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                        ExpansionPackTaskCard(expansionInfo: expansionPack)
+                    }
+
+                    // Skip option
+                    Button {
+                        // TODO: Mark expansion as skipped and show day complete
+                    } label: {
+                        Text("Skip for now")
+                            .font(.caption)
+                            .foregroundColor(theme.textOnCardMuted)
+                    }
+                }
             } else {
                 // Today's focus - single prominent card
                 VStack(spacing: Spacing.md) {
@@ -2102,6 +2150,519 @@ struct DevPanelView: View {
                     isResetting = false
                     statusMessage = "Reset failed: \(error.localizedDescription)"
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Expansion Pack Task Card
+
+struct ExpansionPackTaskCard: View {
+    let expansionInfo: ExpansionPackInfo
+
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    private var currentPeriod: TimePeriod {
+        themeManager.currentTimePeriod
+    }
+
+    var body: some View {
+        HStack(spacing: Spacing.lg) {
+            // Sparkle icon circle
+            ZStack {
+                Circle()
+                    .fill(QuestionnaireSection.expansionPack.accentColor.opacity(0.15))
+                    .frame(width: 56, height: 56)
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 24))
+                    .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
+            }
+
+            // Content
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text("Deeper Dive")
+                    .font(.system(size: Typography.headline, weight: .semibold, design: .rounded))
+                    .foregroundColor(theme.textOnCard)
+
+                Text(expansionInfo.shortExplanation)
+                    .font(.system(size: Typography.subheadline, design: .rounded))
+                    .foregroundColor(theme.textOnCardSecondary)
+                    .lineLimit(2)
+
+                // Gateway tags
+                HStack(spacing: 6) {
+                    ForEach(expansionInfo.triggeredGateways.prefix(3), id: \.self) { gateway in
+                        Text(gateway.displayName)
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(QuestionnaireSection.expansionPack.accentColor)
+                            .cornerRadius(10)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Duration and arrow
+            VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                Text("~\(expansionInfo.totalEstimatedMinutes) min")
+                    .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                    .foregroundColor(theme.textOnCardMuted)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(theme.textOnCard)
+            }
+        }
+        .padding(Spacing.lg)
+        .background(
+            GlassyCardBackground(opacity: 0.6, tint: QuestionnaireSection.expansionPack.accentColor)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.large)
+                .stroke(QuestionnaireSection.expansionPack.accentColor.opacity(currentPeriod == .evening || currentPeriod == .night ? 0.4 : 0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Expansion Pack Questionnaire View
+
+struct ExpansionPackQuestionnaireView: View {
+    @Binding var currentDay: Int
+    let expansionInfo: ExpansionPackInfo
+
+    @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @StateObject private var questionnaireManager = QuestionnaireManager.shared
+
+    @State private var showingIntro = true
+    @State private var currentIndex = 0
+    @State private var responses: [String: Any] = [:]
+    @State private var userInteracted: Set<String> = []
+    @State private var showingCompletion = false
+    @State private var isSaving = false
+
+    @Environment(\.presentationMode) var presentationMode
+
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var questions: [Question] { expansionInfo.questions }
+
+    // Circadian-aware button colors
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var buttonBackgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.25, green: 0.15, blue: 0.1)
+        } else {
+            return Color(.secondarySystemBackground)
+        }
+    }
+
+    private var buttonTextColor: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var navBarBackgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.15, green: 0.08, blue: 0.05)
+        } else {
+            return Color(.systemBackground)
+        }
+    }
+
+    var body: some View {
+        Group {
+            if showingIntro {
+                ExpansionPackIntroView(
+                    expansionInfo: expansionInfo,
+                    onContinue: {
+                        withAnimation {
+                            showingIntro = false
+                        }
+                    },
+                    onSkip: {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                )
+            } else if showingCompletion {
+                ExpansionCompletionView(
+                    expansionInfo: expansionInfo,
+                    onDone: {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                )
+            } else {
+                questionnaireContent
+            }
+        }
+        .navigationTitle("Deeper Dive")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(navBarBackgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(isEvening ? .dark : .light, for: .navigationBar)
+        .overlay {
+            if isSaving {
+                ZStack {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(QuestionnaireSection.expansionPack.accentColor)
+                        Text("Saving your responses...")
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    .padding(32)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(theme.cardBackground.opacity(0.95))
+                    )
+                }
+            }
+        }
+    }
+
+    private var questionnaireContent: some View {
+        ZStack {
+            QuestionnaireWaveBackground()
+
+            VStack(spacing: 0) {
+                // Header
+                SectionHeaderView(
+                    section: .expansionPack,
+                    currentQuestion: currentIndex + 1,
+                    totalQuestions: questions.count
+                )
+
+                // Progress
+                SectionProgressView(
+                    section: .expansionPack,
+                    currentIndex: currentIndex,
+                    totalQuestions: questions.count
+                )
+                .padding(.vertical, 8)
+
+                // Question content
+                ScrollView {
+                    VStack(spacing: 20) {
+                        if !questions.isEmpty && currentIndex < questions.count {
+                            SectionQuestionCard(section: .expansionPack, question: questions[currentIndex]) {
+                                questionInputView(for: questions[currentIndex])
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                    .padding(.vertical)
+                }
+
+                // Navigation buttons
+                navigationButtons
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func questionInputView(for question: Question) -> some View {
+        switch question.questionType {
+        case .scale:
+            ScaleInput(
+                question: question,
+                value: scaleBinding(for: question.id, default: ScaleInput.smartDefault(for: question)),
+                theme: theme
+            )
+        case .yesNo, .yesNoDontKnow:
+            YesNoInput(
+                question: question,
+                value: stringBinding(for: question.id),
+                theme: theme
+            )
+        case .singleSelect:
+            SingleSelectInput(
+                question: question,
+                value: stringBinding(for: question.id),
+                theme: theme
+            )
+        case .multiSelect:
+            MultiSelectInput(
+                question: question,
+                values: arrayBinding(for: question.id),
+                theme: theme
+            )
+        default:
+            TextInputView(
+                question: question,
+                value: stringBinding(for: question.id),
+                placeholder: "Enter your answer"
+            )
+        }
+    }
+
+    // MARK: - Bindings
+
+    private func scaleBinding(for questionId: String, default defaultValue: Double) -> Binding<Double> {
+        Binding(
+            get: { (responses[questionId] as? Double) ?? defaultValue },
+            set: {
+                responses[questionId] = $0
+                userInteracted.insert(questionId)
+            }
+        )
+    }
+
+    private func stringBinding(for questionId: String) -> Binding<String> {
+        Binding(
+            get: { (responses[questionId] as? String) ?? "" },
+            set: {
+                responses[questionId] = $0
+                userInteracted.insert(questionId)
+            }
+        )
+    }
+
+    private func arrayBinding(for questionId: String) -> Binding<[String]> {
+        Binding(
+            get: { (responses[questionId] as? [String]) ?? [] },
+            set: {
+                responses[questionId] = $0
+                userInteracted.insert(questionId)
+            }
+        )
+    }
+
+    // MARK: - Navigation
+
+    private var navigationButtons: some View {
+        HStack(spacing: 16) {
+            Button(action: previousQuestion) {
+                HStack {
+                    Image(systemName: "chevron.left")
+                    Text("Back")
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(buttonBackgroundColor)
+                .foregroundColor(buttonTextColor)
+                .cornerRadius(12)
+            }
+            .disabled(currentIndex == 0)
+            .opacity(currentIndex == 0 ? 0.5 : 1)
+
+            Button(action: nextQuestion) {
+                HStack {
+                    Text(currentIndex == questions.count - 1 ? "Complete" : "Next")
+                    Image(systemName: currentIndex == questions.count - 1 ? "checkmark.circle.fill" : "chevron.right")
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(canProceed ? QuestionnaireSection.expansionPack.accentColor : Color.gray)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+            }
+            .disabled(!canProceed)
+        }
+        .padding()
+        .background(navBarBackgroundColor)
+    }
+
+    private var canProceed: Bool {
+        guard !questions.isEmpty && currentIndex < questions.count else { return false }
+        let question = questions[currentIndex]
+
+        if !question.required { return true }
+
+        switch question.questionType {
+        case .scale:
+            return userInteracted.contains(question.id)
+        case .singleSelect, .yesNo, .yesNoDontKnow:
+            guard let response = responses[question.id] else { return false }
+            return !(response as? String ?? "").isEmpty
+        case .multiSelect:
+            guard let response = responses[question.id] else { return false }
+            return !(response as? [String] ?? []).isEmpty
+        default:
+            return userInteracted.contains(question.id) || responses[question.id] != nil
+        }
+    }
+
+    private func previousQuestion() {
+        if currentIndex > 0 {
+            currentIndex -= 1
+        }
+    }
+
+    private func nextQuestion() {
+        if currentIndex < questions.count - 1 {
+            currentIndex += 1
+        } else {
+            completeExpansion()
+        }
+    }
+
+    private func completeExpansion() {
+        isSaving = true
+
+        Task {
+            do {
+                // Save expansion responses
+                var convexResponses: [[String: Any]] = []
+                for (questionId, value) in responses {
+                    guard userInteracted.contains(questionId) else { continue }
+                    var response: [String: Any] = ["questionId": questionId]
+                    if let stringValue = value as? String {
+                        response["responseValue"] = stringValue
+                    } else if let numberValue = value as? Double {
+                        response["responseNumber"] = numberValue
+                    } else if let arrayValue = value as? [String] {
+                        response["responseArray"] = arrayValue
+                    }
+                    convexResponses.append(response)
+                }
+
+                if !convexResponses.isEmpty {
+                    _ = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
+                }
+
+                await MainActor.run {
+                    isSaving = false
+                    withAnimation {
+                        showingCompletion = true
+                    }
+                }
+            } catch {
+                print("[ExpansionPack] Error saving: \(error)")
+                await MainActor.run {
+                    isSaving = false
+                    // Still show completion - responses saved locally
+                    withAnimation {
+                        showingCompletion = true
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Expansion Completion View
+
+struct ExpansionCompletionView: View {
+    let expansionInfo: ExpansionPackInfo
+    let onDone: () -> Void
+
+    @State private var isAnimating = false
+
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var primaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.996, green: 0.953, blue: 0.780)
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var secondaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)
+        } else {
+            return Color.secondary
+        }
+    }
+
+    private var backgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.12, green: 0.08, blue: 0.05)
+        } else {
+            return Color(.systemBackground)
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.1))
+                    .frame(width: 120, height: 120)
+                    .scaleEffect(isAnimating ? 1.2 : 0.8)
+                    .opacity(isAnimating ? 0.5 : 1)
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 60))
+                    .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
+                    .scaleEffect(isAnimating ? 1.0 : 0.9)
+            }
+
+            VStack(spacing: 8) {
+                Text("Deeper Dive Complete!")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(primaryTextColor)
+
+                Text("Thank you for helping us understand you better")
+                    .font(.subheadline)
+                    .foregroundColor(secondaryTextColor)
+                    .multilineTextAlignment(.center)
+            }
+
+            // Summary
+            VStack(spacing: 12) {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("\(expansionInfo.questions.count) questions answered")
+                        .foregroundColor(primaryTextColor)
+                    Spacer()
+                }
+
+                ForEach(expansionInfo.triggeredGateways, id: \.self) { gateway in
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
+                        Text("\(gateway.displayName) assessment complete")
+                            .foregroundColor(secondaryTextColor)
+                        Spacer()
+                    }
+                }
+            }
+            .padding()
+            .background(QuestionnaireSection.expansionPack.backgroundColor)
+            .cornerRadius(12)
+            .padding(.horizontal)
+
+            Spacer()
+
+            Button(action: onDone) {
+                Text("Continue")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 20)
+        }
+        .background(backgroundColor)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                isAnimating = true
             }
         }
     }

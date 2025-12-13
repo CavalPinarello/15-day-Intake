@@ -30,11 +30,13 @@ struct QuestionnaireView: View {
     @State private var sleepLogQuestions: [Question] = []
     @State private var sleepLogIndex: Int = 0
     @State private var sleepLogResponses: [String: Any] = [:]
+    @State private var sleepLogUserInteracted: Set<String> = []  // Track which questions user actually touched
 
     // Assessment State
     @State private var assessmentQuestions: [Question] = []
     @State private var assessmentIndex: Int = 0
     @State private var assessmentResponses: [String: Any] = [:]
+    @State private var assessmentUserInteracted: Set<String> = []  // Track which questions user actually touched
 
     // HealthKit
     @State private var healthKitSleepSummary: HealthKitSleepSummary?
@@ -235,7 +237,7 @@ struct QuestionnaireView: View {
             case .scale:
                 ScaleInput(
                     question: question,
-                    value: binding(for: question.id, default: Double(question.scaleMin ?? 1)),
+                    value: binding(for: question.id, default: ScaleInput.smartDefault(for: question)),
                     theme: theme
                 )
 
@@ -263,14 +265,14 @@ struct QuestionnaireView: View {
             case .number, .numberScroll:
                 NumberInput(
                     question: question,
-                    value: binding(for: question.id, default: Double(question.defaultValue ?? question.minValue ?? 0)),
+                    value: binding(for: question.id, default: NumberInput.smartDefault(for: question)),
                     theme: theme
                 )
 
             case .time:
                 TimeInput(
                     question: question,
-                    value: dateBinding(for: question.id),
+                    value: dateBinding(for: question.id, question: question, previousBedtime: getPreviousBedtime(for: question.id)),
                     previousBedtime: getPreviousBedtime(for: question.id)
                 )
 
@@ -315,10 +317,13 @@ struct QuestionnaireView: View {
                 }
             },
             set: { newValue in
+                print("[iOS BINDING] Setting \(questionId) = \(newValue), userInteracted=true")
                 if currentSection == .sleepLog {
                     sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
                 } else {
                     assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
                 }
             }
         )
@@ -336,8 +341,10 @@ struct QuestionnaireView: View {
             set: { newValue in
                 if currentSection == .sleepLog {
                     sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
                 } else {
                     assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
                 }
             }
         )
@@ -355,27 +362,43 @@ struct QuestionnaireView: View {
             set: { newValue in
                 if currentSection == .sleepLog {
                     sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
                 } else {
                     assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
                 }
             }
         )
     }
 
     private func dateBinding(for questionId: String) -> Binding<Date> {
-        Binding(
+        dateBinding(for: questionId, question: nil, previousBedtime: nil)
+    }
+
+    private func dateBinding(for questionId: String, question: Question?, previousBedtime: Date?) -> Binding<Date> {
+        // Calculate smart default based on question context
+        let defaultDate: Date
+        if let q = question {
+            defaultDate = TimeInput.smartDefault(for: q, previousBedtime: previousBedtime)
+        } else {
+            defaultDate = Date()
+        }
+
+        return Binding(
             get: {
                 if currentSection == .sleepLog {
-                    return (sleepLogResponses[questionId] as? Date) ?? Date()
+                    return (sleepLogResponses[questionId] as? Date) ?? defaultDate
                 } else {
-                    return (assessmentResponses[questionId] as? Date) ?? Date()
+                    return (assessmentResponses[questionId] as? Date) ?? defaultDate
                 }
             },
             set: { newValue in
                 if currentSection == .sleepLog {
                     sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
                 } else {
                     assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
                 }
             }
         )
@@ -393,8 +416,10 @@ struct QuestionnaireView: View {
             set: { newValue in
                 if currentSection == .sleepLog {
                     sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
                 } else {
                     assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
                 }
             }
         )
@@ -572,20 +597,32 @@ struct QuestionnaireView: View {
         // Non-required questions can proceed
         if !question.required { return true }
 
-        // Check if response exists
+        // Check if user has actually interacted with this question
+        let userInteracted = currentSection == .sleepLog ? sleepLogUserInteracted : assessmentUserInteracted
         let responses = currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
-        guard let response = responses[question.id] else { return false }
 
-        // Validate based on type
         switch question.questionType {
+        case .number, .numberScroll:
+            // Number inputs with +/- buttons - user MUST interact to proceed
+            // (otherwise they might accidentally skip without noticing the default)
+            return userInteracted.contains(question.id)
+        case .scale, .time, .date, .minutesScroll:
+            // Scale sliders, time/date/minutes pickers show a visible default that user can accept
+            // Allow proceeding without interaction - if they don't change it, they're accepting it
+            // The value will be saved when they tap Next (marked as interacted in saveCurrentResponse)
+            return true
         case .text, .email:
+            guard let response = responses[question.id] else { return false }
             return !(response as? String ?? "").isEmpty
         case .singleSelect, .yesNo, .yesNoDontKnow:
+            guard let response = responses[question.id] else { return false }
             return !(response as? String ?? "").isEmpty
         case .multiSelect:
+            guard let response = responses[question.id] else { return false }
             return !(response as? [String] ?? []).isEmpty
         default:
-            return true
+            // For other types, check if user interacted OR if response exists
+            return userInteracted.contains(question.id) || responses[question.id] != nil
         }
     }
 
@@ -758,6 +795,8 @@ struct QuestionnaireView: View {
                             } else if let arr = value.arrayValue {
                                 sleepLogResponses[questionId] = arr
                             }
+                            // Mark as user-interacted since it was previously saved
+                            sleepLogUserInteracted.insert(questionId)
                         } else {
                             if let str = value.stringValue {
                                 assessmentResponses[questionId] = str
@@ -766,10 +805,12 @@ struct QuestionnaireView: View {
                             } else if let arr = value.arrayValue {
                                 assessmentResponses[questionId] = arr
                             }
+                            // Mark as user-interacted since it was previously saved
+                            assessmentUserInteracted.insert(questionId)
                         }
                     }
                     loadedResponseCount = savedResponses.count
-                    print("[iOS] Loaded \(savedResponses.count) saved responses from Convex")
+                    print("[iOS] Loaded \(savedResponses.count) saved responses from Convex (marked as user-interacted)")
                 }
 
                 // Load question progress (which question user was on)
@@ -1073,14 +1114,117 @@ struct QuestionnaireView: View {
     private func saveCurrentResponse() {
         let questions = currentSection == .sleepLog ? sleepLogQuestions : assessmentQuestions
         let index = currentSection == .sleepLog ? sleepLogIndex : assessmentIndex
-        let responses = currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
 
         guard !questions.isEmpty && index < questions.count else { return }
         let question = questions[index]
 
-        guard let responseValue = responses[question.id] else { return }
-
         let answerTime = Int(Date().timeIntervalSince(questionStartTime))
+
+        // For scale questions, user can accept the smart default by tapping Next
+        if question.questionType == .scale {
+            let valueToSave: Double
+            let defaultValue = ScaleInput.smartDefault(for: question)
+            if currentSection == .sleepLog {
+                if let existingValue = sleepLogResponses[question.id] as? Double {
+                    valueToSave = existingValue
+                } else {
+                    valueToSave = defaultValue
+                    sleepLogResponses[question.id] = valueToSave
+                }
+                sleepLogUserInteracted.insert(question.id)
+            } else {
+                if let existingValue = assessmentResponses[question.id] as? Double {
+                    valueToSave = existingValue
+                } else {
+                    valueToSave = defaultValue
+                    assessmentResponses[question.id] = valueToSave
+                }
+                assessmentUserInteracted.insert(question.id)
+            }
+
+            var response = QuestionResponse(
+                questionId: question.id,
+                dayNumber: currentDay,
+                answeredAt: Date(),
+                answeredInSeconds: answerTime
+            )
+            response.numberValue = valueToSave
+            questionnaireManager.saveResponse(response)
+            return
+        }
+
+        // For time/date questions, user can accept the smart default by tapping Next
+        if question.questionType == .time || question.questionType == .date {
+            let valueToSave: Date
+            if currentSection == .sleepLog {
+                if let existingValue = sleepLogResponses[question.id] as? Date {
+                    valueToSave = existingValue
+                } else {
+                    let prevBedtime = getPreviousBedtime(for: question.id)
+                    valueToSave = TimeInput.smartDefault(for: question, previousBedtime: prevBedtime)
+                    sleepLogResponses[question.id] = valueToSave
+                }
+                sleepLogUserInteracted.insert(question.id)
+            } else {
+                if let existingValue = assessmentResponses[question.id] as? Date {
+                    valueToSave = existingValue
+                } else {
+                    let prevBedtime = getPreviousBedtime(for: question.id)
+                    valueToSave = TimeInput.smartDefault(for: question, previousBedtime: prevBedtime)
+                    assessmentResponses[question.id] = valueToSave
+                }
+                assessmentUserInteracted.insert(question.id)
+            }
+
+            var response = QuestionResponse(
+                questionId: question.id,
+                dayNumber: currentDay,
+                answeredAt: Date(),
+                answeredInSeconds: answerTime
+            )
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            response.stringValue = formatter.string(from: valueToSave)
+            questionnaireManager.saveResponse(response)
+            return
+        }
+
+        // For minutesScroll questions, user can accept the smart default by tapping Next
+        if question.questionType == .minutesScroll {
+            let valueToSave: Int
+            let defaultMinutes = question.defaultValue ?? 15  // Default to 15 minutes if not specified
+            if currentSection == .sleepLog {
+                if let existingValue = sleepLogResponses[question.id] as? Int {
+                    valueToSave = existingValue
+                } else {
+                    valueToSave = defaultMinutes
+                    sleepLogResponses[question.id] = valueToSave
+                }
+                sleepLogUserInteracted.insert(question.id)
+            } else {
+                if let existingValue = assessmentResponses[question.id] as? Int {
+                    valueToSave = existingValue
+                } else {
+                    valueToSave = defaultMinutes
+                    assessmentResponses[question.id] = valueToSave
+                }
+                assessmentUserInteracted.insert(question.id)
+            }
+
+            var response = QuestionResponse(
+                questionId: question.id,
+                dayNumber: currentDay,
+                answeredAt: Date(),
+                answeredInSeconds: answerTime
+            )
+            response.numberValue = Double(valueToSave)
+            questionnaireManager.saveResponse(response)
+            return
+        }
+
+        // For other question types, only save if response exists
+        let responses = currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
+        guard let responseValue = responses[question.id] else { return }
 
         var response = QuestionResponse(
             questionId: question.id,
@@ -1186,15 +1330,22 @@ struct QuestionnaireView: View {
 
     /// Sync all responses to Convex before completing a section
     /// This ensures server-side validation can verify responses exist
+    /// IMPORTANT: Only sync responses where user actually interacted (not smart defaults)
     private func syncResponsesToConvex() async throws {
         print("[iOS] syncResponsesToConvex called")
-        print("[iOS] sleepLogResponses: \(sleepLogResponses.count) items")
-        print("[iOS] assessmentResponses: \(assessmentResponses.count) items")
+        print("[iOS] sleepLogResponses: \(sleepLogResponses.count) items, userInteracted: \(sleepLogUserInteracted.count)")
+        print("[iOS] assessmentResponses: \(assessmentResponses.count) items, userInteracted: \(assessmentUserInteracted.count)")
 
         var convexResponses: [[String: Any]] = []
 
-        // Convert sleep log responses
+        // Convert sleep log responses - only those user actually interacted with
         for (questionId, value) in sleepLogResponses {
+            // CRITICAL: Only sync if user explicitly interacted with this question
+            guard sleepLogUserInteracted.contains(questionId) else {
+                print("[iOS] Skipping \(questionId) - user did not interact (smart default)")
+                continue
+            }
+
             var response: [String: Any] = ["questionId": questionId]
 
             if let stringValue = value as? String {
@@ -1217,8 +1368,14 @@ struct QuestionnaireView: View {
             convexResponses.append(response)
         }
 
-        // Convert assessment responses
+        // Convert assessment responses - only those user actually interacted with
         for (questionId, value) in assessmentResponses {
+            // CRITICAL: Only sync if user explicitly interacted with this question
+            guard assessmentUserInteracted.contains(questionId) else {
+                print("[iOS] Skipping \(questionId) - user did not interact (smart default)")
+                continue
+            }
+
             var response: [String: Any] = ["questionId": questionId]
 
             if let stringValue = value as? String {
@@ -1239,13 +1396,13 @@ struct QuestionnaireView: View {
         }
 
         // Only sync if we have responses
-        print("[iOS] Total responses to sync: \(convexResponses.count)")
+        print("[iOS] Total user-interacted responses to sync: \(convexResponses.count)")
         if !convexResponses.isEmpty {
             print("[iOS] Calling ConvexService.saveResponses for day \(currentDay)...")
             let result = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
             print("[iOS] Synced \(result.savedCount) responses to Convex")
         } else {
-            print("[iOS] No responses to sync!")
+            print("[iOS] No user-interacted responses to sync!")
         }
     }
 

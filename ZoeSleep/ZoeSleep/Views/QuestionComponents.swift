@@ -133,33 +133,9 @@ struct ScaleInput: View {
     let question: Question
     @Binding var value: Double
     var theme: ColorTheme = ColorTheme.shared
-    @State private var hasSetInitialValue = false
-
-    // Smart default values for scale questions
-    private var smartDefaultValue: Double {
-        let minVal = Double(question.scaleMin ?? 1)
-        let maxVal = Double(question.scaleMax ?? 10)
-
-        switch question.id {
-        // Sleep quality (1-10) - neutral/slightly good
-        case "SL_QUALITY", "1":
-            return 6
-        default:
-            // Smart inference based on question text
-            let lowerText = question.text.lowercased()
-            if lowerText.contains("quality") && lowerText.contains("sleep") {
-                return 6  // Sleep quality - neutral
-            } else if lowerText.contains("stress") {
-                return 5  // Stress level - moderate
-            } else if lowerText.contains("pain") {
-                return 2  // Pain level - low (optimistic)
-            } else if lowerText.contains("energy") || lowerText.contains("refreshed") {
-                return 6  // Energy/refreshed - neutral
-            }
-            // Default to middle of range
-            return (minVal + maxVal) / 2
-        }
-    }
+    // NOTE: Smart defaults are now handled by the binding getter in QuestionnaireView
+    // This component should NOT set values on appear, as that would incorrectly
+    // mark the question as user-interacted before the user actually touches the slider
 
     var body: some View {
         VStack(spacing: 12) {
@@ -185,16 +161,45 @@ struct ScaleInput: View {
                 .fontWeight(.bold)
                 .foregroundColor(question.pillar.themeColor)
         }
-        .onAppear {
-            // Only set smart default once on first appear
-            if !hasSetInitialValue {
-                hasSetInitialValue = true
-                let smartDefault = smartDefaultValue
-                // Ensure within bounds
-                let minVal = Double(question.scaleMin ?? 1)
-                let maxVal = Double(question.scaleMax ?? 10)
-                value = min(max(smartDefault, minVal), maxVal)
+        // REMOVED: .onAppear that was setting smart defaults
+        // This was causing values to be saved before user interaction
+    }
+
+    /// Static helper to compute smart default for a question
+    /// Call this from the binding's default parameter
+    /// Returns a value relative to the question's actual scale range
+    static func smartDefault(for question: Question) -> Double {
+        let minVal = Double(question.scaleMin ?? 1)
+        let maxVal = Double(question.scaleMax ?? 10)
+        let range = maxVal - minVal
+
+        // Helper to convert percentage (0-1) to scale value
+        func percentToValue(_ percent: Double) -> Double {
+            return minVal + (range * percent)
+        }
+
+        // Default to middle of range (50%)
+        let middleValue = percentToValue(0.5)
+
+        switch question.id {
+        // Known question IDs with specific defaults
+        case "SL_QUALITY", "1":
+            // Sleep quality - slightly above middle (60%)
+            return round(percentToValue(0.6))
+        default:
+            // Smart inference based on question text
+            let lowerText = question.text.lowercased()
+            if lowerText.contains("quality") && lowerText.contains("sleep") {
+                return round(percentToValue(0.6))  // Sleep quality - slightly above middle
+            } else if lowerText.contains("stress") {
+                return round(percentToValue(0.5))  // Stress level - middle
+            } else if lowerText.contains("pain") {
+                return round(percentToValue(0.2))  // Pain level - low (optimistic)
+            } else if lowerText.contains("energy") || lowerText.contains("refreshed") {
+                return round(percentToValue(0.6))  // Energy/refreshed - slightly above middle
             }
+            // Default to middle of range
+            return round(middleValue)
         }
     }
 }
@@ -330,12 +335,14 @@ struct NumberInput: View {
     let question: Question
     @Binding var value: Double
     var theme: ColorTheme = ColorTheme.shared
-    @State private var hasSetInitialValue = false
+    // NOTE: Smart defaults are now handled by the binding getter in QuestionnaireView
+    // This component should NOT set values on appear
 
     private var pillarColor: Color { question.pillar.themeColor }
 
-    // Smart default values based on question context
-    private var smartDefaultValue: Double {
+    /// Static helper to compute smart default for a question
+    /// Call this from the binding's default parameter
+    static func smartDefault(for question: Question) -> Double {
         switch question.id {
         // Demographics
         case "D1":
@@ -421,17 +428,8 @@ struct NumberInput: View {
                 .disabled(value >= Double(question.maxValue ?? 100))
             }
         }
-        .onAppear {
-            // Only set smart default once on first appear
-            if !hasSetInitialValue {
-                hasSetInitialValue = true
-                let smartDefault = smartDefaultValue
-                // Ensure within bounds
-                let minVal = Double(question.minValue ?? 0)
-                let maxVal = Double(question.maxValue ?? 100)
-                value = min(max(smartDefault, minVal), maxVal)
-            }
-        }
+        // REMOVED: .onAppear that was setting smart defaults
+        // This was causing values to be saved before user interaction
     }
 
     private func formatValue() -> String {
@@ -462,15 +460,40 @@ struct TimeInput: View {
     @Binding var value: Date
     var previousBedtime: Date? = nil  // Used to calculate smart defaults for wake/asleep times
     @ObservedObject private var themeManager = ThemeManager.shared
-    @State private var hasInitialized = false  // Track if we've set the initial default
+    // NOTE: Smart defaults are now handled by the dateBinding getter in QuestionnaireView
+    // This component should NOT set values on appear
 
     // Circadian-aware check
     private var isEvening: Bool {
         TimePeriod.current == .evening || TimePeriod.current == .night
     }
 
-    // Smart default times based on question context and previous answers (Consensus Sleep Diary)
-    private var smartDefaultTime: Date {
+    var body: some View {
+        VStack(spacing: 8) {
+            DatePicker(
+                "",
+                selection: $value,
+                displayedComponents: .hourAndMinute
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .frame(height: themeManager.largeIconsMode ? 180 : 150)
+            .scaleEffect(themeManager.largeIconsMode ? 1.15 : 1.0)
+            // Apply circadian-aware styling to picker text
+            // Force dark mode for the picker in evening/night to get light text,
+            // then tint with warm amber color
+            .colorScheme(isEvening ? .dark : .light)
+            .tint(isEvening ? Color(red: 0.988, green: 0.827, blue: 0.302) : nil) // Golden amber tint
+        }
+        .id("\(question.id)-\(previousBedtime?.timeIntervalSince1970 ?? 0)") // Force view recreation when question or context changes
+        // REMOVED: .task and .onChange that were setting smart defaults
+        // This was causing values to be marked as user-interacted before the user actually touched the picker
+        // Smart defaults are now provided via the dateBinding getter in QuestionnaireView
+    }
+
+    /// Static helper to compute smart default time for a question
+    /// Call this from the binding's default parameter
+    static func smartDefault(for question: Question, previousBedtime: Date? = nil) -> Date {
         let calendar = Calendar.current
         var components = DateComponents()
         components.minute = 0
@@ -588,43 +611,6 @@ struct TimeInput: View {
         }
 
         return calendar.date(from: components) ?? Date()
-    }
-
-    var body: some View {
-        VStack(spacing: 8) {
-            DatePicker(
-                "",
-                selection: $value,
-                displayedComponents: .hourAndMinute
-            )
-            .datePickerStyle(.wheel)
-            .labelsHidden()
-            .frame(height: themeManager.largeIconsMode ? 180 : 150)
-            .scaleEffect(themeManager.largeIconsMode ? 1.15 : 1.0)
-            // Apply circadian-aware styling to picker text
-            // Force dark mode for the picker in evening/night to get light text,
-            // then tint with warm amber color
-            .colorScheme(isEvening ? .dark : .light)
-            .tint(isEvening ? Color(red: 0.988, green: 0.827, blue: 0.302) : nil) // Golden amber tint
-        }
-        .id("\(question.id)-\(previousBedtime?.timeIntervalSince1970 ?? 0)") // Force view recreation when question or context changes
-        .task {
-            // Use task instead of onAppear for more reliable initialization
-            // Only set smart default if we haven't initialized yet for this question
-            if !hasInitialized {
-                // Check if current value looks like it was set to "now" (the default fallback)
-                // rather than a meaningful time. If within 60 seconds of now, override with smart default.
-                let timeDiff = abs(value.timeIntervalSinceNow)
-                if timeDiff < 60 {
-                    value = smartDefaultTime
-                }
-                hasInitialized = true
-            }
-        }
-        .onChange(of: question.id) { _, _ in
-            // Reset initialization flag when question changes
-            hasInitialized = false
-        }
     }
 }
 

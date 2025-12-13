@@ -824,6 +824,86 @@ class QuestionnaireManager: ObservableObject {
         return abs(totalMinutes1 - totalMinutes2)
     }
 
+    // MARK: - Same-Day Expansion Pack System
+    // When gateways are triggered during the core assessment (Days 1-5),
+    // we can offer additional "expansion" questions on the same day.
+    // This provides immediate, personalized deep-dives.
+
+    /// Maximum number of expansion questions to show in a single day (to avoid overwhelming the user)
+    static let maxExpansionQuestionsPerDay = 15
+
+    /// Maps gateway types to their primary expansion module
+    /// These are the "quick" expansion modules suitable for same-day delivery
+    /// Note: Only includes modules that exist in expansionQuestionsByModule
+    static let sameDayExpansionModules: [GatewayType: String] = [
+        .insomnia: "expansion_isi",           // 7 questions - Insomnia Severity Index
+        .poorSleepQuality: "expansion_isi",   // Same as insomnia
+        .excessiveSleepiness: "expansion_ess", // 8 questions - Epworth Sleepiness Scale
+        .depression: "expansion_phq9",        // 9 questions - PHQ-9
+        .anxiety: "expansion_gad7_part1",     // 4 questions - GAD-7 Part 1
+        .osa: "expansion_stop_bang"           // 8 questions - STOP-BANG
+        // Note: cognitive, pain, dietImpact, sleepTiming don't have quick same-day modules yet
+    ]
+
+    /// Get expansion pack info for newly triggered gateways on the current day
+    /// Returns nil if no gateways were triggered or no expansion is available
+    func getExpansionPackForDay(_ dayNumber: Int) -> ExpansionPackInfo? {
+        // Only offer same-day expansion during core phase (Days 1-5)
+        guard dayNumber <= 5 else { return nil }
+
+        // Get triggered gateways that have same-day expansion modules
+        let triggeredWithExpansion = gatewayStates.filter { state in
+            state.triggered && Self.sameDayExpansionModules.keys.contains(state.gatewayType)
+        }
+
+        guard !triggeredWithExpansion.isEmpty else { return nil }
+
+        // Collect expansion questions from triggered gateways
+        var expansionQuestions: [Question] = []
+        var includedGateways: [GatewayType] = []
+
+        for state in triggeredWithExpansion {
+            guard let moduleId = Self.sameDayExpansionModules[state.gatewayType],
+                  let moduleQuestions = Self.expansionQuestionsByModule[moduleId] else { continue }
+
+            // Check if adding this module would exceed the limit
+            if expansionQuestions.count + moduleQuestions.count <= Self.maxExpansionQuestionsPerDay {
+                // Avoid duplicates (e.g., insomnia and poorSleepQuality share the same module)
+                let newQuestionIds = Set(moduleQuestions.map { $0.id })
+                let existingQuestionIds = Set(expansionQuestions.map { $0.id })
+                if newQuestionIds.isDisjoint(with: existingQuestionIds) {
+                    expansionQuestions.append(contentsOf: moduleQuestions)
+                    includedGateways.append(state.gatewayType)
+                }
+            }
+        }
+
+        // Return nil if no questions to show
+        guard !expansionQuestions.isEmpty else { return nil }
+
+        // Calculate estimated time (roughly 1 minute per question)
+        let estimatedMinutes = max(expansionQuestions.count, 3) // Minimum 3 minutes
+
+        return ExpansionPackInfo(
+            triggeredGateways: includedGateways,
+            questions: expansionQuestions,
+            totalEstimatedMinutes: estimatedMinutes
+        )
+    }
+
+    /// Check if there are triggered gateways that haven't had their expansion questions shown yet
+    /// This helps the dashboard decide whether to show the expansion pack section
+    func hasAvailableExpansionPack(for dayNumber: Int) -> Bool {
+        return getExpansionPackForDay(dayNumber) != nil
+    }
+
+    /// Get the list of gateways that were triggered today and have expansion available
+    func getTriggeredGatewaysWithExpansion() -> [GatewayType] {
+        return gatewayStates.filter { state in
+            state.triggered && Self.sameDayExpansionModules.keys.contains(state.gatewayType)
+        }.map { $0.gatewayType }
+    }
+
     // MARK: - Response Management
 
     func saveResponse(_ response: QuestionResponse) {

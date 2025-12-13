@@ -13,11 +13,13 @@ import SwiftUI
 enum QuestionnaireSection: String, CaseIterable {
     case sleepLog = "sleep_log"
     case assessment = "assessment"
+    case expansionPack = "expansion_pack"  // NEW: Same-day triggered assessments
 
     var title: String {
         switch self {
         case .sleepLog: return FriendlyCopy.sleepLogHeader
         case .assessment: return FriendlyCopy.assessmentHeader
+        case .expansionPack: return "Deeper Dive"
         }
     }
 
@@ -25,6 +27,7 @@ enum QuestionnaireSection: String, CaseIterable {
         switch self {
         case .sleepLog: return "A quick check-in"
         case .assessment: return "Getting to know you"
+        case .expansionPack: return "Personalized for you"
         }
     }
 
@@ -32,6 +35,7 @@ enum QuestionnaireSection: String, CaseIterable {
         switch self {
         case .sleepLog: return "How did you sleep?"
         case .assessment: return "Help us understand you better"
+        case .expansionPack: return "Based on your responses"
         }
     }
 
@@ -39,6 +43,7 @@ enum QuestionnaireSection: String, CaseIterable {
         switch self {
         case .sleepLog: return "moon.zzz.fill"
         case .assessment: return "clipboard.fill"
+        case .expansionPack: return "sparkles"
         }
     }
 
@@ -51,16 +56,18 @@ enum QuestionnaireSection: String, CaseIterable {
         let isEvening = TimePeriod.current == .evening || TimePeriod.current == .night
 
         if isEvening {
-            // Warm brown tint for both sections at night
+            // Warm brown tint for all sections at night
             switch self {
             case .sleepLog: return Color(red: 0.4, green: 0.25, blue: 0.15).opacity(0.3)    // Warm brown
             case .assessment: return Color(red: 0.35, green: 0.2, blue: 0.1).opacity(0.3)  // Darker brown
+            case .expansionPack: return Color(red: 0.45, green: 0.28, blue: 0.12).opacity(0.35)  // Copper/bronze tint
             }
         } else {
-            // Daytime: Original blue/purple tints
+            // Daytime colors
             switch self {
             case .sleepLog: return Color(red: 0.13, green: 0.59, blue: 0.95).opacity(0.1)  // Blue
             case .assessment: return Color(red: 0.61, green: 0.35, blue: 0.71).opacity(0.15)  // Purple
+            case .expansionPack: return Color(red: 0.72, green: 0.45, blue: 0.2).opacity(0.15)  // Copper/bronze
             }
         }
     }
@@ -74,12 +81,14 @@ enum QuestionnaireSection: String, CaseIterable {
             switch self {
             case .sleepLog: return Color(red: 0.95, green: 0.6, blue: 0.2)    // Warm amber #F29933
             case .assessment: return Color(red: 0.85, green: 0.5, blue: 0.15) // Deep amber #D98026
+            case .expansionPack: return Color(red: 0.85, green: 0.55, blue: 0.25) // Copper #D98C40
             }
         } else {
-            // Daytime: Original blue/purple
+            // Daytime colors
             switch self {
             case .sleepLog: return Color(red: 0.13, green: 0.59, blue: 0.95)  // #2196F3
             case .assessment: return Color(red: 0.61, green: 0.35, blue: 0.71)  // #9C27B0
+            case .expansionPack: return Color(red: 0.72, green: 0.45, blue: 0.2)  // Copper/bronze #B87333
             }
         }
     }
@@ -103,9 +112,15 @@ enum QuestionnaireSection: String, CaseIterable {
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
+            case .expansionPack:
+                return LinearGradient(
+                    colors: [Color(red: 0.85, green: 0.55, blue: 0.25), Color(red: 0.7, green: 0.4, blue: 0.15)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
         } else {
-            // Daytime: Original gradients
+            // Daytime gradients
             switch self {
             case .sleepLog:
                 return LinearGradient(
@@ -116,6 +131,12 @@ enum QuestionnaireSection: String, CaseIterable {
             case .assessment:
                 return LinearGradient(
                     colors: [Color(red: 0.61, green: 0.35, blue: 0.71), Color(red: 0.45, green: 0.25, blue: 0.55)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .expansionPack:
+                return LinearGradient(
+                    colors: [Color(red: 0.72, green: 0.45, blue: 0.2), Color(red: 0.55, green: 0.32, blue: 0.12)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -131,6 +152,40 @@ enum QuestionnaireSection: String, CaseIterable {
             return Color(red: 0.988, green: 0.827, blue: 0.302)  // #FCD34D
         } else {
             return accentColor
+        }
+    }
+}
+
+// MARK: - Expansion Pack Info (tracks why questions were triggered)
+
+struct ExpansionPackInfo {
+    let triggeredGateways: [GatewayType]
+    let questions: [Question]
+    let totalEstimatedMinutes: Int
+
+    /// Human-readable explanation of why these questions are being asked
+    var triggerExplanation: String {
+        guard !triggeredGateways.isEmpty else {
+            return "Based on your responses, we'd like to learn more."
+        }
+
+        let gatewayNames = triggeredGateways.map { $0.displayName }
+        if gatewayNames.count == 1 {
+            return "Based on your response about \(gatewayNames[0].lowercased()), we'd like to understand this area better."
+        } else if gatewayNames.count == 2 {
+            return "Based on your responses about \(gatewayNames[0].lowercased()) and \(gatewayNames[1].lowercased()), we'd like to learn more."
+        } else {
+            let allButLast = gatewayNames.dropLast().joined(separator: ", ")
+            return "Based on your responses about \(allButLast.lowercased()), and \(gatewayNames.last!.lowercased()), we'd like to understand these areas better."
+        }
+    }
+
+    /// Short subtitle for the card
+    var shortExplanation: String {
+        if triggeredGateways.count == 1 {
+            return "Understanding your \(triggeredGateways[0].displayName.lowercased())"
+        } else {
+            return "Personalized questions based on your answers"
         }
     }
 }
@@ -768,5 +823,226 @@ struct FlowLayout: Layout {
         onDone: {},
         completedSection: .sleepLog,
         onProceedToNextSection: {}
+    )
+}
+
+// MARK: - Expansion Pack Intro View
+// Shows before expansion questions to explain why they were triggered
+
+struct ExpansionPackIntroView: View {
+    let expansionInfo: ExpansionPackInfo
+    let onContinue: () -> Void
+    let onSkip: (() -> Void)?  // Optional - allow skipping if not mandatory
+
+    @State private var isAnimating = false
+
+    // Circadian-aware colors
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var primaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var secondaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
+        } else {
+            return Color.secondary
+        }
+    }
+
+    private var backgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.12, green: 0.08, blue: 0.05)  // Dark warm brown
+        } else {
+            return Color(.systemBackground)
+        }
+    }
+
+    private var cardBackgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.22, green: 0.15, blue: 0.10)  // Slightly lighter dark brown
+        } else {
+            return Color(.secondarySystemBackground)
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            // Sparkle icon animation
+            ZStack {
+                Circle()
+                    .fill(QuestionnaireSection.expansionPack.accentColor.opacity(0.15))
+                    .frame(width: 100, height: 100)
+                    .scaleEffect(isAnimating ? 1.1 : 1.0)
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 50))
+                    .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
+                    .scaleEffect(isAnimating ? 1.0 : 0.9)
+            }
+
+            // Title
+            VStack(spacing: 8) {
+                Text("Deeper Dive")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(primaryTextColor)
+
+                Text("Personalized for you")
+                    .font(.subheadline)
+                    .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
+            }
+
+            // Explanation card
+            VStack(alignment: .leading, spacing: 16) {
+                // Why these questions
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.title3)
+                        .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
+
+                    Text(expansionInfo.triggerExplanation)
+                        .font(.body)
+                        .foregroundColor(primaryTextColor)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Divider()
+                    .background(secondaryTextColor.opacity(0.3))
+
+                // What to expect
+                HStack(spacing: 20) {
+                    // Question count
+                    VStack(spacing: 4) {
+                        Text("\(expansionInfo.questions.count)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
+                        Text("questions")
+                            .font(.caption)
+                            .foregroundColor(secondaryTextColor)
+                    }
+
+                    // Divider
+                    Rectangle()
+                        .fill(secondaryTextColor.opacity(0.3))
+                        .frame(width: 1, height: 40)
+
+                    // Time estimate
+                    VStack(spacing: 4) {
+                        Text("~\(expansionInfo.totalEstimatedMinutes)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
+                        Text("minutes")
+                            .font(.caption)
+                            .foregroundColor(secondaryTextColor)
+                    }
+
+                    Spacer()
+                }
+
+                // Triggered gateways tags
+                if !expansionInfo.triggeredGateways.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Areas we'll explore:")
+                            .font(.caption)
+                            .foregroundColor(secondaryTextColor)
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+
+                        FlowLayout(spacing: 8) {
+                            ForEach(expansionInfo.triggeredGateways, id: \.self) { gateway in
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption2)
+                                    Text(gateway.displayName)
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(QuestionnaireSection.expansionPack.accentColor)
+                                .cornerRadius(16)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .background(cardBackgroundColor)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(QuestionnaireSection.expansionPack.accentColor.opacity(0.3), lineWidth: 1)
+            )
+            .padding(.horizontal)
+
+            // Reassurance
+            HStack(spacing: 8) {
+                Image(systemName: "shield.checkered")
+                    .font(.caption)
+                    .foregroundColor(secondaryTextColor)
+                Text("Your answers help us create a personalized sleep plan")
+                    .font(.caption)
+                    .foregroundColor(secondaryTextColor)
+            }
+
+            Spacer()
+
+            // Buttons
+            VStack(spacing: 12) {
+                Button(action: onContinue) {
+                    HStack {
+                        Text("Let's dive in")
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(QuestionnaireSection.expansionPack.accentColor)
+                    .cornerRadius(12)
+                }
+
+                if let skip = onSkip {
+                    Button(action: skip) {
+                        Text("Skip for now")
+                            .font(.subheadline)
+                            .foregroundColor(secondaryTextColor)
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 20)
+        }
+        .background(backgroundColor)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                isAnimating = true
+            }
+        }
+    }
+}
+
+#Preview("Expansion Pack Intro") {
+    ExpansionPackIntroView(
+        expansionInfo: ExpansionPackInfo(
+            triggeredGateways: [.insomnia, .poorSleepQuality],
+            questions: [],
+            totalEstimatedMinutes: 8
+        ),
+        onContinue: {},
+        onSkip: {}
     )
 }

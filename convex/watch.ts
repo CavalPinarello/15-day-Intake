@@ -1060,6 +1060,22 @@ export const getQuestionProgress = query({
 });
 
 /**
+ * Debug: Get all questionnaire sessions for a user
+ */
+export const debugGetAllSessions = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const sessions = await ctx.db
+      .query("questionnaire_session")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+    return sessions;
+  },
+});
+
+/**
  * Update question progress when user answers a question
  * Called after each question to enable seamless cross-device sync
  * SECURITY: Requires sessionToken to validate user ownership

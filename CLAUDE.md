@@ -78,6 +78,9 @@ iPhone ←→ Convex ←→ Dashboard
 - Fixed questionnaire navigation: Back button now properly respects section boundaries (Dec 12, 2025)
 - Added save error handling: Retry dialogs for failed Convex syncs (Dec 12, 2025)
 - Circadian picker styling: Time/date pickers now use warm amber colors at night (Dec 12, 2025)
+- **Fixed pre-fill/fast-forward bug:** Questionnaire no longer auto-fills answers on fresh start (Dec 12, 2025)
+- **User interaction tracking:** Only saves responses user explicitly touched; accepts smart defaults on Next tap
+- **Smart defaults are scale-relative:** Default values now adapt to actual question scale range (1-5 vs 1-10)
 - Onboarding: 8 steps, account-aware, circadian colors
 - Cross-device sync: Question-by-question resume
 - Day unlock: 4 AM (was 5 AM)
