@@ -69,8 +69,16 @@ struct ZoeSleepApp: App {
 struct AppRootView: View {
     @State private var showSplash = true
     @State private var splashOpacity: Double = 1.0
+    @State private var minSplashTimeElapsed = false
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var onboardingManager: OnboardingManager
+
+    // Splash should stay until:
+    // 1. Minimum time elapsed (0.6s for animation)
+    // 2. Session check is complete (isCheckingSession == false)
+    private var shouldHideSplash: Bool {
+        minSplashTimeElapsed && !authManager.isCheckingSession
+    }
 
     var body: some View {
         ZStack {
@@ -78,19 +86,30 @@ struct AppRootView: View {
             mainContent
                 .opacity(showSplash ? 0 : 1)
 
-            // Fast splash screen (0.6s)
+            // Splash screen - shows loading indicator while checking session
             if showSplash {
-                SplashScreenView(onComplete: {
-                    // Quick fade out
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        splashOpacity = 0
-                    }
-                    // Remove splash
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        showSplash = false
-                    }
-                }, duration: 0.6)
+                SplashScreenView(
+                    onComplete: {
+                        // Mark minimum time elapsed
+                        minSplashTimeElapsed = true
+                    },
+                    duration: 0.6,
+                    isLoading: authManager.isCheckingSession,
+                    loadingMessage: "Signing in"
+                )
                 .opacity(splashOpacity)
+            }
+        }
+        .onChange(of: shouldHideSplash) { _, shouldHide in
+            if shouldHide {
+                // Quick fade out
+                withAnimation(.easeOut(duration: 0.2)) {
+                    splashOpacity = 0
+                }
+                // Remove splash
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    showSplash = false
+                }
             }
         }
     }
@@ -118,16 +137,42 @@ struct AppRootView: View {
 struct ThemedRootView: View {
     @ObservedObject private var themeManager = ThemeManager.shared
 
+    /// Convert text size multiplier to DynamicTypeSize for system-wide scaling
+    private var dynamicTypeSize: DynamicTypeSize {
+        switch themeManager.textSizeMultiplier {
+        case ..<0.85: return .xSmall
+        case 0.85..<0.95: return .small
+        case 0.95..<1.05: return .medium
+        case 1.05..<1.15: return .large
+        case 1.15..<1.25: return .xLarge
+        case 1.25..<1.35: return .xxLarge
+        default: return .xxxLarge
+        }
+    }
+
     var body: some View {
         ContentView()
             .preferredColorScheme(themeManager.currentColorScheme)
             .tint(themeManager.accentColor)
+            .dynamicTypeSize(dynamicTypeSize)  // Apply text size scaling app-wide
             .onChange(of: themeManager.appearanceMode) { _, _ in
                 // Force UI update
             }
             .onChange(of: themeManager.accentColorOption) { _, _ in
                 // Force UI update - sync to watch
                 iOSWatchConnectivityManager.shared.sendThemeSettingsToWatch()
+            }
+            .onChange(of: themeManager.textSizeMultiplier) { _, _ in
+                // Force UI update for text size changes
+            }
+            .onChange(of: themeManager.largeIconsMode) { _, _ in
+                // Force UI update for large icons mode
+            }
+            .onChange(of: themeManager.highContrast) { _, _ in
+                // Force UI update for high contrast mode
+            }
+            .onChange(of: themeManager.reduceMotion) { _, _ in
+                // Force UI update for reduce motion
             }
     }
 }

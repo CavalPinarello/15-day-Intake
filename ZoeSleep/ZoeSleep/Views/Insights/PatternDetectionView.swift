@@ -16,11 +16,20 @@ struct PatternDetectionView: View {
     @EnvironmentObject var themeManager: ThemeManager
     private var theme: ColorTheme { themeManager.currentTheme }
 
+    // MARK: - Circadian-Aware Colors
+    private var palette: CircadianPalette {
+        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    }
+
+    private var circadianTextPrimary: Color {
+        palette.textPrimary
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Patterns")
                 .font(.headline)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(circadianTextPrimary)
 
             if let pattern = workdayVsWeekend {
                 workdayWeekendCard(pattern)
@@ -50,7 +59,7 @@ struct PatternDetectionView: View {
                 Text("Workday vs Weekend")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)
             }
 
             HStack(spacing: 12) {
@@ -58,20 +67,20 @@ struct PatternDetectionView: View {
                 VStack(spacing: 4) {
                     Text("Workday")
                         .font(.caption2)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)
 
                     Text(formatDuration(Int(pattern.workdayAvgSleep)))
                         .font(.callout)
                         .fontWeight(.semibold)
-                        .foregroundColor(theme.textPrimary)
+                        .foregroundColor(theme.textOnCard)
 
                     Text("\(Int(pattern.workdayAvgEfficiency))% eff")
                         .font(.caption2)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-                .background(theme.backgroundTint)
+                .background(theme.primary.opacity(0.10))
                 .cornerRadius(8)
 
                 // Comparison arrow
@@ -95,25 +104,25 @@ struct PatternDetectionView: View {
                 VStack(spacing: 4) {
                     Text("Weekend")
                         .font(.caption2)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)
 
                     Text(formatDuration(Int(pattern.weekendAvgSleep)))
                         .font(.callout)
                         .fontWeight(.semibold)
-                        .foregroundColor(theme.textPrimary)
+                        .foregroundColor(theme.textOnCard)
 
                     Text("\(Int(pattern.weekendAvgEfficiency))% eff")
                         .font(.caption2)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-                .background(theme.backgroundTint)
+                .background(theme.primary.opacity(0.10))
                 .cornerRadius(8)
             }
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.35))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(12)
     }
 
@@ -132,7 +141,7 @@ struct PatternDetectionView: View {
                 Text("Optimal Bedtime")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)
 
                 Text("Around \(bedtime.time)")
                     .font(.callout)
@@ -140,7 +149,7 @@ struct PatternDetectionView: View {
 
                 Text("You fall asleep \(Int(bedtime.latencyDiff)) min faster")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)
             }
 
             Spacer()
@@ -153,11 +162,11 @@ struct PatternDetectionView: View {
                     .foregroundColor(theme.success)
                 Text("confidence")
                     .font(.caption2)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)
             }
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.35))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(12)
     }
 
@@ -171,7 +180,7 @@ struct PatternDetectionView: View {
                 Text("Sleep Stages")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)
             }
 
             HStack(spacing: 8) {
@@ -195,13 +204,13 @@ struct PatternDetectionView: View {
                 stageBar(
                     label: "Light",
                     percent: stages.avgLightPercent,
-                    color: theme.textSecondary,
+                    color: theme.textOnCardSecondary,
                     belowRecommended: false
                 )
             }
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.35))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(12)
     }
 
@@ -209,7 +218,7 @@ struct PatternDetectionView: View {
         VStack(spacing: 4) {
             Text(label)
                 .font(.caption2)
-                .foregroundColor(theme.textSecondary)
+                .foregroundColor(theme.textOnCardSecondary)
 
             ZStack(alignment: .bottom) {
                 RoundedRectangle(cornerRadius: 4)
@@ -225,7 +234,7 @@ struct PatternDetectionView: View {
                 Text("\(Int(percent))%")
                     .font(.caption2)
                     .fontWeight(.medium)
-                    .foregroundColor(belowRecommended ? theme.warning : theme.textPrimary)
+                    .foregroundColor(belowRecommended ? theme.warning : theme.textOnCard)
 
                 if belowRecommended {
                     Image(systemName: "arrow.down")
@@ -242,10 +251,10 @@ struct PatternDetectionView: View {
     private var noPatternView: some View {
         Text("Patterns will appear as more data is collected")
             .font(.subheadline)
-            .foregroundColor(theme.textSecondary)
+            .foregroundColor(theme.textOnCardSecondary)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(GlassyCardBackground(opacity: 0.35))
+            .background(GlassyCardBackground(opacity: 0.5))
             .cornerRadius(12)
     }
 

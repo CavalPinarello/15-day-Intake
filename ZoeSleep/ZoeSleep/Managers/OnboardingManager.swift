@@ -80,24 +80,25 @@ enum WearableDevice: String, CaseIterable, Identifiable {
 
 /// Onboarding step enum
 /// NOTE: No welcome step - splash screen serves as welcome, onboarding starts with name
+/// REVISED: HealthKit moved earlier to enable auto-fill of demographics
 enum OnboardingStep: Int, CaseIterable {
     case name = 0
-    case measurementSystem = 1
-    case heightWeight = 2
-    case genderAge = 3
-    case wearables = 4
-    case healthConnect = 5
+    case healthConnect = 1      // Moved earlier - before body metrics
+    case measurementSystem = 2  // Auto-detected from locale, may be skipped
+    case heightWeight = 3       // Skipped entirely if HealthKit provides data
+    case genderAge = 4          // Skipped if HealthKit provides data
+    case wearables = 5
     case sleepPhilosophy = 6
     case ready = 7
 
     var title: String {
         switch self {
         case .name: return "Your Name"
+        case .healthConnect: return "Health Data"
         case .measurementSystem: return "Units"
         case .heightWeight: return "Body Metrics"
         case .genderAge: return "About You"
         case .wearables: return "Devices"
-        case .healthConnect: return "Health Data"
         case .sleepPhilosophy: return "Our Approach"
         case .ready: return "Ready"
         }
@@ -404,12 +405,19 @@ class OnboardingManager: ObservableObject {
         case .name:
             // Skip if name is already filled
             return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .measurementSystem:
-            // Don't skip - user might want to change the auto-detected value
+        case .healthConnect:
+            // Never skip - always show HealthKit permission request
             return false
+        case .measurementSystem:
+            // Skip measurement system - auto-detected from locale
+            // User can change in settings if needed
+            return true
         case .heightWeight:
-            // Skip if we got data from HealthKit
-            return profile.hasConnectedHealthKit && profile.heightCm > 100 && profile.weightKg > 30
+            // Skip entirely if HealthKit provided height and weight data
+            // This is the key change from Issue 2
+            return profile.hasConnectedHealthKit &&
+                   profile.heightCm > 100 && profile.heightCm < 250 &&
+                   profile.weightKg > 30 && profile.weightKg < 300
         case .genderAge:
             // Skip if we got complete data from HealthKit
             return profile.hasConnectedHealthKit &&

@@ -64,12 +64,13 @@ struct CircadianColors {
     }
 }
 
-// MARK: - Question Card Container
+// MARK: - Question Card Container (Calm, Headspace-inspired)
 
 struct QuestionCard<Content: View>: View {
     let question: Question
     let content: () -> Content
     var theme: ColorTheme = ColorTheme.shared
+    @State private var showHelpText = false
 
     init(question: Question, theme: ColorTheme = ColorTheme.shared, @ViewBuilder content: @escaping () -> Content) {
         self.question = question
@@ -78,56 +79,51 @@ struct QuestionCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Pillar badge
-            HStack {
-                Text(question.pillar.rawValue.uppercased())
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(question.pillar.themeColor)
-                    .cornerRadius(4)
+        VStack(spacing: Spacing.xl) {
+            // Question text - large, centered, friendly
+            VStack(spacing: Spacing.md) {
+                Text(question.text)
+                    .font(.system(size: Typography.title2, weight: .semibold, design: .rounded))
+                    .foregroundColor(CircadianColors.primary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Spacer()
-
-                if question.required {
-                    Text("Required")
-                        .font(.caption2)
-                        .foregroundColor(CircadianColors.secondary)
-                }
-            }
-
-            // Question text
-            Text(question.text)
-                .font(.body)
-                .fontWeight(.medium)
-                .foregroundColor(CircadianColors.primary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            // Help text
-            if let helpText = question.helpText {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "info.circle")
-                        .foregroundColor(theme.primary)
-                        .font(.caption)
-                    Text(helpText)
-                        .font(.caption)
+                // Help text - tap to expand
+                if let helpText = question.helpText {
+                    Button {
+                        withAnimation(.spring(response: 0.3)) {
+                            showHelpText.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: showHelpText ? "questionmark.circle.fill" : "questionmark.circle")
+                                .font(.system(size: Typography.subheadline))
+                            if showHelpText {
+                                Text(helpText)
+                                    .font(.system(size: Typography.subheadline, design: .rounded))
+                                    .multilineTextAlignment(.center)
+                            } else {
+                                Text("Need help?")
+                                    .font(.system(size: Typography.subheadline, design: .rounded))
+                            }
+                        }
                         .foregroundColor(CircadianColors.muted)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(8)
-                .background(theme.backgroundTint)
-                .cornerRadius(8)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, Spacing.md)
 
-            // Answer content
+            // Answer content - ample space
             content()
+                .frame(maxWidth: .infinity)
         }
-        .padding(16)
-        .background(CircadianColors.secondaryBackground)
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .padding(Spacing.xl)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.extraLarge)
+                .fill(CircadianColors.secondaryBackground)
+        )
     }
 }
 
@@ -466,19 +462,25 @@ struct TimeInput: View {
     @Binding var value: Date
     var previousBedtime: Date? = nil  // Used to calculate smart defaults for wake/asleep times
     @ObservedObject private var themeManager = ThemeManager.shared
+    @State private var hasInitialized = false  // Track if we've set the initial default
 
-    // Smart default times based on question context and previous answers (Stanford Sleep Diary)
+    // Circadian-aware check
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    // Smart default times based on question context and previous answers (Consensus Sleep Diary)
     private var smartDefaultTime: Date {
         let calendar = Calendar.current
         var components = DateComponents()
         components.minute = 0
 
         switch question.id {
-        // Stanford Sleep Diary - New question IDs
-        case "SD_GOT_INTO_BED":
+        // Consensus Sleep Diary (CSD) question IDs
+        case "CSD_INTO_BED":
             components.hour = 22  // 10:00 PM - when you got into bed
 
-        case "SD_LIGHTS_OUT":
+        case "CSD_TRY_SLEEP":
             // Typically 5-15 min after getting into bed
             if let gotIntoBed = previousBedtime {
                 return calendar.date(byAdding: .minute, value: 10, to: gotIntoBed) ?? gotIntoBed
@@ -486,23 +488,15 @@ struct TimeInput: View {
             components.hour = 22
             components.minute = 15
 
-        case "SL_ASLEEP_TIME":
-            // Typically 10-20 min after lights out
-            if let lightsOut = previousBedtime {
-                return calendar.date(byAdding: .minute, value: 15, to: lightsOut) ?? lightsOut
-            }
-            components.hour = 22
-            components.minute = 30
-
-        case "SL_WAKE_TIME":
-            // Typically ~7-8 hours after asleep time
-            if let asleepTime = previousBedtime {
-                return calendar.date(byAdding: .hour, value: 8, to: asleepTime) ?? Date()
+        case "CSD_FINAL_WAKE":
+            // Typically ~7-8 hours after trying to sleep
+            if let trySleep = previousBedtime {
+                return calendar.date(byAdding: .hour, value: 8, to: trySleep) ?? Date()
             }
             components.hour = 6
             components.minute = 30
 
-        case "SD_OUT_OF_BED":
+        case "CSD_OUT_BED":
             // Typically 5-15 min after final wake
             if let wakeTime = previousBedtime {
                 return calendar.date(byAdding: .minute, value: 10, to: wakeTime) ?? wakeTime
@@ -510,46 +504,84 @@ struct TimeInput: View {
             components.hour = 6
             components.minute = 45
 
+        case "CSD_CAFFEINE_LAST":
+            // Default to 2 PM for last caffeine
+            components.hour = 14
+            components.minute = 0
+
+        case "CSD_ALCOHOL_LAST":
+            // Default to 8 PM for last alcohol
+            components.hour = 20
+            components.minute = 0
+
         // Legacy Stanford Sleep Log IDs (backward compatibility)
-        case "SL_BEDTIME":
+        case "SL_BEDTIME", "SD_GOT_INTO_BED":
             components.hour = 22  // 10:00 PM - typical bedtime
+
+        case "SD_LIGHTS_OUT":
+            if let gotIntoBed = previousBedtime {
+                return calendar.date(byAdding: .minute, value: 10, to: gotIntoBed) ?? gotIntoBed
+            }
+            components.hour = 22
+            components.minute = 15
+
+        case "SL_ASLEEP_TIME":
+            if let lightsOut = previousBedtime {
+                return calendar.date(byAdding: .minute, value: 15, to: lightsOut) ?? lightsOut
+            }
+            components.hour = 22
+            components.minute = 30
+
+        case "SL_WAKE_TIME":
+            if let asleepTime = previousBedtime {
+                return calendar.date(byAdding: .hour, value: 8, to: asleepTime) ?? Date()
+            }
+            components.hour = 6
+            components.minute = 30
+
+        case "SD_OUT_OF_BED":
+            if let wakeTime = previousBedtime {
+                return calendar.date(byAdding: .minute, value: 10, to: wakeTime) ?? wakeTime
+            }
+            components.hour = 6
+            components.minute = 45
 
         // PSQI questions
         case "PSQI_1":
-            components.hour = 22  // 10:30 PM - usual bedtime
+            components.hour = 22
             components.minute = 30
         case "PSQI_3":
-            // If we have PSQI_1 (bedtime) answer, default to ~8 hours after
             if let bedtime = previousBedtime {
                 return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? Date()
             }
-            components.hour = 7   // 7:00 AM - usual wake time
+            components.hour = 7
 
         default:
             // Smart inference based on question text
             let lowerText = question.text.lowercased()
             if lowerText.contains("wake") || lowerText.contains("morning") || lowerText.contains("get up") || lowerText.contains("out of bed") {
-                // Wake-related: use bedtime + 8 hours if available
                 if let bedtime = previousBedtime {
                     return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? Date()
                 }
-                components.hour = 7   // 7:00 AM for wake-related
+                components.hour = 7
             } else if lowerText.contains("fall asleep") || lowerText.contains("fell asleep") {
-                // Fall asleep: use bedtime + 15 min if available
                 if let bedtime = previousBedtime {
                     return calendar.date(byAdding: .minute, value: 15, to: bedtime) ?? bedtime
                 }
-                components.hour = 22  // 10:30 PM for fall asleep
+                components.hour = 22
                 components.minute = 30
             } else if lowerText.contains("lights") || lowerText.contains("try to sleep") {
-                // Lights out: use bedtime + 10 min if available
                 if let bedtime = previousBedtime {
                     return calendar.date(byAdding: .minute, value: 10, to: bedtime) ?? bedtime
                 }
                 components.hour = 22
                 components.minute = 15
+            } else if lowerText.contains("caffeine") {
+                components.hour = 14  // 2 PM default for caffeine
+            } else if lowerText.contains("alcohol") {
+                components.hour = 20  // 8 PM default for alcohol
             } else if lowerText.contains("bed") || lowerText.contains("sleep") || lowerText.contains("night") {
-                components.hour = 22  // 10:00 PM for bedtime-related
+                components.hour = 22
             } else {
                 components.hour = 12  // Noon for unknown
             }
@@ -569,11 +601,29 @@ struct TimeInput: View {
             .labelsHidden()
             .frame(height: themeManager.largeIconsMode ? 180 : 150)
             .scaleEffect(themeManager.largeIconsMode ? 1.15 : 1.0)
+            // Apply circadian-aware styling to picker text
+            // Force dark mode for the picker in evening/night to get light text,
+            // then tint with warm amber color
+            .colorScheme(isEvening ? .dark : .light)
+            .tint(isEvening ? Color(red: 0.988, green: 0.827, blue: 0.302) : nil) // Golden amber tint
         }
-        .id(question.id) // Force view recreation when question changes
-        .onAppear {
-            // Always set smart default when view appears for this question
-            value = smartDefaultTime
+        .id("\(question.id)-\(previousBedtime?.timeIntervalSince1970 ?? 0)") // Force view recreation when question or context changes
+        .task {
+            // Use task instead of onAppear for more reliable initialization
+            // Only set smart default if we haven't initialized yet for this question
+            if !hasInitialized {
+                // Check if current value looks like it was set to "now" (the default fallback)
+                // rather than a meaningful time. If within 60 seconds of now, override with smart default.
+                let timeDiff = abs(value.timeIntervalSinceNow)
+                if timeDiff < 60 {
+                    value = smartDefaultTime
+                }
+                hasInitialized = true
+            }
+        }
+        .onChange(of: question.id) { _, _ in
+            // Reset initialization flag when question changes
+            hasInitialized = false
         }
     }
 }
@@ -584,6 +634,11 @@ struct DateInputView: View {
     let question: Question
     @Binding var value: Date
 
+    // Circadian-aware check
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
     var body: some View {
         DatePicker(
             "",
@@ -592,6 +647,9 @@ struct DateInputView: View {
         )
         .datePickerStyle(.graphical)
         .labelsHidden()
+        // Apply circadian-aware styling
+        .colorScheme(isEvening ? .dark : .light)
+        .tint(isEvening ? Color(red: 0.988, green: 0.827, blue: 0.302) : nil) // Golden amber tint
     }
 }
 
@@ -671,6 +729,11 @@ struct MinutesScrollPicker: View {
     let question: Question
     @Binding var value: Int
 
+    // Circadian-aware check
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
     var body: some View {
         VStack(spacing: 8) {
             Picker("", selection: $value) {
@@ -685,6 +748,9 @@ struct MinutesScrollPicker: View {
             }
             .pickerStyle(.wheel)
             .frame(height: 150)
+            // Apply circadian-aware styling to picker text
+            .colorScheme(isEvening ? .dark : .light)
+            .tint(isEvening ? Color(red: 0.988, green: 0.827, blue: 0.302) : nil) // Golden amber tint
         }
     }
 }
@@ -703,7 +769,7 @@ struct InfoCard: View {
 
             Text(question.text)
                 .font(.body)
-                .foregroundColor(.primary)
+                .foregroundColor(CircadianColors.primary)  // Circadian-aware
         }
         .padding(16)
         .background(theme.success.opacity(0.1))

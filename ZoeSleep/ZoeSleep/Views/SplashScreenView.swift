@@ -12,11 +12,17 @@ struct SplashScreenView: View {
     @State private var logoOpacity: Double = 0
     @State private var textOpacity: Double = 0
     @State private var glowOpacity: Double = 0
+    @State private var loadingDots: Int = 0
 
     var onComplete: (() -> Void)?
     var duration: Double = 0.6  // Fast splash
+    var isLoading: Bool = false  // Show loading indicator
+    var loadingMessage: String = "Signing in"  // Customizable loading message
 
     private var palette: CircadianPalette { CircadianPalette.current }
+
+    // Timer for loading dots animation
+    private let loadingTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -61,7 +67,7 @@ struct SplashScreenView: View {
 
                 // App name
                 VStack(spacing: 4) {
-                    Text("Zoe Sleep")
+                    Text("Zoé Sleep")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundColor(palette.textPrimary)
 
@@ -70,10 +76,32 @@ struct SplashScreenView: View {
                         .foregroundColor(palette.accent)
                 }
                 .opacity(textOpacity)
+
+                // Loading indicator (shown when checking session)
+                if isLoading {
+                    HStack(spacing: 4) {
+                        Text(loadingMessage)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(palette.textSecondary)
+
+                        // Animated dots
+                        Text(String(repeating: ".", count: loadingDots))
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(palette.textSecondary)
+                            .frame(width: 24, alignment: .leading)
+                    }
+                    .padding(.top, 24)
+                    .opacity(textOpacity)
+                }
             }
         }
         .onAppear {
             startAnimation()
+        }
+        .onReceive(loadingTimer) { _ in
+            if isLoading {
+                loadingDots = (loadingDots % 3) + 1
+            }
         }
     }
 

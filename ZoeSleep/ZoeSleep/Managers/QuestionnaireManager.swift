@@ -73,7 +73,235 @@ class QuestionnaireManager: ObservableObject {
         DayConfiguration(id: 15, dayNumber: 15, title: "BPI & MEDAS & MEQ", description: "Pain inventory, diet assessment, chronotype. Flexible completion day.", estimatedMinutes: 29, moduleIds: ["expansion_bpi", "expansion_medas", "expansion_meq"], isExpansionDay: true, requiredGateways: [.pain, .dietImpact, .sleepTiming])
     ]
 
-    // MARK: - Stanford Sleep Log Questions (Asked Every Day)
+    // MARK: - Consensus Sleep Diary Questions (Asked Every Day)
+    // Based on the standardized Consensus Sleep Diary (Carney et al., 2012)
+    // https://pmc.ncbi.nlm.nih.gov/articles/PMC3250369/
+
+    static let consensusSleepDiaryQuestions: [Question] = [
+        // Day Context (asked first to set the stage)
+        Question(
+            id: "CSD_DAY_TYPE",
+            text: "What type of day was yesterday?",
+            pillar: .sleepLog,
+            questionType: .singleSelect,
+            options: ["Work day", "School day", "Day off", "Vacation"],
+            helpText: "This helps us understand your sleep patterns",
+            group: "sleep_log"
+        ),
+
+        // Core CSD Questions - Timing
+        Question(
+            id: "CSD_INTO_BED",
+            text: "What time did you get into bed last night?",
+            pillar: .sleepLog,
+            questionType: .time,
+            helpText: "When you physically got into bed, not when you tried to sleep",
+            group: "sleep_log"
+        ),
+        Question(
+            id: "CSD_TRY_SLEEP",
+            text: "What time did you try to go to sleep?",
+            pillar: .sleepLog,
+            questionType: .time,
+            helpText: "When you turned off the lights and closed your eyes",
+            group: "sleep_log"
+        ),
+        Question(
+            id: "CSD_LATENCY",
+            text: "How long did it take you to fall asleep?",
+            pillar: .sleepLog,
+            questionType: .minutesScroll,
+            minValue: 0,
+            maxValue: 180,
+            unit: "minutes",
+            defaultValue: 15,
+            helpText: "Your best estimate in minutes",
+            group: "sleep_log"
+        ),
+        Question(
+            id: "CSD_AWAKENINGS",
+            text: "How many times did you wake up during the night?",
+            pillar: .sleepLog,
+            questionType: .numberScroll,
+            minValue: 0,
+            maxValue: 20,
+            defaultValue: 0,
+            helpText: "Not counting your final awakening",
+            group: "sleep_log"
+        ),
+        Question(
+            id: "CSD_WASO",
+            text: "In total, how long were you awake during the night?",
+            pillar: .sleepLog,
+            questionType: .minutesScroll,
+            minValue: 0,
+            maxValue: 300,
+            unit: "minutes",
+            defaultValue: 0,
+            helpText: "Total time of all awakenings combined",
+            group: "sleep_log"
+        ),
+        Question(
+            id: "CSD_FINAL_WAKE",
+            text: "What time was your final awakening this morning?",
+            pillar: .sleepLog,
+            questionType: .time,
+            helpText: "The last time you woke up before getting out of bed",
+            group: "sleep_log"
+        ),
+        Question(
+            id: "CSD_OUT_BED",
+            text: "What time did you get out of bed?",
+            pillar: .sleepLog,
+            questionType: .time,
+            helpText: "When you actually got up for the day",
+            group: "sleep_log"
+        ),
+
+        // Sleep Quality Rating (1-5 scale per CSD standard)
+        Question(
+            id: "CSD_QUALITY",
+            text: "How would you rate the quality of your sleep last night?",
+            pillar: .sleepLog,
+            questionType: .scale,
+            scaleMin: 1,
+            scaleMax: 5,
+            scaleMinLabel: "Very poor",
+            scaleMaxLabel: "Very good",
+            group: "sleep_log"
+        ),
+
+        // Refreshed feeling
+        Question(
+            id: "CSD_REFRESHED",
+            text: "How refreshed do you feel this morning?",
+            pillar: .sleepLog,
+            questionType: .scale,
+            scaleMin: 1,
+            scaleMax: 5,
+            scaleMinLabel: "Not at all",
+            scaleMaxLabel: "Very refreshed",
+            group: "sleep_log"
+        )
+    ]
+
+    // MARK: - Optional Context Questions (shown in expandable section)
+    // These provide additional context but are not required
+
+    static let sleepContextQuestions: [Question] = [
+        // Napping
+        Question(
+            id: "CSD_NAPS",
+            text: "Did you nap or doze yesterday?",
+            pillar: .sleepLog,
+            questionType: .yesNo,
+            group: "sleep_context"
+        ),
+        Question(
+            id: "CSD_NAP_COUNT",
+            text: "How many times did you nap?",
+            pillar: .sleepLog,
+            questionType: .numberScroll,
+            minValue: 1,
+            maxValue: 5,
+            defaultValue: 1,
+            conditionalLogic: ConditionalLogic(questionId: "CSD_NAPS", equals: "Yes"),
+            group: "sleep_context"
+        ),
+        Question(
+            id: "CSD_NAP_DURATION",
+            text: "Total nap time yesterday?",
+            pillar: .sleepLog,
+            questionType: .minutesScroll,
+            minValue: 5,
+            maxValue: 240,
+            unit: "minutes",
+            defaultValue: 30,
+            conditionalLogic: ConditionalLogic(questionId: "CSD_NAPS", equals: "Yes"),
+            group: "sleep_context"
+        ),
+
+        // Caffeine
+        Question(
+            id: "CSD_CAFFEINE",
+            text: "How many caffeinated drinks did you have yesterday?",
+            pillar: .sleepLog,
+            questionType: .numberScroll,
+            minValue: 0,
+            maxValue: 10,
+            defaultValue: 0,
+            helpText: "Coffee, tea, energy drinks, soda",
+            group: "sleep_context"
+        ),
+        Question(
+            id: "CSD_CAFFEINE_LAST",
+            text: "What time was your last caffeinated drink?",
+            pillar: .sleepLog,
+            questionType: .time,
+            conditionalLogic: ConditionalLogic(questionId: "CSD_CAFFEINE", greaterThan: 0),
+            group: "sleep_context"
+        ),
+
+        // Alcohol
+        Question(
+            id: "CSD_ALCOHOL",
+            text: "Did you have any alcohol yesterday?",
+            pillar: .sleepLog,
+            questionType: .yesNo,
+            group: "sleep_context"
+        ),
+        Question(
+            id: "CSD_ALCOHOL_DRINKS",
+            text: "How many alcoholic drinks?",
+            pillar: .sleepLog,
+            questionType: .numberScroll,
+            minValue: 1,
+            maxValue: 10,
+            defaultValue: 1,
+            conditionalLogic: ConditionalLogic(questionId: "CSD_ALCOHOL", equals: "Yes"),
+            group: "sleep_context"
+        ),
+        Question(
+            id: "CSD_ALCOHOL_LAST",
+            text: "What time was your last alcoholic drink?",
+            pillar: .sleepLog,
+            questionType: .time,
+            conditionalLogic: ConditionalLogic(questionId: "CSD_ALCOHOL", equals: "Yes"),
+            group: "sleep_context"
+        ),
+
+        // Sleep Medications
+        Question(
+            id: "CSD_MEDS",
+            text: "Did you take any sleep medication or aid?",
+            pillar: .sleepLog,
+            questionType: .yesNo,
+            helpText: "Prescription, OTC, or supplements like melatonin",
+            group: "sleep_context"
+        ),
+        Question(
+            id: "CSD_MEDS_NAME",
+            text: "What did you take?",
+            pillar: .sleepLog,
+            questionType: .text,
+            helpText: "Medication name and dose if known",
+            conditionalLogic: ConditionalLogic(questionId: "CSD_MEDS", equals: "Yes"),
+            group: "sleep_context"
+        ),
+
+        // Comments
+        Question(
+            id: "CSD_COMMENTS",
+            text: "Any other comments about your sleep?",
+            pillar: .sleepLog,
+            questionType: .text,
+            helpText: "Optional - anything else you'd like to note",
+            group: "sleep_context"
+        )
+    ]
+
+    // MARK: - Legacy Stanford Sleep Log (kept for backward compatibility)
+    // Maps to CSD questions for data migration
 
     static let stanfordSleepLogQuestions: [Question] = [
         Question(
@@ -175,7 +403,7 @@ class QuestionnaireManager: ObservableObject {
                 gatewayThreshold: 30
             ),
             Question(id: "PSQI_3", text: "During the past month, when have you usually gotten up in the morning?", pillar: .sleepQuality, questionType: .time, helpText: "Your subjective perception - don't check your wearable"),
-            Question(id: "PSQI_4", text: "During the past month, how many hours of actual sleep did you get at night?", pillar: .sleepQuality, questionType: .number, minValue: 0, maxValue: 15, step: 0.5, unit: "hours")
+            Question(id: "PSQI_4", text: "During the past month, how many hours of actual sleep do you feel you got at night?", pillar: .sleepQuality, questionType: .number, minValue: 0, maxValue: 15, step: 0.5, unit: "hours", helpText: "Your best estimate is fine - don't check your wearable")
         ],
 
         // DAY 2: PSQI Part 2 + Sleep Quantity + Sleep Regularity
@@ -409,12 +637,23 @@ class QuestionnaireManager: ObservableObject {
     func getQuestionsForDay(_ dayNumber: Int) -> [Question] {
         var questions: [Question] = []
 
-        // 1. Always start with Stanford Sleep Log
-        questions.append(contentsOf: Self.stanfordSleepLogQuestions)
+        // 1. Always start with Consensus Sleep Diary (enhanced from Stanford Sleep Log)
+        questions.append(contentsOf: Self.consensusSleepDiaryQuestions)
 
         // 2. Add core questions for days 1-5
         if dayNumber <= 5, let coreQuestions = Self.coreQuestionsByDay[dayNumber] {
-            questions.append(contentsOf: coreQuestions)
+            // For Day 1, filter out demographic questions already answered during onboarding
+            if dayNumber == 1 {
+                let filteredQuestions = coreQuestions.filter { question in
+                    !shouldSkipDemographicQuestion(question.id)
+                }
+                questions.append(contentsOf: filteredQuestions)
+
+                // Pre-fill responses from onboarding so data is available for analysis
+                prefillFromOnboardingProfile()
+            } else {
+                questions.append(contentsOf: coreQuestions)
+            }
         }
 
         // 3. For expansion days (6-15), check gateway triggers
@@ -594,6 +833,91 @@ class QuestionnaireManager: ObservableObject {
 
     func getResponse(for questionId: String) -> QuestionResponse? {
         return responses[questionId]
+    }
+
+    // MARK: - Duplicate Question Prevention (Issues 7-11)
+
+    /// Check if a demographic question should be skipped because it was already answered during onboarding
+    /// This prevents asking name, DOB, gender, height, weight again in Day 1 assessment
+    func shouldSkipDemographicQuestion(_ questionId: String) -> Bool {
+        let profile = OnboardingManager.shared.profile
+
+        switch questionId {
+        case "D1": // Full name
+            return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case "D2": // Date of birth
+            // Skip if birth year is not the default (1990) - meaning user provided it
+            return profile.birthYear != 1990
+        case "D4": // Sex assigned at birth
+            return profile.gender != Gender.preferNotToSay.rawValue
+        case "D5": // Height
+            // Always skip - height is always collected during onboarding
+            return true
+        case "D6": // Weight
+            // Always skip - weight is always collected during onboarding
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Get demographic responses from onboarding profile to pre-populate in questionnaire
+    /// This ensures data collected during onboarding is available for clinical analysis
+    func getDemographicResponsesFromOnboarding() -> [String: QuestionResponse] {
+        let profile = OnboardingManager.shared.profile
+        var responses: [String: QuestionResponse] = [:]
+
+        // D1: Full name
+        if !profile.name.isEmpty {
+            var response = QuestionResponse(questionId: "D1", dayNumber: 1)
+            response.stringValue = profile.name
+            responses["D1"] = response
+        }
+
+        // D2: Date of birth (convert birth year to date string)
+        if profile.birthYear != 1990 {
+            var response = QuestionResponse(questionId: "D2", dayNumber: 1)
+            // Format as a date string for consistency
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            if let date = Calendar.current.date(from: DateComponents(year: profile.birthYear, month: 1, day: 1)) {
+                response.stringValue = dateFormatter.string(from: date)
+            }
+            responses["D2"] = response
+        }
+
+        // D4: Sex assigned at birth
+        if profile.gender != Gender.preferNotToSay.rawValue {
+            var response = QuestionResponse(questionId: "D4", dayNumber: 1)
+            response.stringValue = profile.gender
+            responses["D4"] = response
+        }
+
+        // D5: Height (in cm)
+        var heightResponse = QuestionResponse(questionId: "D5", dayNumber: 1)
+        heightResponse.numberValue = profile.heightCm
+        responses["D5"] = heightResponse
+
+        // D6: Weight (in kg)
+        var weightResponse = QuestionResponse(questionId: "D6", dayNumber: 1)
+        weightResponse.numberValue = profile.weightKg
+        responses["D6"] = weightResponse
+
+        return responses
+    }
+
+    /// Pre-populate responses from onboarding data
+    /// Call this when loading Day 1 questionnaire
+    func prefillFromOnboardingProfile() {
+        let onboardingResponses = getDemographicResponsesFromOnboarding()
+
+        for (questionId, response) in onboardingResponses {
+            // Only pre-fill if not already answered
+            if responses[questionId] == nil {
+                responses[questionId] = response
+                print("[QuestionnaireManager] Pre-filled \(questionId) from onboarding")
+            }
+        }
     }
 
     // MARK: - HealthKit Integration

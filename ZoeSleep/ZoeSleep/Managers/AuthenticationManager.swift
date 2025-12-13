@@ -16,6 +16,7 @@ class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated = false
     @Published var user: User?
     @Published var isLoading = false
+    @Published var isCheckingSession = true  // True until initial session check completes
     @Published var errorMessage: String?
 
     private let convexService = ConvexService.shared
@@ -39,7 +40,11 @@ class AuthenticationManager: ObservableObject {
             // Validate the session with Convex
             Task {
                 await validateStoredSession()
+                isCheckingSession = false
             }
+        } else {
+            // No saved session, done checking
+            isCheckingSession = false
         }
     }
 

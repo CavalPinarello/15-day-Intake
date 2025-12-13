@@ -34,10 +34,22 @@ struct MainDashboardView: View {
     @State private var refreshTimer: Timer?
     @State private var isRefreshing = false
 
+    // Sync status tracking
+    @State private var syncStatus: SyncStatus = .synced
+    @State private var lastSyncError: String? = nil
+
     // Poll every 5 seconds when app is active (for cross-device sync)
     private let refreshInterval: TimeInterval = 5.0
 
     private var theme: ColorTheme { themeManager.currentTheme }
+
+    @State private var showingDevPanel = false
+
+    enum SyncStatus {
+        case synced
+        case syncing
+        case error
+    }
 
     var body: some View {
         ZStack {
@@ -63,6 +75,36 @@ struct MainDashboardView: View {
                 }
                 .padding()
             }
+
+            // MARK: - Floating Dev Button (only when debug mode is ON)
+            if themeManager.debugMode {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button {
+                            showingDevPanel = true
+                        } label: {
+                            Text("DEV")
+                                .font(.caption)
+                                .fontWeight(.black)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.red)
+                                .cornerRadius(20)
+                                .shadow(color: .red.opacity(0.5), radius: 8, x: 0, y: 4)
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 20)
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingDevPanel) {
+            DevPanelView(currentDay: $currentDay)
+                .environmentObject(themeManager)
+                .environmentObject(questionnaireManager)
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showingJourneyOverview) {
@@ -156,12 +198,21 @@ struct MainDashboardView: View {
 
         if !silent {
             print("[iOS Dashboard] Refreshing from Convex...")
+            syncStatus = .syncing
         }
 
         await questionnaireManager.loadJourneyProgress()
 
         await MainActor.run {
-            if let progress = questionnaireManager.journeyProgress {
+            // Check if there was an error during the refresh
+            if let error = questionnaireManager.error {
+                syncStatus = .error
+                lastSyncError = error
+                print("[iOS Dashboard] Sync error: \(error)")
+            } else if let progress = questionnaireManager.journeyProgress {
+                syncStatus = .synced
+                lastSyncError = nil
+
                 // Only update if there's a change
                 if currentDay != progress.currentDay {
                     withAnimation {
@@ -178,147 +229,154 @@ struct MainDashboardView: View {
         }
     }
 
-    // MARK: - Header View
+    // MARK: - Header View (Calm, friendly design)
 
     private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Zoe Sleep")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(theme.primary)
-
-                // Personalized greeting with user's name
-                if !OnboardingManager.shared.profile.name.isEmpty {
-                    Text("\(getGreeting()), \(OnboardingManager.shared.profile.name)")
-                        .font(.subheadline)
-                        .foregroundColor(theme.textSecondary)
-                } else {
-                    Text(getGreeting())
-                        .font(.subheadline)
-                        .foregroundColor(theme.textSecondary)
-                }
-            }
-
-            Spacer()
-
-            // Sync button - manually refresh from Convex
-            Button {
-                Task {
-                    print("[iOS] Manual sync triggered")
-                    await questionnaireManager.loadJourneyProgress()
-                    if let progress = questionnaireManager.journeyProgress {
-                        currentDay = progress.currentDay
-                        print("[iOS] Synced from Convex: Day \(progress.currentDay)")
-                    }
-                }
-            } label: {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.title2)
-                    .foregroundColor(theme.primary)
-            }
-            .padding(.trailing, 8)
-
-            // Profile button - navigates to unified profile/settings view
-            NavigationLink {
-                ProfileSettingsView()
-                    .environmentObject(themeManager)
-                    .environmentObject(authManager)
-                    .environmentObject(healthKitManager)
-            } label: {
-                // Profile avatar with user initial or icon
-                ZStack {
-                    Circle()
-                        .fill(theme.primary.opacity(0.2))
-                        .frame(width: 40, height: 40)
-
-                    if !OnboardingManager.shared.profile.name.isEmpty {
-                        Text(String(OnboardingManager.shared.profile.name.prefix(1)).uppercased())
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundColor(theme.primary)
-                    } else {
-                        Image(systemName: "person.fill")
-                            .font(.body)
-                            .foregroundColor(theme.primary)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Journey Progress Card
-
-    private var journeyProgressCard: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.lg) {
+            // Top bar with sync status and profile
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("15-Day Sleep Journey")
-                        .font(.headline)
-                        .foregroundColor(theme.textPrimary)
-                    Text("Day \(currentDay) of 15")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(theme.primary)
+                // Sync status indicator (subtle, only shows when there's an issue)
+                if syncStatus == .error {
+                    Button {
+                        // Tap to retry sync
+                        Task {
+                            await refreshFromConvex()
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.icloud")
+                                .font(.caption)
+                            Text("Sync issue")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(theme.warning)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(theme.warning.opacity(0.15))
+                        .clipShape(Capsule())
+                    }
+                } else if syncStatus == .syncing {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                        Text("Syncing...")
+                            .font(.caption2)
+                    }
+                    .foregroundColor(theme.textSecondary)
                 }
 
                 Spacer()
 
-                // Circular progress
-                ZStack {
-                    Circle()
-                        .stroke(theme.inactive, lineWidth: 8)
-                        .frame(width: 60, height: 60)
+                // Profile button - navigates to unified profile/settings view
+                NavigationLink {
+                    ProfileSettingsView()
+                        .environmentObject(themeManager)
+                        .environmentObject(authManager)
+                        .environmentObject(healthKitManager)
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(theme.primary.opacity(0.15))
+                            .frame(width: 44, height: 44)
 
-                    Circle()
-                        .trim(from: 0, to: CGFloat(currentDay) / 15.0)
-                        .stroke(theme.primary, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                        .frame(width: 60, height: 60)
-                        .rotationEffect(.degrees(-90))
-
-                    Text("\(Int((Double(currentDay) / 15.0) * 100))%")
-                        .font(.caption)
-                        .fontWeight(.bold)
+                        if !OnboardingManager.shared.profile.name.isEmpty {
+                            Text(String(OnboardingManager.shared.profile.name.prefix(1)).uppercased())
+                                .font(.system(size: Typography.headline, weight: .bold, design: .rounded))
+                                .foregroundColor(theme.primary)
+                        } else {
+                            Image(systemName: "person.fill")
+                                .font(.body)
+                                .foregroundColor(theme.primary)
+                        }
+                    }
                 }
             }
 
-            // Day indicators
-            HStack(spacing: 4) {
-                ForEach(1...15, id: \.self) { day in
-                    Circle()
-                        .fill(dayColor(for: day))
-                        .frame(width: 16, height: 16)
-                        .overlay(
-                            Text(day == currentDay ? "\(day)" : "")
-                                .font(.system(size: 8))
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                        )
-                }
-            }
+            // Greeting - large, warm, centered
+            VStack(spacing: Spacing.xs) {
+                let hour = Calendar.current.component(.hour, from: Date())
+                let userName = OnboardingManager.shared.profile.name.isEmpty ? nil : OnboardingManager.shared.profile.name
 
-            // Day type indicator
-            if currentDay <= 5 {
-                HStack {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(theme.corePhase)
-                    Text("Core Assessment Phase (Days 1-5)")
-                        .font(.caption)
-                        .foregroundColor(theme.textSecondary)
-                }
-            } else {
-                HStack {
-                    Image(systemName: "arrow.up.right.circle.fill")
-                        .foregroundColor(theme.expansionPhase)
-                    Text("Personalized Expansion Phase")
-                        .font(.caption)
-                        .foregroundColor(theme.textSecondary)
-                }
+                Text(FriendlyCopy.greeting(for: hour, name: userName))
+                    .font(.system(size: Typography.title, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.textPrimary)
+                    .multilineTextAlignment(.center)
+
+                Text(FriendlyCopy.randomDayMessage())
+                    .font(.system(size: Typography.body, weight: .regular, design: .rounded))
+                    .foregroundColor(theme.textSecondary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, Spacing.sm)
         }
-        .padding()
-        .background(GlassyCardBackground(opacity: 0.4))
-        .cornerRadius(16)
+    }
+
+    // MARK: - Journey Progress Card (Simplified, calm design)
+
+    private var completedDaysCount: Int {
+        questionnaireManager.journeyProgress?.completedDays.count ?? 0
+    }
+
+    private var journeyProgressCard: some View {
+        VStack(spacing: Spacing.lg) {
+            // Day indicator with percentage
+            HStack {
+                // Day X of 15
+                HStack(spacing: Spacing.xs) {
+                    Text("Day \(currentDay)")
+                        .font(.system(size: Typography.title3, weight: .bold, design: .rounded))
+                        .foregroundColor(theme.textOnCard)
+
+                    Text("of 15")
+                        .font(.system(size: Typography.title3, weight: .regular, design: .rounded))
+                        .foregroundColor(theme.textOnCardSecondary)
+                }
+
+                Spacer()
+
+                // Percentage complete
+                Text("\(progressPercentage)%")
+                    .font(.system(size: Typography.headline, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.primary)
+            }
+
+            // Progress dots (cleaner than 15 circles)
+            ProgressDots(current: completedDaysCount + 1, total: 15)
+
+            // Encouraging message based on progress - HIGH CONTRAST
+            Text(progressMessage(completedCount: completedDaysCount))
+                .font(.system(size: Typography.subheadline, weight: .regular, design: .rounded))
+                .foregroundColor(theme.textOnCardSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity)
+        .background(
+            GlassyCardBackground(opacity: 0.6)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+        )
+    }
+
+    private var progressPercentage: Int {
+        Int((Double(completedDaysCount) / 15.0) * 100)
+    }
+
+    private func progressMessage(completedCount: Int) -> String {
+        switch completedCount {
+        case 0:
+            return "Let's start your sleep journey"
+        case 1...4:
+            return "Building your sleep profile"
+        case 5...9:
+            return "Halfway there! Great progress"
+        case 10...13:
+            return "Almost done! Keep going"
+        case 14:
+            return "Final day tomorrow!"
+        default:
+            return "Journey complete!"
+        }
     }
 
     private func dayColor(for day: Int) -> Color {
@@ -338,79 +396,108 @@ struct MainDashboardView: View {
         (questionnaireManager.journeyProgress?.assessmentCompleted ?? false)
     }
 
-    private var todaysTasksCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Today's Tasks")
-                    .font(.headline)
-                    .foregroundColor(theme.textPrimary)
-                Spacer()
-                if isDayComplete {
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(theme.success)
-                        Text("Complete")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(theme.success)
-                    }
-                } else if let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) {
-                    Text("~\(config.estimatedMinutes + 2) min total")
-                        .font(.caption)
-                        .foregroundColor(theme.textSecondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(theme.backgroundTint)
-                        .cornerRadius(8)
-                }
-            }
+    private var sleepLogDone: Bool {
+        questionnaireManager.journeyProgress?.sleepLogCompleted ?? false
+    }
 
-            // Day Complete Celebration View
+    private var assessmentDone: Bool {
+        questionnaireManager.journeyProgress?.assessmentCompleted ?? false
+    }
+
+    private var todaysTasksCard: some View {
+        VStack(spacing: Spacing.lg) {
+            // Day Complete Celebration
             if isDayComplete {
                 DayCompleteCelebrationView(
                     currentDay: currentDay,
                     isDebugMode: themeManager.debugMode,
                     onAdvanceDay: advanceToNextDay
                 )
-            }
+            } else {
+                // Today's focus - single prominent card
+                VStack(spacing: Spacing.md) {
+                    Text("Today's focus")
+                        .font(.system(size: Typography.subheadline, weight: .medium, design: .rounded))
+                        .foregroundColor(theme.textOnCardSecondary)
 
-            // Sleep Log Section Card (Blue) - Stanford Sleep Log, done daily
-            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
-                SectionTaskCard(
-                    section: .sleepLog,
-                    questionCount: 5,
-                    estimatedMinutes: 2,
-                    isCompleted: questionnaireManager.journeyProgress?.sleepLogCompleted ?? false,
-                    whyExplanation: getSleepLogWhyExplanation()
-                )
-            }
-            .disabled(questionnaireManager.journeyProgress?.sleepLogCompleted ?? false)
+                    // Primary action - whichever is not complete
+                    if !sleepLogDone {
+                        NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                            CalmTaskCard(
+                                icon: "moon.zzz.fill",
+                                title: FriendlyCopy.sleepLogHeader,
+                                subtitle: "Quick check-in about last night",
+                                duration: "~3 min"
+                            )
+                        }
+                    } else if !assessmentDone {
+                        NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                            CalmTaskCard(
+                                icon: "list.bullet.clipboard",
+                                title: FriendlyCopy.assessmentHeader,
+                                subtitle: getDayDescription(),
+                                duration: "~\(getAssessmentMinutes()) min"
+                            )
+                        }
+                    }
 
-            // Day Assessment Section Card (Purple) - Adaptive questionnaire with gateway questions
-            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
-                SectionTaskCard(
-                    section: .assessment,
-                    title: getDayTitle(),
-                    subtitle: getDayDescription(),
-                    questionCount: getAssessmentQuestionCount(),
-                    estimatedMinutes: getAssessmentMinutes(),
-                    isCompleted: questionnaireManager.journeyProgress?.assessmentCompleted ?? false,
-                    whyExplanation: getAssessmentWhyExplanation()
-                )
+                    // Secondary task (if first is done)
+                    if sleepLogDone && !assessmentDone {
+                        // Sleep log done indicator - HIGH CONTRAST on card
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(theme.success)
+                            Text("Sleep log complete")
+                                .font(.system(size: Typography.subheadline, design: .rounded))
+                                .foregroundColor(theme.textOnCardSecondary)  // Circadian-aware
+                            Spacer()
+                        }
+                        .padding(.top, Spacing.xs)
+                    } else if !sleepLogDone && assessmentDone {
+                        // Assessment done indicator - HIGH CONTRAST on card
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(theme.success)
+                            Text("Assessment complete")
+                                .font(.system(size: Typography.subheadline, design: .rounded))
+                                .foregroundColor(theme.textOnCardSecondary)  // Circadian-aware
+                            Spacer()
+                        }
+                        .padding(.top, Spacing.xs)
+                    } else if !sleepLogDone && !assessmentDone {
+                        // Show secondary task as smaller item - HIGH CONTRAST on card
+                        NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "list.bullet.clipboard")
+                                    .foregroundColor(theme.primary.opacity(0.6))
+                                Text("Then: \(FriendlyCopy.assessmentHeader)")
+                                    .font(.system(size: Typography.subheadline, design: .rounded))
+                                    .foregroundColor(theme.textOnCardSecondary)  // Circadian-aware
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(theme.textOnCardMuted)  // Circadian-aware
+                            }
+                        }
+                        .padding(.top, Spacing.xs)
+                    }
+                }
             }
-            .disabled(questionnaireManager.journeyProgress?.assessmentCompleted ?? false)
         }
-        .padding()
-        .background(GlassyCardBackground(opacity: 0.4))
-        .cornerRadius(16)
+        .padding(Spacing.lg)
+        .background(
+            GlassyCardBackground(opacity: 0.6)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+        )
     }
 
     private func advanceToNextDay() {
         guard currentDay < 15 else { return }
         Task {
             do {
-                // Pass debugMode flag - only bypasses time check, NOT completion check
-                let response = try await ConvexService.shared.advanceToNextDay(debugMode: themeManager.debugMode)
+                // Pass debugMode or unlockTimeOverride - bypasses time check, NOT completion check
+                let bypassTimeCheck = themeManager.debugMode || themeManager.unlockTimeOverride
+                let response = try await ConvexService.shared.advanceToNextDay(debugMode: bypassTimeCheck)
 
                 if response.success {
                     await questionnaireManager.loadJourneyProgress()
@@ -496,11 +583,12 @@ struct MainDashboardView: View {
                         .foregroundColor(theme.warning)
                     Text("Personalized Assessments Triggered")
                         .font(.headline)
+                        .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                 }
 
                 Text("Based on your responses, the following specialized assessments have been added to your journey:")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
 
                 ForEach(triggeredGateways, id: \.id) { gateway in
                     HStack {
@@ -509,6 +597,7 @@ struct MainDashboardView: View {
                             .font(.caption)
                         Text(gateway.gatewayType.displayName)
                             .font(.subheadline)
+                            .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                         Spacer()
                     }
                 }
@@ -530,9 +619,9 @@ struct MainDashboardView: View {
                         icon: "list.bullet.clipboard.fill",
                         iconColor: theme.accent,
                         title: "Treatment Tasks",
-                        subtitle: "Daily tasks from your physician",
-                        theme: theme
+                        subtitle: "Daily tasks from your physician"
                     )
+                    .environmentObject(themeManager)
                 }
             }
 
@@ -541,9 +630,9 @@ struct MainDashboardView: View {
                     icon: "calendar",
                     iconColor: theme.sleepDiary,
                     title: "Sleep Diary History",
-                    subtitle: "View your sleep log entries",
-                    theme: theme
+                    subtitle: "View your sleep log entries"
                 )
+                .environmentObject(themeManager)
             }
 
             NavigationLink(destination: InsightsView()) {
@@ -551,25 +640,14 @@ struct MainDashboardView: View {
                     icon: "chart.line.uptrend.xyaxis",
                     iconColor: theme.insights,
                     title: "Sleep Insights",
-                    subtitle: "View patterns and recommendations",
-                    theme: theme
+                    subtitle: "View patterns and recommendations"
                 )
+                .environmentObject(themeManager)
             }
         }
     }
 
     // MARK: - Helper Methods
-
-    private func getGreeting() -> String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 {
-            return "Good morning"
-        } else if hour < 17 {
-            return "Good afternoon"
-        } else {
-            return "Good evening"
-        }
-    }
 
     private func getDayTitle() -> String {
         guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
@@ -603,7 +681,10 @@ struct TaskRow: View {
     let title: String
     let subtitle: String
     let isCompleted: Bool
-    var theme: ColorTheme = ColorTheme.shared
+
+    // Observe ThemeManager for reactive circadian updates
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -618,10 +699,10 @@ struct TaskRow: View {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
                     .lineLimit(2)
             }
 
@@ -632,7 +713,7 @@ struct TaskRow: View {
                     .foregroundColor(theme.success)
             } else {
                 Image(systemName: "chevron.right")
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardMuted)  // HIGH CONTRAST - circadian-aware
             }
         }
         .padding(12)
@@ -648,7 +729,10 @@ struct QuickActionRow: View {
     let iconColor: Color
     let title: String
     let subtitle: String
-    var theme: ColorTheme = ColorTheme.shared
+
+    // Observe ThemeManager for reactive circadian updates
+    @EnvironmentObject var themeManager: ThemeManager
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -663,16 +747,16 @@ struct QuickActionRow: View {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
-                .foregroundColor(theme.textSecondary)
+                .foregroundColor(theme.textOnCardMuted)  // HIGH CONTRAST - circadian-aware
         }
         .padding(12)
         .background(GlassyCardBackground(opacity: 0.35))
@@ -690,7 +774,10 @@ struct SectionTaskCard: View {
     let estimatedMinutes: Int
     let isCompleted: Bool
     var whyExplanation: String? = nil  // Contextual explanation for why this matters
-    var theme: ColorTheme = ColorTheme.shared
+
+    // Observe ThemeManager for reactive circadian updates
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -704,18 +791,25 @@ struct SectionTaskCard: View {
                         .fontWeight(.bold)
                         .tracking(0.5)
                 }
-                .foregroundColor(theme.textOnPrimary)
+                .foregroundColor(theme.textOnPrimary)  // Circadian-aware
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(theme.primary)  // Use circadian-safe primary color
+                .background(theme.primary)  // Circadian-safe primary color
                 .cornerRadius(6)
 
                 Spacer()
 
                 if isCompleted {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.title3)
+                    // More prominent completion indicator
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(theme.success)  // Circadian-aware
+                            .font(.title2)
+                        Text("Done")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(theme.success)  // Circadian-aware
+                    }
                 } else {
                     HStack(spacing: 4) {
                         Text("\(questionCount) Q")
@@ -726,19 +820,19 @@ struct SectionTaskCard: View {
                         Text("~\(estimatedMinutes) min")
                             .font(.caption)
                     }
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
                 }
             }
 
-            // Title
+            // Title - HIGH CONTRAST on card
             Text(title ?? section.title)
                 .font(.headline)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(theme.textOnCard)  // Circadian-aware
 
-            // Subtitle/Description
+            // Subtitle/Description - HIGH CONTRAST on card
             Text(subtitle ?? section.description)
                 .font(.subheadline)
-                .foregroundColor(theme.textSecondary)
+                .foregroundColor(theme.textOnCardSecondary)  // Circadian-aware
                 .lineLimit(2)
 
             // Why this matters (contextual explanation)
@@ -749,7 +843,7 @@ struct SectionTaskCard: View {
                         .foregroundColor(theme.primary)
                     Text(why)
                         .font(.caption2)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardMuted)  // HIGH CONTRAST - circadian-aware
                         .lineLimit(3)
                 }
                 .padding(10)
@@ -767,27 +861,98 @@ struct SectionTaskCard: View {
                     Image(systemName: isCompleted ? "checkmark" : "arrow.right")
                         .font(.caption)
                 }
-                .foregroundColor(isCompleted ? .green : theme.primary)
+                .foregroundColor(isCompleted ? theme.success : theme.primary)  // Circadian-aware
             }
         }
         .padding(16)
-        .background(GlassyCardBackground(opacity: 0.35, tint: theme.primary))
+        .background(GlassyCardBackground(opacity: 0.35, tint: isCompleted ? theme.success : theme.primary))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
                     LinearGradient(
-                        colors: [
+                        colors: isCompleted ? [
+                            theme.success.opacity(0.5),
+                            theme.success.opacity(0.2)
+                        ] : [
                             theme.primary.opacity(0.4),
                             theme.primary.opacity(0.15)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    lineWidth: 1
+                    lineWidth: isCompleted ? 2 : 1
                 )
         )
-        .opacity(isCompleted ? 0.7 : 1.0)
+        .opacity(isCompleted ? 0.85 : 1.0)
+    }
+}
+
+// MARK: - Calm Task Card (Headspace-inspired)
+
+struct CalmTaskCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let duration: String
+
+    // Observe ThemeManager for reactive circadian updates - MUST use this for all colors!
+    @ObservedObject private var themeManager = ThemeManager.shared
+
+    // Get fresh theme from ThemeManager - NOT from passed parameter
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    private var currentPeriod: TimePeriod {
+        themeManager.currentTimePeriod
+    }
+
+    var body: some View {
+        HStack(spacing: Spacing.lg) {
+            // Icon circle
+            ZStack {
+                Circle()
+                    .fill(theme.primary.opacity(0.15))
+                    .frame(width: 56, height: 56)
+
+                Image(systemName: icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(theme.primary)
+            }
+
+            // Content - HIGH CONTRAST on card background (circadian-aware)
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(title)
+                    .font(.system(size: Typography.headline, weight: .semibold, design: .rounded))
+                    .foregroundColor(theme.textOnCard)  // Cream text in evening/night
+
+                Text(subtitle)
+                    .font(.system(size: Typography.subheadline, design: .rounded))
+                    .foregroundColor(theme.textOnCardSecondary)  // Golden amber in evening/night
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            // Duration and arrow - HIGH CONTRAST (circadian-aware)
+            VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                Text(duration)
+                    .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                    .foregroundColor(theme.textOnCardMuted)  // Warm amber in evening/night
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(theme.textOnCard)  // Cream in evening/night
+            }
+        }
+        .padding(Spacing.lg)
+        .background(
+            GlassyCardBackground(opacity: 0.6)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.large)
+                .stroke(theme.primary.opacity(currentPeriod == .evening || currentPeriod == .night ? 0.3 : 0.2), lineWidth: 1)
+        )
     }
 }
 
@@ -805,7 +970,7 @@ struct JourneyOverviewView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     ForEach(QuestionnaireManager.dayConfigurations, id: \.id) { config in
-                        DayOverviewCard(config: config, currentDay: currentDay, theme: theme)
+                        DayOverviewCard(config: config, currentDay: currentDay)
                     }
                 }
                 .padding()
@@ -825,7 +990,10 @@ struct JourneyOverviewView: View {
 struct DayOverviewCard: View {
     let config: DayConfiguration
     let currentDay: Int
-    var theme: ColorTheme = ColorTheme.shared
+
+    // Observe ThemeManager for reactive circadian updates
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -836,16 +1004,17 @@ struct DayOverviewCard: View {
                     .frame(width: 44, height: 44)
                 Text("\(config.dayNumber)")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(theme.textOnPrimary)  // Circadian-aware
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(config.title)
                     .font(.subheadline)
                     .fontWeight(.medium)
+                    .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                 Text(config.description)
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
                     .lineLimit(2)
 
                 if config.isExpansionDay {
@@ -855,7 +1024,7 @@ struct DayOverviewCard: View {
                         Text("Expansion Day")
                             .font(.caption2)
                     }
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardMuted)  // HIGH CONTRAST - circadian-aware
                 }
             }
 
@@ -863,10 +1032,10 @@ struct DayOverviewCard: View {
 
             Text("~\(config.estimatedMinutes) min")
                 .font(.caption2)
-                .foregroundColor(theme.textSecondary)
+                .foregroundColor(theme.textOnCardMuted)  // HIGH CONTRAST - circadian-aware
         }
         .padding()
-        .background(backgroundColor)
+        .background(GlassyCardBackground(opacity: 0.4))  // Circadian-aware background
         .cornerRadius(12)
     }
 
@@ -876,32 +1045,664 @@ struct DayOverviewCard: View {
         } else if config.dayNumber == currentDay {
             return theme.active
         } else {
-            return Color.gray
+            return theme.textOnCardMuted.opacity(0.5)  // Circadian-aware gray
         }
-    }
-
-    private var backgroundColor: Color {
-        if config.dayNumber == currentDay {
-            return theme.backgroundTint
-        }
-        return Color(.secondarySystemBackground)
     }
 }
 
 struct SleepDiaryHistoryView: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    @StateObject private var questionnaireManager = QuestionnaireManager.shared
+    @State private var selectedDay: Int = 1
+    @State private var sleepEntries: [Int: SleepDiaryEntry] = [:]
+    @State private var isLoading = true
+
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var completedDays: [Int] {
+        questionnaireManager.journeyProgress?.completedDays ?? []
+    }
+
+    // MARK: - Circadian-Aware Colors (for text on circadian background)
+    private var palette: CircadianPalette {
+        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    }
+
+    private var circadianTextPrimary: Color {
+        palette.textPrimary
+    }
+
+    private var circadianTextSecondary: Color {
+        palette.textSecondary
+    }
+
+    private var circadianCardBackground: Color {
+        if palette.isDark {
+            return Color(red: 0.20, green: 0.13, blue: 0.09).opacity(0.90)
+        } else {
+            return Color(red: 1.0, green: 0.99, blue: 0.96).opacity(0.85)
+        }
+    }
+
     var body: some View {
-        VStack {
-            Text("Sleep Diary History")
-                .font(.title)
+        ZStack {
+            // Circadian wave background - syncs with ThemeManager
+            DashboardWaveBackground()
+
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Day Selector
+                    daySelectorView
+
+                    // Selected Day Details
+                    if completedDays.isEmpty {
+                        emptyStateView
+                    } else if isLoading {
+                        loadingView
+                    } else if let entry = sleepEntries[selectedDay] {
+                        dayDetailView(entry: entry)
+                    } else {
+                        noDayDataView
+                    }
+
+                    // Sleep Metrics Chart (after 3+ days)
+                    if completedDays.count >= 3 {
+                        sleepTrendChart
+                    }
+
+                    Spacer(minLength: 40)
+                }
                 .padding()
-
-            Text("Your sleep log entries will appear here")
-                .foregroundColor(ColorTheme.shared.textSecondary)
-
-            Spacer()
+            }
         }
         .navigationTitle("Sleep Diary")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(palette.isDark ? .dark : .light, for: .navigationBar)
+        .onAppear {
+            loadSleepHistory()
+        }
+        .onChange(of: selectedDay) { _, _ in
+            // Data already loaded, no action needed
+        }
+    }
+
+    // MARK: - Day Selector
+
+    private var daySelectorView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Select a Day")
+                .font(.headline)
+                .foregroundColor(circadianTextPrimary)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(1...15, id: \.self) { day in
+                        DayPillButton(
+                            day: day,
+                            isSelected: day == selectedDay,
+                            isCompleted: completedDays.contains(day)
+                        ) {
+                            if completedDays.contains(day) {
+                                selectedDay = day
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    // MARK: - Day Detail View
+
+    private func dayDetailView(entry: SleepDiaryEntry) -> some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Day \(selectedDay)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(theme.textOnCard)
+
+                    if let date = entry.date {
+                        Text(date, style: .date)
+                            .font(.subheadline)
+                            .foregroundColor(theme.textOnCardSecondary)
+                    }
+                }
+                Spacer()
+
+                // Quality badge
+                if let quality = entry.sleepQuality {
+                    qualityBadge(quality: quality)
+                }
+            }
+            .padding()
+            .background(GlassyCardBackground(opacity: 0.5))
+            .cornerRadius(16)
+
+            // Sleep Timing Card
+            sleepTimingCard(entry: entry)
+
+            // Sleep Metrics Card
+            sleepMetricsCard(entry: entry)
+
+            // Context Card (if data exists)
+            if entry.hasContextData {
+                contextCard(entry: entry)
+            }
+        }
+    }
+
+    private func sleepTimingCard(entry: SleepDiaryEntry) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Sleep Timing", systemImage: "clock.fill")
+                .font(.headline)
+                .foregroundColor(theme.primary)
+
+            VStack(spacing: 8) {
+                if let intoBed = entry.intoBedTime {
+                    timingRow(label: "Got into bed", time: intoBed, icon: "bed.double.fill")
+                }
+                if let trySleep = entry.trySleepTime {
+                    timingRow(label: "Tried to sleep", time: trySleep, icon: "moon.fill")
+                }
+                if let finalWake = entry.finalWakeTime {
+                    timingRow(label: "Final awakening", time: finalWake, icon: "sunrise.fill")
+                }
+                if let outBed = entry.outOfBedTime {
+                    timingRow(label: "Got out of bed", time: outBed, icon: "figure.walk")
+                }
+            }
+        }
+        .padding()
+        .background(GlassyCardBackground(opacity: 0.5))
+        .cornerRadius(16)
+    }
+
+    private func sleepMetricsCard(entry: SleepDiaryEntry) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Sleep Metrics", systemImage: "chart.bar.fill")
+                .font(.headline)
+                .foregroundColor(theme.primary)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                if let duration = entry.totalSleepDuration {
+                    metricTile(label: "Total Sleep", value: formatDuration(duration), icon: "bed.double.fill")
+                }
+                if let latency = entry.sleepLatency {
+                    metricTile(label: "Fall Asleep", value: "\(latency) min", icon: "hourglass")
+                }
+                if let awakenings = entry.awakenings {
+                    metricTile(label: "Awakenings", value: "\(awakenings)", icon: "exclamationmark.circle")
+                }
+                if let waso = entry.waso {
+                    metricTile(label: "Time Awake", value: "\(waso) min", icon: "clock.badge.exclamationmark")
+                }
+                if let efficiency = entry.sleepEfficiency {
+                    metricTile(label: "Efficiency", value: "\(Int(efficiency))%", icon: "percent")
+                }
+                if let refreshed = entry.refreshedRating {
+                    metricTile(label: "Refreshed", value: "\(refreshed)/5", icon: "sparkles")
+                }
+            }
+        }
+        .padding()
+        .background(GlassyCardBackground(opacity: 0.5))
+        .cornerRadius(16)
+    }
+
+    private func contextCard(entry: SleepDiaryEntry) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Context", systemImage: "info.circle.fill")
+                .font(.headline)
+                .foregroundColor(theme.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                if let dayType = entry.dayType {
+                    contextRow(label: "Day type", value: dayType)
+                }
+                if let caffeine = entry.caffeineCount, caffeine > 0 {
+                    contextRow(label: "Caffeine drinks", value: "\(caffeine)")
+                }
+                if entry.hadAlcohol == true {
+                    contextRow(label: "Alcohol", value: "Yes")
+                }
+                if entry.tookSleepMeds == true {
+                    contextRow(label: "Sleep medication", value: entry.sleepMedsName ?? "Yes")
+                }
+                if entry.didNap == true, let napDuration = entry.napDuration {
+                    contextRow(label: "Napped", value: "\(napDuration) min")
+                }
+            }
+        }
+        .padding()
+        .background(GlassyCardBackground(opacity: 0.5))
+        .cornerRadius(16)
+    }
+
+    // MARK: - Sleep Trend Chart
+
+    private var sleepTrendChart: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Sleep Quality Trend", systemImage: "chart.line.uptrend.xyaxis")
+                .font(.headline)
+                .foregroundColor(theme.primary)
+
+            // Simple bar chart for quality ratings
+            HStack(alignment: .bottom, spacing: 8) {
+                ForEach(completedDays.sorted(), id: \.self) { day in
+                    if let entry = sleepEntries[day], let quality = entry.sleepQuality {
+                        VStack(spacing: 4) {
+                            Rectangle()
+                                .fill(qualityColor(quality: quality))
+                                .frame(width: 24, height: CGFloat(quality) * 20)
+                                .cornerRadius(4)
+
+                            Text("\(day)")
+                                .font(.caption2)
+                                .foregroundColor(theme.textOnCardMuted)
+                        }
+                    }
+                }
+            }
+            .frame(height: 120)
+            .padding(.vertical, 8)
+
+            // Legend
+            HStack(spacing: 16) {
+                legendItem(color: theme.success, label: "Good (4-5)")
+                legendItem(color: theme.warning, label: "Fair (3)")
+                legendItem(color: theme.error, label: "Poor (1-2)")
+            }
+            .font(.caption)
+        }
+        .padding()
+        .background(GlassyCardBackground(opacity: 0.5))
+        .cornerRadius(16)
+    }
+
+    // MARK: - Helper Views
+
+    private func qualityBadge(quality: Int) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: qualityIcon(quality: quality))
+            Text("\(quality)/5")
+        }
+        .font(.subheadline)
+        .fontWeight(.semibold)
+        .foregroundColor(.white)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(qualityColor(quality: quality))
+        .cornerRadius(20)
+    }
+
+    private func timingRow(label: String, time: Date, icon: String) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(theme.primary)
+                .frame(width: 24)
+            Text(label)
+                .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST
+            Spacer()
+            Text(time, style: .time)
+                .fontWeight(.medium)
+                .foregroundColor(theme.textOnCard)  // HIGH CONTRAST
+        }
+    }
+
+    private func metricTile(label: String, value: String, icon: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(theme.primary)
+
+            Text(value)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(theme.textOnCard)
+
+            Text(label)
+                .font(.caption)
+                .foregroundColor(theme.textOnCardSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(GlassyCardBackground(opacity: 0.3))
+        .cornerRadius(12)
+    }
+
+    private func contextRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST
+            Spacer()
+            Text(value)
+                .fontWeight(.medium)
+                .foregroundColor(theme.textOnCard)  // HIGH CONTRAST
+        }
+    }
+
+    private func legendItem(color: Color, label: String) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST
+        }
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "moon.zzz.fill")
+                .font(.system(size: 60))
+                .foregroundColor(theme.primary.opacity(0.5))
+
+            Text("No sleep data yet")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(circadianTextPrimary)
+
+            Text("Complete your daily sleep log to see your history here")
+                .font(.subheadline)
+                .foregroundColor(circadianTextSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(40)
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.5)
+                .tint(theme.primary)
+            Text("Loading sleep history...")
+                .foregroundColor(circadianTextSecondary)
+        }
+        .padding(40)
+    }
+
+    private var noDayDataView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.system(size: 40))
+                .foregroundColor(theme.warning)
+
+            Text("No data for Day \(selectedDay)")
+                .font(.headline)
+                .foregroundColor(circadianTextPrimary)
+
+            Text("Select a completed day to view details")
+                .font(.subheadline)
+                .foregroundColor(circadianTextSecondary)
+        }
+        .padding(40)
+    }
+
+    // MARK: - Helper Functions
+
+    private func qualityColor(quality: Int) -> Color {
+        switch quality {
+        case 4...5: return theme.success
+        case 3: return theme.warning
+        default: return theme.error
+        }
+    }
+
+    private func qualityIcon(quality: Int) -> String {
+        switch quality {
+        case 4...5: return "star.fill"
+        case 3: return "star.leadinghalf.filled"
+        default: return "star"
+        }
+    }
+
+    private func formatDuration(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let mins = minutes % 60
+        if hours > 0 && mins > 0 {
+            return "\(hours)h \(mins)m"
+        } else if hours > 0 {
+            return "\(hours)h"
+        } else {
+            return "\(mins)m"
+        }
+    }
+
+    // MARK: - Data Loading
+
+    private func loadSleepHistory() {
+        isLoading = true
+
+        // Set selected day to most recent completed day
+        if let lastDay = completedDays.max() {
+            selectedDay = lastDay
+        }
+
+        // Load sleep entries from responses
+        Task {
+            var entries: [Int: SleepDiaryEntry] = [:]
+
+            for day in completedDays {
+                if let entry = await loadDayEntry(day: day) {
+                    entries[day] = entry
+                }
+            }
+
+            await MainActor.run {
+                sleepEntries = entries
+                isLoading = false
+            }
+        }
+    }
+
+    private func loadDayEntry(day: Int) async -> SleepDiaryEntry? {
+        // Fetch responses for this day from Convex
+        do {
+            let savedResponses = try await ConvexService.shared.getSavedResponses(dayNumber: day)
+
+            // Convert QuestionResponseValue to [String: Any] for SleepDiaryEntry
+            var responses: [String: Any] = [:]
+            for (questionId, responseValue) in savedResponses {
+                if let stringValue = responseValue.stringValue {
+                    // Check if it's a time string (ISO8601) and convert to Date
+                    if let date = ISO8601DateFormatter().date(from: stringValue) {
+                        responses[questionId] = date
+                    } else {
+                        responses[questionId] = stringValue
+                    }
+                } else if let numberValue = responseValue.numberValue {
+                    responses[questionId] = Int(numberValue)
+                } else if let arrayValue = responseValue.arrayValue {
+                    responses[questionId] = arrayValue
+                }
+            }
+
+            return SleepDiaryEntry(from: responses, day: day)
+        } catch {
+            print("[SleepDiaryHistory] Failed to load day \(day): \(error)")
+            return nil
+        }
+    }
+}
+
+// MARK: - Day Pill Button
+
+struct DayPillButton: View {
+    let day: Int
+    let isSelected: Bool
+    let isCompleted: Bool
+    let action: () -> Void
+
+    // Observe ThemeManager for reactive circadian updates
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Text("\(day)")
+                    .font(.headline)
+                    .fontWeight(isSelected ? .bold : .regular)
+
+                if isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption2)
+                }
+            }
+            .frame(width: 44, height: 56)
+            .foregroundColor(foregroundColor)
+            .background(backgroundColor)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? theme.primary : Color.clear, lineWidth: 2)
+            )
+        }
+        .disabled(!isCompleted)
+    }
+
+    private var foregroundColor: Color {
+        if isSelected {
+            return theme.textOnPrimary  // Circadian-aware text on primary background
+        } else if isCompleted {
+            return theme.textOnCard  // Circadian-aware - visible on background
+        } else {
+            // Unselected/incomplete - still needs to be visible!
+            return theme.textOnCardMuted  // Full opacity for visibility
+        }
+    }
+
+    private var backgroundColor: Color {
+        if isSelected {
+            return theme.primary
+        } else if isCompleted {
+            return theme.backgroundTint  // Circadian-aware background tint
+        } else {
+            return Color.clear
+        }
+    }
+}
+
+// MARK: - Sleep Diary Entry Model
+
+struct SleepDiaryEntry {
+    let day: Int
+    let date: Date?
+
+    // Core timing
+    let intoBedTime: Date?
+    let trySleepTime: Date?
+    let finalWakeTime: Date?
+    let outOfBedTime: Date?
+
+    // Metrics
+    let sleepLatency: Int?  // minutes to fall asleep
+    let awakenings: Int?
+    let waso: Int?  // wake after sleep onset (minutes)
+    let totalSleepDuration: Int?  // in minutes
+    let sleepEfficiency: Double?  // percentage
+
+    // Ratings
+    let sleepQuality: Int?  // 1-5
+    let refreshedRating: Int?  // 1-5
+
+    // Context
+    let dayType: String?
+    let caffeineCount: Int?
+    let hadAlcohol: Bool?
+    let tookSleepMeds: Bool?
+    let sleepMedsName: String?
+    let didNap: Bool?
+    let napDuration: Int?
+
+    var hasContextData: Bool {
+        dayType != nil || (caffeineCount ?? 0) > 0 || hadAlcohol == true || tookSleepMeds == true || didNap == true
+    }
+
+    init(from responses: [String: Any], day: Int) {
+        self.day = day
+        self.date = Self.parseDate(responses["_date"]) ?? Date()
+
+        // Parse timing responses (support both Date and timestamp formats)
+        self.intoBedTime = Self.parseDate(responses["CSD_INTO_BED"]) ?? Self.parseDate(responses["SL_BEDTIME"])
+        self.trySleepTime = Self.parseDate(responses["CSD_TRY_SLEEP"]) ?? Self.parseDate(responses["SL_ASLEEP_TIME"])
+        self.finalWakeTime = Self.parseDate(responses["CSD_FINAL_WAKE"]) ?? Self.parseDate(responses["SL_WAKE_TIME"])
+        self.outOfBedTime = Self.parseDate(responses["CSD_OUT_BED"])
+
+        // Parse metrics
+        self.sleepLatency = responses["CSD_LATENCY"] as? Int
+        self.awakenings = responses["CSD_AWAKENINGS"] as? Int ?? responses["SL_AWAKENINGS"] as? Int
+        self.waso = responses["CSD_WASO"] as? Int
+
+        // Calculate total sleep and efficiency if we have timing data
+        if let trySleep = self.trySleepTime, let finalWake = self.finalWakeTime {
+            let totalTimeInBed = finalWake.timeIntervalSince(trySleep) / 60  // minutes
+            let latency = Double(self.sleepLatency ?? 0)
+            let wasoMinutes = Double(self.waso ?? 0)
+            let actualSleep = totalTimeInBed - latency - wasoMinutes
+            self.totalSleepDuration = max(0, Int(actualSleep))
+            self.sleepEfficiency = totalTimeInBed > 0 ? (actualSleep / totalTimeInBed) * 100 : nil
+        } else {
+            self.totalSleepDuration = nil
+            self.sleepEfficiency = nil
+        }
+
+        // Parse ratings
+        if let quality = responses["CSD_QUALITY"] as? Int {
+            self.sleepQuality = quality
+        } else if let quality = responses["SL_QUALITY"] as? Int {
+            // Convert 1-10 scale to 1-5
+            self.sleepQuality = max(1, min(5, (quality + 1) / 2))
+        } else if let quality = responses["SL_QUALITY"] as? Double {
+            self.sleepQuality = max(1, min(5, Int((quality + 1) / 2)))
+        } else {
+            self.sleepQuality = nil
+        }
+        self.refreshedRating = responses["CSD_REFRESHED"] as? Int
+
+        // Parse context
+        self.dayType = responses["CSD_DAY_TYPE"] as? String
+        self.caffeineCount = responses["CSD_CAFFEINE"] as? Int
+        self.hadAlcohol = (responses["CSD_ALCOHOL"] as? String) == "Yes"
+        self.tookSleepMeds = (responses["CSD_MEDS"] as? String) == "Yes"
+        self.sleepMedsName = responses["CSD_MEDS_NAME"] as? String
+        self.didNap = (responses["CSD_NAPS"] as? String) == "Yes"
+        self.napDuration = responses["CSD_NAP_DURATION"] as? Int
+    }
+
+    /// Parse various date formats (Date, timestamp, ISO8601 string)
+    private static func parseDate(_ value: Any?) -> Date? {
+        guard let value = value else { return nil }
+
+        // Already a Date
+        if let date = value as? Date {
+            return date
+        }
+
+        // Timestamp (milliseconds since epoch)
+        if let timestamp = value as? Double {
+            return Date(timeIntervalSince1970: timestamp / 1000)
+        }
+        if let timestamp = value as? Int {
+            return Date(timeIntervalSince1970: Double(timestamp) / 1000)
+        }
+
+        // ISO8601 string
+        if let string = value as? String {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatter.date(from: string) {
+                return date
+            }
+            // Try without fractional seconds
+            formatter.formatOptions = [.withInternetDateTime]
+            return formatter.date(from: string)
+        }
+
+        return nil
     }
 }
 
@@ -931,7 +1732,9 @@ struct DayCompleteCelebrationView: View {
     @State private var isUnlocked: Bool = false
     @State private var timer: Timer?
 
-    private var theme: ColorTheme { ColorTheme.shared }
+    // Observe ThemeManager for reactive circadian updates
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -952,7 +1755,7 @@ struct DayCompleteCelebrationView: View {
                         .foregroundColor(theme.success)
                     Text(currentDay < 15 ? "Great progress on your sleep journey" : "Congratulations! Journey complete!")
                         .font(.subheadline)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
                 }
 
                 Spacer()
@@ -961,9 +1764,10 @@ struct DayCompleteCelebrationView: View {
             // Next day info
             if currentDay < 15 {
                 Divider()
+                    .background(theme.textOnCardMuted.opacity(0.3))  // Circadian-aware divider
 
-                if isDebugMode {
-                    // Debug mode: Show advance button immediately (bypasses time check only)
+                if isDebugMode || themeManager.unlockTimeOverride {
+                    // Debug mode or unlock override: Show advance button immediately (bypasses time check)
                     Button(action: onAdvanceDay) {
                         HStack {
                             Image(systemName: "forward.fill")
@@ -972,16 +1776,16 @@ struct DayCompleteCelebrationView: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(theme.textOnPrimary)  // Circadian-aware
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(theme.primary)
                         .cornerRadius(10)
                     }
 
-                    Text("Debug mode: Time check bypassed")
+                    Text(isDebugMode ? "Debug mode: Time check bypassed" : "Unlock override enabled in Settings")
                         .font(.caption2)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
                 } else if isUnlocked {
                     // Day unlocked (past 4 AM) - show advance button
                     Button(action: onAdvanceDay) {
@@ -992,26 +1796,39 @@ struct DayCompleteCelebrationView: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(theme.textOnPrimary)  // Circadian-aware
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(theme.primary)
                         .cornerRadius(10)
                     }
                 } else {
-                    // Countdown to 4 AM
-                    HStack {
-                        Image(systemName: "clock.fill")
-                            .foregroundColor(theme.textSecondary)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Day \(currentDay + 1) unlocks at 4:00 AM")
+                    // Locked state - show padlock with "We'll unlock tomorrow"
+                    HStack(spacing: 12) {
+                        // Semi-transparent padlock icon
+                        ZStack {
+                            Circle()
+                                .fill(theme.textOnCardMuted.opacity(0.15))
+                                .frame(width: 44, height: 44)
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(theme.textOnCardSecondary.opacity(0.7))
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Day \(currentDay + 1)")
                                 .font(.subheadline)
-                                .foregroundColor(theme.textPrimary)
-                            Text(timeUntilUnlock)
+                                .fontWeight(.medium)
+                                .foregroundColor(theme.textOnCard)
+                            Text("We'll unlock tomorrow at 4:00 AM")
                                 .font(.caption)
-                                .foregroundColor(theme.textSecondary)
+                                .foregroundColor(theme.textOnCardSecondary)
+                            Text(timeUntilUnlock)
+                                .font(.caption2)
+                                .foregroundColor(theme.textOnCardMuted)
                                 .monospacedDigit()
                         }
+
                         Spacer()
                     }
                     .padding(.vertical, 8)
@@ -1019,17 +1836,18 @@ struct DayCompleteCelebrationView: View {
             } else {
                 // Journey complete message
                 Divider()
+                    .background(theme.textOnCardMuted.opacity(0.3))  // Circadian-aware divider
                 HStack {
                     Image(systemName: "trophy.fill")
-                        .foregroundColor(.yellow)
+                        .foregroundColor(theme.warning)  // Use theme warning (amber/gold) instead of .yellow
                     Text("You've completed the 15-day sleep assessment!")
                         .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                 }
             }
         }
         .padding(16)
-        .background(theme.success.opacity(0.1))
+        .background(GlassyCardBackground(opacity: 0.5, tint: theme.success))  // Circadian-aware card background
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -1092,6 +1910,199 @@ struct DayCompleteCelebrationView: View {
             timeUntilUnlock = "\(minutes)m \(seconds)s remaining"
         } else {
             timeUntilUnlock = "\(seconds)s remaining"
+        }
+    }
+}
+
+// MARK: - Developer Panel View
+
+struct DevPanelView: View {
+    @Binding var currentDay: Int
+    @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var questionnaireManager: QuestionnaireManager
+    @Environment(\.dismiss) var dismiss
+
+    @State private var isAdvancingDay = false
+    @State private var isResetting = false
+    @State private var statusMessage: String?
+
+    var body: some View {
+        NavigationView {
+            List {
+                // Current Status
+                Section {
+                    HStack {
+                        Text("Current Day")
+                        Spacer()
+                        Text("Day \(currentDay)")
+                            .fontWeight(.bold)
+                            .foregroundColor(.orange)
+                    }
+
+                    HStack {
+                        Text("Sleep Log")
+                        Spacer()
+                        Text(questionnaireManager.journeyProgress?.sleepLogCompleted == true ? "Complete" : "Pending")
+                            .foregroundColor(questionnaireManager.journeyProgress?.sleepLogCompleted == true ? .green : .orange)
+                    }
+
+                    HStack {
+                        Text("Assessment")
+                        Spacer()
+                        Text(questionnaireManager.journeyProgress?.assessmentCompleted == true ? "Complete" : "Pending")
+                            .foregroundColor(questionnaireManager.journeyProgress?.assessmentCompleted == true ? .green : .orange)
+                    }
+
+                    HStack {
+                        Text("Completed Days")
+                        Spacer()
+                        Text("\(questionnaireManager.journeyProgress?.completedDays.count ?? 0) of 15")
+                            .foregroundColor(.secondary)
+                    }
+                } header: {
+                    Text("Current Status")
+                }
+
+                // Quick Actions
+                Section {
+                    // Advance to Next Day
+                    Button {
+                        advanceDay()
+                    } label: {
+                        HStack {
+                            Label("Advance to Next Day", systemImage: "forward.fill")
+                                .foregroundColor(.orange)
+                            Spacer()
+                            if isAdvancingDay {
+                                ProgressView()
+                                    .tint(.orange)
+                            } else {
+                                Text("→ Day \(min(currentDay + 1, 15))")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .disabled(currentDay >= 15 || isAdvancingDay)
+
+                    // Reset Progress
+                    Button {
+                        resetProgress()
+                    } label: {
+                        HStack {
+                            Label("Reset to Day 1", systemImage: "arrow.counterclockwise")
+                                .foregroundColor(.red)
+                            Spacer()
+                            if isResetting {
+                                ProgressView()
+                                    .tint(.red)
+                            }
+                        }
+                    }
+                    .disabled(isResetting)
+
+                    // Refresh from Server
+                    Button {
+                        Task {
+                            await questionnaireManager.loadJourneyProgress()
+                            currentDay = questionnaireManager.journeyProgress?.currentDay ?? currentDay
+                            statusMessage = "Refreshed from server"
+                        }
+                    } label: {
+                        Label("Refresh from Server", systemImage: "arrow.triangle.2.circlepath")
+                            .foregroundColor(.blue)
+                    }
+                } header: {
+                    Text("Quick Actions")
+                } footer: {
+                    if let message = statusMessage {
+                        Text(message)
+                            .foregroundColor(.green)
+                    }
+                }
+
+                // Gateway States
+                Section {
+                    ForEach(questionnaireManager.gatewayStates, id: \.gatewayType) { state in
+                        HStack {
+                            Text(state.gatewayType.rawValue)
+                                .font(.caption)
+                            Spacer()
+                            Text(state.triggered ? "Triggered" : "Not triggered")
+                                .font(.caption)
+                                .foregroundColor(state.triggered ? .orange : .secondary)
+                        }
+                    }
+                } header: {
+                    Text("Gateway States")
+                }
+            }
+            .navigationTitle("Developer Panel")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func advanceDay() {
+        isAdvancingDay = true
+        statusMessage = nil
+
+        Task {
+            do {
+                let response = try await ConvexService.shared.advanceToNextDay(debugMode: true)
+
+                if response.success {
+                    await questionnaireManager.loadJourneyProgress()
+                    await MainActor.run {
+                        if let newDay = response.newDay {
+                            currentDay = newDay
+                        }
+                        isAdvancingDay = false
+                        statusMessage = "Advanced to Day \(response.newDay ?? currentDay)"
+                        NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                    }
+                } else {
+                    await MainActor.run {
+                        isAdvancingDay = false
+                        statusMessage = "Failed: \(response.error ?? "Unknown error")"
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isAdvancingDay = false
+                    statusMessage = "Error: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    private func resetProgress() {
+        isResetting = true
+        statusMessage = nil
+
+        Task {
+            do {
+                try await ConvexService.shared.resetJourneyProgress()
+                await questionnaireManager.loadJourneyProgress()
+                await MainActor.run {
+                    currentDay = 1
+                    questionnaireManager.currentDay = 1
+                    isResetting = false
+                    statusMessage = "Reset to Day 1"
+                    NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                }
+            } catch {
+                await MainActor.run {
+                    isResetting = false
+                    statusMessage = "Reset failed: \(error.localizedDescription)"
+                }
+            }
         }
     }
 }

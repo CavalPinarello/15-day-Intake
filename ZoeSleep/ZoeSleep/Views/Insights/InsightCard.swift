@@ -28,11 +28,11 @@ struct InsightCard: View {
                 Text(insight.title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)
 
                 Text(insight.text)
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 // Confidence indicator
@@ -42,7 +42,7 @@ struct InsightCard: View {
                     Text("\(Int(insight.confidence * 100))% confidence")
                         .font(.caption2)
                 }
-                .foregroundColor(theme.textSecondary.opacity(0.7))
+                .foregroundColor(theme.textOnCardMuted)
             }
 
             Spacer()
@@ -50,11 +50,11 @@ struct InsightCard: View {
             if insight.actionable {
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardMuted)
             }
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.35))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(12)
     }
 

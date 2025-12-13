@@ -15,6 +15,19 @@ struct DataRequirementView: View {
     @EnvironmentObject var themeManager: ThemeManager
     private var theme: ColorTheme { themeManager.currentTheme }
 
+    // MARK: - Circadian-Aware Colors
+    private var palette: CircadianPalette {
+        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    }
+
+    private var circadianTextPrimary: Color {
+        palette.textPrimary
+    }
+
+    private var circadianTextSecondary: Color {
+        palette.textSecondary
+    }
+
     private var daysRemaining: Int {
         max(0, requiredDays - currentDays)
     }
@@ -30,12 +43,12 @@ struct DataRequirementView: View {
             Text("Collecting Sleep Data")
                 .font(.title2)
                 .fontWeight(.semibold)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(circadianTextPrimary)
 
             // Description
             Text("We need at least \(requiredDays) days of data to generate meaningful insights. You have \(currentDays) day\(currentDays == 1 ? "" : "s") so far.")
                 .font(.body)
-                .foregroundColor(theme.textSecondary)
+                .foregroundColor(circadianTextSecondary)
                 .multilineTextAlignment(.center)
 
             // Progress indicator
@@ -45,7 +58,7 @@ struct DataRequirementView: View {
 
                 Text("\(daysRemaining) more day\(daysRemaining == 1 ? "" : "s") to go")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(circadianTextSecondary)
             }
             .padding(.top, 10)
 
@@ -62,7 +75,7 @@ struct DataRequirementView: View {
             Text("Coming Soon:")
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(theme.textOnCard)
 
             UpcomingInsightRow(
                 icon: "brain.head.profile",
@@ -97,7 +110,7 @@ struct DataRequirementView: View {
             .environmentObject(themeManager)
         }
         .padding()
-        .background(theme.backgroundTint)
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(12)
     }
 }
@@ -118,22 +131,22 @@ struct UpcomingInsightRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: isUnlocked ? "checkmark.circle.fill" : icon)
-                .foregroundColor(isUnlocked ? theme.success : theme.textSecondary)
+                .foregroundColor(isUnlocked ? theme.success : theme.textOnCardSecondary)
                 .frame(width: 20)
 
             Text(text)
                 .font(.caption)
-                .foregroundColor(isUnlocked ? theme.success : theme.textSecondary)
+                .foregroundColor(isUnlocked ? theme.success : theme.textOnCardSecondary)
 
             Spacer()
 
             if !isUnlocked {
                 Text("Day \(daysRequired)")
                     .font(.caption2)
-                    .foregroundColor(theme.textSecondary.opacity(0.7))
+                    .foregroundColor(theme.textOnCardMuted)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
-                    .background(theme.backgroundTint)
+                    .background(theme.primary.opacity(0.15))
                     .cornerRadius(4)
             }
         }

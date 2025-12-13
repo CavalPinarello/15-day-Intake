@@ -63,6 +63,7 @@ struct GlassyWaveShape: Shape {
 struct GlassyWaveLayer: View {
     let index: Int
     let colorScheme: ColorScheme
+    var palette: CircadianPalette = CircadianPalette.current  // Pass from parent
     @State private var phase: CGFloat = 0
 
     // Wave configurations for each layer
@@ -82,13 +83,9 @@ struct GlassyWaveLayer: View {
     }
 
     private var waveGradient: LinearGradient {
-        let baseColor = colorScheme == .dark
-            ? Color(red: 0.30, green: 0.85, blue: 0.80) // Bright teal for dark mode
-            : Color(red: 0.15, green: 0.60, blue: 0.70) // Deeper teal for light mode
-
-        let highlightColor = colorScheme == .dark
-            ? Color(red: 0.40, green: 0.95, blue: 0.90) // Lighter teal highlight
-            : Color(red: 0.25, green: 0.75, blue: 0.85)
+        // USE PASSED PALETTE for waves - ensures sync with ThemeManager
+        let baseColor = palette.wave
+        let highlightColor = palette.accent
 
         return LinearGradient(
             colors: [
@@ -129,6 +126,7 @@ struct GlassyWaveLayer: View {
 struct GlowingLineWave: View {
     let index: Int
     let colorScheme: ColorScheme
+    var palette: CircadianPalette = CircadianPalette.current  // Pass from parent
     @State private var phase: CGFloat = 0
 
     private var config: (amplitude: CGFloat, frequency: CGFloat, speed: Double, yOffset: CGFloat, lineWidth: CGFloat, opacity: Double) {
@@ -145,9 +143,8 @@ struct GlowingLineWave: View {
     }
 
     private var lineColor: Color {
-        colorScheme == .dark
-            ? Color(red: 0.45, green: 0.95, blue: 0.90) // Bright cyan-teal
-            : Color(red: 0.20, green: 0.70, blue: 0.80)
+        // USE PASSED PALETTE for accent lines - ensures sync with ThemeManager
+        palette.accent
     }
 
     var body: some View {
@@ -246,6 +243,11 @@ struct CircadianWaveBackground: View {
     /// Wave intensity (0-1, affects opacity)
     var intensity: Double = 1.0
 
+    /// Get current palette based on ThemeManager's time period (single source of truth)
+    private var currentPalette: CircadianPalette {
+        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    }
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -256,13 +258,13 @@ struct CircadianWaveBackground: View {
                 if !reduceMotion {
                     // Glassy filled waves (back to front)
                     ForEach(0..<5, id: \.self) { index in
-                        GlassyWaveLayer(index: index, colorScheme: colorScheme)
+                        GlassyWaveLayer(index: index, colorScheme: colorScheme, palette: currentPalette)
                             .opacity(intensity)
                     }
 
                     // Glowing accent lines on top
                     ForEach(0..<4, id: \.self) { index in
-                        GlowingLineWave(index: index, colorScheme: colorScheme)
+                        GlowingLineWave(index: index, colorScheme: colorScheme, palette: currentPalette)
                             .opacity(intensity)
                     }
                 }
@@ -282,29 +284,12 @@ struct CircadianWaveBackground: View {
     }
 
     private var defaultGradient: LinearGradient {
-        if colorScheme == .dark {
-            // Dark mode: Deep navy gradient with subtle color variation
-            LinearGradient(
-                colors: [
-                    Color(red: 0.04, green: 0.06, blue: 0.12), // Very deep navy top
-                    Color(red: 0.06, green: 0.09, blue: 0.16), // #0F172A
-                    Color(red: 0.05, green: 0.10, blue: 0.18)  // Hint of teal-navy bottom
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        } else {
-            // Light mode: Soft gradient
-            LinearGradient(
-                colors: [
-                    Color(red: 0.96, green: 0.97, blue: 0.99),
-                    Color(red: 0.92, green: 0.95, blue: 0.98),
-                    Color(red: 0.88, green: 0.94, blue: 0.98)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
+        // Uses ThemeManager's currentTimePeriod so SwiftUI re-renders when it changes
+        return LinearGradient(
+            colors: currentPalette.background,
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 }
 
@@ -553,6 +538,51 @@ struct CircadianPalette {
     let textPrimary: Color
     let textSecondary: Color
 
+    /// Get palette for a specific time period (used by ThemeManager)
+    static func forPeriod(_ period: TimePeriod) -> CircadianPalette {
+        switch period {
+        case .evening, .night:
+            return CircadianPalette(
+                background: [
+                    Color(red: 0.14, green: 0.08, blue: 0.06),
+                    Color(red: 0.16, green: 0.09, blue: 0.07),
+                    Color(red: 0.18, green: 0.10, blue: 0.08)
+                ],
+                wave: Color(red: 0.85, green: 0.45, blue: 0.20),
+                accent: Color(red: 0.95, green: 0.55, blue: 0.25),
+                isDark: true,
+                textPrimary: Color(red: 0.996, green: 0.953, blue: 0.780),
+                textSecondary: Color(red: 0.988, green: 0.827, blue: 0.302)
+            )
+        case .morning:
+            return CircadianPalette(
+                background: [
+                    Color(red: 0.92, green: 0.97, blue: 0.98),
+                    Color(red: 0.88, green: 0.95, blue: 0.97),
+                    Color(red: 0.84, green: 0.93, blue: 0.96)
+                ],
+                wave: Color(red: 0.31, green: 0.80, blue: 0.77),
+                accent: Color(red: 0.27, green: 0.72, blue: 0.82),
+                isDark: false,
+                textPrimary: Color(red: 0.10, green: 0.15, blue: 0.20),
+                textSecondary: Color(red: 0.35, green: 0.45, blue: 0.50)
+            )
+        case .afternoon:
+            return CircadianPalette(
+                background: [
+                    Color(red: 0.94, green: 0.96, blue: 0.99),
+                    Color(red: 0.90, green: 0.94, blue: 0.98),
+                    Color(red: 0.86, green: 0.92, blue: 0.97)
+                ],
+                wave: Color(red: 0.35, green: 0.70, blue: 0.85),
+                accent: Color(red: 0.45, green: 0.75, blue: 0.90),
+                isDark: false,
+                textPrimary: Color(red: 0.10, green: 0.15, blue: 0.20),
+                textSecondary: Color(red: 0.40, green: 0.45, blue: 0.50)
+            )
+        }
+    }
+
     /// Get the current circadian palette based on time of day
     static var current: CircadianPalette {
         let now = Date()
@@ -650,14 +680,19 @@ struct CircadianPalette {
 // MARK: - Dashboard Wave Background (Circadian-aware animated waves)
 
 /// Animated wave background for dashboard - like Headspace meditation app
-/// Uses shared CircadianPalette that adjusts for time of day and season
+/// Uses ThemeManager's currentTimePeriod for proper sync across all components
 struct DashboardWaveBackground: View {
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var phase1: CGFloat = 0
     @State private var phase2: CGFloat = 0
     @State private var phase3: CGFloat = 0
 
+    /// Get palette from ThemeManager so it updates when time changes
+    private var palette: CircadianPalette {
+        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    }
+
     var body: some View {
-        let palette = CircadianPalette.current
 
         GeometryReader { geometry in
             ZStack {
@@ -802,53 +837,77 @@ struct FlowingWave: Shape {
 
 // MARK: - Glassy Card Background
 
-/// A translucent background for cards - uses circadian palette for proper contrast
+/// A translucent background for cards - uses ThemeManager for proper sync
+/// CIRCADIAN: In evening/night, cards should be warm dark colors that blend with background
 struct GlassyCardBackground: View {
+    @ObservedObject private var themeManager = ThemeManager.shared
     var opacity: Double = 0.5
     var tint: Color? = nil
     var blur: CGFloat = 0  // Kept for API compatibility
 
+    /// Get palette from ThemeManager so it updates when time changes
+    private var palette: CircadianPalette {
+        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    }
+
     var body: some View {
-        let palette = CircadianPalette.current
 
         ZStack {
-            // Base translucent layer - adapts to circadian mode
+            // Base layer - adapts to circadian mode
             if palette.isDark {
-                // Night mode: warm translucent brown (no blue!)
+                // Evening/Night mode: warm solid brown (high contrast with cream text)
+                // Higher opacity for better text readability
                 LinearGradient(
                     colors: [
-                        Color(red: 0.18, green: 0.12, blue: 0.10).opacity(opacity),
-                        Color(red: 0.15, green: 0.10, blue: 0.08).opacity(opacity * 0.85)
+                        Color(red: 0.20, green: 0.13, blue: 0.09).opacity(min(opacity * 2.5, 0.95)),
+                        Color(red: 0.16, green: 0.10, blue: 0.07).opacity(min(opacity * 2.2, 0.90))
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             } else {
-                // Day mode: translucent white/cream
+                // Day mode: translucent cream/white (subtle, not glaring)
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(opacity * 0.9),
-                        Color.white.opacity(opacity * 0.75)
+                        Color(red: 1.0, green: 0.99, blue: 0.96).opacity(opacity * 0.85),
+                        Color(red: 1.0, green: 0.98, blue: 0.94).opacity(opacity * 0.70)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             }
 
-            // Optional color tint
+            // Optional color tint (subtle in dark mode)
             if let tint = tint {
-                tint.opacity(palette.isDark ? 0.08 : 0.05)
+                tint.opacity(palette.isDark ? 0.06 : 0.04)
             }
 
-            // Subtle top highlight for glassy effect
-            LinearGradient(
-                colors: [
-                    (palette.isDark ? palette.accent : Color.white).opacity(palette.isDark ? 0.08 : 0.25),
-                    Color.clear
-                ],
-                startPoint: .top,
-                endPoint: .center
-            )
+            // Subtle border/highlight for depth
+            if palette.isDark {
+                // Warm amber edge highlight for dark cards
+                RoundedRectangle(cornerRadius: 0)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.961, green: 0.620, blue: 0.043).opacity(0.15),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            } else {
+                // Subtle light highlight for day cards
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.20),
+                        Color.clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+            }
         }
     }
 }
@@ -891,7 +950,7 @@ extension View {
 
 #Preview("Content with Background") {
     VStack {
-        Text("Zoe Sleep")
+        Text("Zoé Sleep")
             .font(.largeTitle)
             .fontWeight(.bold)
             .foregroundColor(.white)

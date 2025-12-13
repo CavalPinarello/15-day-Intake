@@ -35,7 +35,7 @@ struct HealthKitIntegrationView: View {
                         .foregroundColor(theme.warning)
                         .multilineTextAlignment(.center)
 
-                    Text("Please sign in to your Zoe Sleep account to enable health data synchronization with our platform.")
+                    Text("Please sign in to your Zoé Sleep account to enable health data synchronization with our platform.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)

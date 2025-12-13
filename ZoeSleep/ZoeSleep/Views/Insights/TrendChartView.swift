@@ -19,7 +19,7 @@ struct TrendChartView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("7-Day Trend")
                 .font(.headline)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(theme.textOnCard)
 
             chartView
 
@@ -27,7 +27,7 @@ struct TrendChartView: View {
             legendView
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.4))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(16)
     }
 
@@ -64,15 +64,15 @@ struct TrendChartView: View {
         .chartYAxis {
             AxisMarks(position: .leading, values: [0, 50, 100]) { value in
                 AxisGridLine()
-                    .foregroundStyle(theme.textSecondary.opacity(0.2))
+                    .foregroundStyle(theme.textOnCardMuted.opacity(0.3))
                 AxisValueLabel()
-                    .foregroundStyle(theme.textSecondary)
+                    .foregroundStyle(theme.textOnCardSecondary)
             }
         }
         .chartXAxis {
             AxisMarks { value in
                 AxisValueLabel()
-                    .foregroundStyle(theme.textSecondary)
+                    .foregroundStyle(theme.textOnCardSecondary)
             }
         }
         .frame(height: 200)
@@ -88,7 +88,7 @@ struct TrendChartView: View {
                     .frame(width: 8, height: 8)
                 Text("Actual (HealthKit)")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)
             }
 
             HStack(spacing: 4) {
@@ -97,7 +97,7 @@ struct TrendChartView: View {
                     .frame(width: 12, height: 2)
                 Text("Your Rating")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)
             }
         }
     }

@@ -75,6 +75,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 **Latest Updates:**
 - Repository renamed: `15-day-Intake` → `Zoe-Sleep-V1` (Dec 11, 2025)
+- Circadian picker styling: Time/date pickers now use warm amber colors at night (Dec 12, 2025)
 - Onboarding: 8 steps, account-aware, circadian colors
 - Cross-device sync: Question-by-question resume
 - Day unlock: 4 AM (was 5 AM)

@@ -16,22 +16,22 @@ enum QuestionnaireSection: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .sleepLog: return "Daily Sleep Log"
-        case .assessment: return "Day Assessment"
+        case .sleepLog: return FriendlyCopy.sleepLogHeader
+        case .assessment: return FriendlyCopy.assessmentHeader
         }
     }
 
     var subtitle: String {
         switch self {
-        case .sleepLog: return "Stanford Sleep Diary"
-        case .assessment: return "About your typical patterns"
+        case .sleepLog: return "A quick check-in"
+        case .assessment: return "Getting to know you"
         }
     }
 
     var description: String {
         switch self {
-        case .sleepLog: return "About last night's sleep..."
-        case .assessment: return "Understanding your sleep patterns..."
+        case .sleepLog: return "How did you sleep?"
+        case .assessment: return "Help us understand you better"
         }
     }
 
@@ -135,7 +135,7 @@ enum QuestionnaireSection: String, CaseIterable {
     }
 }
 
-// MARK: - Section Header View
+// MARK: - Section Header View (Calm, minimal design)
 
 struct SectionHeaderView: View {
     let section: QuestionnaireSection
@@ -143,102 +143,56 @@ struct SectionHeaderView: View {
     let totalQuestions: Int
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Colored header bar
+        VStack(spacing: Spacing.sm) {
+            // Simple, friendly header
             HStack {
-                Image(systemName: section.icon)
-                    .font(.title2)
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: section.icon)
+                        .font(.system(size: Typography.headline))
+                        .foregroundColor(section.accentColor)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(section.title.uppercased())
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .tracking(1)
-
-                    Text(section.subtitle)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                    Text(section.title)
+                        .font(.system(size: Typography.headline, weight: .semibold, design: .rounded))
+                        .foregroundColor(section.descriptionTextColor)
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(currentQuestion)/\(totalQuestions)")
-                        .font(.headline)
-                        .fontWeight(.bold)
-
-                    Text("questions")
-                        .font(.caption2)
-                }
+                // Simple question counter
+                Text("\(currentQuestion) of \(totalQuestions)")
+                    .font(.system(size: Typography.subheadline, weight: .medium, design: .rounded))
+                    .foregroundColor(section.descriptionTextColor.opacity(0.7))
             }
-            .foregroundColor(.white)
-            .padding()
-            .background(section.headerGradient)
-
-            // Subtitle bar
-            HStack {
-                Text(section.description)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(section.descriptionTextColor)
-
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.md)
             .background(section.backgroundColor)
         }
     }
 }
 
-// MARK: - Section Progress View
+// MARK: - Section Progress View (Minimal, unobtrusive)
 
 struct SectionProgressView: View {
     let section: QuestionnaireSection
     let currentIndex: Int
     let totalQuestions: Int
 
-    // Maximum dots to show before switching to compact view
-    private let maxDotsToShow = 15
-
     var body: some View {
-        VStack(spacing: 8) {
-            // Progress bar
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(section.backgroundColor)
-                        .frame(height: 8)
+        // Simple thin progress bar
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(section.accentColor.opacity(0.15))
+                    .frame(height: 4)
 
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(section.accentColor)
-                        .frame(width: geometry.size.width * CGFloat(currentIndex + 1) / CGFloat(max(totalQuestions, 1)), height: 8)
-                }
-            }
-            .frame(height: 8)
-
-            // Progress indicator - dots for small sets, text for large
-            if totalQuestions <= maxDotsToShow {
-                // Progress dots for smaller question sets
-                HStack(spacing: 6) {
-                    ForEach(0..<totalQuestions, id: \.self) { index in
-                        Circle()
-                            .fill(index <= currentIndex ? section.accentColor : section.backgroundColor)
-                            .frame(width: 8, height: 8)
-                            .overlay(
-                                Circle()
-                                    .stroke(section.accentColor.opacity(0.3), lineWidth: 1)
-                            )
-                    }
-                }
-            } else {
-                // Compact text progress for larger question sets
-                Text("\(currentIndex + 1) of \(totalQuestions) questions")
-                    .font(.caption)
-                    .foregroundColor(section.accentColor)
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(section.accentColor)
+                    .frame(width: geometry.size.width * CGFloat(currentIndex + 1) / CGFloat(max(totalQuestions, 1)), height: 4)
+                    .animation(.spring(response: 0.3), value: currentIndex)
             }
         }
-        .padding(.horizontal)
+        .frame(height: 4)
+        .padding(.horizontal, Spacing.lg)
     }
 }
 
@@ -250,6 +204,35 @@ struct SectionTransitionView: View {
     let onContinue: () -> Void
 
     @State private var isAnimating = false
+
+    // Circadian-aware colors
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var primaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var secondaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
+        } else {
+            return Color.secondary
+        }
+    }
+
+    private var backgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.12, green: 0.08, blue: 0.05)  // Dark warm brown
+        } else {
+            return Color(.systemBackground)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -272,20 +255,22 @@ struct SectionTransitionView: View {
                 Text("\(fromSection.title) Complete!")
                     .font(.title2)
                     .fontWeight(.bold)
+                    .foregroundColor(primaryTextColor)
 
                 Text("Great job capturing last night's sleep")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(secondaryTextColor)
             }
 
             Divider()
+                .background(secondaryTextColor.opacity(0.3))
                 .padding(.horizontal, 40)
 
             // Next section preview
             VStack(spacing: 12) {
                 Text("Up Next")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(secondaryTextColor)
                     .textCase(.uppercase)
                     .tracking(1)
 
@@ -301,7 +286,7 @@ struct SectionTransitionView: View {
 
                         Text(toSection.description)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(secondaryTextColor)
                     }
                 }
                 .padding()
@@ -327,7 +312,7 @@ struct SectionTransitionView: View {
             .padding(.horizontal)
             .padding(.bottom, 20)
         }
-        .background(Color(.systemBackground))
+        .background(backgroundColor)
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
                 isAnimating = true
@@ -464,6 +449,43 @@ struct DayCompletionView: View {
 
     @State private var isAnimating = false
 
+    // Circadian-aware colors
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var primaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var secondaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
+        } else {
+            return Color.secondary
+        }
+    }
+
+    private var viewBackgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.12, green: 0.08, blue: 0.05)  // Dark warm brown
+        } else {
+            return Color(.systemBackground)
+        }
+    }
+
+    private var cardBackgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.18, green: 0.12, blue: 0.08)  // Slightly lighter dark brown
+        } else {
+            return Color(.secondarySystemBackground)
+        }
+    }
+
     // Computed: Is this a full day completion or section-only?
     private var isFullDayComplete: Bool {
         completedSection == nil
@@ -514,10 +536,11 @@ struct DayCompletionView: View {
                     Text(titleText)
                         .font(.title)
                         .fontWeight(.bold)
+                        .foregroundColor(primaryTextColor)
 
                     Text(subtitleText)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                 }
 
                 // Summary cards
@@ -531,9 +554,10 @@ struct DayCompletionView: View {
                             Text("Sleep Log")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
+                                .foregroundColor(primaryTextColor)
                             Text("\(sleepLogQuestionsCount) questions completed")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(secondaryTextColor)
                         }
 
                         Spacer()
@@ -554,10 +578,11 @@ struct DayCompletionView: View {
                             Text("Day Assessment")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
+                                .foregroundColor(primaryTextColor)
                             if isFullDayComplete || completedSection == .assessment {
                                 Text("\(assessmentQuestionsCount) questions completed")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(secondaryTextColor)
                             } else {
                                 Text("\(assessmentQuestionsCount) questions remaining")
                                     .font(.caption)
@@ -586,13 +611,13 @@ struct DayCompletionView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Personalized Assessments Added")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(secondaryTextColor)
                             .textCase(.uppercase)
                             .tracking(1)
 
                         Text("Based on your responses, we've added these assessments to your journey:")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(secondaryTextColor)
 
                         FlowLayout(spacing: 8) {
                             ForEach(triggeredGateways, id: \.self) { gateway in
@@ -612,7 +637,7 @@ struct DayCompletionView: View {
                         }
                     }
                     .padding()
-                    .background(Color(.secondarySystemBackground))
+                    .background(cardBackgroundColor)
                     .cornerRadius(12)
                     .padding(.horizontal)
                 }
@@ -650,7 +675,7 @@ struct DayCompletionView: View {
                 }
             }
         }
-        .background(Color(.systemBackground))
+        .background(viewBackgroundColor)
         .onAppear {
             withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
                 isAnimating = true

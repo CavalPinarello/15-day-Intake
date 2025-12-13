@@ -81,8 +81,8 @@ struct RewardMomentConfig {
 
     // MARK: - General Settings
 
-    /// Auto-dismiss timeout in seconds
-    static let autoDismissSeconds: Double = 4.0
+    /// Auto-dismiss timeout in seconds (increased from 4.0 for better readability)
+    static let autoDismissSeconds: Double = 7.0
 
     /// Enable rewards in Sleep Log section (calibration encouragement)
     static let skipSleepLog = false

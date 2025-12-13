@@ -21,7 +21,7 @@ struct SettingsView: View {
         List {
             // MARK: - Appearance Section
             Section {
-                // Color Theme Picker
+                // Color Theme Picker (simplified - removed accent color selector per Issue 15)
                 Picker(selection: $themeManager.appearanceMode) {
                     ForEach(ThemeManager.AppearanceMode.allCases) { mode in
                         HStack {
@@ -33,44 +33,10 @@ struct SettingsView: View {
                 } label: {
                     Label("Color Theme", systemImage: "paintbrush.fill")
                 }
-
-                // Accent Color Picker
-                Picker(selection: $themeManager.accentColorOption) {
-                    ForEach(ThemeManager.AccentColorOption.allCases) { color in
-                        HStack {
-                            Circle()
-                                .fill(color.color)
-                                .frame(width: 20, height: 20)
-                            Text(color.rawValue)
-                        }
-                        .tag(color)
-                    }
-                } label: {
-                    Label("Accent Color", systemImage: "paintpalette.fill")
-                }
-
-                // Color Preview
-                HStack(spacing: 12) {
-                    Text("Preview:")
-                        .foregroundColor(.secondary)
-
-                    ForEach(ThemeManager.AccentColorOption.allCases) { color in
-                        Circle()
-                            .fill(color.color)
-                            .frame(width: 28, height: 28)
-                            .overlay(
-                                Circle()
-                                    .stroke(themeManager.accentColorOption == color ? Color.primary : Color.clear, lineWidth: 3)
-                            )
-                            .onTapGesture {
-                                themeManager.accentColorOption = color
-                            }
-                    }
-                }
-                .padding(.vertical, 4)
-
             } header: {
                 Text("Appearance")
+            } footer: {
+                Text("Circadian mode automatically adjusts colors based on time of day to support healthy sleep.")
             }
 
             // MARK: - Accessibility Section
@@ -159,6 +125,20 @@ struct SettingsView: View {
 
                 // Debug Options (only shown when debug mode is on)
                 if themeManager.debugMode {
+                    // Unlock Time Override
+                    Toggle(isOn: $themeManager.unlockTimeOverride) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Bypass 4 AM Unlock", systemImage: "lock.open.fill")
+                                .font(.headline)
+                                .foregroundColor(.orange)
+                            Text("Immediately unlock next day after completion")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .tint(.orange)
+                    .accessibleTapTarget()
+
                     // Advance to Next Day
                     Button {
                         showingAdvanceDayConfirmation = true
@@ -259,7 +239,7 @@ struct SettingsView: View {
             } header: {
                 Text("About")
             } footer: {
-                Text("Zoe Sleep for Longevity System\nThe best sleep of your life and maximum daily energy while protecting your health.")
+                Text("Zoé Sleep for Longevity System\nThe best sleep of your life and maximum daily energy while protecting your health.")
                     .font(.caption)
                     .multilineTextAlignment(.center)
                     .padding(.top, 8)
@@ -307,17 +287,33 @@ struct SettingsView: View {
 
         Task {
             do {
-                // Call Convex to advance day
-                try await ConvexService.shared.advanceToNextDay()
-                await MainActor.run {
-                    questionnaireManager.currentDay = min(questionnaireManager.currentDay + 1, 15)
-                    isAdvancingDay = false
+                // Call Convex to advance day - pass debugMode: true to bypass time check
+                let response = try await ConvexService.shared.advanceToNextDay(debugMode: true)
+
+                if response.success {
+                    // Refresh journey progress from server
+                    await questionnaireManager.loadJourneyProgress()
+
+                    await MainActor.run {
+                        if let newDay = response.newDay {
+                            questionnaireManager.currentDay = newDay
+                        }
+                        isAdvancingDay = false
+                        // Post notification to refresh dashboard
+                        NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                    }
+                    print("[Settings] Advanced to Day \(response.newDay ?? questionnaireManager.currentDay)")
+                } else {
+                    // Server rejected advancement - likely sections not complete
+                    await MainActor.run {
+                        isAdvancingDay = false
+                        print("[Settings] Cannot advance: \(response.error ?? "Unknown error")")
+                    }
                 }
             } catch {
                 await MainActor.run {
                     isAdvancingDay = false
-                    // Show error (in production, use proper error handling)
-                    print("Failed to advance day: \(error)")
+                    print("[Settings] Failed to advance day: \(error)")
                 }
             }
         }

@@ -57,7 +57,7 @@ struct Config {
     // ============================================
     // App Configuration
     // ============================================
-    static let appName = "Zoe Sleep"
+    static let appName = "Zoé Sleep"
     static let appVersion = "1.0.0"
     static let appBundleId = "com.sleep360.app"
 

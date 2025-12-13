@@ -17,29 +17,47 @@ struct SleepInsightsDashboardView: View {
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Header with last sync info
-                headerSection
+    // MARK: - Circadian-Aware Colors (for text on circadian background)
+    private var palette: CircadianPalette {
+        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    }
 
-                if viewModel.isLoading {
-                    loadingView
-                } else if !viewModel.hasEnoughForInsights {
-                    // Not enough data yet - show progress
-                    DataRequirementView(
-                        currentDays: viewModel.daysOfData,
-                        requiredDays: 5
-                    )
-                    .padding(.horizontal)
-                } else {
-                    // Has enough data - show insights
-                    insightsContent
+    private var circadianTextPrimary: Color {
+        palette.textPrimary
+    }
+
+    private var circadianTextSecondary: Color {
+        palette.textSecondary
+    }
+
+    var body: some View {
+        ZStack {
+            // Circadian wave background - syncs with ThemeManager
+            DashboardWaveBackground()
+
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header with last sync info
+                    headerSection
+
+                    if viewModel.isLoading {
+                        loadingView
+                    } else if !viewModel.hasEnoughForInsights {
+                        // Not enough data yet - show progress
+                        DataRequirementView(
+                            currentDays: viewModel.daysOfData,
+                            requiredDays: 5
+                        )
+                        .padding(.horizontal)
+                    } else {
+                        // Has enough data - show insights
+                        insightsContent
+                    }
                 }
+                .padding(.vertical)
             }
-            .padding(.vertical)
         }
-        .background(Color(.systemBackground))
+        .toolbarColorScheme(palette.isDark ? .dark : .light, for: .navigationBar)
         .refreshable {
             await viewModel.refreshData()
         }
@@ -55,12 +73,12 @@ struct SleepInsightsDashboardView: View {
             Text("Sleep Insights")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(circadianTextPrimary)
 
             if let lastSync = viewModel.lastHealthKitSync {
                 Text("Last synced \(lastSync, style: .relative) ago")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(circadianTextSecondary)
             }
         }
         .padding(.top, 8)
@@ -72,9 +90,10 @@ struct SleepInsightsDashboardView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.2)
+                .tint(theme.primary)
             Text("Loading insights...")
                 .font(.subheadline)
-                .foregroundColor(theme.textSecondary)
+                .foregroundColor(circadianTextSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
@@ -136,11 +155,11 @@ struct SleepInsightsDashboardView: View {
                 Text(viewModel.lastNightDurationFormatted)
                     .font(.title3)
                     .fontWeight(.semibold)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)
 
                 Text("Last Night")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)
             }
             .frame(maxWidth: .infinity)
 
@@ -156,11 +175,11 @@ struct SleepInsightsDashboardView: View {
                 Text(viewModel.lastNightEfficiencyFormatted)
                     .font(.title3)
                     .fontWeight(.semibold)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)
 
                 Text("Efficiency")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)
             }
             .frame(maxWidth: .infinity)
 
@@ -177,21 +196,21 @@ struct SleepInsightsDashboardView: View {
                     Text("\(Int(subjective.quality))/10")
                         .font(.title3)
                         .fontWeight(.semibold)
-                        .foregroundColor(theme.textPrimary)
+                        .foregroundColor(theme.textOnCard)
                 } else {
                     Text("--")
                         .font(.title3)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)
                 }
 
                 Text("Your Rating")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)
             }
             .frame(maxWidth: .infinity)
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.4))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(16)
         .padding(.horizontal)
     }
@@ -202,7 +221,7 @@ struct SleepInsightsDashboardView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Insights")
                 .font(.headline)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(circadianTextPrimary)
                 .padding(.horizontal)
 
             ForEach(viewModel.insights) { insight in
@@ -218,7 +237,7 @@ struct SleepInsightsDashboardView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Weekly Averages")
                 .font(.headline)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(theme.textOnCard)
 
             HStack(spacing: 16) {
                 avgStatView(
@@ -247,7 +266,7 @@ struct SleepInsightsDashboardView: View {
             }
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.4))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(16)
         .padding(.horizontal)
     }
@@ -261,11 +280,11 @@ struct SleepInsightsDashboardView: View {
             Text(value)
                 .font(.caption)
                 .fontWeight(.semibold)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(theme.textOnCard)
 
             Text(label)
                 .font(.caption2)
-                .foregroundColor(theme.textSecondary)
+                .foregroundColor(theme.textOnCardSecondary)
         }
         .frame(maxWidth: .infinity)
     }

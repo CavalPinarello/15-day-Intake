@@ -31,25 +31,30 @@ struct OnboardingView: View {
                     }
 
                     // Content - starts with name (no welcome step, splash serves as welcome)
+                    // REVISED ORDER: HealthKit moved early to enable skip of body metrics
                     TabView(selection: $onboardingManager.currentStep) {
                         NameStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.name)
 
+                        // HealthKit early - allows pre-filling of body metrics
+                        HealthConnectStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
+                            .environmentObject(healthKitManager)
+                            .tag(OnboardingStep.healthConnect)
+
+                        // Measurement system - auto-skipped (uses locale detection)
                         MeasurementSystemStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.measurementSystem)
 
+                        // Height/Weight - skipped if HealthKit provided data
                         HeightWeightStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.heightWeight)
 
+                        // Gender/Age - skipped if HealthKit provided data
                         GenderAgeStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.genderAge)
 
                         WearablesStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.wearables)
-
-                        HealthConnectStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
-                            .environmentObject(healthKitManager)
-                            .tag(OnboardingStep.healthConnect)
 
                         SleepPhilosophyStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.sleepPhilosophy)
@@ -1071,45 +1076,54 @@ struct SummaryRow: View {
 struct OnboardingNavigationButtons: View {
     @ObservedObject var onboardingManager: OnboardingManager
     var showBack: Bool = false
-    var nextLabel: String = "Continue"
+    var nextLabel: String = FriendlyCopy.continueButton  // "Let's go" by default
 
     private var palette: CircadianPalette { CircadianPalette.current }
 
     var body: some View {
-        VStack(spacing: 12) {
-            // Next button
+        VStack(spacing: Spacing.sm) {
+            // Next button - calm, rounded style
             Button(action: { onboardingManager.nextStep() }) {
-                HStack(spacing: 6) {
+                HStack(spacing: Spacing.xs) {
                     Text(nextLabel)
-                        .fontWeight(.semibold)
+                        .font(.system(size: Typography.headline, weight: .semibold, design: .rounded))
                     Image(systemName: "arrow.right")
+                        .font(.system(size: Typography.subheadline, weight: .semibold))
                 }
                 .foregroundColor(onboardingManager.canProceed
                     ? (palette.isDark ? Color(red: 0.15, green: 0.10, blue: 0.08) : .white)
                     : palette.textSecondary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, Spacing.md)
                 .background(
-                    LinearGradient(
-                        colors: onboardingManager.canProceed
-                            ? [palette.accent, palette.wave]
-                            : [Color.gray.opacity(0.3), Color.gray.opacity(0.3)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+                    RoundedRectangle(cornerRadius: CornerRadius.medium)
+                        .fill(
+                            onboardingManager.canProceed
+                                ? LinearGradient(
+                                    colors: [palette.accent, palette.wave],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                                : LinearGradient(
+                                    colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.3)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                        )
                 )
-                .cornerRadius(14)
             }
             .disabled(!onboardingManager.canProceed)
+            .scaleEffect(onboardingManager.canProceed ? 1.0 : 0.98)
+            .animation(.spring(response: 0.3), value: onboardingManager.canProceed)
 
             // Back button
             if showBack {
                 Button(action: { onboardingManager.previousStep() }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: Spacing.xxs) {
                         Image(systemName: "chevron.left")
-                        Text("Back")
+                        Text(FriendlyCopy.backButton)
                     }
-                    .font(.caption)
+                    .font(.system(size: Typography.subheadline, design: .rounded))
                     .foregroundColor(palette.textSecondary.opacity(0.7))
                 }
             }

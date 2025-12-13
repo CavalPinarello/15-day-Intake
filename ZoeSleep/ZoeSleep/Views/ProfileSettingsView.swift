@@ -284,7 +284,7 @@ struct ProfileSettingsView: View {
 
     private var appearanceSection: some View {
         Section {
-            // Color Theme Picker
+            // Color Theme Picker (simplified - removed accent color selector per Issue 15)
             Picker(selection: $themeManager.appearanceMode) {
                 ForEach(ThemeManager.AppearanceMode.allCases) { mode in
                     HStack {
@@ -296,44 +296,10 @@ struct ProfileSettingsView: View {
             } label: {
                 Label("Color Theme", systemImage: "paintbrush.fill")
             }
-
-            // Accent Color Picker
-            Picker(selection: $themeManager.accentColorOption) {
-                ForEach(ThemeManager.AccentColorOption.allCases) { color in
-                    HStack {
-                        Circle()
-                            .fill(color.color)
-                            .frame(width: 20, height: 20)
-                        Text(color.rawValue)
-                    }
-                    .tag(color)
-                }
-            } label: {
-                Label("Accent Color", systemImage: "paintpalette.fill")
-            }
-
-            // Color Preview
-            HStack(spacing: 12) {
-                Text("Preview:")
-                    .foregroundColor(.secondary)
-
-                ForEach(ThemeManager.AccentColorOption.allCases) { color in
-                    Circle()
-                        .fill(color.color)
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Circle()
-                                .stroke(themeManager.accentColorOption == color ? Color.primary : Color.clear, lineWidth: 3)
-                        )
-                        .onTapGesture {
-                            themeManager.accentColorOption = color
-                        }
-                }
-            }
-            .padding(.vertical, 4)
-
         } header: {
             Text("Appearance")
+        } footer: {
+            Text("Circadian mode automatically adjusts colors based on time of day to support healthy sleep.")
         }
     }
 
@@ -531,7 +497,7 @@ struct ProfileSettingsView: View {
         } header: {
             Text("About")
         } footer: {
-            Text("Zoe Sleep for Longevity System\nThe best sleep of your life and maximum daily energy while protecting your health.")
+            Text("Zoé Sleep for Longevity System\nThe best sleep of your life and maximum daily energy while protecting your health.")
                 .font(.caption)
                 .multilineTextAlignment(.center)
                 .padding(.top, 8)

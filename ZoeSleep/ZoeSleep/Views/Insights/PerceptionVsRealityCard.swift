@@ -24,7 +24,7 @@ struct PerceptionVsRealityCard: View {
 
                 Text("Perception vs Reality")
                     .font(.headline)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)
 
                 Spacer()
 
@@ -33,7 +33,7 @@ struct PerceptionVsRealityCard: View {
                     // TODO: Show explanation sheet
                 } label: {
                     Image(systemName: "info.circle")
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)
                 }
             }
 
@@ -52,7 +52,7 @@ struct PerceptionVsRealityCard: View {
             }
         }
         .padding()
-        .background(GlassyCardBackground(opacity: 0.4))
+        .background(GlassyCardBackground(opacity: 0.5))
         .cornerRadius(16)
     }
 
@@ -65,7 +65,7 @@ struct PerceptionVsRealityCard: View {
                 VStack(spacing: 4) {
                     Text("Your Rating")
                         .font(.caption)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)
 
                     Text("\(Int(subjective.quality))/10")
                         .font(.title)
@@ -74,7 +74,7 @@ struct PerceptionVsRealityCard: View {
 
                     Text("Last night")
                         .font(.caption2)
-                        .foregroundColor(theme.textSecondary.opacity(0.7))
+                        .foregroundColor(theme.textOnCardMuted)
                 }
                 .frame(maxWidth: .infinity)
 
@@ -86,14 +86,14 @@ struct PerceptionVsRealityCard: View {
 
                     Text(viewModel.gapIndicatorLabel)
                         .font(.caption2)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)
                 }
 
                 // Objective (Actual Data)
                 VStack(spacing: 4) {
                     Text("Actual Sleep")
                         .font(.caption)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(theme.textOnCardSecondary)
 
                     Text(viewModel.lastNightDurationFormatted)
                         .font(.title)
@@ -102,7 +102,7 @@ struct PerceptionVsRealityCard: View {
 
                     Text("\(viewModel.lastNightEfficiencyFormatted) efficient")
                         .font(.caption2)
-                        .foregroundColor(theme.textSecondary.opacity(0.7))
+                        .foregroundColor(theme.textOnCardMuted)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -111,9 +111,9 @@ struct PerceptionVsRealityCard: View {
             // Interpretation text
             Text(viewModel.interpretationText)
                 .font(.subheadline)
-                .foregroundColor(theme.textSecondary)
+                .foregroundColor(theme.textOnCardSecondary)
                 .padding(12)
-                .background(theme.backgroundTint)
+                .background(theme.primary.opacity(0.10))
                 .cornerRadius(8)
         }
     }
@@ -123,7 +123,7 @@ struct PerceptionVsRealityCard: View {
     private var noDataView: some View {
         Text("Complete your sleep log to see the comparison")
             .font(.subheadline)
-            .foregroundColor(theme.textSecondary)
+            .foregroundColor(theme.textOnCardSecondary)
             .frame(maxWidth: .infinity)
             .padding()
     }
@@ -135,11 +135,11 @@ struct PerceptionVsRealityCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Perception Accuracy")
                     .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundColor(theme.textOnCardSecondary)
 
                 Text(viewModel.correlationDescription)
                     .font(.subheadline)
-                    .foregroundColor(theme.textPrimary)
+                    .foregroundColor(theme.textOnCard)
             }
 
             Spacer()
@@ -183,7 +183,7 @@ struct CorrelationGauge: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.gray.opacity(0.2), lineWidth: 6)
+                .stroke(theme.textOnCardMuted.opacity(0.3), lineWidth: 6)
                 .frame(width: 50, height: 50)
 
             Circle()
@@ -195,7 +195,7 @@ struct CorrelationGauge: View {
             Text("\(Int(value * 100))%")
                 .font(.caption2)
                 .fontWeight(.bold)
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(theme.textOnCard)
         }
     }
 

@@ -10,7 +10,7 @@ import SwiftUI
 
 // MARK: - Time Period Enum
 
-enum TimePeriod {
+enum TimePeriod: Equatable {
     case morning    // After dawn until noon: Bright, energetic
     case afternoon  // Noon until dusk start: Transitioning warmth
     case evening    // Dusk start until night: Full sunset warmth (NO blue light!)
@@ -158,6 +158,7 @@ struct ColorTheme {
     }
 
     /// Card background with time-based warmth
+    /// CIRCADIAN: Cards should blend with background, not be stark white
     var cardBackground: Color {
         if accentColorOption != nil {
             return Color(.secondarySystemBackground)
@@ -165,13 +166,17 @@ struct ColorTheme {
         guard let period = period else { return Color(.secondarySystemBackground) }
         switch period {
         case .morning:
-            return Color(hex: "#F0F9FF")!  // Very light blue (OK for morning)
+            // Soft translucent white-blue that blends with morning sky background
+            return Color.white.opacity(0.75)
         case .afternoon:
-            return Color(hex: "#FFFBEB")!  // Warm cream
+            // Warm translucent cream
+            return Color(red: 1.0, green: 0.99, blue: 0.95).opacity(0.80)
         case .evening:
-            return Color(hex: "#FFF7ED")!  // Warm orange tint
+            // Warm dark card - blends with brown background
+            return Color(red: 0.22, green: 0.14, blue: 0.10).opacity(0.85)
         case .night:
-            return Color(hex: "#2D1A14")!  // Deep warm brown - NO purple (sleep-safe)
+            // Deep warm card - very dark but warm
+            return Color(red: 0.18, green: 0.11, blue: 0.08).opacity(0.90)
         }
     }
 
@@ -217,10 +222,15 @@ struct ColorTheme {
 
     // MARK: - Text Colors (Sleep-Optimized for dark evening backgrounds)
     // CRITICAL: Must be HIGH CONTRAST on dark brown backgrounds in evening/night!
+    // ALWAYS use current time period for text colors - even with custom accent colors!
+
+    /// Get current period - uses stored period or falls back to current time
+    private var effectivePeriod: TimePeriod {
+        period ?? TimePeriod.current
+    }
 
     var textPrimary: Color {
-        guard let period = period else { return Color.primary }
-        switch period {
+        switch effectivePeriod {
         case .morning, .afternoon:
             return Color.primary  // System default
         case .evening, .night:
@@ -230,8 +240,7 @@ struct ColorTheme {
     }
 
     var textSecondary: Color {
-        guard let period = period else { return Color.secondary }
-        switch period {
+        switch effectivePeriod {
         case .morning, .afternoon:
             return Color.secondary  // System default
         case .evening, .night:
@@ -242,8 +251,7 @@ struct ColorTheme {
 
     /// Muted text for hints, timestamps, etc.
     var textMuted: Color {
-        guard let period = period else { return Color.secondary.opacity(0.7) }
-        switch period {
+        switch effectivePeriod {
         case .morning, .afternoon:
             return Color.secondary.opacity(0.7)
         case .evening, .night:
@@ -253,12 +261,49 @@ struct ColorTheme {
     }
 
     var textOnPrimary: Color {
-        guard let period = period else { return .white }
-        switch period {
+        switch effectivePeriod {
         case .morning, .afternoon:
             return .white
         case .evening, .night:
             return Color(red: 0.15, green: 0.10, blue: 0.08)  // Dark brown on amber buttons
+        }
+    }
+
+    // MARK: - Card Text Colors (CIRCADIAN-AWARE for high contrast)
+    // Morning/Afternoon: Dark text on light cards
+    // Evening/Night: Warm cream/amber text on dark cards
+    // ALWAYS uses effectivePeriod to ensure time-aware colors even with custom accents!
+
+    /// Primary text ON cards - circadian-aware for contrast
+    var textOnCard: Color {
+        switch effectivePeriod {
+        case .morning, .afternoon:
+            return Color(red: 0.15, green: 0.10, blue: 0.08)  // Dark brown on light cards
+        case .evening, .night:
+            // Bright warm cream - high contrast on dark cards
+            return Color(red: 0.996, green: 0.953, blue: 0.780)  // #FEF3C7
+        }
+    }
+
+    /// Secondary text ON cards - circadian-aware
+    var textOnCardSecondary: Color {
+        switch effectivePeriod {
+        case .morning, .afternoon:
+            return Color(red: 0.35, green: 0.25, blue: 0.20)  // Medium brown on light cards
+        case .evening, .night:
+            // Golden amber - visible on dark cards
+            return Color(red: 0.988, green: 0.827, blue: 0.302)  // #FCD34D
+        }
+    }
+
+    /// Muted text ON cards - circadian-aware
+    var textOnCardMuted: Color {
+        switch effectivePeriod {
+        case .morning, .afternoon:
+            return Color(red: 0.50, green: 0.40, blue: 0.35)  // Light brown on light cards
+        case .evening, .night:
+            // Warm amber - still visible on dark cards
+            return Color(red: 0.961, green: 0.620, blue: 0.043)  // #F59E0B
         }
     }
 

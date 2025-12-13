@@ -48,6 +48,12 @@ struct QuestionnaireView: View {
     @StateObject private var rewardManager = RewardMomentManager()
     @State private var showingRewardCard: Bool = false
 
+    // Save Status & Error Handling
+    @State private var isSaving: Bool = false
+    @State private var saveError: String? = nil
+    @State private var showingSaveError: Bool = false
+    @State private var retryAction: (() -> Void)? = nil
+
     @Environment(\.presentationMode) var presentationMode
 
     private var theme: ColorTheme { themeManager.currentTheme }
@@ -113,6 +119,9 @@ struct QuestionnaireView: View {
         }
         .navigationTitle(currentSection == .sleepLog ? "Sleep Log" : "Day \(currentDay) Assessment")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(navBarBackgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(isEvening ? .dark : .light, for: .navigationBar)
         .onAppear {
             loadQuestions()
             if startSection == .sleepLog {
@@ -124,6 +133,41 @@ struct QuestionnaireView: View {
             // notify dashboard to refresh from Convex
             print("[iOS Questionnaire] View disappearing - posting refresh notification")
             NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+        }
+        .overlay {
+            // Saving overlay
+            if isSaving {
+                ZStack {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(theme.primary)
+
+                        Text("Saving your responses...")
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    .padding(32)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(theme.cardBackground.opacity(0.95))
+                    )
+                }
+                .transition(.opacity)
+            }
+        }
+        .alert("Save Failed", isPresented: $showingSaveError) {
+            Button("Try Again") {
+                retryAction?()
+            }
+            Button("Cancel", role: .cancel) {
+                // Stay on current screen, don't dismiss
+            }
+        } message: {
+            Text(saveError ?? "An error occurred while saving your responses. Please check your internet connection and try again.")
         }
     }
 
@@ -360,20 +404,34 @@ struct QuestionnaireView: View {
 
     /// Returns the previously answered bedtime to help set smart defaults for subsequent time questions
     private func getPreviousBedtime(for questionId: String) -> Date? {
-        // For Stanford Sleep Diary questions, chain the time dependencies
+        // For Consensus Sleep Diary questions, chain the time dependencies
         if currentSection == .sleepLog {
             switch questionId {
+            // CSD Question Dependencies
+            case "CSD_TRY_SLEEP":
+                // Try to sleep is shortly after getting into bed
+                return sleepLogResponses["CSD_INTO_BED"] as? Date
+            case "CSD_FINAL_WAKE":
+                // Final wake is ~8 hours after trying to sleep
+                return sleepLogResponses["CSD_TRY_SLEEP"] as? Date ?? sleepLogResponses["CSD_INTO_BED"] as? Date
+            case "CSD_OUT_BED":
+                // Out of bed is shortly after final wake
+                return sleepLogResponses["CSD_FINAL_WAKE"] as? Date
+            case "CSD_CAFFEINE_LAST":
+                // No dependency, but might use a midday default
+                return nil
+            case "CSD_ALCOHOL_LAST":
+                // No dependency, but might use an evening default
+                return nil
+
+            // Legacy Stanford Sleep Diary question dependencies
             case "SD_LIGHTS_OUT":
-                // Lights out is typically same as or shortly after getting into bed
                 return sleepLogResponses["SD_GOT_INTO_BED"] as? Date
             case "SL_ASLEEP_TIME":
-                // Fall asleep time is typically after lights out
                 return sleepLogResponses["SD_LIGHTS_OUT"] as? Date ?? sleepLogResponses["SD_GOT_INTO_BED"] as? Date
             case "SL_WAKE_TIME":
-                // Wake time is typically 7-8 hours after asleep time
                 return sleepLogResponses["SL_ASLEEP_TIME"] as? Date ?? sleepLogResponses["SD_LIGHTS_OUT"] as? Date
             case "SD_OUT_OF_BED":
-                // Out of bed is typically same or shortly after wake time
                 return sleepLogResponses["SL_WAKE_TIME"] as? Date
             default:
                 break
@@ -443,8 +501,8 @@ struct QuestionnaireView: View {
                 .foregroundColor(buttonTextColor)
                 .cornerRadius(12)
             }
-            .disabled(currentIndex == 0 && currentSection == .sleepLog)
-            .opacity((currentIndex == 0 && currentSection == .sleepLog) ? 0.5 : 1)
+            .disabled(isBackButtonDisabled)
+            .opacity(isBackButtonDisabled ? 0.5 : 1)
 
             // Next/Submit button
             Button(action: nextQuestion) {
@@ -492,6 +550,18 @@ struct QuestionnaireView: View {
         currentIndex == currentQuestions.count - 1
     }
 
+    /// Back button should be disabled when:
+    /// - Sleep Log at first question (can't go back further)
+    /// - Assessment at first question AND in sectionOnly mode (can't go back to Sleep Log)
+    private var isBackButtonDisabled: Bool {
+        if currentSection == .sleepLog {
+            return currentIndex == 0
+        } else {
+            // Assessment section
+            return currentIndex == 0 && sectionOnly
+        }
+    }
+
     private var canProceed: Bool {
         guard !currentQuestions.isEmpty && currentIndex < currentQuestions.count else { return false }
         let question = currentQuestions[currentIndex]
@@ -536,13 +606,16 @@ struct QuestionnaireView: View {
                     sleepLogQuestions = convertedSleepLog
                     assessmentQuestions = convertedAssessment
 
+                    print("[iOS] === QUESTIONS LOADED ===")
                     print("[iOS] Loaded \(sleepLogQuestions.count) sleep log + \(assessmentQuestions.count) assessment questions from Convex")
                     print("[iOS] Triggered gateways: \(questionsResponse.metadata.triggeredGateways.joined(separator: ", "))")
 
                     // Start with the specified section
                     currentSection = startSection
+                    print("[iOS] BEFORE RESET: sleepLogIndex=\(sleepLogIndex), assessmentIndex=\(assessmentIndex)")
                     sleepLogIndex = 0
                     assessmentIndex = 0
+                    print("[iOS] AFTER RESET: sleepLogIndex=\(sleepLogIndex), assessmentIndex=\(assessmentIndex)")
                     startTime = Date()
                     questionStartTime = Date()
 
@@ -552,6 +625,7 @@ struct QuestionnaireView: View {
                     }
 
                     // Load saved progress from Convex (cross-device sync)
+                    print("[iOS] About to call loadSavedProgress()...")
                     loadSavedProgress()
                 }
             } catch {
@@ -661,6 +735,10 @@ struct QuestionnaireView: View {
 
     /// Load saved progress and responses from Convex for cross-device sync
     private func loadSavedProgress() {
+        print("[iOS] loadSavedProgress() called - startSection=\(startSection), currentDay=\(currentDay)")
+        print("[iOS] Current indices before load: sleepLogIndex=\(sleepLogIndex), assessmentIndex=\(assessmentIndex)")
+        print("[iOS] Current responses before load: sleepLog=\(sleepLogResponses.count), assessment=\(assessmentResponses.count)")
+
         Task {
             do {
                 let section = startSection == .sleepLog ? "sleepLog" : "assessment"
@@ -668,6 +746,7 @@ struct QuestionnaireView: View {
                 // First, load saved responses so we can validate progress against them
                 var loadedResponseCount = 0
                 let savedResponses = try await ConvexService.shared.getSavedResponses(dayNumber: currentDay)
+                print("[iOS] Convex returned \(savedResponses.count) saved responses")
                 await MainActor.run {
                     for (questionId, value) in savedResponses {
                         // Determine which section this question belongs to
@@ -792,13 +871,14 @@ struct QuestionnaireView: View {
             if assessmentIndex > 0 {
                 assessmentIndex -= 1
                 questionStartTime = Date()
-            } else {
-                // Go back to sleep log
+            } else if !sectionOnly {
+                // Only go back to sleep log if we're in full-day mode (not section-only)
                 withAnimation {
                     currentSection = .sleepLog
                     sleepLogIndex = sleepLogQuestions.count - 1
                 }
             }
+            // If sectionOnly is true, do nothing - the Back button should already be disabled
         }
     }
 
@@ -947,9 +1027,14 @@ struct QuestionnaireView: View {
             saveResponseFromDictionary(questionId: questionId, value: value, questions: sleepLogQuestions)
         }
 
-        // Mark sleep log as complete in Convex (async, but don't block UI)
+        // Show saving indicator and sync to Convex BEFORE transitioning
+        isSaving = true
+
         Task {
             do {
+                // CRITICAL: Sync responses FIRST, then mark complete
+                try await syncResponsesToConvex()
+
                 let result = try await ConvexService.shared.completeSection(dayNumber: currentDay, section: "sleepLog")
                 print("[iOS] Sleep log section completed: sleepLog=\(result.sleepLogCompleted), assessment=\(result.assessmentCompleted)")
 
@@ -959,18 +1044,29 @@ struct QuestionnaireView: View {
                 // Notify dashboard to refresh
                 await MainActor.run {
                     NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                    isSaving = false
+
+                    // Only transition after successful save
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showingCompletion = false
+                        currentSection = .assessment
+                        assessmentIndex = 0
+                        questionStartTime = Date()
+                    }
                 }
             } catch {
-                print("[iOS] Error saving sleep log completion: \(error)")
+                print("[iOS] Error saving sleep log: \(error)")
+                print("[iOS] Sleep log responses count: \(sleepLogResponses.count)")
+                print("[iOS] Sleep log response keys: \(Array(sleepLogResponses.keys))")
+                await MainActor.run {
+                    isSaving = false
+                    // Show detailed error for debugging
+                    let errorDetail = (error as? ConvexError)?.localizedDescription ?? error.localizedDescription
+                    saveError = "Failed to save your sleep log. \(errorDetail)"
+                    showingSaveError = true
+                    retryAction = { proceedToAssessment() }
+                }
             }
-        }
-
-        // Immediately transition to assessment section (don't wait for async)
-        withAnimation(.easeInOut(duration: 0.3)) {
-            showingCompletion = false
-            currentSection = .assessment
-            assessmentIndex = 0
-            questionStartTime = Date()
         }
     }
 
@@ -1025,6 +1121,9 @@ struct QuestionnaireView: View {
 
         print("[iOS] completeDay() called - sectionOnly=\(sectionOnly), completedSectionAtFinish=\(String(describing: completedSectionAtFinish))")
 
+        // Show saving indicator
+        isSaving = true
+
         // Determine what to complete based on which section just finished
         // completedSectionAtFinish tells us which section triggered the completion screen
         Task {
@@ -1067,12 +1166,19 @@ struct QuestionnaireView: View {
                 }
 
                 await MainActor.run {
+                    isSaving = false
                     presentationMode.wrappedValue.dismiss()
                 }
             } catch {
-                print("[iOS] Error completing: \(error.localizedDescription)")
+                print("[iOS] Error completing: \(error)")
+                print("[iOS] Sleep log responses: \(sleepLogResponses.count), Assessment responses: \(assessmentResponses.count)")
                 await MainActor.run {
-                    presentationMode.wrappedValue.dismiss()
+                    isSaving = false
+                    let sectionName = completedSectionAtFinish == .sleepLog ? "sleep log" : "assessment"
+                    let errorDetail = (error as? ConvexError)?.localizedDescription ?? error.localizedDescription
+                    saveError = "Failed to save your \(sectionName). \(errorDetail)"
+                    showingSaveError = true
+                    retryAction = { completeDay() }
                 }
             }
         }
@@ -1081,6 +1187,10 @@ struct QuestionnaireView: View {
     /// Sync all responses to Convex before completing a section
     /// This ensures server-side validation can verify responses exist
     private func syncResponsesToConvex() async throws {
+        print("[iOS] syncResponsesToConvex called")
+        print("[iOS] sleepLogResponses: \(sleepLogResponses.count) items")
+        print("[iOS] assessmentResponses: \(assessmentResponses.count) items")
+
         var convexResponses: [[String: Any]] = []
 
         // Convert sleep log responses
@@ -1100,6 +1210,8 @@ struct QuestionnaireView: View {
                 response["responseValue"] = formatter.string(from: dateValue)
             } else if let arrayValue = value as? [String] {
                 response["responseArray"] = arrayValue
+            } else {
+                print("[iOS] Warning: Unknown response type for \(questionId): \(type(of: value))")
             }
 
             convexResponses.append(response)
@@ -1127,9 +1239,13 @@ struct QuestionnaireView: View {
         }
 
         // Only sync if we have responses
+        print("[iOS] Total responses to sync: \(convexResponses.count)")
         if !convexResponses.isEmpty {
+            print("[iOS] Calling ConvexService.saveResponses for day \(currentDay)...")
             let result = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
             print("[iOS] Synced \(result.savedCount) responses to Convex")
+        } else {
+            print("[iOS] No responses to sync!")
         }
     }
 

@@ -255,9 +255,12 @@ export const completeSection = mutation({
       // Assessment varies by day - require at least 1 to prove user engaged
       const minResponses = args.section === "sleepLog" ? 3 : 1;
 
-      // Filter responses by section (rough heuristic - SL_ prefix for sleep log)
+      // Filter responses by section
+      // Sleep log questions can have SL_ prefix (legacy) or SD_ prefix (Consensus Sleep Diary)
+      // Also include CSD_ prefix for compatibility
       const sectionResponses = responses.filter(r => {
-        const isSleepLog = r.question_id.startsWith("SL_");
+        const qid = r.question_id;
+        const isSleepLog = qid.startsWith("SL_") || qid.startsWith("SD_") || qid.startsWith("CSD_");
         return args.section === "sleepLog" ? isSleepLog : !isSleepLog;
       });
 
@@ -791,14 +794,17 @@ export const resetProgress = mutation({
     }
 
     // Delete questionnaire session progress (cross-device sync state)
+    // Use by_user index since we're only filtering by user_id
     const sessions = await ctx.db
       .query("questionnaire_session")
-      .withIndex("by_user_day_section", (q) => q.eq("user_id", args.userId))
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
 
     for (const session of sessions) {
       await ctx.db.delete(session._id);
     }
+
+    console.log(`[Convex] Reset complete: cleared ${progressEntries.length} progress, ${responses.length} responses, ${assessmentResponses.length} assessment responses, ${sessions.length} sessions`);
 
     return {
       success: true,
