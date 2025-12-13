@@ -906,6 +906,10 @@ struct JourneyProgressData: Codable {
     // Section completion status for current day
     var sleepLogCompleted: Bool = false
     var assessmentCompleted: Bool = false
+    // Expansion pack completion for current day (tracked locally)
+    var expansionPackCompleted: Bool = false
+    // Gateways whose expansion questions have been answered (persists across days)
+    var completedExpansionGateways: [GatewayType] = []
 
     var progressPercentage: Double {
         return Double(completedDays.count) / Double(totalDays) * 100.0
@@ -921,5 +925,10 @@ struct JourneyProgressData: Codable {
 
     func isGatewayTriggered(_ gateway: GatewayType) -> Bool {
         return gatewayStates.first(where: { $0.gatewayType == gateway })?.triggered ?? false
+    }
+
+    /// Check if a gateway's expansion questions have already been completed
+    func hasCompletedExpansion(for gateway: GatewayType) -> Bool {
+        return completedExpansionGateways.contains(gateway)
     }
 }

@@ -2531,11 +2531,20 @@ struct ExpansionPackQuestionnaireView: View {
                     convexResponses.append(response)
                 }
 
+                // Also save auto-derived responses from profile (for STOP-BANG scoring)
+                let derivedResponses = getDerivedResponsesFromProfile()
+                for response in derivedResponses {
+                    convexResponses.append(response)
+                }
+
                 if !convexResponses.isEmpty {
                     _ = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
                 }
 
                 await MainActor.run {
+                    // Mark these gateways as having completed their expansion
+                    QuestionnaireManager.shared.markExpansionCompleted(gateways: expansionInfo.triggeredGateways)
+
                     isSaving = false
                     withAnimation {
                         showingCompletion = true
@@ -2544,6 +2553,9 @@ struct ExpansionPackQuestionnaireView: View {
             } catch {
                 print("[ExpansionPack] Error saving: \(error)")
                 await MainActor.run {
+                    // Still mark as completed locally
+                    QuestionnaireManager.shared.markExpansionCompleted(gateways: expansionInfo.triggeredGateways)
+
                     isSaving = false
                     // Still show completion - responses saved locally
                     withAnimation {
@@ -2552,6 +2564,100 @@ struct ExpansionPackQuestionnaireView: View {
                 }
             }
         }
+    }
+
+    /// Get responses that can be auto-derived from onboarding profile and previous gateway answers
+    /// This ensures clinical scoring instruments get complete data without asking redundant questions
+    private func getDerivedResponsesFromProfile() -> [[String: Any]] {
+        var derivedResponses: [[String: Any]] = []
+        let profile = OnboardingManager.shared.profile
+        let qm = QuestionnaireManager.shared
+
+        // ===== STOP-BANG Auto-Derived =====
+
+        // SB_5: BMI > 35?
+        if profile.heightCm > 0 && profile.weightKg > 0 {
+            let heightM = profile.heightCm / 100.0
+            let bmi = profile.weightKg / (heightM * heightM)
+            let bmiOver35 = bmi > 35
+            derivedResponses.append([
+                "questionId": "SB_5",
+                "responseValue": bmiOver35 ? "Yes" : "No"
+            ])
+        }
+
+        // SB_6: Age > 50?
+        if profile.birthYear > 1900 {
+            let currentYear = Calendar.current.component(.year, from: Date())
+            let age = currentYear - profile.birthYear
+            let ageOver50 = age > 50
+            derivedResponses.append([
+                "questionId": "SB_6",
+                "responseValue": ageOver50 ? "Yes" : "No"
+            ])
+        }
+
+        // SB_8: Gender = Male?
+        let isMale = profile.gender.lowercased() == "male"
+        derivedResponses.append([
+            "questionId": "SB_8",
+            "responseValue": isMale ? "Yes" : "No"
+        ])
+
+        // SB_1: Snoring - from Question 19 (gateway)
+        if let q19 = qm.responses["19"]?.stringValue {
+            let snoringYes = q19 == "Yes"
+            derivedResponses.append([
+                "questionId": "SB_1",
+                "responseValue": snoringYes ? "Yes" : "No"
+            ])
+        }
+
+        // SB_2: Tired - from Question 17 (gateway, 5-point scale)
+        // Q17: ["Never", "Rarely", "Sometimes", "Often", "Always"]
+        // STOP-BANG considers "Often" or "Always" as Yes
+        if let q17 = qm.responses["17"]?.stringValue {
+            let tiredYes = q17 == "Often" || q17 == "Always"
+            derivedResponses.append([
+                "questionId": "SB_2",
+                "responseValue": tiredYes ? "Yes" : "No"
+            ])
+        }
+
+        // SB_3: Observed stop breathing - from Question 20 (gateway)
+        if let q20 = qm.responses["20"]?.stringValue {
+            let observedYes = q20 == "Yes"
+            derivedResponses.append([
+                "questionId": "SB_3",
+                "responseValue": observedYes ? "Yes" : "No"
+            ])
+        }
+
+        // ===== PHQ-9 Auto-Derived =====
+
+        // PHQ9_2: "Feeling down, depressed, or hopeless?" - from Question 15 (gateway)
+        // Q15 uses: ["Not at all", "Several days", "More than half the days", "Nearly every day"]
+        // PHQ9 uses the same scale, so we can copy directly
+        if let q15 = qm.responses["15"]?.stringValue {
+            derivedResponses.append([
+                "questionId": "PHQ9_2",
+                "responseValue": q15
+            ])
+        }
+
+        // ===== GAD-7 Auto-Derived =====
+
+        // GAD7_1: "Feeling nervous, anxious, or on edge?" - from Question 16 (gateway)
+        // Q16 uses: ["Not at all", "Several days", "More than half the days", "Nearly every day"]
+        // GAD7 uses the same scale, so we can copy directly
+        if let q16 = qm.responses["16"]?.stringValue {
+            derivedResponses.append([
+                "questionId": "GAD7_1",
+                "responseValue": q16
+            ])
+        }
+
+        return derivedResponses
     }
 }
 

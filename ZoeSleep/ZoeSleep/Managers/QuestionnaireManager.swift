@@ -514,7 +514,9 @@ class QuestionnaireManager: ObservableObject {
                 isGateway: true,
                 gatewayType: .osa
             ),
-            Question(id: "21", text: "Do you often feel tired, fatigued, or sleepy during daytime?", pillar: .physical, questionType: .yesNo),
+            // Note: Q21 removed - redundant with Q17 (Day 3 gateway)
+            // Q17 asks the same thing with a 5-point scale, Q21 was just yes/no
+            // SB_2 derivation now uses Q17 instead
             Question(
                 id: "22",
                 text: "Do you experience pain that affects your sleep?",
@@ -851,9 +853,14 @@ class QuestionnaireManager: ObservableObject {
         // Only offer same-day expansion during core phase (Days 1-5)
         guard dayNumber <= 5 else { return nil }
 
-        // Get triggered gateways that have same-day expansion modules
+        // Get completed expansion gateways
+        let completedExpansions = journeyProgress?.completedExpansionGateways ?? []
+
+        // Get triggered gateways that have same-day expansion modules AND haven't been completed yet
         let triggeredWithExpansion = gatewayStates.filter { state in
-            state.triggered && Self.sameDayExpansionModules.keys.contains(state.gatewayType)
+            state.triggered &&
+            Self.sameDayExpansionModules.keys.contains(state.gatewayType) &&
+            !completedExpansions.contains(state.gatewayType)
         }
 
         guard !triggeredWithExpansion.isEmpty else { return nil }
@@ -866,13 +873,16 @@ class QuestionnaireManager: ObservableObject {
             guard let moduleId = Self.sameDayExpansionModules[state.gatewayType],
                   let moduleQuestions = Self.expansionQuestionsByModule[moduleId] else { continue }
 
+            // Filter out questions that are redundant (already answered or derivable from profile)
+            let filteredQuestions = filterRedundantExpansionQuestions(moduleQuestions)
+
             // Check if adding this module would exceed the limit
-            if expansionQuestions.count + moduleQuestions.count <= Self.maxExpansionQuestionsPerDay {
+            if expansionQuestions.count + filteredQuestions.count <= Self.maxExpansionQuestionsPerDay {
                 // Avoid duplicates (e.g., insomnia and poorSleepQuality share the same module)
-                let newQuestionIds = Set(moduleQuestions.map { $0.id })
+                let newQuestionIds = Set(filteredQuestions.map { $0.id })
                 let existingQuestionIds = Set(expansionQuestions.map { $0.id })
                 if newQuestionIds.isDisjoint(with: existingQuestionIds) {
-                    expansionQuestions.append(contentsOf: moduleQuestions)
+                    expansionQuestions.append(contentsOf: filteredQuestions)
                     includedGateways.append(state.gatewayType)
                 }
             }
@@ -889,6 +899,75 @@ class QuestionnaireManager: ObservableObject {
             questions: expansionQuestions,
             totalEstimatedMinutes: estimatedMinutes
         )
+    }
+
+    /// Filter out expansion questions that are redundant (already answered in core assessment or derivable from profile)
+    private func filterRedundantExpansionQuestions(_ questions: [Question]) -> [Question] {
+        return questions.filter { question in
+            switch question.id {
+
+            // ===== STOP-BANG Redundancies =====
+            case "SB_1":
+                // "Do you snore loudly?" - already asked as Question 19 (gateway trigger)
+                return false
+            case "SB_2":
+                // "Do you feel tired during daytime?" - derived from Question 17 (gateway)
+                // Q17 asks the same with a 5-point scale
+                return false
+            case "SB_3":
+                // "Has anyone observed you stop breathing?" - already asked as Question 20 (gateway trigger)
+                return false
+            case "SB_5":
+                // "BMI > 35?" - we have height/weight from onboarding
+                return false
+            case "SB_6":
+                // "Age > 50?" - we have birth year from onboarding
+                return false
+            case "SB_8":
+                // "Gender = Male?" - we have sex from onboarding
+                return false
+
+            // ===== PHQ-9 Redundancies =====
+            case "PHQ9_2":
+                // "Feeling down, depressed, or hopeless?" - already asked as Question 15 (gateway trigger)
+                // We use Q15 answer to derive this
+                return false
+
+            // ===== GAD-7 Redundancies =====
+            case "GAD7_1":
+                // "Feeling nervous, anxious, or on edge?" - already asked as Question 16 (gateway trigger)
+                // We use Q16 answer to derive this
+                return false
+
+            // ===== ESS Potential Redundancy =====
+            // Note: ESS_* questions are specific situational doziness - NOT redundant with Q17/Q21
+            // Those ask general tiredness, ESS asks probability of dozing in specific situations
+            // Keep all ESS questions
+
+            // ===== ISI Potential Redundancy =====
+            // Note: ISI questions ask SEVERITY ratings (0-4 scale) while core questions ask yes/no
+            // ISI_1 (difficulty falling asleep) is MORE DETAILED than Q3 (general insomnia yes/no)
+            // Keep all ISI questions - they provide clinical scoring detail
+
+            default:
+                return true
+            }
+        }
+    }
+
+    /// Mark expansion gateways as completed (call after expansion questionnaire is done)
+    func markExpansionCompleted(gateways: [GatewayType]) {
+        guard var progress = journeyProgress else { return }
+
+        for gateway in gateways {
+            if !progress.completedExpansionGateways.contains(gateway) {
+                progress.completedExpansionGateways.append(gateway)
+            }
+        }
+        progress.expansionPackCompleted = true
+        journeyProgress = progress
+
+        print("[QuestionnaireManager] Marked expansion completed for: \(gateways.map { $0.rawValue })")
     }
 
     /// Check if there are triggered gateways that haven't had their expansion questions shown yet
