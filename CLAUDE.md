@@ -107,7 +107,11 @@ iPhone ←→ Convex ←→ Dashboard
   - No more empty days (was 0 questions on days 6, 8, 11, 14, 15)
   - Core assessment: Days 1-7 (11-17 questions each)
   - Expansion packs: Days 8-15 (conditional, 16-33 questions each)
-- **Intervention library system:** Physician dashboard can assign interventions to patients
+- **Intervention library system:** Physician dashboard can assign interventions to patients (Dec 18, 2025)
+  - 39 evidence-based interventions across 12 categories
+  - 7 treatment bundles (Delayed Phase+Insomnia, Cardiometabolic, Fragile Sleeper, etc.)
+  - AI-powered suggestions based on patient gateways and phenotypes
+  - Seed: `npx convex run seedInterventionLibrary:seedAll`
 - Repository renamed: `15-day-Intake` → `Zoe-Sleep-V1` (Dec 11, 2025)
 - Fixed questionnaire navigation: Back button now properly respects section boundaries (Dec 12, 2025)
 - Added save error handling: Retry dialogs for failed Convex syncs (Dec 12, 2025)
