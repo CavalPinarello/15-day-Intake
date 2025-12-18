@@ -94,6 +94,12 @@ Zoe-Sleep-V1/
 ```
 /client/src/components/
 ├── questions/                    # Question input components
+├── physician/                    # Physician dashboard components
+│   ├── InterventionLibrary.tsx   # Searchable intervention catalog
+│   ├── InterventionAssignment.tsx # Draft & assign interventions
+│   ├── ScoreDetailModal.tsx      # Questionnaire response viewer
+│   ├── Patient360Tab.tsx         # 360° patient view
+│   └── AIInsightsCard.tsx        # AI-generated insights
 ├── ui/                           # Shadcn UI components
 └── navigation/                   # Nav components
 ```
@@ -106,6 +112,9 @@ Zoe-Sleep-V1/
 ├── schema.ts                     # Database schema (30+ tables)
 ├── watch.ts                      # Watch-specific functions
 ├── ios.ts                        # iOS-specific functions
+├── physician.ts                  # Physician dashboard queries/mutations
+├── interventionLibrary.ts        # Intervention assignment system
+├── seedInterventionLibrary.ts    # Seed 39 interventions + 7 bundles
 ├── recommendations.ts            # Physician recommendations
 ├── treatment.ts                  # Treatment management
 ├── questions.ts                  # Question operations
@@ -117,7 +126,10 @@ Zoe-Sleep-V1/
 - `users` - User profiles & progress
 - `questionnaire_responses` - All question answers
 - `questionnaire_session` - Cross-device sync state
-- `interventions` - Treatment interventions
+- `interventions` - Evidence-based intervention library (39 items)
+- `intervention_categories` - 12 categories (CBT-I, Light/Dark, etc.)
+- `intervention_bundles` - 7 treatment bundles
+- `user_interventions` - Assigned patient interventions
 - `recommendations` - Physician recommendations
 - `ios_devices`, `ios_sessions` - iOS tracking
 - `apple_sign_in` - Apple Sign In data
