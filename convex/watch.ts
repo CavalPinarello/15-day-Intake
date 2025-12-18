@@ -264,14 +264,70 @@ export const completeSection = mutation({
         return args.section === "sleepLog" ? isSleepLog : !isSleepLog;
       });
 
-      if (sectionResponses.length < minResponses) {
+      // For assessment section on expansion days (8-15), check if there are actually questions
+      // If no gateways triggered, there may be 0 assessment questions, which is valid
+      let skipAssessmentValidation = false;
+      if (args.section === "assessment" && args.dayNumber >= 8) {
+        // Check if this day has any actual assessment questions
+        const dayModules = await ctx.db
+          .query("day_modules")
+          .withIndex("by_day", (q) => q.eq("day_number", args.dayNumber))
+          .collect();
+
+        // Check if any modules have questions that should be shown
+        // (expansion modules only show if their gateway is triggered)
+        let hasRealQuestions = false;
+        for (const dayModule of dayModules) {
+          const module = await ctx.db
+            .query("assessment_modules")
+            .withIndex("by_module_id", (q) => q.eq("module_id", dayModule.module_id))
+            .first();
+
+          if (!module) continue;
+
+          // If it's an expansion module, check if gateway is triggered
+          if (module.tier === "expansion" || module.tier === "specialized") {
+            const moduleGateways = await ctx.db
+              .query("module_gateways")
+              .withIndex("by_module_id", (q) => q.eq("module_id", dayModule.module_id))
+              .collect();
+
+            if (moduleGateways.length > 0) {
+              // Get user's triggered gateways
+              const userGateways = await ctx.db
+                .query("user_gateway_states")
+                .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+                .collect();
+              const triggeredIds = new Set(userGateways.filter(g => g.is_triggered).map(g => g.gateway_id));
+
+              const hasTriggeredGateway = moduleGateways.some(mg => triggeredIds.has(mg.gateway_id));
+              if (hasTriggeredGateway) {
+                hasRealQuestions = true;
+                break;
+              }
+            }
+          } else {
+            // Core module - always has questions
+            hasRealQuestions = true;
+            break;
+          }
+        }
+
+        // If no real questions exist for this day's assessment, skip validation
+        if (!hasRealQuestions) {
+          skipAssessmentValidation = true;
+          console.log(`[Convex] Day ${args.dayNumber} has no assessment questions (no gateways triggered) - skipping validation`);
+        }
+      }
+
+      if (!skipAssessmentValidation && sectionResponses.length < minResponses) {
         throw new Error(
           `Cannot complete ${args.section}: Only ${sectionResponses.length} responses found, ` +
           `minimum ${minResponses} required. Please answer the questions before completing.`
         );
       }
 
-      console.log(`[Convex] Section validation passed: ${sectionResponses.length} responses for ${args.section}`);
+      console.log(`[Convex] Section validation passed: ${sectionResponses.length} responses for ${args.section}${skipAssessmentValidation ? " (no questions required)" : ""}`);
     }
 
     // Get or create the day entry

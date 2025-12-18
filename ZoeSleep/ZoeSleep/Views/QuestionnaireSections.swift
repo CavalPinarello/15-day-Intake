@@ -541,6 +541,11 @@ struct DayCompletionView: View {
         }
     }
 
+    // Computed: Is this the final day of the 15-day journey?
+    private var isJourneyComplete: Bool {
+        dayNumber >= 15 && (isFullDayComplete || completedSection == .assessment)
+    }
+
     // Computed: Is this a full day completion or section-only?
     private var isFullDayComplete: Bool {
         completedSection == nil
@@ -548,7 +553,9 @@ struct DayCompletionView: View {
 
     // Computed: Title text
     private var titleText: String {
-        if isFullDayComplete {
+        if isJourneyComplete {
+            return "Journey Complete!"
+        } else if isFullDayComplete {
             return "Day \(dayNumber) Complete!"
         } else if completedSection == .sleepLog {
             return "Sleep Log Complete!"
@@ -559,7 +566,9 @@ struct DayCompletionView: View {
 
     // Computed: Subtitle text
     private var subtitleText: String {
-        if isFullDayComplete {
+        if isJourneyComplete {
+            return "Thank you for completing your comprehensive sleep assessment"
+        } else if isFullDayComplete {
             return "Great progress on your sleep journey"
         } else if completedSection == .sleepLog {
             return "Now let's complete the Day Assessment"
@@ -569,6 +578,208 @@ struct DayCompletionView: View {
     }
 
     var body: some View {
+        if isJourneyComplete {
+            journeyCompleteView
+        } else {
+            regularCompletionView
+        }
+    }
+
+    // MARK: - Journey Complete View (Day 15 Final)
+
+    private var journeyCompleteView: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                Spacer(minLength: 30)
+
+                // Trophy animation
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.yellow.opacity(0.3), Color.orange.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 140, height: 140)
+                        .scaleEffect(isAnimating ? 1.1 : 0.9)
+                        .opacity(isAnimating ? 0.8 : 1)
+
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 70))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.yellow, Color.orange],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .scaleEffect(isAnimating ? 1.0 : 0.8)
+                }
+
+                VStack(spacing: 12) {
+                    Text("Congratulations!")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(primaryTextColor)
+
+                    Text("You've completed your 15-day comprehensive sleep assessment")
+                        .font(.headline)
+                        .foregroundColor(secondaryTextColor)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+
+                // What happens next card
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Image(systemName: "stethoscope")
+                            .font(.title2)
+                            .foregroundColor(QuestionnaireSection.assessment.accentColor)
+
+                        Text("What Happens Next")
+                            .font(.headline)
+                            .foregroundColor(primaryTextColor)
+                    }
+
+                    Text("Your sleep medicine physician team will now analyze your responses and health data to create a personalized sleep intervention plan tailored specifically to you.")
+                        .font(.body)
+                        .foregroundColor(secondaryTextColor)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Divider()
+                        .background(secondaryTextColor.opacity(0.3))
+
+                    HStack(spacing: 16) {
+                        VStack {
+                            Image(systemName: "clock.badge.checkmark")
+                                .font(.title2)
+                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                            Text("2-3 Days")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(primaryTextColor)
+                            Text("Review Time")
+                                .font(.caption2)
+                                .foregroundColor(secondaryTextColor)
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        VStack {
+                            Image(systemName: "bell.badge")
+                                .font(.title2)
+                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                            Text("Notification")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(primaryTextColor)
+                            Text("When Ready")
+                                .font(.caption2)
+                                .foregroundColor(secondaryTextColor)
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        VStack {
+                            Image(systemName: "list.bullet.clipboard")
+                                .font(.title2)
+                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                            Text("Your Plan")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(primaryTextColor)
+                            Text("Personalized")
+                                .font(.caption2)
+                                .foregroundColor(secondaryTextColor)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(20)
+                .background(cardBackgroundColor)
+                .cornerRadius(16)
+                .padding(.horizontal)
+
+                // Summary stats
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Your Journey Summary")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(primaryTextColor)
+
+                    HStack(spacing: 20) {
+                        VStack {
+                            Text("15")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                            Text("Days")
+                                .font(.caption)
+                                .foregroundColor(secondaryTextColor)
+                        }
+
+                        VStack {
+                            Text("15")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(QuestionnaireSection.sleepLog.accentColor)
+                            Text("Sleep Logs")
+                                .font(.caption)
+                                .foregroundColor(secondaryTextColor)
+                        }
+
+                        if !triggeredGateways.isEmpty {
+                            VStack {
+                                Text("\(triggeredGateways.count)")
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.orange)
+                                Text("Deep Dives")
+                                    .font(.caption)
+                                    .foregroundColor(secondaryTextColor)
+                            }
+                        }
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(cardBackgroundColor.opacity(0.5))
+                .cornerRadius(12)
+                .padding(.horizontal)
+
+                Spacer(minLength: 20)
+
+                // Done button
+                Button(action: onDone) {
+                    Text("Done")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            LinearGradient(
+                                colors: [Color.green, Color.green.opacity(0.8)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 20)
+            }
+        }
+        .background(viewBackgroundColor)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                isAnimating = true
+            }
+        }
+    }
+
+    // MARK: - Regular Day Completion View
+
+    private var regularCompletionView: some View {
         ScrollView {
             VStack(spacing: 24) {
                 Spacer(minLength: 40)

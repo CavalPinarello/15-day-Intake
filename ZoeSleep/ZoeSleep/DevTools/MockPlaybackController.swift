@@ -124,6 +124,16 @@ class MockPlaybackController: ObservableObject {
                     questions: sleepLogQuestions
                 )
 
+                // Compute and persist sleep metrics to user_sleep_data table
+                // This populates the dashboard's Sleep Quality Trend chart
+                let dateForDay = dateString(forDayOffset: day - 1)
+                do {
+                    try await convexService.computeSleepMetricsFromResponses(dayNumber: day, date: dateForDay)
+                    log("Computed sleep metrics for Day \(day)")
+                } catch {
+                    log("Sleep metrics warning: \(error.localizedDescription)")
+                }
+
                 guard !isCancelled else { return }
 
                 // Get assessment questions for this day
@@ -167,6 +177,17 @@ class MockPlaybackController: ObservableObject {
                 } else {
                     log("Day \(day) complete - final day!")
                 }
+            }
+
+            // Persist calculated questionnaire scores to database
+            // This populates the dashboard's Clinical Scores section
+            state = .computingScores
+            log("Computing and persisting questionnaire scores...")
+            do {
+                try await convexService.persistCalculatedScores()
+                log("Questionnaire scores persisted successfully")
+            } catch {
+                log("Scores warning: \(error.localizedDescription)")
             }
 
             // Success!
@@ -275,6 +296,18 @@ class MockPlaybackController: ObservableObject {
                 required: false
             )
         ]
+    }
+
+    // MARK: - Date Helpers
+
+    /// Generate a date string (YYYY-MM-DD) for a given day offset from today
+    /// Day 1 = today, Day 2 = yesterday, etc. (sleep logs report previous night)
+    private func dateString(forDayOffset offset: Int) -> String {
+        let calendar = Calendar.current
+        let date = calendar.date(byAdding: .day, value: -offset, to: Date()) ?? Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 }
 

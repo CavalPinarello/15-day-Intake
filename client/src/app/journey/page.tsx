@@ -1,83 +1,54 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { QuestionRenderer } from '@/components/questions';
-import { ResponseValue, Question, AnswerFormat } from '@/components/questions/types';
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { QuestionRenderer } from "@/components/questions";
+import { ResponseValue } from "@/components/questions/types";
 import {
-  ChevronLeft, ChevronRight, Moon, ClipboardList,
-  CheckCircle, Home, X, Sparkles
-} from 'lucide-react';
-import * as convexService from '@/lib/convexService';
-import { useCircadianTheme } from '@/hooks/useCircadianTheme';
+  ChevronLeft,
+  ChevronRight,
+  Moon,
+  ClipboardList,
+  CheckCircle,
+  Home,
+  X,
+  Sparkles,
+  AlertCircle,
+} from "lucide-react";
+import { useCircadianTheme } from "@/hooks/useCircadianTheme";
+import { useConvexUser, useJourneyState } from "@/hooks/useConvexUser";
+import { useConvexQuestionnaire, useSectionManager } from "@/hooks/useConvexQuestionnaire";
+import { SignInButton, useAuth } from "@clerk/nextjs";
 
-// Section types matching iOS
-type QuestionnaireSection = 'sleepLog' | 'assessment';
+// Section types
+type QuestionnaireSection = "sleepLog" | "assessment";
 
-interface DayInfo {
-  id: number;
-  day_number: number;
-  title: string;
-  description: string;
-}
-
-interface QuestionData {
-  id: string;
-  question_text: string;
-  question_type: string;
-  options: any;
-  required: boolean;
-  order_index: number;
-  section?: string;
-  conditional_logic?: string;
-}
-
-interface ConditionalLogic {
-  question_key?: string;  // Cross-platform sync key matching iOS/Watch IDs
-  is_daily_log?: boolean;
-  pillar?: string;
-  is_gateway?: boolean;
-  gateway_condition?: string;
-  gateway_threshold?: number;
-  help_text?: string;
-}
-
-// Section colors matching iOS QuestionnaireSections.swift
+// Section styles matching iOS
 const sectionStyles = {
   sleepLog: {
-    color: '#2196F3',
-    bgColor: 'bg-blue-500',
-    bgLight: 'bg-blue-50',
-    textColor: 'text-blue-600',
-    borderColor: 'border-blue-200',
-    gradient: 'from-blue-500 to-blue-600',
+    color: "#2196F3",
+    bgColor: "bg-blue-500",
+    bgLight: "bg-blue-50",
+    textColor: "text-blue-600",
+    borderColor: "border-blue-200",
+    gradient: "from-blue-500 to-blue-600",
     icon: Moon,
-    title: 'SLEEP LOG',
-    subtitle: 'Stanford Sleep Diary',
+    title: "SLEEP LOG",
+    subtitle: "Stanford Sleep Diary",
   },
   assessment: {
-    color: '#9C27B0',
-    bgColor: 'bg-purple-500',
-    bgLight: 'bg-purple-50',
-    textColor: 'text-purple-600',
-    borderColor: 'border-purple-200',
-    gradient: 'from-purple-500 to-purple-600',
+    color: "#9C27B0",
+    bgColor: "bg-purple-500",
+    bgLight: "bg-purple-50",
+    textColor: "text-purple-600",
+    borderColor: "border-purple-200",
+    gradient: "from-purple-500 to-purple-600",
     icon: ClipboardList,
-    title: 'ASSESSMENT',
-    subtitle: 'Day Assessment',
+    title: "ASSESSMENT",
+    subtitle: "Day Assessment",
   },
 };
-
-// Helper to parse conditional logic JSON
-function parseConditionalLogic(logicStr: string | null | undefined): ConditionalLogic | null {
-  if (!logicStr) return null;
-  try {
-    return JSON.parse(logicStr);
-  } catch {
-    return null;
-  }
-}
 
 // Day configuration titles
 const dayConfigurations: Record<number, { title: string; description: string }> = {
@@ -98,404 +69,177 @@ const dayConfigurations: Record<number, { title: string; description: string }> 
   15: { title: "Journey Completion", description: "Final review and summary" },
 };
 
-// Helper to normalize section param
 function normalizeSection(section: string | null): QuestionnaireSection {
-  if (!section) return 'sleepLog';
+  if (!section) return "sleepLog";
   const lower = section.toLowerCase();
-  if (lower === 'sleeplog' || lower === 'sleep-log' || lower === 'sleep_log') return 'sleepLog';
-  if (lower === 'assessment') return 'assessment';
-  return 'sleepLog';
+  if (lower === "sleeplog" || lower === "sleep-log" || lower === "sleep_log") return "sleepLog";
+  if (lower === "assessment") return "assessment";
+  return "sleepLog";
 }
 
 export default function JourneyPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialSection = normalizeSection(searchParams.get('section'));
+  const initialSection = normalizeSection(searchParams.get("section"));
+  const dayParam = searchParams.get("day");
 
-  // Circadian theme for time-aware colors
-  const { textClasses, bgClasses, cardClasses, buttonClasses, isWarm, colors } = useCircadianTheme();
+  // Auth
+  const { isSignedIn } = useAuth();
+  const { userId, isLoading: userLoading, error: userError } = useConvexUser();
 
-  const [currentDay, setCurrentDay] = useState(1);
-  const [currentSection, setCurrentSection] = useState<QuestionnaireSection>(initialSection);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [sleepLogResponses, setSleepLogResponses] = useState<Map<string, ResponseValue>>(new Map());
-  const [assessmentResponses, setAssessmentResponses] = useState<Map<string, ResponseValue>>(new Map());
-  const [sleepLogQuestions, setSleepLogQuestions] = useState<Question[]>([]);
-  const [assessmentQuestions, setAssessmentQuestions] = useState<Question[]>([]);
-  const [dayInfo, setDayInfo] = useState<DayInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showSectionTransition, setShowSectionTransition] = useState(false);
-  const [showDayCompletion, setShowDayCompletion] = useState(false);
-  const [sleepLogComplete, setSleepLogComplete] = useState(false);
-  const [assessmentComplete, setAssessmentComplete] = useState(false);
+  // Theme
+  const { textClasses, bgClasses, cardClasses, buttonClasses, isWarm } = useCircadianTheme();
 
-  // Get current questions based on section
-  const currentQuestions = currentSection === 'sleepLog' ? sleepLogQuestions : assessmentQuestions;
-  const currentResponses = currentSection === 'sleepLog' ? sleepLogResponses : assessmentResponses;
-  const setCurrentResponses = currentSection === 'sleepLog' ? setSleepLogResponses : setAssessmentResponses;
+  // Journey state
+  const { currentDay: journeyCurrentDay, sleepLogCompleted, assessmentCompleted } = useJourneyState();
+  const currentDay = dayParam ? parseInt(dayParam, 10) : journeyCurrentDay;
+
+  // Section management
+  const {
+    currentSection,
+    setCurrentSection,
+    showSectionTransition,
+    showDayCompletion,
+    handleSectionComplete,
+    continueToAssessment,
+    setShowDayCompletion,
+  } = useSectionManager(userId, currentDay);
+
+  // Initialize section from URL or journey state
+  useEffect(() => {
+    if (initialSection) {
+      setCurrentSection(initialSection);
+    } else if (sleepLogCompleted && !assessmentCompleted) {
+      setCurrentSection("assessment");
+    }
+  }, [initialSection, sleepLogCompleted, assessmentCompleted, setCurrentSection]);
+
+  // Questionnaire logic
+  const {
+    currentQuestion,
+    currentQuestionIndex,
+    totalQuestions,
+    questions,
+    progress,
+    isLoading: questionsLoading,
+    isSaving,
+    saveError,
+    currentResponse,
+    responses,
+    isResponseValid,
+    metadata,
+    saveResponse,
+    goToNextQuestion,
+    goToPreviousQuestion,
+    completeSection,
+    clearError,
+  } = useConvexQuestionnaire({
+    userId,
+    dayNumber: currentDay,
+    section: currentSection,
+  });
+
   const sectionStyle = sectionStyles[currentSection];
   const SectionIcon = sectionStyle.icon;
+  const dayConfig = dayConfigurations[currentDay] || { title: `Day ${currentDay}`, description: "" };
 
-  // Load journey progress on mount
-  useEffect(() => {
-    const savedProgress = localStorage.getItem('journeyProgress');
-    if (savedProgress) {
-      const progress = JSON.parse(savedProgress);
-      setCurrentDay(progress.currentDay || 1);
-    }
-    loadDayData();
-  }, []);
-
-  // Load day data when currentDay changes
-  useEffect(() => {
-    loadDayData();
-  }, [currentDay]);
-
-  const loadDayData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const dayResponse = await fetch(`${apiUrl}/days/${currentDay}`);
-
-      if (!dayResponse.ok) {
-        throw new Error(`Failed to fetch day info: ${dayResponse.statusText}`);
-      }
-
-      const dayData = await dayResponse.json();
-      const config = dayConfigurations[currentDay] || { title: `Day ${currentDay}`, description: '' };
-
-      setDayInfo({
-        id: dayData.day?.id || currentDay,
-        day_number: currentDay,
-        title: config.title,
-        description: config.description,
-      });
-
-      // Transform and filter questions by is_daily_log
-      if (dayData.questions) {
-        const sleepLogQs: Question[] = [];
-        const assessmentQs: Question[] = [];
-
-        dayData.questions.forEach((q: QuestionData) => {
-          const logic = parseConditionalLogic(q.conditional_logic);
-          // Use question_key from conditional_logic for cross-platform sync with iOS/Watch
-          // Falls back to database id if no question_key exists
-          const questionId = logic?.question_key || q.id.toString();
-          const transformedQuestion: Question = {
-            question_id: questionId,
-            question_text: q.question_text,
-            answer_format: mapQuestionType(q.question_type),
-            format_config: JSON.stringify(createConfig(q.question_type, q.options, logic?.question_key)),
-            required: q.required || false,
-            order_index: q.order_index,
-            estimated_time_seconds: 60,
-          };
-
-          // Separate by is_daily_log flag
-          if (logic?.is_daily_log) {
-            sleepLogQs.push(transformedQuestion);
-          } else {
-            assessmentQs.push(transformedQuestion);
-          }
-        });
-
-        // Sort by order_index
-        sleepLogQs.sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-        assessmentQs.sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-
-        setSleepLogQuestions(sleepLogQs);
-        setAssessmentQuestions(assessmentQs);
-
-        // Load saved progress from Convex for cross-device sync
-        await loadSavedProgress(sleepLogQs, assessmentQs);
-      }
-    } catch (err) {
-      console.error('Error fetching day data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load questionnaire');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load saved progress from Convex for cross-device sync
-  const loadSavedProgress = async (sleepLogQs: Question[], assessmentQs: Question[]) => {
-    try {
-      const section = currentSection;
-      const questions = section === 'sleepLog' ? sleepLogQs : assessmentQs;
-
-      // Load question progress (which question user was on)
-      const progress = await convexService.getQuestionProgress(currentDay, section);
-      if (progress && !progress.completed && progress.currentQuestionIndex < questions.length) {
-        setCurrentQuestionIndex(progress.currentQuestionIndex);
-        console.log(`[Web] Resuming ${section} at question ${progress.currentQuestionIndex + 1}/${questions.length} (last device: ${progress.lastDevice})`);
-      }
-
-      // Load saved responses to pre-fill answers
-      const savedResponses = await convexService.getSavedResponses(currentDay);
-      const sleepLogMap = new Map<string, ResponseValue>();
-      const assessmentMap = new Map<string, ResponseValue>();
-
-      Object.entries(savedResponses).forEach(([questionId, value]) => {
-        const responseValue: ResponseValue = value.stringValue ?? value.numberValue ?? value.arrayValue ?? null;
-        if (responseValue !== null) {
-          // Determine which section this question belongs to
-          if (sleepLogQs.some(q => q.question_id === questionId)) {
-            sleepLogMap.set(questionId, responseValue);
-          } else {
-            assessmentMap.set(questionId, responseValue);
-          }
-        }
-      });
-
-      if (sleepLogMap.size > 0) setSleepLogResponses(sleepLogMap);
-      if (assessmentMap.size > 0) setAssessmentResponses(assessmentMap);
-      console.log(`[Web] Loaded ${Object.keys(savedResponses).length} saved responses from Convex`);
-    } catch (err) {
-      console.error('[Web] Failed to load saved progress:', err);
-    }
-  };
-
-  // Sync question progress to Convex after each question
-  const syncProgressToConvex = useCallback(async (questionIndex: number) => {
-    const questions = currentSection === 'sleepLog' ? sleepLogQuestions : assessmentQuestions;
-    try {
-      await convexService.updateQuestionProgress(
-        currentDay,
-        currentSection,
-        questionIndex,
-        questions.length
-      );
-    } catch (err) {
-      console.error('[Web] Failed to sync progress:', err);
-    }
-  }, [currentDay, currentSection, sleepLogQuestions, assessmentQuestions]);
-
-  const mapQuestionType = (dbType: string): AnswerFormat => {
-    const typeMap: Record<string, AnswerFormat> = {
-      'textarea': 'textarea',
-      'scale': 'slider_scale',
-      'time': 'time_picker',
-      'select': 'single_select_chips',
-      'checkbox': 'multi_select_chips',
-      'number': 'number_input',
-    };
-    return typeMap[dbType] || 'textarea';
-  };
-
-  const createConfig = (questionType: string, dbOptions: any, questionKey?: string) => {
-    switch (questionType) {
-      case 'select':
-        return {
-          options: Array.isArray(dbOptions)
-            ? dbOptions.map((opt: string) => ({ value: opt, label: opt }))
-            : [],
-          layout: 'vertical'
-        };
-      case 'checkbox':
-        return {
-          options: Array.isArray(dbOptions)
-            ? dbOptions.map((opt: string) => ({ value: opt, label: opt }))
-            : [],
-          layout: 'grid'
-        };
-      case 'scale':
-        return {
-          min: dbOptions?.min || 1,
-          max: dbOptions?.max || 10,
-          step: dbOptions?.step || 1,
-          labels: { min: dbOptions?.minLabel || 'Low', max: dbOptions?.maxLabel || 'High' },
-          questionKey
-        };
-      case 'time':
-        return { format: 'HH:MM', questionKey };
-      case 'number':
-        return { min: dbOptions?.min, max: dbOptions?.max, step: dbOptions?.step || 1, unit: dbOptions?.unit, questionKey };
-      default:
-        return { placeholder: 'Enter your response...', maxLength: 1000, rows: 4 };
-    }
-  };
-
+  // Handlers
   const handleResponseChange = (questionId: string, value: ResponseValue) => {
-    setCurrentResponses(prev => {
-      const newResponses = new Map(prev);
-      newResponses.set(questionId, value);
-      return newResponses;
-    });
-
-    // Save to API
     saveResponse(questionId, value);
   };
 
-  const saveResponse = async (questionId: string, value: ResponseValue) => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      await fetch(`${apiUrl}/responses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: 1,
-          question_id: questionId,
-          response_value: typeof value === 'string' ? value : null,
-          response_number: typeof value === 'number' ? value : null,
-          response_array: Array.isArray(value) ? JSON.stringify(value) : null,
-        }),
-      });
-    } catch (err) {
-      console.error('Error saving response:', err);
-    }
-  };
+  const handleNext = async () => {
+    const result = await goToNextQuestion();
 
-  const currentQuestion = currentQuestions[currentQuestionIndex];
-  const currentResponse = currentQuestion ? currentResponses.get(currentQuestion.question_id) : null;
-  const isResponseValid = currentQuestion?.required ? currentResponse !== null && currentResponse !== undefined && currentResponse !== '' : true;
-  const progress = currentQuestions.length > 0 ? ((currentQuestionIndex + 1) / currentQuestions.length) * 100 : 0;
-
-  const handleNext = () => {
-    if (currentQuestionIndex < currentQuestions.length - 1) {
-      const newIndex = currentQuestionIndex + 1;
-      setCurrentQuestionIndex(newIndex);
-      // Sync progress to Convex for cross-device sync
-      syncProgressToConvex(newIndex);
-    } else {
-      // Section complete
-      if (currentSection === 'sleepLog') {
-        setSleepLogComplete(true);
-        saveSleepLogData();
-        setShowSectionTransition(true);
-      } else {
-        setAssessmentComplete(true);
-        setShowDayCompletion(true);
+    if (result?.sectionComplete) {
+      try {
+        await completeSection();
+        handleSectionComplete(currentSection);
+      } catch (err) {
+        // Error already handled in hook
       }
     }
   };
 
   const handlePrevious = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    }
-  };
-
-  const saveSleepLogData = async () => {
-    // Save sleep log to localStorage
-    // Build the entry from all sleep log responses
-    const sleepLogEntry: Record<string, any> = {
-      date: new Date().toLocaleDateString(),
-    };
-
-    // Map responses by looking for common sleep log field patterns in question text
-    sleepLogQuestions.forEach(q => {
-      const qText = q.question_text.toLowerCase();
-      const response = sleepLogResponses.get(q.question_id);
-
-      if (qText.includes('bed') && qText.includes('time')) {
-        sleepLogEntry.bedtime = response;
-      } else if (qText.includes('wake') || qText.includes('get up')) {
-        sleepLogEntry.wakeTime = response;
-      } else if (qText.includes('fall asleep') || qText.includes('fell asleep')) {
-        sleepLogEntry.asleepTime = response;
-      } else if (qText.includes('woke up') || qText.includes('awakenings') || qText.includes('times')) {
-        sleepLogEntry.awakenings = response;
-      } else if (qText.includes('quality') || qText.includes('rate')) {
-        sleepLogEntry.sleepQuality = response;
-      }
-    });
-
-    const existingLogs = JSON.parse(localStorage.getItem('sleepLogs') || '[]');
-    existingLogs.unshift(sleepLogEntry);
-    localStorage.setItem('sleepLogs', JSON.stringify(existingLogs.slice(0, 30)));
-
-    // Update journey progress with section completion status
-    const savedProgress = JSON.parse(localStorage.getItem('journeyProgress') || '{}');
-    const newProgress = {
-      ...savedProgress,
-      currentDay: savedProgress.currentDay || currentDay,
-      sleepLogCompleted: true,
-      assessmentCompleted: savedProgress.assessmentCompleted || false,
-    };
-    localStorage.setItem('journeyProgress', JSON.stringify(newProgress));
-
-    // Call Convex to mark sleep log section as complete for cross-device sync
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      await fetch(`${apiUrl}/section-complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: 1,
-          day_number: currentDay,
-          section: 'sleepLog',
-          source: 'web'
-        }),
-      });
-      console.log('[Web] Sleep log section marked complete');
-    } catch (err) {
-      console.error('[Web] Error marking sleep log complete:', err);
-    }
+    goToPreviousQuestion();
   };
 
   const handleContinueToAssessment = () => {
-    setShowSectionTransition(false);
-    setCurrentSection('assessment');
-    setCurrentQuestionIndex(0);
+    continueToAssessment();
   };
 
-  const handleDayComplete = async () => {
-    // Save progress
-    const savedProgress = JSON.parse(localStorage.getItem('journeyProgress') || '{}');
-    const completedDays = savedProgress.completedDays || [];
-    if (!completedDays.includes(currentDay)) {
-      completedDays.push(currentDay);
-    }
-
-    const newProgress = {
-      ...savedProgress,
-      currentDay: Math.min(currentDay + 1, 15),
-      completedDays,
-      phase: currentDay >= 5 ? 'expansion' : 'core',
-      // Reset section completion for next day
-      sleepLogCompleted: false,
-      assessmentCompleted: false,
-    };
-    localStorage.setItem('journeyProgress', JSON.stringify(newProgress));
-
-    // Call Convex to mark assessment section as complete for cross-device sync
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      await fetch(`${apiUrl}/section-complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: 1,
-          day_number: currentDay,
-          section: 'assessment',
-          source: 'web'
-        }),
-      });
-      console.log('[Web] Assessment section marked complete');
-    } catch (err) {
-      console.error('[Web] Error marking assessment complete:', err);
-    }
-
+  const handleDayComplete = () => {
     if (currentDay >= 15) {
-      // Journey complete
-      window.location.href = '/treatment';
+      router.push("/treatment");
     } else {
-      // Go to dashboard
-      window.location.href = '/dashboard';
+      router.push("/dashboard");
     }
   };
+
+  // === RENDER STATES ===
+
+  // Not signed in
+  if (!isSignedIn) {
+    return (
+      <div className={`min-h-screen ${bgClasses} flex items-center justify-center p-4`}>
+        <div className={`max-w-md w-full ${cardClasses.combined} rounded-2xl shadow-lg p-8 text-center`}>
+          <div className={`w-16 h-16 mx-auto mb-4 ${isWarm ? "bg-[#F28C40]/20" : "bg-blue-100"} rounded-full flex items-center justify-center`}>
+            <Moon className={`w-8 h-8 ${isWarm ? "text-[#F28C40]" : "text-blue-600"}`} />
+          </div>
+          <h2 className={`text-xl font-bold mb-2 ${textClasses.primary}`}>Welcome to Zoe Sleep</h2>
+          <p className={`mb-6 ${textClasses.secondary}`}>Sign in to start your 15-day sleep journey</p>
+          <SignInButton mode="modal">
+            <button className={`w-full py-3 px-6 ${buttonClasses.primary} font-semibold rounded-xl`}>
+              Sign In to Continue
+            </button>
+          </SignInButton>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading user
+  if (userLoading) {
+    return (
+      <div className={`min-h-screen ${bgClasses} flex items-center justify-center`}>
+        <div className="text-center">
+          <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${isWarm ? "border-[#F28C40]" : "border-blue-600"} mx-auto mb-4`}></div>
+          <p className={textClasses.secondary}>Setting up your journey...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // User error
+  if (userError) {
+    return (
+      <div className={`min-h-screen ${bgClasses} flex items-center justify-center p-4`}>
+        <div className={`max-w-md w-full ${cardClasses.combined} rounded-2xl shadow-lg p-8 text-center`}>
+          <div className={`w-16 h-16 mx-auto mb-4 ${isWarm ? "bg-[#F87171]/20" : "bg-red-100"} rounded-full flex items-center justify-center`}>
+            <X className={`w-8 h-8 ${isWarm ? "text-[#F87171]" : "text-red-500"}`} />
+          </div>
+          <h2 className={`text-xl font-bold mb-2 ${textClasses.primary}`}>Setup Error</h2>
+          <p className={`mb-6 ${textClasses.secondary}`}>{userError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className={`px-6 py-2 ${buttonClasses.primary} rounded-lg`}
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Section Transition View
   if (showSectionTransition) {
     return (
       <div className={`min-h-screen ${bgClasses} flex items-center justify-center p-4`}>
         <div className={`max-w-md w-full ${cardClasses.combined} rounded-2xl shadow-lg p-8 text-center`}>
-          {/* Success Animation */}
           <div className="w-20 h-20 mx-auto mb-6 relative">
-            <div className={`absolute inset-0 ${isWarm ? 'bg-[#34D399]/20' : 'bg-green-100'} rounded-full animate-ping opacity-50`}></div>
-            <div className={`relative w-20 h-20 ${isWarm ? 'bg-[#34D399]' : 'bg-green-500'} rounded-full flex items-center justify-center`}>
+            <div className={`absolute inset-0 ${isWarm ? "bg-[#34D399]/20" : "bg-green-100"} rounded-full animate-ping opacity-50`}></div>
+            <div className={`relative w-20 h-20 ${isWarm ? "bg-[#34D399]" : "bg-green-500"} rounded-full flex items-center justify-center`}>
               <CheckCircle className="w-10 h-10 text-white" />
             </div>
           </div>
@@ -503,19 +247,19 @@ export default function JourneyPage() {
           <h2 className={`text-2xl font-bold mb-2 ${textClasses.primary}`}>Sleep Log Complete!</h2>
           <p className={`mb-8 ${textClasses.secondary}`}>Great job recording your sleep data</p>
 
-          <div className={`border-t ${isWarm ? 'border-[#5C3D2E]' : 'border-gray-100'} pt-6 mb-6`}>
+          <div className={`border-t ${isWarm ? "border-[#5C3D2E]" : "border-gray-100"} pt-6 mb-6`}>
             <p className={`text-sm uppercase tracking-wide mb-4 ${textClasses.muted}`}>Up Next</p>
-            <div className={`${isWarm ? 'bg-[#4A3020]' : sectionStyles.assessment.bgLight} rounded-xl p-4 text-left`}>
+            <div className={`${isWarm ? "bg-[#4A3020]" : sectionStyles.assessment.bgLight} rounded-xl p-4 text-left`}>
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 ${sectionStyles.assessment.bgColor} rounded-lg flex items-center justify-center`}>
                   <ClipboardList className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <span className={`text-xs font-semibold ${isWarm ? 'text-[#F28C40]' : sectionStyles.assessment.textColor}`}>
+                  <span className={`text-xs font-semibold ${isWarm ? "text-[#F28C40]" : sectionStyles.assessment.textColor}`}>
                     {sectionStyles.assessment.title}
                   </span>
-                  <h3 className={`font-medium ${textClasses.primary}`}>{dayInfo?.title}</h3>
-                  <p className={`text-sm ${textClasses.muted}`}>{assessmentQuestions.length} questions</p>
+                  <h3 className={`font-medium ${textClasses.primary}`}>{dayConfig.title}</h3>
+                  <p className={`text-sm ${textClasses.muted}`}>{metadata?.assessmentCount || 0} questions</p>
                 </div>
               </div>
             </div>
@@ -537,10 +281,9 @@ export default function JourneyPage() {
     return (
       <div className={`min-h-screen ${bgClasses} flex items-center justify-center p-4`}>
         <div className={`max-w-md w-full ${cardClasses.combined} rounded-2xl shadow-lg p-8 text-center`}>
-          {/* Success Animation */}
           <div className="w-24 h-24 mx-auto mb-6 relative">
-            <div className={`absolute inset-0 ${isWarm ? 'bg-[#34D399]/20' : 'bg-green-100'} rounded-full animate-ping opacity-50`}></div>
-            <div className={`relative w-24 h-24 ${isWarm ? 'bg-gradient-to-br from-[#F28C40] to-[#D97706]' : 'bg-gradient-to-br from-green-400 to-emerald-500'} rounded-full flex items-center justify-center`}>
+            <div className={`absolute inset-0 ${isWarm ? "bg-[#34D399]/20" : "bg-green-100"} rounded-full animate-ping opacity-50`}></div>
+            <div className={`relative w-24 h-24 ${isWarm ? "bg-gradient-to-br from-[#F28C40] to-[#D97706]" : "bg-gradient-to-br from-green-400 to-emerald-500"} rounded-full flex items-center justify-center`}>
               <Sparkles className="w-12 h-12 text-white" />
             </div>
           </div>
@@ -548,31 +291,30 @@ export default function JourneyPage() {
           <h2 className={`text-2xl font-bold mb-2 ${textClasses.primary}`}>Day {currentDay} Complete!</h2>
           <p className={`mb-6 ${textClasses.secondary}`}>Excellent work on your sleep journey</p>
 
-          {/* Summary Cards */}
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className={`${isWarm ? 'bg-[#4A3020]' : sectionStyles.sleepLog.bgLight} rounded-xl p-4`}>
-              <Moon className={`w-6 h-6 ${isWarm ? 'text-[#F28C40]' : sectionStyles.sleepLog.textColor} mx-auto mb-2`} />
+            <div className={`${isWarm ? "bg-[#4A3020]" : sectionStyles.sleepLog.bgLight} rounded-xl p-4`}>
+              <Moon className={`w-6 h-6 ${isWarm ? "text-[#F28C40]" : sectionStyles.sleepLog.textColor} mx-auto mb-2`} />
               <p className={`text-sm font-medium ${textClasses.primary}`}>Sleep Log</p>
-              <p className={`text-xs ${textClasses.muted}`}>{sleepLogQuestions.length} questions</p>
+              <p className={`text-xs ${textClasses.muted}`}>{metadata?.sleepLogCount || 0} questions</p>
             </div>
-            <div className={`${isWarm ? 'bg-[#4A3020]' : sectionStyles.assessment.bgLight} rounded-xl p-4`}>
-              <ClipboardList className={`w-6 h-6 ${isWarm ? 'text-[#F28C40]' : sectionStyles.assessment.textColor} mx-auto mb-2`} />
+            <div className={`${isWarm ? "bg-[#4A3020]" : sectionStyles.assessment.bgLight} rounded-xl p-4`}>
+              <ClipboardList className={`w-6 h-6 ${isWarm ? "text-[#F28C40]" : sectionStyles.assessment.textColor} mx-auto mb-2`} />
               <p className={`text-sm font-medium ${textClasses.primary}`}>Assessment</p>
-              <p className={`text-xs ${textClasses.muted}`}>{assessmentQuestions.length} questions</p>
+              <p className={`text-xs ${textClasses.muted}`}>{metadata?.assessmentCount || 0} questions</p>
             </div>
           </div>
 
           {currentDay < 15 ? (
             <button
               onClick={handleDayComplete}
-              className={`w-full py-3 px-6 ${isWarm ? buttonClasses.primary : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'} font-semibold rounded-xl hover:opacity-90 transition-opacity`}
+              className={`w-full py-3 px-6 ${isWarm ? buttonClasses.primary : "bg-gradient-to-r from-green-500 to-emerald-500 text-white"} font-semibold rounded-xl hover:opacity-90 transition-opacity`}
             >
               Continue to Day {currentDay + 1}
             </button>
           ) : (
             <button
               onClick={handleDayComplete}
-              className={`w-full py-3 px-6 ${isWarm ? buttonClasses.primary : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'} font-semibold rounded-xl hover:opacity-90 transition-opacity`}
+              className={`w-full py-3 px-6 ${isWarm ? buttonClasses.primary : "bg-gradient-to-r from-purple-500 to-pink-500 text-white"} font-semibold rounded-xl hover:opacity-90 transition-opacity`}
             >
               Complete Journey
             </button>
@@ -582,43 +324,48 @@ export default function JourneyPage() {
     );
   }
 
-  // Loading State
-  if (loading) {
+  // Loading questions
+  if (questionsLoading) {
     return (
       <div className={`min-h-screen ${bgClasses} flex items-center justify-center`}>
         <div className="text-center">
-          <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${isWarm ? 'border-[#F28C40]' : 'border-blue-600'} mx-auto mb-4`}></div>
+          <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${isWarm ? "border-[#F28C40]" : "border-blue-600"} mx-auto mb-4`}></div>
           <p className={textClasses.secondary}>Loading your assessment...</p>
         </div>
       </div>
     );
   }
 
-  // Error State
-  if (error) {
+  // No questions available
+  if (questions.length === 0) {
     return (
       <div className={`min-h-screen ${bgClasses} flex items-center justify-center p-4`}>
         <div className={`max-w-md w-full ${cardClasses.combined} rounded-2xl shadow-lg p-8 text-center`}>
-          <div className={`w-16 h-16 mx-auto mb-4 ${isWarm ? 'bg-[#F87171]/20' : 'bg-red-100'} rounded-full flex items-center justify-center`}>
-            <X className={`w-8 h-8 ${isWarm ? 'text-[#F87171]' : 'text-red-500'}`} />
+          <div className={`w-16 h-16 mx-auto mb-4 ${isWarm ? "bg-[#F28C40]/20" : "bg-blue-100"} rounded-full flex items-center justify-center`}>
+            <CheckCircle className={`w-8 h-8 ${isWarm ? "text-[#F28C40]" : "text-blue-600"}`} />
           </div>
-          <h2 className={`text-xl font-bold mb-2 ${textClasses.primary}`}>Error Loading Assessment</h2>
-          <p className={`mb-6 ${textClasses.secondary}`}>{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className={`px-6 py-2 ${buttonClasses.primary} rounded-lg`}
+          <h2 className={`text-xl font-bold mb-2 ${textClasses.primary}`}>No Questions Today</h2>
+          <p className={`mb-6 ${textClasses.secondary}`}>
+            {currentSection === "sleepLog"
+              ? "Sleep log has been completed for today."
+              : "No assessment questions for today based on your profile."}
+          </p>
+          <Link
+            href="/dashboard"
+            className={`inline-block px-6 py-2 ${buttonClasses.primary} rounded-lg`}
           >
-            Try Again
-          </button>
+            Return to Dashboard
+          </Link>
         </div>
       </div>
     );
   }
 
+  // Main questionnaire view
   return (
     <div className={`min-h-screen ${bgClasses}`}>
       {/* Section Header */}
-      <header className={`${isWarm ? 'bg-gradient-to-r from-[#F28C40] to-[#D97706]' : `bg-gradient-to-r ${sectionStyle.gradient}`} text-white`}>
+      <header className={`${isWarm ? "bg-gradient-to-r from-[#F28C40] to-[#D97706]" : `bg-gradient-to-r ${sectionStyle.gradient}`} text-white`}>
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-3">
             <Link href="/dashboard" className="p-2 hover:bg-white/10 rounded-lg transition-colors">
@@ -629,7 +376,7 @@ export default function JourneyPage() {
               <span className="font-semibold">{sectionStyle.title}</span>
             </div>
             <span className="text-sm opacity-80">
-              {currentQuestionIndex + 1}/{currentQuestions.length}
+              {currentQuestionIndex + 1}/{totalQuestions}
             </span>
           </div>
           <p className="text-sm opacity-80 text-center">{sectionStyle.subtitle}</p>
@@ -645,53 +392,75 @@ export default function JourneyPage() {
       </header>
 
       {/* Day Info */}
-      <div className={`max-w-2xl mx-auto px-4 py-3 border-b ${isWarm ? 'border-[#5C3D2E] bg-[#3D2418]/50' : 'border-gray-100 bg-white/50'}`}>
+      <div className={`max-w-2xl mx-auto px-4 py-3 border-b ${isWarm ? "border-[#5C3D2E] bg-[#3D2418]/50" : "border-gray-100 bg-white/50"}`}>
         <div className="flex items-center justify-between">
           <div>
             <span className={`text-sm ${textClasses.muted}`}>Day {currentDay} of 15</span>
-            {currentSection === 'assessment' && dayInfo && (
-              <h2 className={`font-medium ${textClasses.primary}`}>{dayInfo.title}</h2>
+            {currentSection === "assessment" && (
+              <h2 className={`font-medium ${textClasses.primary}`}>{dayConfig.title}</h2>
             )}
           </div>
           {/* Progress Dots */}
-          <div className="flex gap-1">
-            {currentQuestions.map((_, idx) => (
+          <div className="flex gap-1 flex-wrap max-w-[120px] justify-end">
+            {questions.slice(0, 15).map((_, idx) => (
               <div
                 key={idx}
                 className={`w-2 h-2 rounded-full transition-all ${
                   idx < currentQuestionIndex
-                    ? isWarm ? 'bg-[#34D399]' : 'bg-green-500'
+                    ? isWarm
+                      ? "bg-[#34D399]"
+                      : "bg-green-500"
                     : idx === currentQuestionIndex
-                    ? isWarm ? 'bg-[#F28C40]' : sectionStyle.bgColor
-                    : isWarm ? 'bg-[#5C3D2E]' : 'bg-gray-200'
+                    ? isWarm
+                      ? "bg-[#F28C40]"
+                      : sectionStyle.bgColor
+                    : isWarm
+                    ? "bg-[#5C3D2E]"
+                    : "bg-gray-200"
                 }`}
               />
             ))}
+            {questions.length > 15 && (
+              <span className={`text-xs ${textClasses.muted}`}>+{questions.length - 15}</span>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Save Error Banner */}
+      {saveError && (
+        <div className={`max-w-2xl mx-auto px-4 py-2`}>
+          <div className={`flex items-center gap-2 p-3 ${isWarm ? "bg-[#F87171]/20 text-[#FCA5A5]" : "bg-red-50 text-red-600"} rounded-lg`}>
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm">{saveError}</span>
+            <button onClick={clearError} className="ml-auto text-sm underline">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Question Content */}
-      <main className="max-w-2xl mx-auto px-4 py-8">
+      <main className="max-w-2xl mx-auto px-4 py-8 pb-24">
         {currentQuestion && (
           <div className={`${cardClasses.combined} rounded-2xl shadow-sm border p-6`}>
             <QuestionRenderer
               question={currentQuestion}
               value={currentResponse ?? null}
               onChange={(value) => handleResponseChange(currentQuestion.question_id, value)}
-              previousResponses={currentResponses}
+              previousResponses={responses}
             />
           </div>
         )}
       </main>
 
       {/* Navigation Footer */}
-      <footer className={`fixed bottom-0 left-0 right-0 ${isWarm ? 'bg-[#2D1A14] border-[#5C3D2E]' : 'bg-white border-gray-100'} border-t p-4`}>
+      <footer className={`fixed bottom-0 left-0 right-0 ${isWarm ? "bg-[#2D1A14] border-[#5C3D2E]" : "bg-white border-gray-100"} border-t p-4`}>
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
           <button
             onClick={handlePrevious}
             disabled={currentQuestionIndex === 0}
-            className={`flex items-center gap-2 px-4 py-2 ${isWarm ? 'text-[#FCD34D] hover:bg-[#3D2418]' : 'text-gray-600 hover:bg-gray-100'} rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+            className={`flex items-center gap-2 px-4 py-2 ${isWarm ? "text-[#FCD34D] hover:bg-[#3D2418]" : "text-gray-600 hover:bg-gray-100"} rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
           >
             <ChevronLeft className="w-5 h-5" />
             <span>Back</span>
@@ -699,17 +468,23 @@ export default function JourneyPage() {
 
           <button
             onClick={handleNext}
-            disabled={!isResponseValid}
+            disabled={!isResponseValid || isSaving}
             className={`flex items-center gap-2 px-6 py-2 ${isWarm ? buttonClasses.primary : `bg-gradient-to-r ${sectionStyle.gradient} text-white`} font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:opacity-90`}
           >
-            <span>
-              {currentQuestionIndex === currentQuestions.length - 1
-                ? currentSection === 'sleepLog'
-                  ? 'Complete Sleep Log'
-                  : 'Complete Day'
-                : 'Next'}
-            </span>
-            <ChevronRight className="w-5 h-5" />
+            {isSaving ? (
+              <span>Saving...</span>
+            ) : (
+              <>
+                <span>
+                  {currentQuestionIndex === totalQuestions - 1
+                    ? currentSection === "sleepLog"
+                      ? "Complete Sleep Log"
+                      : "Complete Day"
+                    : "Next"}
+                </span>
+                <ChevronRight className="w-5 h-5" />
+              </>
+            )}
           </button>
         </div>
       </footer>

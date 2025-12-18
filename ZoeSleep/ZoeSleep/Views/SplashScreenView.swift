@@ -2,7 +2,7 @@
 //  SplashScreenView.swift
 //  Zoe Sleep - Sleep Better, Live Longer
 //
-//  Fast, elegant splash screen with circadian-aware colors
+//  Elegant splash screen with animated aurora borealis and Zoé logo
 //
 
 import SwiftUI
@@ -13,85 +13,94 @@ struct SplashScreenView: View {
     @State private var textOpacity: Double = 0
     @State private var glowOpacity: Double = 0
     @State private var loadingDots: Int = 0
+    @State private var auroraOpacity: Double = 0
 
     var onComplete: (() -> Void)?
-    var duration: Double = 0.6  // Fast splash
-    var isLoading: Bool = false  // Show loading indicator
-    var loadingMessage: String = "Signing in"  // Customizable loading message
+    var duration: Double = 1.2  // Slightly longer to appreciate the aurora
+    var isLoading: Bool = false
+    var loadingMessage: String = "Signing in"
 
     private var palette: CircadianPalette { CircadianPalette.current }
 
     // Timer for loading dots animation
     private let loadingTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
+    // Brand teal color
+    private let brandTeal = Color(red: 0.22, green: 0.65, blue: 0.69)
+
     var body: some View {
         ZStack {
-            // Background
-            LinearGradient(
-                colors: palette.background,
-                startPoint: .top,
-                endPoint: .bottom
+            // Animated aurora borealis background
+            AuroraBorealisView()
+                .opacity(auroraOpacity)
+
+            // Subtle vignette overlay
+            RadialGradient(
+                colors: [.clear, Color.black.opacity(0.3)],
+                center: .center,
+                startRadius: 100,
+                endRadius: 400
             )
             .ignoresSafeArea()
 
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
+                Spacer()
+
                 // Logo with glow effect
                 ZStack {
-                    // Glow
+                    // Glow behind logo
                     Circle()
                         .fill(
                             RadialGradient(
-                                colors: [palette.accent.opacity(0.4), Color.clear],
+                                colors: [brandTeal.opacity(0.4), Color.clear],
                                 center: .center,
-                                startRadius: 10,
-                                endRadius: 80
+                                startRadius: 20,
+                                endRadius: 100
                             )
                         )
-                        .frame(width: 160, height: 160)
+                        .frame(width: 180, height: 180)
                         .opacity(glowOpacity)
                         .scaleEffect(logoScale * 1.2)
+                        .blur(radius: 20)
 
-                    // ECG wave icon
-                    Image(systemName: "waveform.path.ecg")
-                        .font(.system(size: 60, weight: .thin))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [palette.accent, palette.wave],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    // The Zoé spiral logo
+                    ZoeLogoAccurate(size: 100, tealColor: brandTeal)
                         .scaleEffect(logoScale)
                         .opacity(logoOpacity)
                 }
 
-                // App name
-                VStack(spacing: 4) {
+                // App name and tagline
+                VStack(spacing: 6) {
                     Text("Zoé Sleep")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(palette.textPrimary)
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
 
                     Text("Sleep Better, Live Longer")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(palette.accent)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(brandTeal)
                 }
                 .opacity(textOpacity)
+
+                Spacer()
 
                 // Loading indicator (shown when checking session)
                 if isLoading {
                     HStack(spacing: 4) {
                         Text(loadingMessage)
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(palette.textSecondary)
+                            .foregroundColor(.white.opacity(0.7))
 
                         // Animated dots
                         Text(String(repeating: ".", count: loadingDots))
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(palette.textSecondary)
+                            .foregroundColor(.white.opacity(0.7))
                             .frame(width: 24, alignment: .leading)
                     }
-                    .padding(.top, 24)
                     .opacity(textOpacity)
+                    .padding(.bottom, 60)
+                } else {
+                    Spacer()
+                        .frame(height: 80)
                 }
             }
         }
@@ -106,24 +115,56 @@ struct SplashScreenView: View {
     }
 
     private func startAnimation() {
-        // Quick, elegant animation
-        withAnimation(.easeOut(duration: 0.25)) {
+        // Fade in aurora first
+        withAnimation(.easeOut(duration: 0.4)) {
+            auroraOpacity = 1.0
+        }
+
+        // Then animate logo
+        withAnimation(.easeOut(duration: 0.4).delay(0.2)) {
             logoOpacity = 1.0
             logoScale = 1.0
             glowOpacity = 1.0
         }
 
-        withAnimation(.easeOut(duration: 0.2).delay(0.1)) {
+        // Then text
+        withAnimation(.easeOut(duration: 0.3).delay(0.4)) {
             textOpacity = 1.0
         }
 
-        // Complete after short duration
+        // Complete after duration
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
             onComplete?()
         }
     }
 }
 
-#Preview {
+/// Simplified splash for quick loads (no aurora animation)
+struct SimpleSplashView: View {
+    var body: some View {
+        ZStack {
+            Color(red: 0.02, green: 0.02, blue: 0.05)
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                ZoeLogoAccurate(size: 80, tealColor: Color(red: 0.22, green: 0.65, blue: 0.69))
+
+                Text("Zoé Sleep")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+            }
+        }
+    }
+}
+
+#Preview("Splash Screen") {
     SplashScreenView()
+}
+
+#Preview("Splash Loading") {
+    SplashScreenView(isLoading: true)
+}
+
+#Preview("Simple Splash") {
+    SimpleSplashView()
 }

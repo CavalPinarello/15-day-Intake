@@ -63,6 +63,8 @@
 		4A5E3C722C8E123456789M03 /* MockDataGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */; };
 		4A5E3C742C8E123456789M05 /* MockPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */; };
 		4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */; };
+		4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C812C8E123456789N02 /* ZoeLogo.swift */; };
+		4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -139,6 +141,8 @@
 		4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataGenerator.swift; sourceTree = "<group>"; };
 		4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlaybackController.swift; sourceTree = "<group>"; };
 		4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlaybackView.swift; sourceTree = "<group>"; };
+		4A5E3C812C8E123456789N02 /* ZoeLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoeLogo.swift; sourceTree = "<group>"; };
+		4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuroraBorealisView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -287,6 +291,8 @@
 				4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */,
 				4A5E3C032C8E123456789G04 /* OnboardingView.swift */,
 				4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */,
+				4A5E3C812C8E123456789N02 /* ZoeLogo.swift */,
+				4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -462,6 +468,8 @@
 				4A5E3C722C8E123456789M03 /* MockDataGenerator.swift in Sources */,
 				4A5E3C742C8E123456789M05 /* MockPlaybackController.swift in Sources */,
 				4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */,
+				4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */,
+				4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

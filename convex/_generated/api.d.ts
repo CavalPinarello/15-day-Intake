@@ -29,6 +29,7 @@ import type * as sleepInsights from "../sleepInsights.js";
 import type * as treatment from "../treatment.js";
 import type * as users from "../users.js";
 import type * as watch from "../watch.js";
+import type * as web from "../web.js";
 
 import type {
   ApiFromModules,
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   treatment: typeof treatment;
   users: typeof users;
   watch: typeof watch;
+  web: typeof web;
 }>;
 
 /**

@@ -568,9 +568,9 @@ struct MainDashboardView: View {
     }
 
     private var hasAssessmentToday: Bool {
-        // Core days always have assessment
-        if currentDay <= 5 { return true }
-        // Expansion days only have assessment if gateways are triggered
+        // Core days (1-7) always have assessment
+        if currentDay <= 7 { return true }
+        // Expansion days (8-15) only have assessment if gateways are triggered
         return !getTriggeredGatewaysForToday().isEmpty
     }
 
@@ -782,8 +782,8 @@ struct MainDashboardView: View {
 
     /// Get the title for today's assessment task
     private func getAssessmentTitle() -> String {
-        // For core days, use "Assessment"
-        if currentDay <= 5 {
+        // For core days (1-7), use "Assessment"
+        if currentDay <= 7 {
             return "Assessment"
         }
 
@@ -800,15 +800,15 @@ struct MainDashboardView: View {
     }
 
     private func getDayDescription() -> String {
-        // For core days (1-5), show config description
-        if currentDay <= 5 {
+        // For core days (1-7), show config description
+        if currentDay <= 7 {
             guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
                 return "Complete today's questions"
             }
             return config.description
         }
 
-        // For expansion days (6-15), show what's being assessed
+        // For expansion days (8-15), show what's being assessed
         let todayGateways = getTriggeredGatewaysForToday()
         if todayGateways.isEmpty {
             return "No additional assessments today"

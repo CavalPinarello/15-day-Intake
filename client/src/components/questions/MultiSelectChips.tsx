@@ -11,14 +11,24 @@ interface MultiSelectChipsProps {
   disabled?: boolean;
 }
 
-export function MultiSelectChips({ 
-  config, 
-  value = [], 
-  onChange, 
-  error, 
-  disabled = false 
+export function MultiSelectChips({
+  config,
+  value = [],
+  onChange,
+  error,
+  disabled = false
 }: MultiSelectChipsProps) {
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+
+  // Guard against missing options
+  const options = config.options || [];
+  if (options.length === 0) {
+    return (
+      <div className="p-4 text-amber-600 bg-amber-50 rounded-lg">
+        No options available for this question.
+      </div>
+    );
+  }
 
   const handleOptionToggle = (optionValue: string) => {
     if (disabled) return;
@@ -69,7 +79,7 @@ export function MultiSelectChips({
           'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
         }
       `}>
-        {config.options.map((option, index) => {
+        {options.map((option, index) => {
           const isSelected = isOptionSelected(option.value);
           const canSelect = canSelectMore() || isSelected;
           const isDisabled = disabled || !canSelect;

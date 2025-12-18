@@ -20,21 +20,49 @@ struct AuthenticationView: View {
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
+    // Brand teal color matching the logo
+    private let brandTeal = Color(red: 0.22, green: 0.65, blue: 0.69)
+
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                // App Logo/Title
-                VStack(spacing: 8) {
-                    Text("Zoé Sleep")
-                        .font(.largeTitle)
-                        .bold()
-                        .foregroundColor(theme.primary)
+            ZStack {
+                // Dark background for aurora to show on
+                Color(red: 0.05, green: 0.05, blue: 0.08)
+                    .ignoresSafeArea()
 
-                    Text("Your comprehensive sleep journey")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.top, 40)
+                // Aurora background - fully visible
+                AuroraBorealisView()
+                    .ignoresSafeArea()
+
+                // Gradient overlay - darker at top for logo, lighter at bottom
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.3),
+                        Color.black.opacity(0.1),
+                        Color.clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+
+                VStack(spacing: 20) {
+                    // App Logo/Title
+                    VStack(spacing: 12) {
+                        // Spiral crescent moon logo with glow
+                        ZoeLogoAccurate(size: 80, tealColor: brandTeal)
+                            .shadow(color: brandTeal.opacity(0.6), radius: 20, x: 0, y: 0)
+
+                        Text("Zoé Sleep")
+                            .font(.largeTitle)
+                            .bold()
+                            .foregroundColor(.white)
+
+                        Text("Your comprehensive sleep journey")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    .padding(.top, 40)
 
                 Spacer()
 
@@ -42,14 +70,18 @@ struct AuthenticationView: View {
                 VStack(spacing: 16) {
                     // Username/Email field
                     TextField(isSignUp ? "Username" : "Username or Email", text: $email)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding()
+                        .background(Color.white.opacity(0.9))
+                        .cornerRadius(10)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
 
                     if isSignUp {
                         // Email for sign up
                         TextField("Email", text: $username)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding()
+                            .background(Color.white.opacity(0.9))
+                            .cornerRadius(10)
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
@@ -57,7 +89,9 @@ struct AuthenticationView: View {
 
                     // Password
                     SecureField("Password", text: $password)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding()
+                        .background(Color.white.opacity(0.9))
+                        .cornerRadius(10)
 
                     // Sign In/Up Button
                     Button(action: {
@@ -99,14 +133,14 @@ struct AuthenticationView: View {
                     HStack {
                         Rectangle()
                             .frame(height: 1)
-                            .foregroundColor(.gray.opacity(0.3))
+                            .foregroundColor(.white.opacity(0.3))
                         Text("OR")
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.white.opacity(0.6))
                             .padding(.horizontal, 8)
                         Rectangle()
                             .frame(height: 1)
-                            .foregroundColor(.gray.opacity(0.3))
+                            .foregroundColor(.white.opacity(0.3))
                     }
                     .padding(.vertical, 8)
 
@@ -144,7 +178,7 @@ struct AuthenticationView: View {
                     }) {
                         Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
                             .font(.footnote)
-                            .foregroundColor(theme.primary)
+                            .foregroundColor(brandTeal)
                     }
                 }
                 .padding(.horizontal, 32)
@@ -155,13 +189,14 @@ struct AuthenticationView: View {
                 VStack(spacing: 4) {
                     Text("Secure authentication powered by Clerk")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.5))
 
                     Text("Your health data is protected and encrypted")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.5))
                 }
                 .padding(.bottom, 20)
+                }
             }
             .navigationTitle("")
             .navigationBarHidden(true)

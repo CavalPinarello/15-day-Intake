@@ -37,9 +37,11 @@ export default defineSchema({
     password_reset_token: v.optional(v.string()),
     password_reset_expires: v.optional(v.number()),
     // OAuth fields (for future Google/Apple integration)
-    oauth_provider: v.optional(v.union(v.literal("google"), v.literal("apple"))),
+    oauth_provider: v.optional(v.union(v.literal("google"), v.literal("apple"), v.literal("clerk"))),
     oauth_id: v.optional(v.string()), // External OAuth user ID
     profile_picture: v.optional(v.string()),
+    // Clerk integration (web auth)
+    clerk_id: v.optional(v.string()), // Clerk user ID for web authentication
   })
     .index("by_username", ["username"])
     .index("by_email", ["email"])
@@ -47,7 +49,8 @@ export default defineSchema({
     .index("by_onboarding", ["onboarding_completed", "current_day"])
     .index("by_oauth", ["oauth_provider", "oauth_id"])
     .index("by_verification_token", ["email_verification_token"])
-    .index("by_reset_token", ["password_reset_token"]),
+    .index("by_reset_token", ["password_reset_token"])
+    .index("by_clerk_id", ["clerk_id"]),
 
   // ============================================
   // Component 1: 14-Day Onboarding Journey

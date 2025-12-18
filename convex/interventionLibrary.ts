@@ -28,7 +28,18 @@ export const getCategories = query({
       .query("intervention_categories")
       .collect();
 
-    return categories.sort((a, b) => a.order_index - b.order_index);
+    // Explicitly map fields to exclude _creationTime (Convex system field)
+    return categories
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((c) => ({
+        _id: c._id,
+        category_id: c.category_id,
+        name: c.name,
+        description: c.description,
+        icon: c.icon,
+        color: c.color,
+        order_index: c.order_index,
+      }));
   },
 });
 

@@ -93,7 +93,7 @@ struct AppRootView: View {
                         // Mark minimum time elapsed
                         minSplashTimeElapsed = true
                     },
-                    duration: 0.6,
+                    duration: 2.5,  // Longer duration to appreciate the aurora animation
                     isLoading: authManager.isCheckingSession,
                     loadingMessage: "Signing in"
                 )

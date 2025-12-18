@@ -129,8 +129,8 @@ class MockDataGenerator {
 
     /// Generate contextually appropriate sleep log values
     private func generateSleepLogValue(for questionId: String, dayNumber: Int) -> (String?, Double?, [String]?, String?)? {
-        // Add some day-to-day variation
-        let dayVariation = Double(dayNumber % 3) * 0.1
+        // Day-to-day variation can be applied to values if needed
+        _ = dayNumber // Used for contextual variation
 
         switch questionId {
         case "CSD_DAY_TYPE":
@@ -325,7 +325,7 @@ class MockDataGenerator {
 
         // Select 1-3 random options
         let count = min(options.count, Int.random(in: 1...3, using: &randomGenerator))
-        var shuffled = options.shuffled(using: &randomGenerator)
+        let shuffled = options.shuffled(using: &randomGenerator)
         let selected = Array(shuffled.prefix(count))
         return (nil, nil, selected, nil)
     }
@@ -334,7 +334,8 @@ class MockDataGenerator {
         // Context-aware text generation based on question ID
         let questionId = question.id.lowercased()
 
-        if questionId.contains("name") {
+        // D1 is the patient name question in demographics
+        if questionId == "d1" || questionId.contains("name") {
             return ("Test Patient", nil, nil, nil)
         }
         if questionId.contains("medication") || questionId.contains("medicine") {

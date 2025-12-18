@@ -517,12 +517,29 @@ export const getPatientDetails = query({
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
 
-    // Get completed days
+    // Get completed days - check both user_progress AND actual responses
     const userProgress = await ctx.db
       .query("user_progress")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
-    const completedDays = userProgress.filter((p) => p.completed).length;
+    let completedDays = userProgress.filter((p) => p.completed).length;
+
+    // If no progress records, calculate from actual sleep log responses
+    if (completedDays === 0 && allResponses.length > 0) {
+      // Count unique days that have sleep log entries (CSD_ or SL_ prefix questions)
+      const daysWithSleepLog = new Set(
+        allResponses
+          .filter(
+            (r) =>
+              r.day_number !== undefined &&
+              (r.question_id.startsWith("CSD_") ||
+                r.question_id.startsWith("SL_") ||
+                r.question_id.startsWith("SD_"))
+          )
+          .map((r) => r.day_number)
+      );
+      completedDays = daysWithSleepLog.size;
+    }
 
     return {
       user: {
@@ -636,12 +653,25 @@ export const getPatientDayData = query({
           }
         } else {
           // Check assessment_questions table for all other questions
-          const question = await ctx.db
+          let question = await ctx.db
             .query("assessment_questions")
             .withIndex("by_question_id", (q) =>
               q.eq("question_id", response.question_id)
             )
             .first();
+
+          // If not found, try stripping common prefixes (PSQI_, ISI_, etc.)
+          if (!question && response.question_id.includes("_")) {
+            const baseId = response.question_id.split("_").pop();
+            if (baseId) {
+              question = await ctx.db
+                .query("assessment_questions")
+                .withIndex("by_question_id", (q) =>
+                  q.eq("question_id", baseId)
+                )
+                .first();
+            }
+          }
 
           if (question) {
             questionText = question.question_text;
@@ -779,6 +809,95 @@ export const getQuestionnaireScores = query({
       calculated_at: score.calculated_at,
       calculation_metadata_json: score.calculation_metadata_json,
     }));
+  },
+});
+
+/**
+ * Get pillar completion stats based on actual responses
+ * This calculates how many questions per pillar have been answered
+ */
+export const getPillarStats = query({
+  args: { userId: v.id("users") },
+  returns: v.array(
+    v.object({
+      pillar: v.string(),
+      questionsAnswered: v.number(),
+      questionsTotal: v.number(),
+      completionPercent: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    // Get all responses for this user
+    const responses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Get unique question IDs that have been answered
+    const answeredQuestionIds = new Set(responses.map(r => r.question_id));
+
+    // Pillar question counts (approximate based on assessment_modules.json)
+    const pillarConfig: Record<string, { displayName: string; expectedQuestions: number }> = {
+      "Social": { displayName: "Social", expectedQuestions: 15 },
+      "Metabolic": { displayName: "Metabolic", expectedQuestions: 17 },
+      "Sleep Quality": { displayName: "Sleep Quality", expectedQuestions: 23 },
+      "Sleep Quantity": { displayName: "Sleep Quantity", expectedQuestions: 3 },
+      "Sleep Regularity": { displayName: "Sleep Regularity", expectedQuestions: 4 },
+      "Sleep Timing": { displayName: "Sleep Timing", expectedQuestions: 8 },
+      "Mental Health": { displayName: "Mental Health", expectedQuestions: 48 },
+      "Cognitive": { displayName: "Cognitive", expectedQuestions: 33 },
+      "Physical": { displayName: "Physical", expectedQuestions: 42 },
+      "Nutritional": { displayName: "Nutritional", expectedQuestions: 25 },
+      "Sleep Log": { displayName: "Sleep Log", expectedQuestions: 5 },
+    };
+
+    // Count answers per pillar by looking up questions
+    const pillarCounts: Record<string, number> = {};
+
+    for (const questionId of answeredQuestionIds) {
+      // Try to find the question's pillar
+      let question = await ctx.db
+        .query("assessment_questions")
+        .withIndex("by_question_id", (q) => q.eq("question_id", questionId))
+        .first();
+
+      // Try stripping prefix if not found
+      if (!question && questionId.includes("_")) {
+        const baseId = questionId.split("_").pop();
+        if (baseId) {
+          question = await ctx.db
+            .query("assessment_questions")
+            .withIndex("by_question_id", (q) => q.eq("question_id", baseId))
+            .first();
+        }
+      }
+
+      // Handle special prefixes
+      let pillar = question?.pillar;
+      if (!pillar) {
+        if (questionId.startsWith("SL_") || questionId.startsWith("CSD_")) {
+          pillar = "Sleep Log";
+        } else if (questionId.startsWith("SD_")) {
+          pillar = "Sleep Diary";
+        }
+      }
+
+      if (pillar) {
+        pillarCounts[pillar] = (pillarCounts[pillar] || 0) + 1;
+      }
+    }
+
+    // Build results
+    return Object.entries(pillarConfig).map(([pillar, config]) => {
+      const answered = pillarCounts[pillar] || 0;
+      const total = config.expectedQuestions;
+      return {
+        pillar: config.displayName,
+        questionsAnswered: answered,
+        questionsTotal: total,
+        completionPercent: total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0,
+      };
+    });
   },
 });
 
@@ -964,6 +1083,205 @@ export const getAllInterventions = query({
       instructions_text: i.instructions_text,
       status: i.status,
     }));
+  },
+});
+
+// ============================================
+// Daily Compliance Data (for Streak Calculation)
+// ============================================
+
+/**
+ * Get daily compliance data for accurate streak and completion tracking
+ */
+export const getDailyComplianceData = query({
+  args: { userId: v.id("users") },
+  returns: v.array(
+    v.object({
+      dayNumber: v.number(),
+      date: v.string(),
+      sleepLogCompleted: v.boolean(),
+      assessmentCompleted: v.boolean(),
+      responseCount: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return [];
+
+    // Get all responses for this user
+    const responses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Sleep log question IDs (CSD = Consensus Sleep Diary, SL = Sleep Log, SD = Sleep Diary)
+    const sleepLogPrefixes = ["CSD_", "SL_", "SD_"];
+
+    // Group responses by day
+    const dayData: Record<
+      number,
+      {
+        sleepLogQuestions: Set<string>;
+        assessmentQuestions: Set<string>;
+        responseCount: number;
+      }
+    > = {};
+
+    for (const response of responses) {
+      const day = response.day_number ?? 1;
+      if (!dayData[day]) {
+        dayData[day] = {
+          sleepLogQuestions: new Set(),
+          assessmentQuestions: new Set(),
+          responseCount: 0,
+        };
+      }
+      dayData[day].responseCount++;
+
+      const isSleepLog = sleepLogPrefixes.some((prefix) =>
+        response.question_id.startsWith(prefix)
+      );
+      if (isSleepLog) {
+        dayData[day].sleepLogQuestions.add(response.question_id);
+      } else {
+        dayData[day].assessmentQuestions.add(response.question_id);
+      }
+    }
+
+    // Build result for each day up to current_day
+    const result: {
+      dayNumber: number;
+      date: string;
+      sleepLogCompleted: boolean;
+      assessmentCompleted: boolean;
+      responseCount: number;
+    }[] = [];
+
+    for (let day = 1; day <= user.current_day; day++) {
+      const data = dayData[day];
+      const date = new Date(user.started_at + (day - 1) * 86400000)
+        .toISOString()
+        .split("T")[0];
+
+      result.push({
+        dayNumber: day,
+        date,
+        // Sleep log is complete if at least 3 sleep-related questions answered
+        sleepLogCompleted: data ? data.sleepLogQuestions.size >= 3 : false,
+        // Assessment is complete if at least 1 non-sleep-log question answered
+        assessmentCompleted: data ? data.assessmentQuestions.size > 0 : false,
+        responseCount: data?.responseCount ?? 0,
+      });
+    }
+
+    return result;
+  },
+});
+
+// ============================================
+// Pillar Detail Queries
+// ============================================
+
+/**
+ * Get all questions and responses for a specific health pillar
+ */
+export const getPillarResponses = query({
+  args: {
+    userId: v.id("users"),
+    pillarName: v.string(),
+  },
+  returns: v.object({
+    questions: v.array(
+      v.object({
+        questionId: v.string(),
+        questionText: v.string(),
+        questionType: v.optional(v.string()),
+        responseValue: v.optional(v.string()),
+        responseNumber: v.optional(v.number()),
+        dayNumber: v.optional(v.number()),
+        answeredAt: v.optional(v.number()),
+      })
+    ),
+    clinicalSummary: v.optional(
+      v.object({
+        interpretation: v.optional(v.string()),
+        severity: v.optional(v.string()),
+        score: v.optional(v.number()),
+        maxScore: v.optional(v.number()),
+      })
+    ),
+  }),
+  handler: async (ctx, args) => {
+    // Get all questions for this pillar from assessment_questions
+    const allQuestions = await ctx.db.query("assessment_questions").collect();
+
+    // Filter questions by pillar
+    const pillarQuestions = allQuestions.filter(
+      (q) => q.pillar === args.pillarName
+    );
+
+    // Get user responses
+    const responses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Map questions to responses
+    const questions = pillarQuestions.map((q) => {
+      const response = responses.find((r) => r.question_id === q.question_id);
+      return {
+        questionId: q.question_id,
+        questionText: q.question_text,
+        questionType: q.question_type,
+        responseValue: response?.response_value,
+        responseNumber: response?.response_number,
+        dayNumber: response?.day_number,
+        answeredAt: response?.updated_at,
+      };
+    });
+
+    // Get clinical summary if available (from questionnaire scores)
+    let clinicalSummary:
+      | {
+          interpretation?: string;
+          severity?: string;
+          score?: number;
+          maxScore?: number;
+        }
+      | undefined;
+
+    // Map pillar names to questionnaire names for clinical scores
+    const pillarToQuestionnaire: Record<string, string[]> = {
+      "Mental Health": ["PHQ-9", "GAD-7"],
+      "Sleep Quality": ["ISI", "PSQI"],
+      Cognitive: ["DBAS-16"],
+    };
+
+    const relevantQuestionnaires = pillarToQuestionnaire[args.pillarName];
+    if (relevantQuestionnaires) {
+      const scores = await ctx.db
+        .query("questionnaire_scores")
+        .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+        .collect();
+
+      const relevantScore = scores.find((s) =>
+        relevantQuestionnaires.includes(s.questionnaire_name)
+      );
+
+      if (relevantScore) {
+        clinicalSummary = {
+          interpretation: relevantScore.interpretation,
+          severity: relevantScore.category,
+          score: relevantScore.score,
+          maxScore: relevantScore.max_score,
+        };
+      }
+    }
+
+    return {
+      questions,
+      clinicalSummary,
+    };
   },
 });
 
@@ -1434,9 +1752,9 @@ export const calculatePatientScores = query({
       calculateSTOPBANG(responseMap, demographics),
     ];
 
-    // Calculate sleep log metrics
+    // Calculate sleep log metrics (SL_, SD_, and CSD_ prefixes)
     const sleepLogResponses = allResponses.filter(r =>
-      r.question_id.startsWith("SL_") || r.question_id.startsWith("SD_")
+      r.question_id.startsWith("SL_") || r.question_id.startsWith("SD_") || r.question_id.startsWith("CSD_")
     );
 
     let totalQuality = 0;
@@ -1447,24 +1765,28 @@ export const calculatePatientScores = query({
     const wakeTimes: string[] = [];
 
     for (const r of sleepLogResponses) {
-      if (r.question_id === "SL_QUALITY" || r.question_id === "SD_SLEEP_QUALITY") {
+      // Sleep quality questions
+      if (r.question_id === "SL_QUALITY" || r.question_id === "SD_SLEEP_QUALITY" || r.question_id === "CSD_QUALITY") {
         const val = r.response_number ?? parseFloat(r.response_value || "");
         if (!isNaN(val)) {
           totalQuality += val;
           qualityCount++;
         }
       }
-      if (r.question_id === "SL_AWAKENINGS" || r.question_id === "SD_AWAKENINGS_COUNT") {
+      // Awakenings questions
+      if (r.question_id === "SL_AWAKENINGS" || r.question_id === "SD_AWAKENINGS_COUNT" || r.question_id === "CSD_AWAKENINGS") {
         const val = r.response_number ?? parseFloat(r.response_value || "");
         if (!isNaN(val)) {
           totalAwakenings += val;
           awakeningsCount++;
         }
       }
-      if (r.question_id === "SL_BEDTIME" || r.question_id === "SD_GOT_INTO_BED") {
+      // Bedtime questions
+      if (r.question_id === "SL_BEDTIME" || r.question_id === "SD_GOT_INTO_BED" || r.question_id === "CSD_INTO_BED") {
         if (r.response_value) bedtimes.push(r.response_value);
       }
-      if (r.question_id === "SL_WAKE_TIME" || r.question_id === "SD_FINAL_WAKE") {
+      // Wake time questions
+      if (r.question_id === "SL_WAKE_TIME" || r.question_id === "SD_FINAL_WAKE" || r.question_id === "CSD_FINAL_WAKE") {
         if (r.response_value) wakeTimes.push(r.response_value);
       }
     }
@@ -1505,6 +1827,122 @@ export const calculatePatientScores = query({
       })),
       sleepMetrics,
       gateways,
+    };
+  },
+});
+
+/**
+ * Calculate and persist questionnaire scores to the database
+ * This runs the scoring algorithms and saves results to questionnaire_scores table
+ * so they can be queried by getQuestionnaireScores
+ *
+ * Used by:
+ * - Mock data generator (to populate dashboard during testing)
+ * - Could be triggered after real users complete enough questions
+ */
+export const persistCalculatedScores = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+    const now = Date.now();
+
+    // Get all user responses
+    const allResponses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Build response map (question_id -> numeric value)
+    const responseMap = new Map<string, number>();
+    for (const r of allResponses) {
+      const numVal = r.response_number ?? (r.response_value ? parseFloat(r.response_value) : NaN);
+      if (!isNaN(numVal)) {
+        responseMap.set(r.question_id, numVal);
+      }
+    }
+
+    // Get demographics for STOP-BANG
+    const demographics: { age?: number; bmi?: number; isMale?: boolean } = {};
+
+    // Age from D2 (DOB)
+    const dobResponse = allResponses.find(r => r.question_id === "D2");
+    if (dobResponse?.response_value) {
+      const dob = new Date(dobResponse.response_value);
+      const today = new Date();
+      const age = Math.floor((today.getTime() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age > 0 && age < 150) demographics.age = age;
+    }
+
+    // Sex from D4
+    const sexResponse = allResponses.find(r => r.question_id === "D4");
+    if (sexResponse?.response_value) {
+      demographics.isMale = sexResponse.response_value.toLowerCase().includes("male") &&
+        !sexResponse.response_value.toLowerCase().includes("female");
+    }
+
+    // BMI from D5 (height) and D6 (weight)
+    const heightResponse = allResponses.find(r => r.question_id === "D5");
+    const weightResponse = allResponses.find(r => r.question_id === "D6");
+    if (heightResponse?.response_number && weightResponse?.response_number) {
+      const heightM = heightResponse.response_number / 100; // cm to m
+      const weightKg = weightResponse.response_number;
+      if (heightM > 0) {
+        demographics.bmi = Math.round((weightKg / (heightM * heightM)) * 10) / 10;
+      }
+    }
+
+    // Calculate all scores using existing functions
+    const scores: QuestionnaireScore[] = [
+      calculateISI(responseMap),
+      calculatePHQ9(responseMap),
+      calculateGAD7(responseMap),
+      calculateESS(responseMap),
+      calculateSTOPBANG(responseMap, demographics),
+    ];
+
+    // Persist each score that has a valid value
+    const savedScores: string[] = [];
+    for (const score of scores) {
+      if (score.score !== null) {
+        const existing = await ctx.db
+          .query("questionnaire_scores")
+          .withIndex("by_user_questionnaire", (q) =>
+            q.eq("user_id", userId).eq("questionnaire_name", score.abbreviation)
+          )
+          .first();
+
+        const scoreData = {
+          user_id: userId,
+          questionnaire_name: score.abbreviation,
+          score: score.score,
+          max_score: score.maxScore,
+          category: score.severity,
+          interpretation: score.interpretation,
+          calculated_at: now,
+          calculation_metadata_json: JSON.stringify({
+            questionsAnswered: score.questionsAnswered,
+            questionsRequired: score.questionsRequired,
+            fullName: score.name,
+          }),
+        };
+
+        if (existing) {
+          await ctx.db.patch(existing._id, scoreData);
+        } else {
+          await ctx.db.insert("questionnaire_scores", scoreData);
+        }
+        savedScores.push(`${score.abbreviation}: ${score.score}/${score.maxScore}`);
+      }
+    }
+
+    console.log(`[persistCalculatedScores] Saved ${savedScores.length} scores for user ${userId}: ${savedScores.join(", ")}`);
+
+    return {
+      success: true,
+      savedCount: savedScores.length,
+      scores: savedScores,
     };
   },
 });

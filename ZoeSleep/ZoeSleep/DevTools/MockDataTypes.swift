@@ -37,6 +37,7 @@ enum MockGeneratorState: Equatable {
     case generatingDay(Int)
     case savingDay(Int)
     case transitioning(from: Int, to: Int)
+    case computingScores  // Calculating and persisting clinical scores
     case completed
     case cancelled
     case failed(String)
@@ -45,6 +46,7 @@ enum MockGeneratorState: Equatable {
         switch (lhs, rhs) {
         case (.idle, .idle),
              (.preparing, .preparing),
+             (.computingScores, .computingScores),
              (.completed, .completed),
              (.cancelled, .cancelled):
             return true
@@ -63,7 +65,7 @@ enum MockGeneratorState: Equatable {
 
     var isActive: Bool {
         switch self {
-        case .preparing, .generatingDay, .savingDay, .transitioning:
+        case .preparing, .generatingDay, .savingDay, .transitioning, .computingScores:
             return true
         default:
             return false
@@ -82,6 +84,8 @@ enum MockGeneratorState: Equatable {
             return "Saving Day \(day)..."
         case .transitioning(let from, let to):
             return "Day \(from) → \(to)"
+        case .computingScores:
+            return "Computing scores..."
         case .completed:
             return "Complete!"
         case .cancelled:

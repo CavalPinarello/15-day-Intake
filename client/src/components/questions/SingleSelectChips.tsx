@@ -13,8 +13,17 @@ interface SingleSelectChipsProps {
 }
 
 export function SingleSelectChips({ config, value, onChange, error, disabled }: SingleSelectChipsProps) {
-  const { options, layout = 'vertical' } = config;
+  const { options = [], layout = 'vertical' } = config;
   const { isWarm, textClasses } = useCircadianTheme();
+
+  // Guard against missing options
+  if (!options || options.length === 0) {
+    return (
+      <div className="p-4 text-amber-600 bg-amber-50 rounded-lg">
+        No options available for this question.
+      </div>
+    );
+  }
 
   const handleSelect = useCallback((optionValue: string) => {
     onChange(optionValue);

@@ -1091,6 +1091,36 @@ extension ConvexService {
     }
 }
 
+// MARK: - Dashboard Data Computation (for Mock Generator)
+
+extension ConvexService {
+    /// Compute sleep metrics from CSD responses and save to user_sleep_data table
+    /// This populates the dashboard's sleep data visualizations
+    func computeSleepMetricsFromResponses(dayNumber: Int, date: String) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let _: SuccessResponse = try await client.mutation("healthkit:computeSleepMetricsFromResponses", args: [
+            "userId": userId,
+            "dayNumber": dayNumber,
+            "date": date
+        ])
+    }
+
+    /// Persist calculated questionnaire scores to questionnaire_scores table
+    /// This populates the dashboard's clinical scores section
+    func persistCalculatedScores() async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let _: SuccessResponse = try await client.mutation("physician:persistCalculatedScores", args: [
+            "userId": userId
+        ])
+    }
+}
+
 // MARK: - Device Info
 
 struct DeviceInfo {

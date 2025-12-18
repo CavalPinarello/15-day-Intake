@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Moon, Lock, Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
+import { Lock, Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
+import { ZoeLogo } from "@/components/ZoeLogo";
 
 // SHA256 hash function for browser
 async function sha256(message: string): Promise<string> {
@@ -127,10 +128,10 @@ export default function PhysicianLoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-blue-600 mb-4">
-            <Moon className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-900/50 to-slate-800/50 backdrop-blur mb-4">
+            <ZoeLogo size={56} />
           </div>
-          <h1 className="text-3xl font-bold text-white">Zoe Sleep</h1>
+          <h1 className="text-3xl font-bold text-white">Zoé Sleep</h1>
           <p className="text-slate-400 mt-1">Physician Dashboard</p>
         </div>
 

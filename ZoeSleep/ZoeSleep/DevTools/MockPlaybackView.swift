@@ -31,7 +31,7 @@ struct MockPlaybackView: View {
                             idleView
                         case .preparing:
                             preparingView
-                        case .generatingDay, .savingDay, .transitioning:
+                        case .generatingDay, .savingDay, .transitioning, .computingScores:
                             generatingView
                         case .completed:
                             completedView

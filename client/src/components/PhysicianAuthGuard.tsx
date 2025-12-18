@@ -4,7 +4,8 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LogOut, Moon } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { ZoeLogo } from "@/components/ZoeLogo";
 
 interface PhysicianAuthGuardProps {
   children: React.ReactNode;
@@ -60,8 +61,8 @@ export default function PhysicianAuthGuard({ children }: PhysicianAuthGuardProps
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-blue-600 mb-4">
-            <Moon className="w-6 h-6 text-white" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4">
+            <ZoeLogo size={48} />
           </div>
           <div className="animate-spin w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full mx-auto" />
           <p className="text-gray-500 mt-4">Verifying access...</p>

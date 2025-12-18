@@ -80,6 +80,12 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **New branding and logo:** Spiral crescent moon logo implementation (Dec 18, 2025)
+  - iOS: ZoeLogo.swift (SwiftUI vector component)
+  - Web: ZoeLogo.tsx (React SVG component)
+  - App icons: All iPhone/iPad/Watch sizes regenerated
+  - Animated aurora borealis splash screen and login background
+  - 2.5 second splash with luminescent wave animation
 - **Question Manager enhancements:** Full question preview in physician dashboard (Dec 13, 2025)
   - Fixed "0 questions" bug - now shows computed counts
   - Expandable modules with full question lists

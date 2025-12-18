@@ -637,3 +637,164 @@ export const getSleepArchitecture = query({
       .reverse();
   },
 });
+
+// ============================================
+// Sleep Metrics Computation from Questionnaire Responses
+// ============================================
+
+/**
+ * Compute sleep metrics from CSD_ (Consensus Sleep Diary) questionnaire responses
+ * and save to user_sleep_data table. This bridges subjective questionnaire data
+ * to the objective sleep metrics format used by the dashboard.
+ *
+ * Used by:
+ * - Mock data generator (to populate dashboard during testing)
+ * - Could be called after real users complete daily sleep log (to compute derived metrics)
+ */
+export const computeSleepMetricsFromResponses = mutation({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+    date: v.string(), // YYYY-MM-DD format
+  },
+  handler: async (ctx, args) => {
+    const { userId, dayNumber, date } = args;
+
+    // Get all CSD_ responses for this user and day
+    const responses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user_day", (q) =>
+        q.eq("user_id", userId).eq("day_number", dayNumber)
+      )
+      .collect();
+
+    // Filter to only CSD_ questions
+    const csdResponses = responses.filter(r => r.question_id.startsWith("CSD_"));
+
+    if (csdResponses.length === 0) {
+      console.log(`[computeSleepMetrics] No CSD_ responses found for user ${userId} day ${dayNumber}`);
+      return { success: true }; // No data to compute, but not an error
+    }
+
+    // Build response map for easy lookup
+    const responseMap = new Map<string, { value?: string; number?: number }>();
+    for (const r of csdResponses) {
+      responseMap.set(r.question_id, {
+        value: r.response_value ?? undefined,
+        number: r.response_number ?? undefined,
+      });
+    }
+
+    // Parse time string to minutes since midnight
+    const parseTimeToMinutes = (timeStr: string | undefined): number | null => {
+      if (!timeStr) return null;
+      const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+      if (!match) return null;
+      const hours = parseInt(match[1], 10);
+      const mins = parseInt(match[2], 10);
+      return hours * 60 + mins;
+    };
+
+    // Extract values from responses
+    const intoBedTime = parseTimeToMinutes(responseMap.get("CSD_INTO_BED")?.value);
+    const trySleepTime = parseTimeToMinutes(responseMap.get("CSD_TRY_SLEEP")?.value);
+    const finalWakeTime = parseTimeToMinutes(responseMap.get("CSD_FINAL_WAKE")?.value);
+    const outOfBedTime = parseTimeToMinutes(responseMap.get("CSD_OUT_BED")?.value);
+    const latencyMins = responseMap.get("CSD_LATENCY")?.number ?? null;
+    const awakenings = responseMap.get("CSD_AWAKENINGS")?.number ?? null;
+    const wasoMins = responseMap.get("CSD_WASO")?.number ?? null;
+    const quality = responseMap.get("CSD_QUALITY")?.number ?? null;
+
+    // Calculate derived metrics
+    let totalSleepMins: number | undefined;
+    let sleepEfficiency: number | undefined;
+    let timeInBedMins: number | undefined;
+
+    // Time in bed = outOfBed - intoBed (handling midnight crossing)
+    if (intoBedTime !== null && outOfBedTime !== null) {
+      if (outOfBedTime > intoBedTime) {
+        timeInBedMins = outOfBedTime - intoBedTime;
+      } else {
+        // Crossed midnight: e.g., 23:00 to 07:00 = 8 hours
+        timeInBedMins = (24 * 60 - intoBedTime) + outOfBedTime;
+      }
+    }
+
+    // Total sleep time = Time in bed - latency - WASO
+    if (timeInBedMins !== undefined) {
+      const latency = latencyMins ?? 0;
+      const waso = wasoMins ?? 0;
+      totalSleepMins = Math.max(0, timeInBedMins - latency - waso);
+    }
+
+    // Sleep efficiency = (Total sleep time / Time in bed) * 100
+    if (totalSleepMins !== undefined && timeInBedMins !== undefined && timeInBedMins > 0) {
+      sleepEfficiency = Math.round((totalSleepMins / timeInBedMins) * 100);
+    }
+
+    // Generate realistic sleep stage distribution (estimated from total sleep)
+    // Typical adult: 20-25% deep, 50-55% light, 20-25% REM
+    let deepSleepMins: number | undefined;
+    let lightSleepMins: number | undefined;
+    let remSleepMins: number | undefined;
+
+    if (totalSleepMins !== undefined && totalSleepMins > 0) {
+      // Add some variance based on quality rating
+      const qualityFactor = quality ? (quality / 5) : 0.7; // 1-5 scale normalized
+
+      deepSleepMins = Math.round(totalSleepMins * (0.15 + qualityFactor * 0.10)); // 15-25%
+      remSleepMins = Math.round(totalSleepMins * (0.18 + qualityFactor * 0.07)); // 18-25%
+      lightSleepMins = totalSleepMins - deepSleepMins - remSleepMins; // Remainder
+    }
+
+    // Convert times to Unix timestamps for storage
+    const dateObj = new Date(date + "T00:00:00");
+    const inBedTimestamp = intoBedTime !== null
+      ? new Date(dateObj.getTime() - 86400000 + intoBedTime * 60000).getTime() // Previous day
+      : undefined;
+    const asleepTimestamp = trySleepTime !== null && latencyMins !== null
+      ? new Date(dateObj.getTime() - 86400000 + (trySleepTime + latencyMins) * 60000).getTime()
+      : undefined;
+    const wakeTimestamp = finalWakeTime !== null
+      ? new Date(dateObj.getTime() + finalWakeTime * 60000).getTime()
+      : undefined;
+
+    // Check for existing entry
+    const existing = await ctx.db
+      .query("user_sleep_data")
+      .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", date))
+      .first();
+
+    const now = Date.now();
+    const sleepData = {
+      in_bed_time: inBedTimestamp,
+      asleep_time: asleepTimestamp,
+      wake_time: wakeTimestamp,
+      total_sleep_mins: totalSleepMins,
+      sleep_efficiency: sleepEfficiency,
+      deep_sleep_mins: deepSleepMins,
+      light_sleep_mins: lightSleepMins,
+      rem_sleep_mins: remSleepMins,
+      awake_mins: wasoMins ?? undefined,
+      interruptions_count: awakenings ?? undefined,
+      sleep_latency_mins: latencyMins ?? undefined,
+      primary_source: "Questionnaire",
+      source_bundle_id: "com.zoesleep.app",
+      synced_at: now,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, sleepData);
+      console.log(`[computeSleepMetrics] Updated sleep data for ${date}: ${totalSleepMins} mins, ${sleepEfficiency}% efficiency`);
+    } else {
+      await ctx.db.insert("user_sleep_data", {
+        user_id: userId,
+        date,
+        ...sleepData,
+      });
+      console.log(`[computeSleepMetrics] Created sleep data for ${date}: ${totalSleepMins} mins, ${sleepEfficiency}% efficiency`);
+    }
+
+    return { success: true };
+  },
+});

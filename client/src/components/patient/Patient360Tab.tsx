@@ -7,6 +7,7 @@ import { useState, useMemo } from "react";
 import { BentoCard, BentoGrid } from "./BentoCard";
 import { SubjectiveVsObjectiveCard } from "./SubjectiveVsObjectiveCard";
 import { PillarSummaryCard, PillarKey, PILLARS } from "./PillarSummaryCard";
+import { PillarDetailModal } from "./PillarDetailModal";
 import { AIInsightsCard, generateSampleInsights } from "./AIInsightsCard";
 import { SleepTrendChart } from "@/components/charts/SleepTrendChart";
 import { ScoreGauge, SCORE_CONFIG } from "@/components/charts/ScoreProgressionChart";
@@ -59,8 +60,14 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
   // Fetch questionnaire scores
   const scores = useQuery(api.physician.getQuestionnaireScores, { userId });
 
+  // Fetch pillar completion stats
+  const pillarStats = useQuery(api.physician.getPillarStats, { userId });
+
   // Fetch responses for pillar analysis
   const responsesByDay = useQuery(api.physician.getPatientResponsesByDay, { userId });
+
+  // Fetch accurate compliance data for streak calculation
+  const complianceDataQuery = useQuery(api.physician.getDailyComplianceData, { userId });
 
   // AI Analysis action
   const analyzePatient = useAction(api.llm.analyzePatientResponses);
@@ -70,6 +77,9 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
     riskFactors: string[];
     recommendations: string[];
   } | null>(null);
+
+  // State for pillar detail modal
+  const [selectedPillar, setSelectedPillar] = useState<PillarKey | null>(null);
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
@@ -119,8 +129,21 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
     })).reverse();
   }, [healthSummary]);
 
-  // Build compliance data (mock for now - would come from user_progress)
+  // Build compliance data - prefer accurate query data, fallback to patient.completedDays
   const complianceData = useMemo(() => {
+    // Use accurate compliance query if available
+    if (complianceDataQuery && complianceDataQuery.length > 0) {
+      return complianceDataQuery.map((d) => ({
+        date: d.date,
+        day: d.dayNumber,
+        tasksCompleted: (d.sleepLogCompleted ? 1 : 0) + (d.assessmentCompleted ? 1 : 0),
+        tasksTotal: 2,
+        sleepLogCompleted: d.sleepLogCompleted,
+        assessmentCompleted: d.assessmentCompleted,
+      }));
+    }
+
+    // Fallback to existing logic
     const days = [];
     for (let i = 1; i <= patient.user.current_day; i++) {
       days.push({
@@ -133,7 +156,7 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
       });
     }
     return days;
-  }, [patient]);
+  }, [patient, complianceDataQuery]);
 
   // Calculate streak
   const currentStreak = useMemo(() => {
@@ -145,7 +168,7 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
     return streak;
   }, [complianceData]);
 
-  // Build pillar statuses (simplified - would need real pillar calculation)
+  // Build pillar statuses using actual response data
   const pillarStatuses = useMemo(() => {
     const pillars: PillarKey[] = [
       "social", "metabolic", "sleepQuality", "sleepQuantity",
@@ -153,11 +176,39 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
       "cognitive", "physical", "nutritional", "sleepLog"
     ];
 
+    // Map pillar keys to display names for lookup
+    const pillarNameMap: Record<PillarKey, string> = {
+      social: "Social",
+      metabolic: "Metabolic",
+      sleepQuality: "Sleep Quality",
+      sleepQuantity: "Sleep Quantity",
+      sleepRegularity: "Sleep Regularity",
+      sleepTiming: "Sleep Timing",
+      mentalHealth: "Mental Health",
+      cognitive: "Cognitive",
+      physical: "Physical",
+      nutritional: "Nutritional",
+      sleepLog: "Sleep Log",
+    };
+
     return pillars.map((pillar) => {
       let score: number | null = null;
       const alerts: string[] = [];
+      let questionsAnswered = 0;
+      let questionsTotal = 10;
 
-      // Map scores to pillars
+      // Get stats from pillarStats query if available
+      const stats = pillarStats?.find(s => s.pillar === pillarNameMap[pillar]);
+      if (stats) {
+        questionsAnswered = stats.questionsAnswered;
+        questionsTotal = stats.questionsTotal;
+        // Use completion percentage as score if questions have been answered
+        if (stats.questionsAnswered > 0) {
+          score = stats.completionPercent;
+        }
+      }
+
+      // Override with specific clinical scores if available
       if (pillar === "sleepQuality" && patientScores.PSQI) {
         score = Math.max(0, 100 - (patientScores.PSQI / 21) * 100);
         if (patientScores.PSQI > 10) alerts.push("Poor sleep quality");
@@ -176,7 +227,10 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
         }
       }
       if (pillar === "sleepLog") {
+        // Sleep log completion based on days completed
         score = patient.completedDays > 0 ? Math.round((patient.completedDays / patient.user.current_day) * 100) : 0;
+        questionsAnswered = patient.completedDays * 5; // 5 questions per day
+        questionsTotal = patient.user.current_day * 5;
       }
       if (pillar === "sleepQuantity" && healthSummary?.summary?.avgSleepHours) {
         const hrs = healthSummary.summary.avgSleepHours;
@@ -187,13 +241,13 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
       return {
         pillar,
         score,
-        questionsAnswered: score !== null ? 5 : 0,
-        questionsTotal: 10,
+        questionsAnswered,
+        questionsTotal,
         trend: null,
         alerts,
       };
     });
-  }, [patientScores, patient, healthSummary]);
+  }, [patientScores, patient, healthSummary, pillarStats]);
 
   // Build subjective vs objective comparison
   const sleepComparison = useMemo(() => {
@@ -295,7 +349,10 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
         <SubjectiveVsObjectiveCard data={sleepComparison} />
 
         {/* Pillar Summary */}
-        <PillarSummaryCard pillars={pillarStatuses} />
+        <PillarSummaryCard
+          pillars={pillarStatuses}
+          onPillarClick={(pillar) => setSelectedPillar(pillar)}
+        />
 
         {/* Score Gauges */}
         <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
@@ -463,6 +520,17 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Pillar Detail Modal */}
+      {selectedPillar && (
+        <PillarDetailModal
+          isOpen={!!selectedPillar}
+          onClose={() => setSelectedPillar(null)}
+          userId={userId}
+          pillar={selectedPillar}
+          pillarStatus={pillarStatuses.find((p) => p.pillar === selectedPillar)!}
+        />
       )}
     </div>
   );
