@@ -77,17 +77,24 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
     riskFactors: string[];
     recommendations: string[];
   } | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // State for pillar detail modal
   const [selectedPillar, setSelectedPillar] = useState<PillarKey | null>(null);
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
+    setAnalysisError(null);
     try {
       const result = await analyzePatient({ userId });
       setAnalysis(result);
+      // Check if the LLM returned an error message
+      if (result.summary === "Error analyzing patient data") {
+        setAnalysisError("Analysis completed but no insights generated. Check if API keys are configured.");
+      }
     } catch (error) {
       console.error("Analysis failed:", error);
+      setAnalysisError(error instanceof Error ? error.message : "Analysis failed. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -106,16 +113,63 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
     return scoreMap;
   }, [scores]);
 
-  // Generate insights from scores
+  // Generate insights from scores and LLM analysis
   const insights = useMemo(() => {
-    return generateSampleInsights({
+    const baseInsights = generateSampleInsights({
       isiScore: patientScores.ISI,
       phq9Score: patientScores.PHQ9,
       gad7Score: patientScores.GAD7,
       avgSleepHours: healthSummary?.summary?.avgSleepHours ?? undefined,
       sleepEfficiency: healthSummary?.summary?.avgEfficiency ?? undefined,
     });
-  }, [patientScores, healthSummary]);
+
+    // Add LLM analysis results if available
+    if (analysis) {
+      const now = new Date().toISOString();
+
+      // Add summary as an info insight
+      if (analysis.summary && analysis.summary !== "Error analyzing patient data") {
+        baseInsights.push({
+          id: "llm-summary",
+          title: "AI Analysis Summary",
+          description: analysis.summary,
+          severity: "info" as const,
+          category: "sleep_quality" as const,
+          confidence: 85,
+          timestamp: now,
+        });
+      }
+
+      // Add risk factors as warnings
+      analysis.riskFactors.forEach((risk, idx) => {
+        baseInsights.push({
+          id: `llm-risk-${idx}`,
+          title: risk.length > 50 ? risk.slice(0, 47) + "..." : risk,
+          description: risk,
+          severity: "warning" as const,
+          category: "sleep_quality" as const,
+          confidence: 80,
+          timestamp: now,
+        });
+      });
+
+      // Add recommendations as positive insights with actions
+      if (analysis.recommendations.length > 0) {
+        baseInsights.push({
+          id: "llm-recommendations",
+          title: "AI Recommendations",
+          description: "Evidence-based interventions suggested by AI analysis",
+          severity: "positive" as const,
+          category: "behavioral" as const,
+          confidence: 75,
+          suggestedActions: analysis.recommendations,
+          timestamp: now,
+        });
+      }
+    }
+
+    return baseInsights;
+  }, [patientScores, healthSummary, analysis]);
 
   // Build sleep trend data from HealthKit
   const sleepTrendData = useMemo(() => {
@@ -343,6 +397,7 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
           onRunDeepAnalysis={handleAnalyze}
           isAnalyzing={isAnalyzing}
           lastAnalysisTime={analysis ? "Just now" : undefined}
+          error={analysisError}
         />
 
         {/* Subjective vs Objective */}

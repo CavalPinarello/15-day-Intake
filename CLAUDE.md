@@ -80,6 +80,12 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Dashboard 360° View data pipeline:** Complete data flow from iOS mock generator to dashboard (Dec 18, 2025)
+  - `healthkit:computeSleepMetricsFromResponses` - Computes sleep metrics from CSD_ responses
+  - `physician:persistCalculatedScores` - Calculates and persists ISI/PHQ-9/GAD-7/ESS/STOP-BANG scores
+  - `physician:getQuestionnaireResponses` - Retrieves individual questionnaire responses for detail views
+  - Mock generator now populates `user_sleep_data` and `questionnaire_scores` tables
+  - ScoreDetailModal shows individual question responses for clinical questionnaires
 - **New branding and logo:** Spiral crescent moon logo implementation (Dec 18, 2025)
   - iOS: ZoeLogo.swift (SwiftUI vector component)
   - Web: ZoeLogo.tsx (React SVG component)

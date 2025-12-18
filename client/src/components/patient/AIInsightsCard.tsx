@@ -30,6 +30,7 @@ interface AIInsightsCardProps {
   onInsightClick?: (insight: AIInsight) => void;
   isAnalyzing?: boolean;
   lastAnalysisTime?: string;
+  error?: string | null;
 }
 
 const severityConfig = {
@@ -78,6 +79,7 @@ export function AIInsightsCard({
   onInsightClick,
   isAnalyzing = false,
   lastAnalysisTime,
+  error,
 }: AIInsightsCardProps) {
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
 
@@ -121,6 +123,13 @@ export function AIInsightsCard({
       }
     >
       <div className="flex flex-col h-full">
+        {/* Error message */}
+        {error && (
+          <div className="mb-3 p-2 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-xs">
+            <span className="font-medium">Analysis Error:</span> {error}
+          </div>
+        )}
+
         {/* Insights list */}
         <div className="flex-1 overflow-y-auto space-y-2 mb-3">
           {sortedInsights.length === 0 ? (

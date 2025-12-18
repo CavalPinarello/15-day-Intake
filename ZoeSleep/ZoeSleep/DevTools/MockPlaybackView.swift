@@ -72,7 +72,7 @@ struct MockPlaybackView: View {
                 .foregroundColor(theme.textPrimary)
 
             // Description
-            Text("This will generate 14 days of realistic questionnaire responses for testing the physician dashboard.")
+            Text("This will generate 15 days of realistic questionnaire responses for testing the physician dashboard.")
                 .font(.system(size: Typography.body))
                 .foregroundColor(theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -132,7 +132,7 @@ struct MockPlaybackView: View {
                 .foregroundColor(theme.textSecondary)
 
             HStack(spacing: Spacing.lg) {
-                StatBadge(icon: "calendar", value: "14", label: "Days")
+                StatBadge(icon: "calendar", value: "15", label: "Days")
                 StatBadge(icon: "list.bullet", value: "~200", label: "Questions")
                 StatBadge(icon: "clock", value: "~2", label: "Minutes")
             }
@@ -390,7 +390,7 @@ struct MockPlaybackView: View {
                 .font(.system(size: Typography.title3, weight: .bold))
                 .foregroundColor(theme.textPrimary)
 
-            Text("14 days of mock questionnaire data has been generated successfully.")
+            Text("15 days of mock questionnaire data has been generated successfully.")
                 .font(.system(size: Typography.body))
                 .foregroundColor(theme.textSecondary)
                 .multilineTextAlignment(.center)

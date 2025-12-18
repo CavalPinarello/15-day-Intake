@@ -1285,6 +1285,132 @@ export const getPillarResponses = query({
   },
 });
 
+/**
+ * Get all questions and responses for a specific standardized questionnaire
+ * (ISI, PHQ-9, GAD-7, ESS, STOP-BANG, etc.)
+ */
+export const getQuestionnaireResponses = query({
+  args: {
+    userId: v.id("users"),
+    questionnaireName: v.string(),
+  },
+  returns: v.array(
+    v.object({
+      questionId: v.string(),
+      questionText: v.string(),
+      responseValue: v.string(),
+      responseNumber: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    // Hardcoded question texts for standardized questionnaires
+    // (These are defined in iOS QuestionnaireManager.swift but not synced to Convex)
+    const questionTexts: Record<string, string> = {
+      // PHQ-9 - Patient Health Questionnaire (Depression)
+      "PHQ9_1": "Over the last 2 weeks: Little interest or pleasure in doing things?",
+      "PHQ9_2": "Over the last 2 weeks: Feeling down, depressed, or hopeless?",
+      "PHQ9_3": "Over the last 2 weeks: Trouble falling or staying asleep, or sleeping too much?",
+      "PHQ9_4": "Over the last 2 weeks: Feeling tired or having little energy?",
+      "PHQ9_5": "Over the last 2 weeks: Poor appetite or overeating?",
+      "PHQ9_6": "Over the last 2 weeks: Feeling bad about yourself - or that you are a failure?",
+      "PHQ9_7": "Over the last 2 weeks: Trouble concentrating on things?",
+      "PHQ9_8": "Over the last 2 weeks: Moving or speaking slowly, or being fidgety/restless?",
+      "PHQ9_9": "Over the last 2 weeks: Thoughts that you would be better off dead or of hurting yourself?",
+
+      // GAD-7 - Generalized Anxiety Disorder
+      "GAD7_1": "Over the last 2 weeks: Feeling nervous, anxious, or on edge?",
+      "GAD7_2": "Over the last 2 weeks: Not being able to stop or control worrying?",
+      "GAD7_3": "Over the last 2 weeks: Worrying too much about different things?",
+      "GAD7_4": "Over the last 2 weeks: Trouble relaxing?",
+      "GAD7_5": "Over the last 2 weeks: Being so restless that it is hard to sit still?",
+      "GAD7_6": "Over the last 2 weeks: Becoming easily annoyed or irritable?",
+      "GAD7_7": "Over the last 2 weeks: Feeling afraid, as if something awful might happen?",
+
+      // ISI - Insomnia Severity Index
+      "ISI_1": "Difficulty falling asleep?",
+      "ISI_2": "Difficulty staying asleep?",
+      "ISI_3": "Problems waking up too early?",
+      "ISI_4": "How satisfied are you with your current sleep pattern?",
+      "ISI_5": "How noticeable to others is your sleep problem affecting your daily functioning?",
+      "ISI_6": "How worried are you about your current sleep problem?",
+      "ISI_7": "How much is your sleep problem interfering with your daily functioning?",
+
+      // ESS - Epworth Sleepiness Scale
+      "ESS_1": "Chance of dozing: Sitting and reading?",
+      "ESS_2": "Chance of dozing: Watching TV?",
+      "ESS_3": "Chance of dozing: Sitting inactive in a public place (theater/meeting)?",
+      "ESS_4": "Chance of dozing: As a passenger in a car for an hour?",
+      "ESS_5": "Chance of dozing: Lying down to rest in the afternoon?",
+      "ESS_6": "Chance of dozing: Sitting and talking to someone?",
+      "ESS_7": "Chance of dozing: Sitting quietly after lunch without alcohol?",
+      "ESS_8": "Chance of dozing: In a car while stopped for a few minutes in traffic?",
+
+      // STOP-BANG - Sleep Apnea Screening (uses numeric IDs from gateway questions)
+      "19": "Do you snore loudly?",
+      "20": "Has anyone observed you stop breathing during sleep?",
+      "21": "Do you often feel tired, fatigued, or sleepy during daytime?",
+      "27": "Do you have or are you being treated for high blood pressure?",
+    };
+
+    // Map questionnaire names to specific question IDs
+    const questionnaireToQuestionIds: Record<string, string[]> = {
+      // ISI - Insomnia Severity Index
+      "ISI": ["ISI_1", "ISI_2", "ISI_3", "ISI_4", "ISI_5", "ISI_6", "ISI_7"],
+      "Insomnia Severity Index": ["ISI_1", "ISI_2", "ISI_3", "ISI_4", "ISI_5", "ISI_6", "ISI_7"],
+
+      // PHQ-9 - Patient Health Questionnaire
+      "PHQ-9": ["PHQ9_1", "PHQ9_2", "PHQ9_3", "PHQ9_4", "PHQ9_5", "PHQ9_6", "PHQ9_7", "PHQ9_8", "PHQ9_9"],
+      "Patient Health Questionnaire": ["PHQ9_1", "PHQ9_2", "PHQ9_3", "PHQ9_4", "PHQ9_5", "PHQ9_6", "PHQ9_7", "PHQ9_8", "PHQ9_9"],
+
+      // GAD-7 - Generalized Anxiety Disorder
+      "GAD-7": ["GAD7_1", "GAD7_2", "GAD7_3", "GAD7_4", "GAD7_5", "GAD7_6", "GAD7_7"],
+      "Generalized Anxiety Disorder": ["GAD7_1", "GAD7_2", "GAD7_3", "GAD7_4", "GAD7_5", "GAD7_6", "GAD7_7"],
+
+      // ESS - Epworth Sleepiness Scale
+      "ESS": ["ESS_1", "ESS_2", "ESS_3", "ESS_4", "ESS_5", "ESS_6", "ESS_7", "ESS_8"],
+      "Epworth Sleepiness Scale": ["ESS_1", "ESS_2", "ESS_3", "ESS_4", "ESS_5", "ESS_6", "ESS_7", "ESS_8"],
+
+      // STOP-BANG - Sleep Apnea Screening (uses numeric question IDs)
+      "STOP-BANG": ["19", "20", "21", "27"],
+      "STOP-BANG Sleep Apnea Screening": ["19", "20", "21", "27"],
+    };
+
+    const questionIds = questionnaireToQuestionIds[args.questionnaireName];
+
+    if (!questionIds || questionIds.length === 0) {
+      return [];
+    }
+
+    // Get user responses
+    const responses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Map specified question IDs to responses
+    const result: Array<{
+      questionId: string;
+      questionText: string;
+      responseValue: string;
+      responseNumber?: number;
+    }> = [];
+
+    for (const qId of questionIds) {
+      const response = responses.find((r) => r.question_id === qId);
+      if (response && (response.response_value || response.response_number !== undefined)) {
+        result.push({
+          questionId: qId,
+          questionText: questionTexts[qId] || `Question ${qId}`,
+          responseValue: response.response_value || String(response.response_number ?? ""),
+          responseNumber: response.response_number,
+        });
+      }
+    }
+
+    return result;
+  },
+});
+
 // ============================================
 // Mutations
 // ============================================

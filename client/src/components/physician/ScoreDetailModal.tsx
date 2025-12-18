@@ -128,6 +128,19 @@ export function ScoreDetailModal({
     (s) => s.questionnaire_name === score.questionnaire_name
   ) || [];
 
+  // Fetch question responses if not provided
+  const fetchedResponses = useQuery(
+    api.physician.getQuestionnaireResponses,
+    questionResponses.length === 0
+      ? { userId, questionnaireName: score.questionnaire_name }
+      : "skip"
+  );
+
+  // Use provided responses or fetched ones
+  const displayResponses = questionResponses.length > 0
+    ? questionResponses
+    : (fetchedResponses || []);
+
   // LLM interpretation action
   const interpretScore = useAction(api.llm.interpretQuestionnaireScore);
 
@@ -150,7 +163,7 @@ export function ScoreDetailModal({
         score: score.score,
         maxScore,
         severity,
-        questionResponses: questionResponses.map((q) => ({
+        questionResponses: displayResponses.map((q) => ({
           questionId: q.questionId,
           questionText: q.questionText,
           responseValue: q.responseValue,
@@ -301,14 +314,21 @@ export function ScoreDetailModal({
           )}
 
           {/* Question Responses */}
-          {questionResponses.length > 0 && (
-            <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700">
-              <div className="flex items-center gap-2 mb-3">
-                <FileText className="w-4 h-4 text-gray-400" />
-                <h3 className="text-sm font-medium text-gray-400">Individual Responses</h3>
+          <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="w-4 h-4 text-gray-400" />
+              <h3 className="text-sm font-medium text-gray-400">
+                Individual Responses {displayResponses.length > 0 && `(${displayResponses.length} questions)`}
+              </h3>
+            </div>
+            {questionResponses.length === 0 && fetchedResponses === undefined ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+                <span className="ml-2 text-sm text-gray-500">Loading responses...</span>
               </div>
+            ) : displayResponses.length > 0 ? (
               <div className="space-y-3 max-h-60 overflow-y-auto">
-                {questionResponses.map((q, i) => (
+                {displayResponses.map((q, i) => (
                   <div key={i} className="flex items-start justify-between gap-4 p-3 bg-gray-900/50 rounded-lg">
                     <div className="flex-1 min-w-0">
                       <span className="text-xs text-gray-500 font-mono">{q.questionId}</span>
@@ -323,8 +343,13 @@ export function ScoreDetailModal({
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-6 text-gray-500">
+                <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No question responses found for this questionnaire</p>
+              </div>
+            )}
+          </div>
 
           {/* AI Interpretation */}
           <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700">

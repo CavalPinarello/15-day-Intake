@@ -19,7 +19,7 @@ import {
 import { useCircadianTheme } from "@/hooks/useCircadianTheme";
 import { useConvexUser, useJourneyState } from "@/hooks/useConvexUser";
 import { useConvexQuestionnaire, useSectionManager } from "@/hooks/useConvexQuestionnaire";
-import { SignInButton, useAuth } from "@clerk/nextjs";
+import { SignInButton, useAuth, UserButton } from "@clerk/nextjs";
 
 // Section types
 type QuestionnaireSection = "sleepLog" | "assessment";
@@ -368,9 +368,12 @@ export default function JourneyPage() {
       <header className={`${isWarm ? "bg-gradient-to-r from-[#F28C40] to-[#D97706]" : `bg-gradient-to-r ${sectionStyle.gradient}`} text-white`}>
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-3">
-            <Link href="/dashboard" className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-              <Home className="w-5 h-5" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/dashboard" className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                <Home className="w-5 h-5" />
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </div>
             <div className="flex items-center gap-2">
               <SectionIcon className="w-5 h-5" />
               <span className="font-semibold">{sectionStyle.title}</span>
