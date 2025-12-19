@@ -19,6 +19,7 @@ import {
   Settings,
   LayoutDashboard,
   List,
+  Code,
 } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
 
@@ -31,6 +32,7 @@ interface PatientData {
   last_accessed: number;
   progress_percentage: number;
   review_status?: string;
+  developer_mode?: boolean;
 }
 
 type ReviewStatus =
@@ -349,6 +351,12 @@ export default function PhysicianDashboard() {
                             <h3 className="font-semibold text-gray-900 truncate">
                               {patient.name || patient.username}
                             </h3>
+                            {/* Developer Mode Badge */}
+                            {patient.developer_mode && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                                <Code className="w-3 h-3" />
+                              </span>
+                            )}
                             <span
                               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}
                             >

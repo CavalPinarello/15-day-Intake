@@ -62,6 +62,7 @@ class MockPlaybackController: ObservableObject {
     func cancel() {
         isCancelled = true
         generationTask?.cancel()
+        progress.markComplete()  // Freeze the elapsed time
         state = .cancelled
     }
 
@@ -190,7 +191,36 @@ class MockPlaybackController: ObservableObject {
                 log("Scores warning: \(error.localizedDescription)")
             }
 
+            // Sync gateway states to Convex and local QuestionnaireManager
+            log("Syncing gateway states...")
+            for gatewayType in GatewayType.allCases {
+                let isTriggered = generator.gatewaysToTrigger.contains(gatewayType)
+                do {
+                    try await convexService.updateGatewayState(
+                        gatewayId: gatewayType.rawValue,
+                        isTriggered: isTriggered,
+                        triggerQuestionId: nil,
+                        triggerValue: nil
+                    )
+                } catch {
+                    log("Gateway sync warning for \(gatewayType.rawValue): \(error.localizedDescription)")
+                }
+            }
+            log("Gateway states synced to Convex")
+
+            // Update local QuestionnaireManager gateway states to match
+            for i in 0..<questionnaireManager.gatewayStates.count {
+                let gatewayType = questionnaireManager.gatewayStates[i].gatewayType
+                let isTriggered = generator.gatewaysToTrigger.contains(gatewayType)
+                questionnaireManager.gatewayStates[i].triggered = isTriggered
+                if isTriggered {
+                    questionnaireManager.gatewayStates[i].triggeredAt = Date()
+                }
+            }
+            log("Local gateway states updated")
+
             // Success!
+            progress.markComplete()  // Freeze the elapsed time
             state = .completed
             log("Mock data generation complete! Generated \(progress.totalQuestionsAnswered) answers.")
 
@@ -199,6 +229,7 @@ class MockPlaybackController: ObservableObject {
 
         } catch {
             if !isCancelled {
+                progress.markComplete()  // Freeze the elapsed time
                 log("FAILED: \(error.localizedDescription)")
                 state = .failed(error.localizedDescription)
             }
@@ -224,6 +255,13 @@ class MockPlaybackController: ObservableObject {
 
             // Generate mock answer
             let mockResponse = generator.generateAnswer(for: question, dayNumber: dayNumber)
+
+            // Skip empty responses (e.g., name field that should preserve user's real name)
+            if mockResponse.isEmpty {
+                progress.currentAnswer = "(skipped - preserving existing value)"
+                continue
+            }
+
             progress.currentAnswer = generator.displayValue(for: mockResponse)
             progress.totalQuestionsAnswered += 1
 

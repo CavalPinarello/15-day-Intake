@@ -146,7 +146,24 @@ export function ScoreDetailModal({
 
   const severity = getSeverityForScore(score.questionnaire_name, score.score);
   const colors = severityColors[severity];
-  const maxScore = score.max_score || 28;
+
+  // Get correct max score for each questionnaire type
+  const questionnaireMaxScores: Record<string, number> = {
+    "ISI": 28,
+    "Insomnia Severity Index": 28,
+    "PHQ-9": 27,
+    "Patient Health Questionnaire": 27,
+    "GAD-7": 21,
+    "Generalized Anxiety Disorder": 21,
+    "ESS": 24,
+    "Epworth Sleepiness Scale": 24,
+    "STOP-BANG": 8,
+    "STOP-BANG Sleep Apnea Screening": 8,
+    "PSQI": 21,
+    "Pittsburgh Sleep Quality Index": 21,
+    "DBAS-16": 160,
+  };
+  const maxScore = score.max_score || questionnaireMaxScores[score.questionnaire_name] || 28;
   const percentage = Math.round((score.score / maxScore) * 100);
 
   // Calculate trend from historical scores

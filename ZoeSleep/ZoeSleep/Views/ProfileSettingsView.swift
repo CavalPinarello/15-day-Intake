@@ -19,6 +19,8 @@ struct ProfileSettingsView: View {
     @State private var showingAdvanceDayConfirmation = false
     @State private var showingResetJourneyConfirmation = false
     @State private var isAdvancingDay = false
+    @State private var isRepairingSleepData = false
+    @State private var repairSleepDataResult: String?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -430,10 +432,63 @@ struct ProfileSettingsView: View {
             }
             .accessibleTapTarget()
 
+            // Repair Sleep Insights Data
+            Button {
+                repairSleepInsightsData()
+            } label: {
+                HStack {
+                    Label("Repair Sleep Insights", systemImage: "wrench.and.screwdriver.fill")
+                        .foregroundColor(.blue)
+
+                    Spacer()
+
+                    if isRepairingSleepData {
+                        ProgressView()
+                            .tint(.blue)
+                    } else if let result = repairSleepDataResult {
+                        Text(result)
+                            .font(.caption)
+                            .foregroundColor(result.contains("Error") ? .red : .green)
+                    }
+                }
+            }
+            .accessibleTapTarget()
+            .disabled(isRepairingSleepData)
+
+            // Developer Panel (full controls)
+            NavigationLink {
+                DevPanelView(currentDay: $questionnaireManager.currentDay)
+                    .environmentObject(themeManager)
+                    .environmentObject(questionnaireManager)
+            } label: {
+                Label("Developer Panel", systemImage: "gearshape.2.fill")
+                    .foregroundColor(.orange)
+            }
+            .accessibleTapTarget()
+
+            #if DEBUG
+            // Mock Data Generator
+            NavigationLink {
+                MockPlaybackView()
+                    .environmentObject(themeManager)
+                    .environmentObject(questionnaireManager)
+            } label: {
+                HStack {
+                    Label("Generate Mock Data", systemImage: "wand.and.stars")
+                        .foregroundColor(.purple)
+                    Spacer()
+                    Text("15 days")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .accessibleTapTarget()
+            #endif
+
         } header: {
             Text("Developer")
         } footer: {
-            Text("Debug mode enables testing features. Use 'Advance to Next Day' to skip waiting.")
+            Text("Debug mode enables testing features. Use 'Generate Mock Data' to create 15 days of test questionnaire responses.")
                 .font(.caption)
         }
     }
@@ -546,6 +601,27 @@ struct ProfileSettingsView: View {
                 }
             } catch {
                 print("Failed to reset progress: \(error)")
+            }
+        }
+    }
+
+    private func repairSleepInsightsData() {
+        isRepairingSleepData = true
+        repairSleepDataResult = nil
+
+        Task {
+            do {
+                let daysProcessed = try await ConvexService.shared.computeAllSleepMetricsFromResponses()
+                await MainActor.run {
+                    repairSleepDataResult = "\(daysProcessed) days"
+                    isRepairingSleepData = false
+                }
+            } catch {
+                await MainActor.run {
+                    repairSleepDataResult = "Error"
+                    isRepairingSleepData = false
+                    print("Failed to repair sleep data: \(error)")
+                }
             }
         }
     }

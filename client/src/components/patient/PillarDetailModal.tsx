@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { X, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { X, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Clock, Loader2 } from "lucide-react";
 import { PILLARS, PillarKey } from "./PillarSummaryCard";
 
 interface PillarStatus {
@@ -71,11 +72,28 @@ export function PillarDetailModal({
 }: PillarDetailModalProps) {
   const pillarInfo = PILLARS[pillar];
 
+  // Track which pillar we're currently querying to detect stale data
+  const [queryPillar, setQueryPillar] = useState<PillarKey | null>(null);
+
+  // Reset query pillar when modal opens with a new pillar
+  useEffect(() => {
+    if (isOpen) {
+      setQueryPillar(pillar);
+    } else {
+      // Clear when modal closes to ensure fresh data on next open
+      setQueryPillar(null);
+    }
+  }, [isOpen, pillar]);
+
   // Query pillar questions and responses
   const pillarResponses = useQuery(
     api.physician.getPillarResponses,
     isOpen ? { userId, pillarName: pillarInfo.name } : "skip"
   );
+
+  // Check if query result matches current pillar (prevents showing stale data)
+  const isDataStale = queryPillar !== pillar;
+  const isLoading = !pillarResponses || isDataStale;
 
   if (!isOpen) return null;
 
@@ -187,7 +205,7 @@ export function PillarDetailModal({
         {/* Content */}
         <div className="overflow-y-auto max-h-[50vh] px-6 py-4 space-y-6">
           {/* Clinical Summary (if available) */}
-          {pillarResponses?.clinicalSummary && (
+          {!isLoading && pillarResponses?.clinicalSummary && (
             <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
               <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,14 +245,15 @@ export function PillarDetailModal({
           )}
 
           {/* Loading State */}
-          {!pillarResponses && (
+          {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-600 border-t-teal-500" />
+              <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+              <span className="ml-2 text-gray-400">Loading {pillarInfo.name} data...</span>
             </div>
           )}
 
           {/* Answered Questions */}
-          {answeredQuestions.length > 0 && (
+          {!isLoading && answeredQuestions.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
@@ -269,7 +288,7 @@ export function PillarDetailModal({
           )}
 
           {/* Unanswered Questions */}
-          {unansweredQuestions.length > 0 && (
+          {!isLoading && unansweredQuestions.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-gray-500" />
@@ -297,7 +316,7 @@ export function PillarDetailModal({
           )}
 
           {/* Empty State */}
-          {pillarResponses && pillarResponses.questions.length === 0 && (
+          {!isLoading && pillarResponses && pillarResponses.questions.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-500">No questions found for this pillar</p>
             </div>

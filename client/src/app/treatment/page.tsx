@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import {
   CheckCircle,
@@ -20,23 +23,9 @@ import {
   Sparkles,
   ArrowLeft,
   Settings,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
-
-interface TreatmentTask {
-  id: string;
-  name: string;
-  category: string;
-  instructions: string;
-  timing: string;
-  frequency: string;
-  isCompleted: boolean;
-}
-
-interface DayHistory {
-  date: string;
-  completedTasks: number;
-  totalTasks: number;
-}
 
 const timingIcons: Record<string, React.ReactNode> = {
   Morning: <Sun className="w-4 h-4" />,
@@ -54,55 +43,6 @@ const timingColors: Record<string, { bg: string; text: string; border: string }>
   "With meals": { bg: "bg-green-50", text: "text-green-700", border: "border-green-200" },
 };
 
-// Sample treatment tasks - in production these would come from the physician dashboard
-const sampleTasks: TreatmentTask[] = [
-  {
-    id: "1",
-    name: "Morning Light Exposure",
-    category: "Sleep Hygiene",
-    instructions: "Get 15-30 minutes of bright light within 1 hour of waking",
-    timing: "Morning",
-    frequency: "Daily",
-    isCompleted: false,
-  },
-  {
-    id: "2",
-    name: "Caffeine Cutoff",
-    category: "Sleep Hygiene",
-    instructions: "No caffeine after 2 PM",
-    timing: "Afternoon",
-    frequency: "Daily",
-    isCompleted: false,
-  },
-  {
-    id: "3",
-    name: "Screen-Free Wind Down",
-    category: "Sleep Hygiene",
-    instructions: "Turn off all screens 1 hour before bed",
-    timing: "Evening",
-    frequency: "Daily",
-    isCompleted: false,
-  },
-  {
-    id: "4",
-    name: "Relaxation Practice",
-    category: "Stress Management",
-    instructions: "Practice deep breathing or progressive muscle relaxation for 10 minutes",
-    timing: "Before bed",
-    frequency: "Daily",
-    isCompleted: false,
-  },
-  {
-    id: "5",
-    name: "Consistent Bedtime",
-    category: "Sleep Schedule",
-    instructions: "Get into bed at the same time each night (within 30 minutes)",
-    timing: "Before bed",
-    frequency: "Daily",
-    isCompleted: false,
-  },
-];
-
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Good morning";
@@ -112,110 +52,194 @@ function getGreeting(): string {
 }
 
 export default function TreatmentPage() {
-  const [tasks, setTasks] = useState<TreatmentTask[]>([]);
   const [showNoteModal, setShowNoteModal] = useState(false);
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<Id<"user_interventions"> | null>(null);
   const [noteText, setNoteText] = useState("");
-  const [weekHistory, setWeekHistory] = useState<DayHistory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadTreatmentData();
-  }, []);
+  // Get user ID from localStorage (set during login)
+  const storedUserId = typeof window !== "undefined" ? localStorage.getItem("convex_user_id") : null;
+  const userId = storedUserId as Id<"users"> | null;
 
-  const loadTreatmentData = () => {
-    setIsLoading(true);
+  // Convex queries
+  const activeInterventions = useQuery(
+    api.treatment.getActiveInterventions,
+    userId ? { userId } : "skip"
+  );
+
+  const todaySummary = useQuery(
+    api.treatment.getTodayTasksSummary,
+    userId ? { userId } : "skip"
+  );
+
+  const complianceHistory = useQuery(
+    api.treatment.getComplianceHistory,
+    userId ? { userId, days: 7 } : "skip"
+  );
+
+  const treatmentPhase = useQuery(
+    api.treatment.getTreatmentPhase,
+    userId ? { userId } : "skip"
+  );
+
+  // Convex mutations
+  const completeTask = useMutation(api.treatment.completeTask);
+  const uncompleteTask = useMutation(api.treatment.uncompleteTask);
+  const addTaskNote = useMutation(api.treatment.addTaskNote);
+
+  const handleToggleTask = async (taskId: Id<"user_interventions">, isCurrentlyCompleted: boolean) => {
     try {
-      // Load tasks from localStorage or use defaults
-      const savedTasks = localStorage.getItem('treatmentTasks');
-      if (savedTasks) {
-        setTasks(JSON.parse(savedTasks));
+      if (isCurrentlyCompleted) {
+        await uncompleteTask({ userInterventionId: taskId });
       } else {
-        setTasks(sampleTasks);
-        localStorage.setItem('treatmentTasks', JSON.stringify(sampleTasks));
-      }
-
-      // Load week history
-      const savedHistory = localStorage.getItem('treatmentHistory');
-      if (savedHistory) {
-        setWeekHistory(JSON.parse(savedHistory));
-      } else {
-        // Generate empty history for last 7 days
-        const history: DayHistory[] = [];
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          history.push({
-            date: date.toISOString().split('T')[0],
-            completedTasks: 0,
-            totalTasks: sampleTasks.length,
-          });
-        }
-        setWeekHistory(history);
+        await completeTask({ userInterventionId: taskId });
       }
     } catch (error) {
-      console.error('Error loading treatment data:', error);
-    } finally {
-      setIsLoading(false);
+      console.error("Error toggling task:", error);
     }
   };
 
-  const handleToggleTask = (taskId: string) => {
-    setTasks(prev => {
-      const updated = prev.map(task =>
-        task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task
-      );
-      localStorage.setItem('treatmentTasks', JSON.stringify(updated));
-
-      // Update today's history
-      const today = new Date().toISOString().split('T')[0];
-      const completedCount = updated.filter(t => t.isCompleted).length;
-      setWeekHistory(prevHistory => {
-        const updatedHistory = prevHistory.map(day =>
-          day.date === today
-            ? { ...day, completedTasks: completedCount }
-            : day
-        );
-        localStorage.setItem('treatmentHistory', JSON.stringify(updatedHistory));
-        return updatedHistory;
-      });
-
-      return updated;
-    });
-  };
-
-  const handleSaveNote = () => {
+  const handleSaveNote = async () => {
     if (!activeTaskId || !noteText.trim()) return;
-    // Save note to localStorage
-    const notes = JSON.parse(localStorage.getItem('treatmentNotes') || '{}');
-    notes[activeTaskId] = notes[activeTaskId] || [];
-    notes[activeTaskId].push({
-      text: noteText,
-      date: new Date().toISOString(),
-    });
-    localStorage.setItem('treatmentNotes', JSON.stringify(notes));
-    setNoteText("");
-    setShowNoteModal(false);
-    setActiveTaskId(null);
+    try {
+      await addTaskNote({
+        userInterventionId: activeTaskId,
+        noteText: noteText.trim(),
+      });
+      setNoteText("");
+      setShowNoteModal(false);
+      setActiveTaskId(null);
+    } catch (error) {
+      console.error("Error saving note:", error);
+    }
   };
 
   // Group tasks by timing
-  const tasksByTiming = tasks.reduce((acc, task) => {
+  const tasksByTiming = (activeInterventions || []).reduce((acc, task) => {
     const timing = task.timing || "Anytime";
     if (!acc[timing]) acc[timing] = [];
     acc[timing].push(task);
     return acc;
-  }, {} as Record<string, TreatmentTask[]>);
+  }, {} as Record<string, typeof activeInterventions>);
 
   // Calculate progress
-  const completedCount = tasks.filter(t => t.isCompleted).length;
-  const totalCount = tasks.length;
-  const completionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const completionPercentage = todaySummary?.completionPercentage || 0;
+  const completedCount = todaySummary?.completedTasks || 0;
+  const totalCount = todaySummary?.totalTasks || 0;
 
-  if (isLoading) {
+  // Loading state
+  if (!userId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-amber-500" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Not Logged In</h2>
+          <p className="text-gray-600 mb-4">
+            Please log in to view your treatment tasks.
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Go to Login
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeInterventions === undefined || todaySummary === undefined) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
+          <span className="text-gray-600">Loading treatment tasks...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user is in treatment phase
+  if (treatmentPhase && treatmentPhase.phase === "intake") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50">
+        <header className="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Link href="/dashboard" className="p-2 hover:bg-gray-100 rounded-full">
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Treatment Tasks</h1>
+                <p className="text-sm text-gray-500">{getGreeting()}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-2xl mx-auto px-4 py-12">
+          <div className="text-center bg-white rounded-2xl border border-gray-200 p-8">
+            <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-8 h-8 text-teal-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Complete Your Assessment First
+            </h2>
+            <p className="text-gray-600 mb-2">
+              You're on day {treatmentPhase.intakeDay} of your 15-day intake assessment.
+            </p>
+            <p className="text-gray-500 text-sm mb-6">
+              Once you complete the assessment, your physician will create a personalized
+              treatment plan just for you.
+            </p>
+            <Link
+              href="/journey"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors"
+            >
+              Continue Assessment
+              <ChevronRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Check if waiting for physician
+  if (treatmentPhase && treatmentPhase.phase === "completed" && totalCount === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50">
+        <header className="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Link href="/dashboard" className="p-2 hover:bg-gray-100 rounded-full">
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Treatment Tasks</h1>
+                <p className="text-sm text-gray-500">{getGreeting()}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-2xl mx-auto px-4 py-12">
+          <div className="text-center bg-white rounded-2xl border border-gray-200 p-8">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-8 h-8 text-amber-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Assessment Complete!
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Great job completing your 15-day assessment. Your physician is now reviewing
+              your results and creating a personalized treatment plan.
+            </p>
+            <p className="text-gray-500 text-sm">
+              You'll receive a notification when your treatment plan is ready.
+            </p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -232,7 +256,10 @@ export default function TreatmentPage() {
               </Link>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Treatment Tasks</h1>
-                <p className="text-sm text-gray-500">{getGreeting()}</p>
+                <p className="text-sm text-gray-500">
+                  {getGreeting()}
+                  {treatmentPhase?.treatmentWeek && ` • Week ${treatmentPhase.treatmentWeek}`}
+                </p>
               </div>
             </div>
             <Link href="/settings" className="p-2 hover:bg-gray-100 rounded-full">
@@ -288,9 +315,11 @@ export default function TreatmentPage() {
         {/* Tasks by Time of Day */}
         <section className="space-y-6">
           {Object.entries(tasksByTiming).map(([timing, timingTasks]) => {
+            if (!timingTasks || timingTasks.length === 0) return null;
+
             const colors = timingColors[timing] || timingColors.Morning;
             const icon = timingIcons[timing] || <Clock className="w-4 h-4" />;
-            const completedInTiming = timingTasks.filter(t => t.isCompleted).length;
+            const completedInTiming = timingTasks.filter(t => t.todayCompleted).length;
 
             return (
               <div key={timing}>
@@ -307,9 +336,9 @@ export default function TreatmentPage() {
                 <div className="space-y-3">
                   {timingTasks.map((task) => (
                     <div
-                      key={task.id}
+                      key={task._id}
                       className={`bg-white rounded-xl border transition-all ${
-                        task.isCompleted
+                        task.todayCompleted
                           ? "border-green-200 bg-green-50/50"
                           : "border-gray-200 hover:border-teal-300 hover:shadow-sm"
                       }`}
@@ -318,14 +347,14 @@ export default function TreatmentPage() {
                         <div className="flex items-start gap-4">
                           {/* Checkbox */}
                           <button
-                            onClick={() => handleToggleTask(task.id)}
+                            onClick={() => handleToggleTask(task._id, task.todayCompleted)}
                             className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                              task.isCompleted
+                              task.todayCompleted
                                 ? "bg-green-500 border-green-500"
                                 : "border-gray-300 hover:border-teal-500"
                             }`}
                           >
-                            {task.isCompleted && (
+                            {task.todayCompleted && (
                               <CheckCircle className="w-4 h-4 text-white" />
                             )}
                           </button>
@@ -335,34 +364,38 @@ export default function TreatmentPage() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <h4
                                 className={`font-medium ${
-                                  task.isCompleted
+                                  task.todayCompleted
                                     ? "text-gray-500 line-through"
                                     : "text-gray-900"
                                 }`}
                               >
                                 {task.name}
                               </h4>
-                              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                                {task.category}
-                              </span>
+                              {task.category && (
+                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                                  {task.category}
+                                </span>
+                              )}
                             </div>
                             <p
                               className={`text-sm mt-1 ${
-                                task.isCompleted ? "text-gray-400" : "text-gray-600"
+                                task.todayCompleted ? "text-gray-400" : "text-gray-600"
                               }`}
                             >
-                              {task.instructions}
+                              {task.custom_instructions || task.instructions}
                             </p>
-                            <p className="text-xs text-gray-400 mt-2">
-                              <Clock className="w-3 h-3 inline mr-1" />
-                              {task.frequency}
-                            </p>
+                            {task.frequency && (
+                              <p className="text-xs text-gray-400 mt-2">
+                                <Clock className="w-3 h-3 inline mr-1" />
+                                {task.frequency}
+                              </p>
+                            )}
                           </div>
 
                           {/* Note Button */}
                           <button
                             onClick={() => {
-                              setActiveTaskId(task.id);
+                              setActiveTaskId(task._id);
                               setShowNoteModal(true);
                             }}
                             className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
@@ -379,29 +412,22 @@ export default function TreatmentPage() {
             );
           })}
 
-          {tasks.length === 0 && (
+          {totalCount === 0 && (
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
               <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 No treatment tasks yet
               </h3>
               <p className="text-gray-500 max-w-sm mx-auto">
-                Complete your 15-day intake to receive personalized treatment
-                recommendations from your physician.
+                Your physician hasn't assigned any treatment tasks yet.
+                Check back soon!
               </p>
-              <Link
-                href="/journey"
-                className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-              >
-                Continue Journey
-                <ChevronRight className="w-4 h-4" />
-              </Link>
             </div>
           )}
         </section>
 
         {/* Weekly Progress */}
-        {weekHistory.length > 0 && (
+        {complianceHistory && complianceHistory.length > 0 && (
           <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
               <TrendingUp className="w-5 h-5 text-teal-600" />
@@ -409,7 +435,7 @@ export default function TreatmentPage() {
             </h3>
 
             <div className="flex justify-between gap-2">
-              {weekHistory.map((day) => {
+              {complianceHistory.slice().reverse().map((day) => {
                 const percentage = day.totalTasks > 0
                   ? Math.round((day.completedTasks / day.totalTasks) * 100)
                   : 0;
@@ -418,7 +444,7 @@ export default function TreatmentPage() {
                 return (
                   <div key={day.date} className="flex-1 text-center">
                     <div
-                      className={`h-16 rounded-lg flex items-end justify-center mb-2 overflow-hidden ${
+                      className={`h-16 rounded-lg flex items-end justify-center mb-2 overflow-hidden bg-gray-100 ${
                         isToday ? "ring-2 ring-teal-500" : ""
                       }`}
                     >

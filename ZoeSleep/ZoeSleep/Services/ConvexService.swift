@@ -1091,6 +1091,167 @@ extension ConvexService {
     }
 }
 
+// MARK: - Sleep Insights Response Types
+
+struct SleepDashboardSummary: Codable {
+    let daysOfData: Int
+    let hasEnoughForInsights: Bool
+    let hasEnoughForPatterns: Bool
+    let daysUntilInsights: Int
+    let daysUntilPatterns: Int
+    let weeklyAverage: WeeklyAverageData
+    let lastNight: LastNightData?
+    let lastSyncTime: Double?
+
+    struct WeeklyAverageData: Codable {
+        let sleepMins: Int
+        let efficiency: Int
+        let deepMins: Int
+        let remMins: Int
+    }
+
+    struct LastNightData: Codable {
+        let date: String
+        let totalSleepMins: Int?
+        let efficiency: Double?
+        let deepMins: Int?
+        let remMins: Int?
+        let primarySource: String?
+    }
+}
+
+struct PerceptionVsRealityData: Codable {
+    let daysCount: Int
+    let comparisonsCount: Int
+    let comparisons: [DailyComparisonData]
+    let lastNightSubjective: SubjectiveData?
+    let lastNightObjective: ObjectiveData?
+    let lastNightDate: String?
+    let correlation: Double?
+    let gapTrend: GapTrendData?
+
+    struct DailyComparisonData: Codable {
+        let date: String
+        let subjective: SubjectiveData
+        let objective: ObjectiveData
+        let gap: GapData
+    }
+
+    struct SubjectiveData: Codable {
+        let quality: Double
+    }
+
+    struct ObjectiveData: Codable {
+        let totalSleepMins: Int
+        let efficiency: Double
+        let deepSleepMins: Int?
+        let remSleepMins: Int?
+    }
+
+    struct GapData: Codable {
+        let gap: Double
+        let direction: String
+        let magnitude: Double
+    }
+
+    struct GapTrendData: Codable {
+        let avgGap: Double
+        let consistentUnderestimate: Bool
+        let confidence: Double
+    }
+}
+
+struct SleepPatternsData: Codable {
+    let workdayWeekend: WorkdayWeekendData?
+    let optimalBedtime: OptimalBedtimeData?
+    let sleepStages: SleepStagesData?
+    let dataPoints: Int
+
+    struct WorkdayWeekendData: Codable {
+        let workdayAvgSleep: Int
+        let weekendAvgSleep: Int
+        let workdayAvgDeep: Int
+        let weekendAvgDeep: Int
+        let workdayAvgEfficiency: Int
+        let weekendAvgEfficiency: Int
+        let sleepDifference: Int
+        let deepDifference: Int
+    }
+
+    struct OptimalBedtimeData: Codable {
+        let time: String
+        let avgLatencyMinutes: Int
+        let latencyDiff: Int
+        let confidence: Double
+    }
+
+    struct SleepStagesData: Codable {
+        let avgDeepPercent: Double
+        let avgRemPercent: Double
+        let avgLightPercent: Double
+        let deepBelowRecommended: Bool
+        let remBelowRecommended: Bool
+    }
+}
+
+struct GeneratedInsight: Codable {
+    let id: String
+    let type: String
+    let title: String
+    let text: String
+    let confidence: Double
+    let actionable: Bool
+}
+
+// MARK: - Sleep Insights Queries
+
+extension ConvexService {
+    /// Get dashboard summary with day counts and weekly averages
+    func getSleepDashboardSummary() async throws -> SleepDashboardSummary {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("sleepInsights:getDashboardSummary", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Get perception vs reality comparison data
+    func getPerceptionVsReality(days: Int = 14) async throws -> PerceptionVsRealityData {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("sleepInsights:getPerceptionVsReality", args: [
+            "userId": userId,
+            "days": days
+        ])
+    }
+
+    /// Detect sleep patterns (workday vs weekend, optimal bedtime, stages)
+    func detectSleepPatterns() async throws -> SleepPatternsData? {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("sleepInsights:detectPatterns", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Generate actionable insights
+    func generateSleepInsights() async throws -> [GeneratedInsight] {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("sleepInsights:generateInsights", args: [
+            "userId": userId
+        ])
+    }
+}
+
 // MARK: - Dashboard Data Computation (for Mock Generator)
 
 extension ConvexService {
@@ -1106,6 +1267,25 @@ extension ConvexService {
             "dayNumber": dayNumber,
             "date": date
         ])
+    }
+
+    /// Retroactively compute sleep metrics for ALL existing CSD_ questionnaire responses
+    /// This populates the dashboard's sleep data from historical questionnaire data
+    func computeAllSleepMetricsFromResponses() async throws -> Int {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        struct ComputeResult: Decodable {
+            let success: Bool
+            let daysProcessed: Int
+        }
+
+        let result: ComputeResult = try await client.mutation("healthkit:computeAllSleepMetricsFromResponses", args: [
+            "userId": userId
+        ])
+
+        return result.daysProcessed
     }
 
     /// Persist calculated questionnaire scores to questionnaire_scores table
@@ -1136,6 +1316,219 @@ struct DeviceInfo {
             osVersion: UIDevice.current.systemVersion,
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
         )
+    }
+}
+
+// MARK: - Treatment Types
+
+struct ActiveIntervention: Codable, Identifiable {
+    let _id: String
+    let intervention_id: String
+    let name: String
+    let category: String?
+    let instructions: String
+    let start_date: String
+    let end_date: String?
+    let frequency: String?
+    let timing: String?
+    let custom_instructions: String?
+    let status: String
+    let todayCompleted: Bool
+
+    var id: String { _id }
+}
+
+struct TreatmentPhaseInfo: Codable {
+    let phase: String
+    let intakeDay: Int
+    let intakeComplete: Bool
+    let treatmentStartDate: String?
+    let treatmentWeek: Int?
+    let activeInterventionCount: Int
+}
+
+struct ComplianceHistoryDay: Codable {
+    let date: String
+    let totalTasks: Int
+    let completedTasks: Int
+    let tasks: [TaskCompletion]
+
+    struct TaskCompletion: Codable {
+        let name: String
+        let completed: Bool
+        let completedAt: Double?
+    }
+}
+
+struct TasksSummary: Codable {
+    let totalTasks: Int
+    let completedTasks: Int
+    let pendingTasks: Int
+    let completionPercentage: Int
+    let nextTask: NextTask?
+
+    struct NextTask: Codable {
+        let name: String
+        let timing: String?
+        let instructions: String
+    }
+}
+
+struct CompleteTaskResponse: Codable {
+    let complianceId: String
+}
+
+struct AddNoteResponse: Codable {
+    let noteId: String
+}
+
+// MARK: - Treatment Queries
+
+extension ConvexService {
+    /// Get all active treatment tasks for today
+    func getActiveInterventions() async throws -> [ActiveIntervention] {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("treatment:getActiveInterventions", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Get treatment phase info (intake, treatment, completed)
+    func getTreatmentPhase() async throws -> TreatmentPhaseInfo {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("treatment:getTreatmentPhase", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Get today's tasks summary
+    func getTodayTasksSummary() async throws -> TasksSummary {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("treatment:getTodayTasksSummary", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Get compliance history for past N days
+    func getComplianceHistory(days: Int = 7) async throws -> [ComplianceHistoryDay] {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("treatment:getComplianceHistory", args: [
+            "userId": userId,
+            "days": days
+        ])
+    }
+
+    /// Complete a treatment task
+    func completeTask(userInterventionId: String, note: String? = nil) async throws -> String {
+        var args: [String: Any] = [
+            "userInterventionId": userInterventionId
+        ]
+        if let note = note {
+            args["note"] = note
+        }
+
+        let response: CompleteTaskResponse = try await client.mutation("treatment:completeTask", args: args)
+        return response.complianceId
+    }
+
+    /// Uncomplete a treatment task (undo)
+    func uncompleteTask(userInterventionId: String) async throws {
+        let _: SuccessResponse = try await client.mutation("treatment:uncompleteTask", args: [
+            "userInterventionId": userInterventionId
+        ])
+    }
+
+    /// Add a note to a treatment task
+    func addTaskNote(userInterventionId: String, noteText: String, moodRating: Int? = nil) async throws -> String {
+        var args: [String: Any] = [
+            "userInterventionId": userInterventionId,
+            "noteText": noteText
+        ]
+        if let mood = moodRating {
+            args["moodRating"] = mood
+        }
+
+        let response: AddNoteResponse = try await client.mutation("treatment:addTaskNote", args: args)
+        return response.noteId
+    }
+}
+
+// MARK: - Multi-Source Sleep Data Types
+
+struct MultiSourceSleepData: Codable {
+    let hasMultipleSources: Bool
+    let sources: [String]
+    let sourceStats: [SourceStat]
+    let comparisonData: [ComparisonDataPoint]
+    let totalDays: Int
+
+    struct SourceStat: Codable {
+        let source: String
+        let dataPoints: Int
+        let avgEfficiency: Double?
+        let avgSleepHours: Double?
+        let hasDeepSleep: Bool
+        let hasHeartRate: Bool
+    }
+
+    struct ComparisonDataPoint: Codable {
+        let date: String
+        let sources: [String: SourceDayData?]
+
+        struct SourceDayData: Codable {
+            let totalSleepMins: Int?
+            let efficiency: Double?
+            let deepMins: Int?
+            let remMins: Int?
+            let lightMins: Int?
+        }
+    }
+}
+
+struct SourceDetail: Codable {
+    let source: String
+    let hasSleepStages: Bool
+    let hasHeartRate: Bool
+    let hasHrv: Bool
+    let qualityScore: Int
+}
+
+// MARK: - Multi-Source Sleep Data Queries
+
+extension ConvexService {
+    /// Get multi-source sleep data for comparison chart
+    func getMultiSourceSleepData(days: Int = 15) async throws -> MultiSourceSleepData {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("healthkit:getMultiSourceSleepData", args: [
+            "userId": userId,
+            "days": days
+        ])
+    }
+
+    /// Get source details (capabilities for each wearable)
+    func getSourceDetails() async throws -> [SourceDetail] {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("healthkit:getSourceDetails", args: [
+            "userId": userId
+        ])
     }
 }
 

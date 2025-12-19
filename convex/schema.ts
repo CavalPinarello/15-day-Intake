@@ -42,6 +42,8 @@ export default defineSchema({
     profile_picture: v.optional(v.string()),
     // Clerk integration (web auth)
     clerk_id: v.optional(v.string()), // Clerk user ID for web authentication
+    // Developer mode (for testers)
+    developer_mode: v.optional(v.boolean()), // Enables fast-track testing (skip time gates, instant day unlock)
   })
     .index("by_username", ["username"])
     .index("by_email", ["email"])
@@ -978,5 +980,212 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_user_day", ["user_id", "day_number"])
     .index("by_user_day_section", ["user_id", "day_number", "section"]),
+
+  // ============================================
+  // Gamification System - "Strava for Sleep"
+  // ============================================
+
+  // User streaks - tracks daily engagement consistency
+  user_streaks: defineTable({
+    user_id: v.id("users"),
+    current_streak: v.number(), // Current consecutive days
+    longest_streak: v.number(), // Personal best
+    last_activity_date: v.string(), // YYYY-MM-DD of last activity
+    streak_frozen_until: v.optional(v.string()), // Date until streak freeze expires
+    freeze_count_this_week: v.number(), // Freezes used this week (max 1)
+    week_start_date: v.string(), // YYYY-MM-DD for freeze reset tracking
+    total_days_completed: v.number(), // Lifetime count
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"]),
+
+  // Achievement badges
+  user_badges: defineTable({
+    user_id: v.id("users"),
+    badge_id: v.string(), // e.g., "first_step", "week_warrior", "journey_master"
+    badge_name: v.string(), // Display name
+    badge_description: v.string(), // Description of how to earn
+    badge_category: v.string(), // "journey", "quality", "clinical", "streak"
+    badge_icon: v.string(), // Icon name or emoji
+    earned_at: v.number(),
+    // Progress tracking for in-progress badges
+    progress_current: v.optional(v.number()),
+    progress_target: v.optional(v.number()),
+    is_earned: v.boolean(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_badge", ["user_id", "badge_id"])
+    .index("by_category", ["badge_category"]),
+
+  // Badge definitions (master list)
+  badge_definitions: defineTable({
+    badge_id: v.string(),
+    name: v.string(),
+    description: v.string(),
+    category: v.string(), // "journey", "quality", "clinical", "streak"
+    icon: v.string(),
+    // Unlock conditions
+    unlock_type: v.string(), // "day_complete", "streak_count", "assessment_complete", "behavior"
+    unlock_threshold: v.optional(v.number()), // e.g., 7 for "7-day streak"
+    unlock_condition_json: v.optional(v.string()), // Complex conditions as JSON
+    // Rewards
+    xp_reward: v.number(), // XP earned when badge unlocked
+    // Display
+    rarity: v.string(), // "common", "uncommon", "rare", "epic", "legendary"
+    order_index: v.number(),
+    is_active: v.boolean(),
+    created_at: v.number(),
+  })
+    .index("by_badge_id", ["badge_id"])
+    .index("by_category", ["category"])
+    .index("by_rarity", ["rarity"]),
+
+  // XP and level progression
+  user_xp: defineTable({
+    user_id: v.id("users"),
+    total_xp: v.number(), // Lifetime XP
+    current_level: v.number(), // 1-5 (Sleep Novice to Sleep Master)
+    level_name: v.string(), // "Sleep Novice", "Sleep Student", etc.
+    xp_to_next_level: v.number(), // XP needed for next level
+    // Weekly XP for challenges
+    weekly_xp: v.number(),
+    week_start_date: v.string(), // YYYY-MM-DD
+    // Breakdown tracking
+    xp_from_logs: v.number(),
+    xp_from_assessments: v.number(),
+    xp_from_streaks: v.number(),
+    xp_from_badges: v.number(),
+    xp_from_challenges: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_level", ["current_level"]),
+
+  // XP transaction log (for audit and display)
+  xp_transactions: defineTable({
+    user_id: v.id("users"),
+    xp_amount: v.number(), // Positive for earned, negative for spent
+    transaction_type: v.string(), // "sleep_log", "assessment", "streak_bonus", "badge_earned", "challenge_complete"
+    description: v.string(), // Human-readable description
+    reference_id: v.optional(v.string()), // ID of related entity (badge, challenge, etc.)
+    created_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "created_at"])
+    .index("by_type", ["transaction_type"]),
+
+  // Daily/weekly challenges
+  user_challenges: defineTable({
+    user_id: v.id("users"),
+    challenge_id: v.string(), // e.g., "log_before_9am", "perfect_week"
+    challenge_type: v.string(), // "daily", "weekly"
+    challenge_name: v.string(),
+    challenge_description: v.string(),
+    xp_reward: v.number(),
+    // Progress
+    start_date: v.string(), // YYYY-MM-DD
+    end_date: v.string(), // YYYY-MM-DD
+    progress_current: v.number(),
+    progress_target: v.number(),
+    status: v.string(), // "active", "completed", "expired"
+    completed_at: v.optional(v.number()),
+    created_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_status", ["user_id", "status"])
+    .index("by_user_type", ["user_id", "challenge_type"]),
+
+  // Challenge definitions (master list)
+  challenge_definitions: defineTable({
+    challenge_id: v.string(),
+    name: v.string(),
+    description: v.string(),
+    challenge_type: v.string(), // "daily", "weekly"
+    // Requirements
+    requirement_type: v.string(), // "log_time", "streak", "completion", "consistency"
+    requirement_target: v.number(),
+    requirement_config_json: v.optional(v.string()), // Additional config
+    // Rewards
+    xp_reward: v.number(),
+    badge_reward_id: v.optional(v.string()), // Optional badge for challenge completion
+    // Availability
+    is_active: v.boolean(),
+    day_of_week: v.optional(v.number()), // 0-6 for day-specific challenges
+    created_at: v.number(),
+  })
+    .index("by_challenge_id", ["challenge_id"])
+    .index("by_type", ["challenge_type"]),
+
+  // ============================================
+  // Science-Backed Encouragement Library
+  // ============================================
+
+  // Evidence-based encouragement messages
+  encouragement_messages: defineTable({
+    message_id: v.string(), // Unique identifier
+    message_text: v.string(), // The encouragement message
+    short_text: v.optional(v.string()), // Shorter version for notifications
+    // Targeting
+    target_demographics_json: v.optional(v.string()), // JSON: {"gender": "female", "age_min": 45, "age_max": 55}
+    target_gateways_json: v.optional(v.string()), // JSON array: ["insomnia", "anxiety"]
+    target_scores_json: v.optional(v.string()), // JSON: {"ISI": {"min": 15, "max": 28}}
+    target_behaviors_json: v.optional(v.string()), // JSON: {"late_chronotype": true}
+    target_triggers_json: v.optional(v.string()), // JSON: {"question_id": "D1", "answer_pattern": "poor"}
+    // Evidence
+    source_citation: v.string(), // e.g., "Sleep Medicine Reviews, 2021"
+    source_url: v.optional(v.string()),
+    evidence_level: v.string(), // "strong", "moderate", "emerging"
+    // Display
+    category: v.string(), // "normalization", "encouragement", "education", "cohort_comparison"
+    pillar: v.optional(v.string()), // Related sleep pillar
+    display_context: v.string(), // "post_question", "section_complete", "day_complete", "insight"
+    priority: v.number(), // Higher = more likely to show
+    // Metadata
+    is_active: v.boolean(),
+    created_at: v.number(),
+    updated_at: v.number(),
+    reviewed_by: v.optional(v.string()), // Medical reviewer
+    reviewed_at: v.optional(v.number()),
+  })
+    .index("by_message_id", ["message_id"])
+    .index("by_category", ["category"])
+    .index("by_context", ["display_context"])
+    .index("by_pillar", ["pillar"]),
+
+  // Cohort statistics for anonymous comparisons
+  cohort_statistics: defineTable({
+    stat_id: v.string(), // e.g., "isi_moderate_improvement_rate"
+    stat_name: v.string(),
+    stat_description: v.string(),
+    // Filtering criteria
+    cohort_criteria_json: v.string(), // JSON defining the cohort
+    // Statistics
+    sample_size: v.number(),
+    stat_value: v.number(), // e.g., 0.80 for "80% improve"
+    stat_type: v.string(), // "percentage", "average", "median"
+    confidence_interval_low: v.optional(v.number()),
+    confidence_interval_high: v.optional(v.number()),
+    // Display
+    display_format: v.string(), // e.g., "{{value}}% of users with similar patterns..."
+    // Metadata
+    computed_at: v.number(),
+    data_source: v.string(), // "internal", "published_research"
+    is_active: v.boolean(),
+  })
+    .index("by_stat_id", ["stat_id"]),
+
+  // User encouragement history (what they've seen)
+  user_encouragement_history: defineTable({
+    user_id: v.id("users"),
+    message_id: v.string(),
+    shown_at: v.number(),
+    context: v.string(), // Where it was shown
+    dismissed: v.boolean(),
+    reaction: v.optional(v.string()), // "helpful", "not_helpful", null
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_message", ["user_id", "message_id"])
+    .index("by_shown_at", ["shown_at"]),
 });
 

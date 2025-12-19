@@ -8,6 +8,81 @@
 
 import Foundation
 
+// MARK: - Demographic Targeting
+
+/// Criteria for showing personalized facts
+struct DemographicFilter: Equatable {
+    var genders: [String]?         // ["female", "male", "other"]
+    var ageMin: Int?               // Minimum age
+    var ageMax: Int?               // Maximum age
+    var gateways: [String]?        // ["insomnia", "anxiety", "sleep_apnea"]
+    var chronotypes: [String]?     // ["early", "late", "neutral"]
+    var conditions: [String]?      // ["perimenopause", "chronic_pain", "shift_work"]
+
+    static let any = DemographicFilter()
+
+    /// Check if a user profile matches this filter
+    func matches(profile: UserDemographicProfile) -> Bool {
+        // Gender check
+        if let genders = genders, !genders.isEmpty {
+            guard let userGender = profile.gender, genders.contains(userGender.lowercased()) else {
+                return false
+            }
+        }
+
+        // Age check
+        if let minAge = ageMin, let userAge = profile.age {
+            guard userAge >= minAge else { return false }
+        }
+        if let maxAge = ageMax, let userAge = profile.age {
+            guard userAge <= maxAge else { return false }
+        }
+
+        // Gateway check (user has at least one)
+        if let gateways = gateways, !gateways.isEmpty {
+            guard let userGateways = profile.triggeredGateways,
+                  !Set(gateways).isDisjoint(with: Set(userGateways)) else {
+                return false
+            }
+        }
+
+        // Chronotype check
+        if let chronotypes = chronotypes, !chronotypes.isEmpty {
+            guard let userChronotype = profile.chronotype,
+                  chronotypes.contains(userChronotype.lowercased()) else {
+                return false
+            }
+        }
+
+        return true
+    }
+}
+
+/// User demographic profile for fact targeting
+struct UserDemographicProfile {
+    let gender: String?
+    let age: Int?
+    let triggeredGateways: [String]?
+    let chronotype: String?
+
+    static let empty = UserDemographicProfile(gender: nil, age: nil, triggeredGateways: nil, chronotype: nil)
+
+    /// Create from OnboardingManager profile
+    @MainActor
+    static func fromOnboarding() -> UserDemographicProfile {
+        let profile = OnboardingManager.shared.profile
+
+        let age = Calendar.current.component(.year, from: Date()) - profile.birthYear
+
+        return UserDemographicProfile(
+            gender: profile.gender,
+            age: age,
+            triggeredGateways: nil, // Would be populated from ConvexService
+            chronotype: nil
+        )
+    }
+}
+
 // MARK: - Sleep Fact Model
 
 struct SleepFact: Identifiable {
@@ -18,8 +93,9 @@ struct SleepFact: Identifiable {
     let statistic: String?      // Optional stat like "73% of users..."
     let citation: String?       // Source reference
     let category: FactCategory  // Type of fact
+    let demographic: DemographicFilter  // Who should see this fact
 
-    init(id: String, pillar: Pillar, title: String, body: String, statistic: String? = nil, citation: String? = nil, category: FactCategory = .scienceSpotlight) {
+    init(id: String, pillar: Pillar, title: String, body: String, statistic: String? = nil, citation: String? = nil, category: FactCategory = .scienceSpotlight, demographic: DemographicFilter = .any) {
         self.id = id
         self.pillar = pillar
         self.title = title
@@ -27,6 +103,7 @@ struct SleepFact: Identifiable {
         self.statistic = statistic
         self.citation = citation
         self.category = category
+        self.demographic = demographic
     }
 }
 
@@ -445,6 +522,171 @@ enum SleepFactBank {
         )
     ]
 
+    // MARK: - Personalized Demographic Facts
+
+    /// Facts targeted to specific demographics for personalized encouragement
+    static let personalizedFacts: [SleepFact] = [
+        // Women 45-55 (Perimenopause)
+        SleepFact(
+            id: "peri_1",
+            pillar: .sleepQuality,
+            title: "You're Not Alone",
+            body: "Many women experience sleep changes during perimenopause due to hormone fluctuations. 40-60% of women report sleep difficulties during this transition. The good news: targeted interventions can help significantly.",
+            statistic: "40-60% of perimenopausal women experience sleep disruption",
+            citation: "Sleep Medicine Reviews, 2019",
+            category: .cohortComparison,
+            demographic: DemographicFilter(genders: ["female"], ageMin: 45, ageMax: 55)
+        ),
+        SleepFact(
+            id: "peri_2",
+            pillar: .sleepTiming,
+            title: "Temperature & Sleep",
+            body: "Women's body temperature rhythms shift during menopause, often requiring a cooler bedroom. The ideal range is 65-68°F (18-20°C) - even cooler than usual may help.",
+            category: .sleepTip,
+            demographic: DemographicFilter(genders: ["female"], ageMin: 45, ageMax: 60)
+        ),
+        SleepFact(
+            id: "peri_3",
+            pillar: .sleepQuality,
+            title: "Hormones & Deep Sleep",
+            body: "Declining estrogen affects deep sleep architecture. But don't worry - understanding your patterns helps us recommend interventions that work with your changing biology.",
+            citation: "Journal of Women's Health, 2021",
+            category: .scienceSpotlight,
+            demographic: DemographicFilter(genders: ["female"], ageMin: 45, ageMax: 60)
+        ),
+
+        // Older Adults (60+)
+        SleepFact(
+            id: "age60_1",
+            pillar: .sleepQuantity,
+            title: "Sleep Needs Change",
+            body: "Research shows sleep needs change with age. 5-6 hours with good efficiency can be normal and healthy after 60. What matters most is how refreshed you feel.",
+            statistic: "Older adults naturally need 30-60 minutes less sleep",
+            citation: "National Sleep Foundation",
+            category: .scienceSpotlight,
+            demographic: DemographicFilter(ageMin: 60)
+        ),
+        SleepFact(
+            id: "age60_2",
+            pillar: .sleepTiming,
+            title: "Earlier Sleep Timing",
+            body: "It's normal to become more of a morning person with age - your circadian rhythm naturally shifts earlier. Working with this change, not against it, improves sleep quality.",
+            category: .scienceSpotlight,
+            demographic: DemographicFilter(ageMin: 55)
+        ),
+        SleepFact(
+            id: "age60_3",
+            pillar: .physical,
+            title: "Light & Healthy Aging",
+            body: "Morning light exposure becomes even more important after 60. Just 20 minutes of natural light after waking helps maintain strong circadian rhythms.",
+            category: .sleepTip,
+            demographic: DemographicFilter(ageMin: 55)
+        ),
+
+        // Young Adults (18-30)
+        SleepFact(
+            id: "young_1",
+            pillar: .sleepTiming,
+            title: "Night Owl? That's Biology",
+            body: "Your sleep timing suggests a 'night owl' chronotype - this is largely genetic, not laziness. About 25% of people share this pattern. Work with your biology, not against it.",
+            statistic: "Only 25% of people are true morning types",
+            category: .scienceSpotlight,
+            demographic: DemographicFilter(ageMin: 18, ageMax: 30, chronotypes: ["late"])
+        ),
+        SleepFact(
+            id: "young_2",
+            pillar: .sleepQuantity,
+            title: "Young Adults Need More",
+            body: "Between ages 18-25, your brain is still developing. You may genuinely need 8-9 hours of sleep - this isn't being lazy, it's neuroscience.",
+            statistic: "Young adults need 7-9 hours for optimal brain function",
+            citation: "American Academy of Sleep Medicine",
+            category: .scienceSpotlight,
+            demographic: DemographicFilter(ageMin: 18, ageMax: 25)
+        ),
+
+        // Insomnia Gateway Triggered
+        SleepFact(
+            id: "insomnia_1",
+            pillar: .mentalHealth,
+            title: "CBT-I Works",
+            body: "Recognizing insomnia patterns is the first step. Cognitive Behavioral Therapy for Insomnia (CBT-I) has an 80% success rate - better than sleeping pills long-term.",
+            statistic: "80% of people improve with CBT-I",
+            citation: "American College of Physicians",
+            category: .scienceSpotlight,
+            demographic: DemographicFilter(gateways: ["insomnia"])
+        ),
+        SleepFact(
+            id: "insomnia_2",
+            pillar: .sleepQuality,
+            title: "Sleep State Misperception",
+            body: "Many people with insomnia actually sleep more than they think. Wearable data often shows this 'perception gap' - you may be sleeping better than you feel!",
+            statistic: "30-50% of insomnia involves perception gaps",
+            category: .cohortComparison,
+            demographic: DemographicFilter(gateways: ["insomnia"])
+        ),
+
+        // Anxiety Gateway Triggered
+        SleepFact(
+            id: "anxiety_1",
+            pillar: .mentalHealth,
+            title: "Anxiety & Sleep",
+            body: "Racing thoughts at bedtime are incredibly common - you're not alone. The good news: treating sleep often improves anxiety, and treating anxiety improves sleep.",
+            statistic: "50% of people with anxiety report sleep problems",
+            category: .cohortComparison,
+            demographic: DemographicFilter(gateways: ["anxiety"])
+        ),
+        SleepFact(
+            id: "anxiety_2",
+            pillar: .nutritional,
+            title: "Caffeine Sensitivity",
+            body: "Caffeine sensitivity increases with anxiety. Even morning coffee can affect sleep 12+ hours later in some people. Tracking your intake helps us personalize advice.",
+            category: .sleepTip,
+            demographic: DemographicFilter(gateways: ["anxiety"])
+        ),
+
+        // Sleep Apnea Risk
+        SleepFact(
+            id: "apnea_1",
+            pillar: .physical,
+            title: "Early Detection Matters",
+            body: "Based on your responses, screening for sleep apnea is important. When treated, people often experience dramatically better sleep and daytime energy.",
+            statistic: "80% of sleep apnea cases are undiagnosed",
+            citation: "American Sleep Apnea Association",
+            category: .whyWeAsked,
+            demographic: DemographicFilter(gateways: ["sleep_apnea"])
+        ),
+
+        // Depression Gateway
+        SleepFact(
+            id: "depression_1",
+            pillar: .mentalHealth,
+            title: "Sleep & Mood Connection",
+            body: "Sleep and mood deeply influence each other. Improving sleep is often recommended as a first-line treatment for depression - it's that interconnected.",
+            citation: "Harvard Health Publishing",
+            category: .scienceSpotlight,
+            demographic: DemographicFilter(gateways: ["depression"])
+        ),
+
+        // Men 40+
+        SleepFact(
+            id: "men40_1",
+            pillar: .physical,
+            title: "Testosterone & Sleep",
+            body: "Sleep is when testosterone production peaks. Poor sleep can significantly affect hormone levels - another reason quality matters as much as quantity.",
+            statistic: "One week of poor sleep reduces testosterone by 10-15%",
+            citation: "JAMA, 2011",
+            category: .scienceSpotlight,
+            demographic: DemographicFilter(genders: ["male"], ageMin: 40)
+        )
+    ]
+
+    // MARK: - Combined Facts
+
+    /// All facts including personalized ones
+    static var allWithPersonalized: [SleepFact] {
+        all + personalizedFacts
+    }
+
     // MARK: - Helpers
 
     /// Get facts for a specific pillar
@@ -460,5 +702,58 @@ enum SleepFactBank {
     /// Get random fact from a pillar
     static func randomFact(for pillar: Pillar) -> SleepFact? {
         facts(for: pillar).randomElement()
+    }
+
+    // MARK: - Personalized Fact Selection
+
+    /// Get facts filtered by user demographics (personalized + general that match)
+    static func factsForUser(_ profile: UserDemographicProfile, pillar: Pillar? = nil) -> [SleepFact] {
+        let allFacts = allWithPersonalized
+
+        return allFacts.filter { fact in
+            // Pillar filter if specified
+            if let pillar = pillar, fact.pillar != pillar {
+                return false
+            }
+
+            // If fact has no demographic filter, include it
+            if fact.demographic == .any {
+                return true
+            }
+
+            // Check if user matches the demographic filter
+            return fact.demographic.matches(profile: profile)
+        }
+    }
+
+    /// Get personalized facts that specifically match the user's demographics
+    static func personalizedFactsForUser(_ profile: UserDemographicProfile) -> [SleepFact] {
+        personalizedFacts.filter { $0.demographic.matches(profile: profile) }
+    }
+
+    /// Get the best fact for a user based on their demographics and recent pillars
+    static func bestFactForUser(_ profile: UserDemographicProfile, recentPillars: [Pillar], excludeIds: Set<String>) -> SleepFact? {
+        // First, try to find a personalized fact that matches
+        let personalizedMatches = personalizedFactsForUser(profile)
+            .filter { !excludeIds.contains($0.id) }
+
+        // Prioritize personalized facts matching recent pillars
+        if let matchingPersonalized = personalizedMatches.first(where: { recentPillars.contains($0.pillar) }) {
+            return matchingPersonalized
+        }
+
+        // Any personalized fact is valuable
+        if let anyPersonalized = personalizedMatches.randomElement() {
+            return anyPersonalized
+        }
+
+        // Fall back to general facts matching recent pillars
+        let generalMatches = all.filter { !excludeIds.contains($0.id) }
+        if let matchingGeneral = generalMatches.first(where: { recentPillars.contains($0.pillar) }) {
+            return matchingGeneral
+        }
+
+        // Random general fact
+        return generalMatches.randomElement()
     }
 }

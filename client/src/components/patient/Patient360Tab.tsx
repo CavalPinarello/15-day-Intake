@@ -9,6 +9,7 @@ import { SubjectiveVsObjectiveCard } from "./SubjectiveVsObjectiveCard";
 import { PillarSummaryCard, PillarKey, PILLARS } from "./PillarSummaryCard";
 import { PillarDetailModal } from "./PillarDetailModal";
 import { AIInsightsCard, generateSampleInsights } from "./AIInsightsCard";
+import { PatientEngagementCard } from "./PatientEngagementCard";
 import { SleepTrendChart } from "@/components/charts/SleepTrendChart";
 import { ScoreGauge, SCORE_CONFIG } from "@/components/charts/ScoreProgressionChart";
 import { SleepBreakdown } from "@/components/charts/SleepArchitectureChart";
@@ -17,6 +18,11 @@ import {
   StreakIndicator,
   ComplianceSummary,
 } from "@/components/charts/ComplianceChart";
+import {
+  MultiSourceSleepChart,
+  SourceComparisonSummary,
+  SourceBadges,
+} from "@/components/charts/MultiSourceSleepChart";
 import {
   Calendar,
   Moon,
@@ -56,6 +62,13 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
   const healthSummary = useQuery(api.healthkit.getPatientHealthSummary, { userId });
   const sleepArchitecture = useQuery(api.healthkit.getSleepArchitecture, { userId, limit: 15 });
   const perceptionGaps = useQuery(api.healthkit.getPerceptionGaps, { userId, limit: 15 });
+
+  // Fetch sleep pattern insights from Convex
+  const sleepPatternInsights = useQuery(api.sleepInsights.generateInsights, { userId });
+
+  // Fetch multi-source sleep data for wearable comparison
+  const multiSourceData = useQuery(api.healthkit.getMultiSourceSleepData, { userId, days: 15 });
+  const sourceDetails = useQuery(api.healthkit.getSourceDetails, { userId });
 
   // Fetch questionnaire scores
   const scores = useQuery(api.physician.getQuestionnaireScores, { userId });
@@ -113,7 +126,7 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
     return scoreMap;
   }, [scores]);
 
-  // Generate insights from scores and LLM analysis
+  // Generate insights from scores, sleep patterns, and LLM analysis
   const insights = useMemo(() => {
     const baseInsights = generateSampleInsights({
       isiScore: patientScores.ISI,
@@ -123,10 +136,43 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
       sleepEfficiency: healthSummary?.summary?.avgEfficiency ?? undefined,
     });
 
+    const now = new Date().toISOString();
+
+    // Add sleep pattern insights from Convex backend
+    if (sleepPatternInsights && sleepPatternInsights.length > 0) {
+      sleepPatternInsights.forEach((insight) => {
+        // Map insight type to severity
+        const severityMap: Record<string, "critical" | "warning" | "info" | "positive"> = {
+          "optimization": "info",
+          "pattern": "info",
+          "cognitive": "warning",
+          "positive": "positive",
+          "warning": "warning",
+        };
+        // Map insight type to category
+        const categoryMap: Record<string, "sleep_quality" | "behavioral" | "mental_health"> = {
+          "optimization": "behavioral",
+          "pattern": "sleep_quality",
+          "cognitive": "mental_health",
+          "positive": "sleep_quality",
+          "warning": "sleep_quality",
+        };
+
+        baseInsights.push({
+          id: insight.id,
+          title: insight.title,
+          description: insight.text,
+          severity: severityMap[insight.type] || "info",
+          category: categoryMap[insight.type] || "sleep_quality",
+          confidence: Math.round(insight.confidence * 100),
+          timestamp: now,
+          suggestedActions: insight.actionable ? ["Review and discuss with patient"] : undefined,
+        });
+      });
+    }
+
     // Add LLM analysis results if available
     if (analysis) {
-      const now = new Date().toISOString();
-
       // Add summary as an info insight
       if (analysis.summary && analysis.summary !== "Error analyzing patient data") {
         baseInsights.push({
@@ -169,7 +215,7 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
     }
 
     return baseInsights;
-  }, [patientScores, healthSummary, analysis]);
+  }, [patientScores, healthSummary, analysis, sleepPatternInsights]);
 
   // Build sleep trend data from HealthKit
   const sleepTrendData = useMemo(() => {
@@ -441,30 +487,8 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
           </div>
         </div>
 
-        {/* Streak */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gray-700/50 flex items-center justify-center text-gray-400">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-white">Streak</h3>
-                <p className="text-xs text-gray-500">Daily completion</p>
-              </div>
-            </div>
-            {currentStreak >= 3 && (
-              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
-                {currentStreak} days
-              </span>
-            )}
-          </div>
-          <StreakIndicator
-            currentStreak={currentStreak}
-            longestStreak={currentStreak}
-            last7Days={complianceData.slice(-7).map(c => c.sleepLogCompleted)}
-          />
-        </div>
+        {/* Patient Engagement - Shows streak, XP, badges, and engagement insights */}
+        <PatientEngagementCard userId={userId} />
 
         {/* Sleep Architecture (if available) */}
         {sleepArchitecture && sleepArchitecture.length > 0 && (
@@ -482,45 +506,129 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
           </div>
         )}
 
-        {/* Wearable Status */}
+        {/* Wearable Status with Data Quality */}
         <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg bg-gray-700/50 flex items-center justify-center text-gray-400">
               <Watch className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-white">Wearables</h3>
-              <p className="text-xs text-gray-500">Connected devices</p>
+              <h3 className="text-sm font-medium text-white">Data Source</h3>
+              <p className="text-xs text-gray-500">Sleep data origin</p>
             </div>
-            <span className={`ml-auto px-2 py-0.5 text-xs font-medium rounded-full border ${
-              hasHealthKitData
-                ? "bg-green-500/20 text-green-400 border-green-500/30"
-                : "bg-gray-500/20 text-gray-400 border-gray-500/30"
-            }`}>
-              {hasHealthKitData ? "Connected" : "Not connected"}
-            </span>
+            {(() => {
+              const source = healthSummary?.recentSleep?.[0]?.primarySource ||
+                            (hasHealthKitData ? "Apple Watch" : null);
+              const quality = getDataQuality(source, healthSummary);
+              return (
+                <span className={`ml-auto px-2 py-0.5 text-xs font-medium rounded-full border ${quality.classes}`}>
+                  {quality.label}
+                </span>
+              );
+            })()}
           </div>
           <div className="flex flex-col items-center justify-center h-24 text-center">
-            {hasHealthKitData ? (
-              <>
-                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-2">
-                  <Heart className="w-6 h-6 text-green-400" />
-                </div>
-                <p className="text-sm text-white font-medium">Apple Watch</p>
-                <p className="text-xs text-gray-400">Syncing sleep data</p>
-              </>
-            ) : (
-              <>
-                <div className="w-12 h-12 rounded-full bg-gray-700/50 flex items-center justify-center mb-2">
-                  <Watch className="w-6 h-6 text-gray-500" />
-                </div>
-                <p className="text-sm text-gray-400">No device connected</p>
-                <p className="text-xs text-gray-500">Subjective data only</p>
-              </>
-            )}
+            {(() => {
+              const source = healthSummary?.recentSleep?.[0]?.primarySource ||
+                            (hasHealthKitData ? "Apple Watch" : null);
+              if (source) {
+                const { icon: SourceIcon, color, label } = getSourceInfo(source);
+                return (
+                  <>
+                    <div className={`w-12 h-12 rounded-full ${color} flex items-center justify-center mb-2`}>
+                      <SourceIcon className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm text-white font-medium">{label}</p>
+                    <p className="text-xs text-gray-400">
+                      {healthSummary?.dataPoints || 0} days of data
+                    </p>
+                  </>
+                );
+              }
+              return (
+                <>
+                  <div className="w-12 h-12 rounded-full bg-gray-700/50 flex items-center justify-center mb-2">
+                    <Watch className="w-6 h-6 text-gray-500" />
+                  </div>
+                  <p className="text-sm text-gray-400">No device connected</p>
+                  <p className="text-xs text-gray-500">Questionnaire data only</p>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
+
+      {/* Multi-Source Sleep Comparison - Only show if patient has multiple wearables */}
+      {multiSourceData?.hasMultipleSources && (
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <Activity className="w-4 h-4 text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-white">Multi-Device Sleep Comparison</h3>
+                <p className="text-xs text-gray-500">
+                  Comparing data from {multiSourceData.sources.length} sources over {multiSourceData.totalDays} days
+                </p>
+              </div>
+            </div>
+            <SourceBadges sources={multiSourceData.sources} />
+          </div>
+
+          <MultiSourceSleepChart
+            hasMultipleSources={multiSourceData.hasMultipleSources}
+            sources={multiSourceData.sources}
+            sourceStats={multiSourceData.sourceStats}
+            comparisonData={multiSourceData.comparisonData}
+            totalDays={multiSourceData.totalDays}
+            metric="efficiency"
+            height={220}
+          />
+
+          <div className="mt-4">
+            <SourceComparisonSummary sourceStats={multiSourceData.sourceStats} />
+          </div>
+
+          {/* Source details table */}
+          {sourceDetails && sourceDetails.length > 1 && (
+            <div className="mt-4 pt-4 border-t border-gray-700/50">
+              <h4 className="text-xs font-medium text-gray-400 mb-2">Device Capabilities</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {sourceDetails.map((detail) => (
+                  <div
+                    key={detail.source}
+                    className="p-2 rounded-lg bg-gray-700/30 border border-gray-600/30"
+                  >
+                    <p className="text-xs font-medium text-white truncate">{detail.source}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {detail.hasSleepStages && (
+                        <span className="px-1.5 py-0.5 text-[9px] rounded bg-green-500/20 text-green-400">
+                          Stages
+                        </span>
+                      )}
+                      {detail.hasHeartRate && (
+                        <span className="px-1.5 py-0.5 text-[9px] rounded bg-blue-500/20 text-blue-400">
+                          HR
+                        </span>
+                      )}
+                      {detail.hasHrv && (
+                        <span className="px-1.5 py-0.5 text-[9px] rounded bg-purple-500/20 text-purple-400">
+                          HRV
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Quality: {detail.qualityScore}/5
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Compliance Chart - Full Width */}
       <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
@@ -589,6 +697,81 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
       )}
     </div>
   );
+}
+
+// Helper function to get data source info
+function getSourceInfo(source: string | null): {
+  icon: typeof Watch;
+  color: string;
+  label: string;
+} {
+  if (!source) {
+    return { icon: Watch, color: "bg-gray-700/50 text-gray-500", label: "No device" };
+  }
+
+  const sourceUpper = source.toUpperCase();
+
+  if (sourceUpper.includes("APPLE") || sourceUpper.includes("WATCH")) {
+    return { icon: Watch, color: "bg-green-500/20 text-green-400", label: "Apple Watch" };
+  }
+  if (sourceUpper.includes("OURA")) {
+    return { icon: Activity, color: "bg-purple-500/20 text-purple-400", label: "Oura Ring" };
+  }
+  if (sourceUpper.includes("FITBIT")) {
+    return { icon: Watch, color: "bg-teal-500/20 text-teal-400", label: "Fitbit" };
+  }
+  if (sourceUpper.includes("GARMIN")) {
+    return { icon: Watch, color: "bg-blue-500/20 text-blue-400", label: "Garmin" };
+  }
+  if (sourceUpper.includes("WHOOP")) {
+    return { icon: Activity, color: "bg-amber-500/20 text-amber-400", label: "WHOOP" };
+  }
+  if (sourceUpper.includes("QUESTIONNAIRE")) {
+    return { icon: Calendar, color: "bg-orange-500/20 text-orange-400", label: "Sleep Log" };
+  }
+
+  return { icon: Heart, color: "bg-green-500/20 text-green-400", label: source };
+}
+
+// Helper function to assess data quality
+function getDataQuality(
+  source: string | null,
+  healthSummary: { summary?: { avgDeepSleepMins?: number | null; avgRestingHr?: number | null; avgHrv?: number | null } } | null | undefined
+): { label: string; classes: string } {
+  if (!source) {
+    return { label: "No data", classes: "bg-gray-500/20 text-gray-400 border-gray-500/30" };
+  }
+
+  // Calculate quality score
+  let qualityScore = 0;
+  const sourceUpper = source.toUpperCase();
+
+  // Has sleep stages (deep/REM)?
+  if (healthSummary?.summary?.avgDeepSleepMins && healthSummary.summary.avgDeepSleepMins > 0) {
+    qualityScore += 2;
+  }
+  // Has heart rate?
+  if (healthSummary?.summary?.avgRestingHr && healthSummary.summary.avgRestingHr > 0) {
+    qualityScore += 1;
+  }
+  // Has HRV?
+  if (healthSummary?.summary?.avgHrv && healthSummary.summary.avgHrv > 0) {
+    qualityScore += 1;
+  }
+  // Is it a dedicated sleep tracker?
+  if (sourceUpper.includes("WATCH") || sourceUpper.includes("OURA") || sourceUpper.includes("WHOOP")) {
+    qualityScore += 1;
+  }
+
+  if (qualityScore >= 4) {
+    return { label: "Excellent", classes: "bg-green-500/20 text-green-400 border-green-500/30" };
+  } else if (qualityScore >= 2) {
+    return { label: "Good", classes: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
+  } else if (qualityScore >= 1) {
+    return { label: "Fair", classes: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
+  } else {
+    return { label: "Limited", classes: "bg-red-500/20 text-red-400 border-red-500/30" };
+  }
 }
 
 // Helper component for stat cards

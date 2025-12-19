@@ -503,6 +503,21 @@ struct DayCompletionView: View {
     var onProceedToNextSection: (() -> Void)? = nil
 
     @State private var isAnimating = false
+    @State private var showConfetti = false
+    @State private var showXPGain = false
+
+    // XP amounts based on completion type
+    private var xpEarned: Int {
+        if isJourneyComplete {
+            return 500  // Big bonus for completing the entire journey
+        } else if isFullDayComplete {
+            return 200  // Perfect day bonus
+        } else if completedSection == .sleepLog {
+            return 50   // Sleep log XP
+        } else {
+            return 100  // Assessment XP
+        }
+    }
 
     // Circadian-aware colors
     private var isEvening: Bool {
@@ -588,35 +603,36 @@ struct DayCompletionView: View {
     // MARK: - Journey Complete View (Day 15 Final)
 
     private var journeyCompleteView: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Spacer(minLength: 30)
+        ZStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    Spacer(minLength: 30)
 
-                // Trophy animation
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.yellow.opacity(0.3), Color.orange.opacity(0.2)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                    // Trophy animation
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.yellow.opacity(0.3), Color.orange.opacity(0.2)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .frame(width: 140, height: 140)
-                        .scaleEffect(isAnimating ? 1.1 : 0.9)
-                        .opacity(isAnimating ? 0.8 : 1)
+                            .frame(width: 140, height: 140)
+                            .scaleEffect(isAnimating ? 1.1 : 0.9)
+                            .opacity(isAnimating ? 0.8 : 1)
 
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 70))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color.yellow, Color.orange],
-                                startPoint: .top,
-                                endPoint: .bottom
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 70))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color.yellow, Color.orange],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
                             )
-                        )
-                        .scaleEffect(isAnimating ? 1.0 : 0.8)
-                }
+                            .scaleEffect(isAnimating ? 1.0 : 0.8)
+                    }
 
                 VStack(spacing: 12) {
                     Text("Congratulations!")
@@ -767,12 +783,37 @@ struct DayCompletionView: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
+                }
+            }
+            .background(viewBackgroundColor)
+
+            // Confetti overlay for journey completion
+            if showConfetti {
+                ConfettiView(
+                    particleCount: 150,
+                    duration: 4.0,
+                    onComplete: { showConfetti = false }
+                )
+                .ignoresSafeArea()
+            }
+
+            // XP gain popup
+            if showXPGain {
+                XPGainPopup(amount: xpEarned)
+                    .transition(.opacity)
             }
         }
-        .background(viewBackgroundColor)
         .onAppear {
             withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
                 isAnimating = true
+            }
+            // Trigger confetti after a short delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                showConfetti = true
+                // Show XP gain after confetti starts
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showXPGain = true
+                }
             }
         }
     }
@@ -780,171 +821,198 @@ struct DayCompletionView: View {
     // MARK: - Regular Day Completion View
 
     private var regularCompletionView: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Spacer(minLength: 40)
+        ZStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    Spacer(minLength: 40)
 
-                // Success animation
-                ZStack {
-                    Circle()
-                        .fill(Color.green.opacity(0.1))
-                        .frame(width: 120, height: 120)
-                        .scaleEffect(isAnimating ? 1.2 : 0.8)
-                        .opacity(isAnimating ? 0.5 : 1)
-
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundColor(.green)
-                        .scaleEffect(isAnimating ? 1.0 : 0.5)
-                }
-
-                VStack(spacing: 8) {
-                    Text(titleText)
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(primaryTextColor)
-
-                    Text(subtitleText)
-                        .font(.subheadline)
-                        .foregroundColor(secondaryTextColor)
-                }
-
-                // Summary cards
-                VStack(spacing: 12) {
-                    // Sleep Log summary - show completed or pending based on context
-                    HStack {
-                        Image(systemName: "moon.zzz.fill")
-                            .foregroundColor(QuestionnaireSection.sleepLog.accentColor)
-
-                        VStack(alignment: .leading) {
-                            Text("Sleep Log")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(primaryTextColor)
-                            Text("\(sleepLogQuestionsCount) questions completed")
-                                .font(.caption)
-                                .foregroundColor(secondaryTextColor)
-                        }
-
-                        Spacer()
+                    // Success animation
+                    ZStack {
+                        Circle()
+                            .fill(Color.green.opacity(0.1))
+                            .frame(width: 120, height: 120)
+                            .scaleEffect(isAnimating ? 1.2 : 0.8)
+                            .opacity(isAnimating ? 0.5 : 1)
 
                         Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 80))
                             .foregroundColor(.green)
+                            .scaleEffect(isAnimating ? 1.0 : 0.5)
                     }
-                    .padding()
-                    .background(QuestionnaireSection.sleepLog.backgroundColor)
-                    .cornerRadius(12)
 
-                    // Assessment summary - show as completed, pending, or to-do
-                    HStack {
-                        Image(systemName: "clipboard.fill")
-                            .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                    VStack(spacing: 8) {
+                        Text(titleText)
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(primaryTextColor)
 
-                        VStack(alignment: .leading) {
-                            Text("Day Assessment")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(primaryTextColor)
-                            if isFullDayComplete || completedSection == .assessment {
-                                Text("\(assessmentQuestionsCount) questions completed")
+                        Text(subtitleText)
+                            .font(.subheadline)
+                            .foregroundColor(secondaryTextColor)
+                    }
+
+                    // Summary cards
+                    VStack(spacing: 12) {
+                        // Sleep Log summary - show completed or pending based on context
+                        HStack {
+                            Image(systemName: "moon.zzz.fill")
+                                .foregroundColor(QuestionnaireSection.sleepLog.accentColor)
+
+                            VStack(alignment: .leading) {
+                                Text("Sleep Log")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(primaryTextColor)
+                                Text("\(sleepLogQuestionsCount) questions completed")
                                     .font(.caption)
                                     .foregroundColor(secondaryTextColor)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        }
+                        .padding()
+                        .background(QuestionnaireSection.sleepLog.backgroundColor)
+                        .cornerRadius(12)
+
+                        // Assessment summary - show as completed, pending, or to-do
+                        HStack {
+                            Image(systemName: "clipboard.fill")
+                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
+
+                            VStack(alignment: .leading) {
+                                Text("Day Assessment")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(primaryTextColor)
+                                if isFullDayComplete || completedSection == .assessment {
+                                    Text("\(assessmentQuestionsCount) questions completed")
+                                        .font(.caption)
+                                        .foregroundColor(secondaryTextColor)
+                                } else {
+                                    Text("\(assessmentQuestionsCount) questions remaining")
+                                        .font(.caption)
+                                        .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                                }
+                            }
+
+                            Spacer()
+
+                            if isFullDayComplete || completedSection == .assessment {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
                             } else {
-                                Text("\(assessmentQuestionsCount) questions remaining")
-                                    .font(.caption)
+                                Image(systemName: "arrow.right.circle.fill")
                                     .foregroundColor(QuestionnaireSection.assessment.accentColor)
                             }
                         }
-
-                        Spacer()
-
-                        if isFullDayComplete || completedSection == .assessment {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                        } else {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
-                        }
-                    }
-                    .padding()
-                    .background(QuestionnaireSection.assessment.backgroundColor)
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal)
-
-                // Gateway triggers (if any)
-                if !triggeredGateways.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Personalized Assessments Added")
-                            .font(.caption)
-                            .foregroundColor(secondaryTextColor)
-                            .textCase(.uppercase)
-                            .tracking(1)
-
-                        Text("Based on your responses, we've added these assessments to your journey:")
-                            .font(.subheadline)
-                            .foregroundColor(secondaryTextColor)
-
-                        FlowLayout(spacing: 8) {
-                            ForEach(triggeredGateways, id: \.self) { gateway in
-                                HStack(spacing: 4) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.caption)
-                                    Text(gateway.displayName)
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(QuestionnaireSection.assessment.backgroundColor)
-                                .cornerRadius(16)
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(cardBackgroundColor)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                }
-
-                Spacer(minLength: 20)
-
-                // Button: Either "Proceed to Assessment" or "Continue"
-                if completedSection == .sleepLog, let proceedAction = onProceedToNextSection {
-                    Button(action: proceedAction) {
-                        HStack {
-                            Text("Proceed to Day Assessment")
-                            Image(systemName: "arrow.right")
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
                         .padding()
-                        .background(QuestionnaireSection.assessment.accentColor)
+                        .background(QuestionnaireSection.assessment.backgroundColor)
                         .cornerRadius(12)
                     }
                     .padding(.horizontal)
-                    .padding(.bottom, 20)
-                } else {
-                    Button(action: onDone) {
-                        Text("Continue")
+
+                    // Gateway triggers (if any)
+                    if !triggeredGateways.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Personalized Assessments Added")
+                                .font(.caption)
+                                .foregroundColor(secondaryTextColor)
+                                .textCase(.uppercase)
+                                .tracking(1)
+
+                            Text("Based on your responses, we've added these assessments to your journey:")
+                                .font(.subheadline)
+                                .foregroundColor(secondaryTextColor)
+
+                            FlowLayout(spacing: 8) {
+                                ForEach(triggeredGateways, id: \.self) { gateway in
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.caption)
+                                        Text(gateway.displayName)
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(QuestionnaireSection.assessment.backgroundColor)
+                                    .cornerRadius(16)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(cardBackgroundColor)
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                    }
+
+                    Spacer(minLength: 20)
+
+                    // Button: Either "Proceed to Assessment" or "Continue"
+                    if completedSection == .sleepLog, let proceedAction = onProceedToNextSection {
+                        Button(action: proceedAction) {
+                            HStack {
+                                Text("Proceed to Day Assessment")
+                                Image(systemName: "arrow.right")
+                            }
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.green)
+                            .background(QuestionnaireSection.assessment.accentColor)
                             .cornerRadius(12)
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 20)
+                    } else {
+                        Button(action: onDone) {
+                            Text("Continue")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.green)
+                                .cornerRadius(12)
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 20)
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom, 20)
                 }
             }
+            .background(viewBackgroundColor)
+
+            // Confetti overlay for day/section completion
+            if showConfetti {
+                ConfettiView(
+                    particleCount: isFullDayComplete ? 100 : 60,
+                    duration: 3.0,
+                    onComplete: { showConfetti = false }
+                )
+                .ignoresSafeArea()
+            }
+
+            // XP gain popup
+            if showXPGain {
+                XPGainPopup(amount: xpEarned)
+                    .transition(.opacity)
+            }
         }
-        .background(viewBackgroundColor)
         .onAppear {
             withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
                 isAnimating = true
+            }
+            // Trigger confetti for full day or assessment completion (not just sleep log)
+            if isFullDayComplete || completedSection == .assessment {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showConfetti = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showXPGain = true
+                    }
+                }
             }
         }
     }

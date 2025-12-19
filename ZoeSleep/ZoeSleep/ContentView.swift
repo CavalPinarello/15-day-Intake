@@ -47,8 +47,6 @@ struct MainDashboardView: View {
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
-    @State private var showingDevPanel = false
-
     enum SyncStatus {
         case synced
         case syncing
@@ -80,35 +78,6 @@ struct MainDashboardView: View {
                 .padding()
             }
 
-            // MARK: - Floating Dev Button (only when debug mode is ON)
-            if themeManager.debugMode {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button {
-                            showingDevPanel = true
-                        } label: {
-                            Text("DEV")
-                                .font(.caption)
-                                .fontWeight(.black)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.red)
-                                .cornerRadius(20)
-                                .shadow(color: .red.opacity(0.5), radius: 8, x: 0, y: 4)
-                        }
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 20)
-                    }
-                }
-            }
-        }
-        .sheet(isPresented: $showingDevPanel) {
-            DevPanelView(currentDay: $currentDay)
-                .environmentObject(themeManager)
-                .environmentObject(questionnaireManager)
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showingJourneyOverview) {
@@ -2304,6 +2273,7 @@ struct DevPanelView: View {
                     Button {
                         Task {
                             await questionnaireManager.loadJourneyProgress()
+                            await questionnaireManager.loadGatewayStatesFromServer()
                             currentDay = questionnaireManager.journeyProgress?.currentDay ?? currentDay
                             statusMessage = "Refreshed from server"
                         }

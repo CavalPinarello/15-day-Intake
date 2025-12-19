@@ -67,7 +67,24 @@ class SleepInsightsViewModel: ObservableObject {
     /// Days until pattern detection unlocks (0 if already unlocked)
     @Published var daysUntilPatterns: Int = 7
 
+    /// Multi-source sleep data (for users with multiple wearables)
+    @Published var multiSourceData: MultiSourceSleepData?
+
+    /// Source details (device capabilities)
+    @Published var sourceDetails: [SourceDetail] = []
+
+    /// Primary data source name
+    @Published var primarySource: String?
+
+    /// Data quality score (0-5)
+    @Published var dataQualityScore: Int = 0
+
     // MARK: - Computed Properties
+
+    /// Whether patient has multiple wearables
+    var hasMultipleSources: Bool {
+        multiSourceData?.hasMultipleSources ?? false
+    }
 
     /// Whether we have enough data for basic insights (5+ days)
     var hasEnoughForInsights: Bool {
@@ -171,9 +188,9 @@ class SleepInsightsViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            // In production, these would call ConvexService
-            // For now, we'll use placeholder implementation
+            // Load dashboard summary and source data
             await loadDashboardSummary()
+            await loadMultiSourceData()
 
             if hasEnoughForInsights {
                 await loadPerceptionVsReality()
@@ -199,52 +216,200 @@ class SleepInsightsViewModel: ObservableObject {
 
     /// Load dashboard summary from Convex
     private func loadDashboardSummary() async {
-        // TODO: Implement Convex call to sleepInsights.getDashboardSummary
-        // For now, this is a placeholder that would be replaced with actual API call
+        do {
+            let summary = try await ConvexService.shared.getSleepDashboardSummary()
 
-        // Example of what the Convex response would look like:
-        // let summary = try await ConvexService.shared.query("sleepInsights:getDashboardSummary", args: ["userId": userId])
+            self.daysOfData = summary.daysOfData
+            self.daysUntilInsights = summary.daysUntilInsights
+            self.daysUntilPatterns = summary.daysUntilPatterns
 
-        // Placeholder: These values would come from the API
-        // self.daysOfData = summary.daysOfData
-        // self.daysUntilInsights = summary.daysUntilInsights
-        // self.daysUntilPatterns = summary.daysUntilPatterns
-        // self.weeklyAverage = summary.weeklyAverage
-        // self.lastNight = summary.lastNight
-        // self.lastHealthKitSync = Date(timeIntervalSince1970: summary.lastSyncTime / 1000)
+            // Map weekly average
+            self.weeklyAverage = WeeklyAverage(
+                sleepMins: summary.weeklyAverage.sleepMins,
+                efficiency: summary.weeklyAverage.efficiency,
+                deepMins: summary.weeklyAverage.deepMins,
+                remMins: summary.weeklyAverage.remMins
+            )
+
+            // Map last night data
+            if let lastNightData = summary.lastNight {
+                self.lastNight = LastNightSleep(
+                    date: lastNightData.date,
+                    totalSleepMins: lastNightData.totalSleepMins,
+                    efficiency: lastNightData.efficiency,
+                    deepMins: lastNightData.deepMins,
+                    remMins: lastNightData.remMins,
+                    primarySource: lastNightData.primarySource
+                )
+            }
+
+            if let syncTime = summary.lastSyncTime {
+                self.lastHealthKitSync = Date(timeIntervalSince1970: syncTime / 1000)
+            }
+
+            print("[SleepInsights] Dashboard loaded: \(summary.daysOfData) days of data")
+
+        } catch {
+            print("[SleepInsights] Error loading dashboard: \(error)")
+        }
+    }
+
+    /// Load multi-source sleep data (for users with multiple wearables)
+    private func loadMultiSourceData() async {
+        do {
+            // Load multi-source comparison data
+            let multiSource = try await ConvexService.shared.getMultiSourceSleepData()
+            self.multiSourceData = multiSource
+
+            // Load source details (capabilities)
+            let details = try await ConvexService.shared.getSourceDetails()
+            self.sourceDetails = details
+
+            // Set primary source from multiSource data or sourceDetails
+            if let firstSource = multiSource.sources.first {
+                self.primarySource = firstSource
+            } else if let firstDetail = details.first {
+                self.primarySource = firstDetail.source
+            }
+
+            // Calculate overall data quality score
+            if let primaryDetail = details.first {
+                self.dataQualityScore = primaryDetail.qualityScore
+            }
+
+            print("[SleepInsights] Multi-source loaded: \(multiSource.sources.count) sources, hasMultiple: \(multiSource.hasMultipleSources)")
+
+        } catch {
+            print("[SleepInsights] Error loading multi-source data: \(error)")
+            // Not critical - continue without multi-source data
+        }
     }
 
     /// Load perception vs reality comparison data
     private func loadPerceptionVsReality() async {
-        // TODO: Implement Convex call to sleepInsights.getPerceptionVsReality
+        do {
+            let data = try await ConvexService.shared.getPerceptionVsReality()
 
-        // Example:
-        // let data = try await ConvexService.shared.query("sleepInsights:getPerceptionVsReality", args: ["userId": userId])
-        // self.lastNightSubjective = data.lastNightSubjective
-        // self.lastNightObjective = data.lastNightObjective
-        // self.correlation = data.correlation
-        // self.perceptionGapTrend = data.gapTrend
-        // self.dailyComparisons = data.comparisons.map { ... }
+            // Map last night subjective
+            if let subjective = data.lastNightSubjective {
+                self.lastNightSubjective = SubjectiveSleepData(
+                    quality: subjective.quality,
+                    date: data.lastNightDate ?? ""
+                )
+            }
+
+            // Map last night objective
+            if let objective = data.lastNightObjective {
+                self.lastNightObjective = ObjectiveSleepData(
+                    totalSleepMins: objective.totalSleepMins,
+                    efficiency: objective.efficiency,
+                    deepSleepMins: objective.deepSleepMins,
+                    remSleepMins: objective.remSleepMins,
+                    lightSleepMins: nil, // Not provided in this response
+                    date: data.lastNightDate
+                )
+            }
+
+            // Set correlation
+            self.correlation = data.correlation
+
+            // Map gap trend
+            if let trend = data.gapTrend {
+                self.perceptionGapTrend = PerceptionGapTrend(
+                    avgGap: trend.avgGap,
+                    consistentUnderestimate: trend.consistentUnderestimate,
+                    confidence: trend.confidence
+                )
+            }
+
+            // Map daily comparisons
+            self.dailyComparisons = data.comparisons.map { comparison in
+                DailyComparison(
+                    date: comparison.date,
+                    subjectiveScore: comparison.subjective.quality * 10, // Convert to 0-100
+                    objectiveScore: (comparison.objective.efficiency * 0.6) +
+                        (min(100, Double(comparison.objective.totalSleepMins) / 420.0 * 100) * 0.4)
+                )
+            }
+
+            print("[SleepInsights] Perception vs Reality loaded: \(data.comparisonsCount) comparisons")
+
+        } catch {
+            print("[SleepInsights] Error loading perception data: \(error)")
+        }
     }
 
     /// Load pattern detection data
     private func loadPatterns() async {
-        // TODO: Implement Convex call to sleepInsights.detectPatterns
+        do {
+            guard let patterns = try await ConvexService.shared.detectSleepPatterns() else {
+                print("[SleepInsights] No pattern data available yet")
+                return
+            }
 
-        // Example:
-        // let patterns = try await ConvexService.shared.query("sleepInsights:detectPatterns", args: ["userId": userId])
-        // self.workdayWeekendPattern = patterns.workdayWeekend
-        // self.optimalBedtime = patterns.optimalBedtime
-        // self.stagePatterns = patterns.sleepStages
+            // Map workday vs weekend (convert Int to Double)
+            if let ww = patterns.workdayWeekend {
+                self.workdayWeekendPattern = WorkdayWeekendPattern(
+                    workdayAvgSleep: Double(ww.workdayAvgSleep),
+                    weekendAvgSleep: Double(ww.weekendAvgSleep),
+                    workdayAvgDeep: Double(ww.workdayAvgDeep),
+                    weekendAvgDeep: Double(ww.weekendAvgDeep),
+                    workdayAvgEfficiency: Double(ww.workdayAvgEfficiency),
+                    weekendAvgEfficiency: Double(ww.weekendAvgEfficiency),
+                    sleepDifference: Double(ww.sleepDifference),
+                    deepDifference: Double(ww.deepDifference)
+                )
+            }
+
+            // Map optimal bedtime (convert Int to Double)
+            if let opt = patterns.optimalBedtime {
+                self.optimalBedtime = OptimalBedtime(
+                    time: opt.time,
+                    avgLatencyMinutes: Double(opt.avgLatencyMinutes),
+                    latencyDiff: Double(opt.latencyDiff),
+                    confidence: opt.confidence
+                )
+            }
+
+            // Map sleep stages
+            if let stages = patterns.sleepStages {
+                self.stagePatterns = SleepStagePatterns(
+                    avgDeepPercent: stages.avgDeepPercent,
+                    avgRemPercent: stages.avgRemPercent,
+                    avgLightPercent: stages.avgLightPercent,
+                    deepBelowRecommended: stages.deepBelowRecommended,
+                    remBelowRecommended: stages.remBelowRecommended
+                )
+            }
+
+            print("[SleepInsights] Patterns loaded: \(patterns.dataPoints) data points")
+
+        } catch {
+            print("[SleepInsights] Error loading patterns: \(error)")
+        }
     }
 
     /// Load generated actionable insights
     private func loadGeneratedInsights() async {
-        // TODO: Implement Convex call to sleepInsights.generateInsights
+        do {
+            let insightsData = try await ConvexService.shared.generateSleepInsights()
 
-        // Example:
-        // let insightsData = try await ConvexService.shared.query("sleepInsights:generateInsights", args: ["userId": userId])
-        // self.insights = insightsData
+            self.insights = insightsData.map { insight in
+                SleepInsight(
+                    id: insight.id,
+                    type: insight.type,
+                    title: insight.title,
+                    text: insight.text,
+                    confidence: insight.confidence,
+                    actionable: insight.actionable
+                )
+            }
+
+            print("[SleepInsights] Generated \(insightsData.count) insights")
+
+        } catch {
+            print("[SleepInsights] Error loading insights: \(error)")
+        }
     }
 
     /// Normalize objective sleep score to 0-100 scale

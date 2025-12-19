@@ -103,9 +103,23 @@ struct SleepInsightsDashboardView: View {
 
     private var insightsContent: some View {
         VStack(spacing: 20) {
+            // Data source indicator (always show)
+            DataSourceCard(
+                source: viewModel.primarySource,
+                qualityScore: viewModel.dataQualityScore,
+                daysOfData: viewModel.daysOfData
+            )
+            .padding(.horizontal)
+
             // Last night summary (always shown with data)
             if viewModel.lastNightSubjective != nil || viewModel.lastNightObjective != nil {
                 lastNightSummaryCard
+            }
+
+            // Multi-source comparison (if patient has multiple wearables)
+            if viewModel.hasMultipleSources {
+                SourceComparisonView(viewModel: viewModel)
+                    .padding(.horizontal)
             }
 
             // Perception vs Reality (5+ days)

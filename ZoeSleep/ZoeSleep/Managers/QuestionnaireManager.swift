@@ -631,6 +631,212 @@ class QuestionnaireManager: ObservableObject {
             Question(id: "SB_6", text: "Age over 50 years old?", pillar: .physical, tier: .expansion, questionType: .yesNo),
             Question(id: "SB_7", text: "Neck circumference greater than 40cm (15.75 inches)?", pillar: .physical, tier: .expansion, questionType: .yesNo),
             Question(id: "SB_8", text: "Gender = Male?", pillar: .physical, tier: .expansion, questionType: .yesNo)
+        ],
+
+        // DBAS-16 Part 1 - Dysfunctional Beliefs and Attitudes about Sleep (Day 7)
+        "expansion_dbas_part1": [
+            Question(id: "DBAS_1", text: "I need 8 hours of sleep to feel refreshed and function well during the day.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_2", text: "When I don't get a proper amount of sleep, I need to catch up the next day by napping or the next night by sleeping longer.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_3", text: "I am concerned that chronic insomnia may have serious consequences on my physical health.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_4", text: "I am worried that I may lose control over my abilities to sleep.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_5", text: "After a poor night's sleep, I know that it will interfere with my daily activities the next day.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_6", text: "In order to be alert and function well during the day, I believe I would be better off taking a sleeping pill rather than having a poor night's sleep.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_7", text: "When I feel irritable, depressed, or anxious during the day, it is mostly because I did not sleep well the night before.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_8", text: "When I sleep poorly on one night, I know it will disturb my sleep schedule for the whole week.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree")
+        ],
+
+        // DBAS-16 Part 2 (Day 8)
+        "expansion_dbas_part2": [
+            Question(id: "DBAS_9", text: "Without an adequate night's sleep, I can hardly function the next day.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_10", text: "I can't ever predict whether I'll have a good or poor night's sleep.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_11", text: "I have little ability to manage the negative consequences of disturbed sleep.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_12", text: "When I feel tired, have no energy, or just seem not to function well during the day, it is generally because I did not sleep well the night before.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_13", text: "I believe insomnia is essentially the result of a chemical imbalance.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_14", text: "I feel insomnia is ruining my ability to enjoy life and prevents me from doing what I want.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_15", text: "Medication is probably the only solution to sleeplessness.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "DBAS_16", text: "I avoid or cancel obligations (social, family) after a poor night's sleep.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree")
+        ],
+
+        // Sleep Hygiene Part 1 (Day 8)
+        "expansion_sleep_hygiene_part1": [
+            Question(id: "SH_1", text: "I keep a regular sleep schedule (same bedtime and wake time daily).", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Always"),
+            Question(id: "SH_2", text: "I avoid caffeine within 6 hours of bedtime.", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Always"),
+            Question(id: "SH_3", text: "I avoid alcohol within 3 hours of bedtime.", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Always"),
+            Question(id: "SH_4", text: "I avoid heavy meals close to bedtime.", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Always"),
+            Question(id: "SH_5", text: "My bedroom is quiet, dark, and at a comfortable temperature.", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree")
+        ],
+
+        // Sleep Hygiene Part 2 (Day 9)
+        "expansion_sleep_hygiene_part2": [
+            Question(id: "SH_6", text: "I avoid screens (phone, TV, computer) within 1 hour of bedtime.", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Always"),
+            Question(id: "SH_7", text: "I have a relaxing pre-sleep routine.", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Always"),
+            Question(id: "SH_8", text: "I use my bed only for sleep and intimacy (not work or watching TV).", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Always"),
+            Question(id: "SH_9", text: "I exercise regularly, but not within 3 hours of bedtime.", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Always"),
+            Question(id: "SH_10", text: "I get natural sunlight exposure during the day.", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Always")
+        ],
+
+        // PSAS Part 1 - Pre-Sleep Arousal Scale (Cognitive) (Day 9)
+        "expansion_psas_part1": [
+            Question(id: "PSAS_C1", text: "Worry about falling asleep", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_C2", text: "Review or ponder events of the day", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_C3", text: "Depressing or anxious thoughts", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_C4", text: "Worry about problems other than sleep", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_C5", text: "Being mentally alert, active", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_C6", text: "Can't shut off your thoughts", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_C7", text: "Thoughts keep running through your head", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_C8", text: "Being distracted by sounds, etc. in the environment", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely")
+        ],
+
+        // PSAS Part 2 - Pre-Sleep Arousal Scale (Somatic) (Day 10)
+        "expansion_psas_part2": [
+            Question(id: "PSAS_S1", text: "Heart racing, pounding, or beating irregularly", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_S2", text: "A jittery, nervous feeling in your body", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_S3", text: "Shortness of breath or labored breathing", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_S4", text: "A tight, tense feeling in your muscles", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_S5", text: "Cold feeling in your hands, feet, or your body in general", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_S6", text: "Have stomach upset (knot or nervous feeling in stomach, etc.)", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_S7", text: "Perspiration in palms of your hands or other parts of your body", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely"),
+            Question(id: "PSAS_S8", text: "Dry feeling in mouth or throat", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Not at all", scaleMaxLabel: "Extremely")
+        ],
+
+        // FSS - Fatigue Severity Scale (Day 11)
+        "expansion_fss": [
+            Question(id: "FSS_1", text: "My motivation is lower when I am fatigued.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 7, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "FSS_2", text: "Exercise brings on my fatigue.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 7, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "FSS_3", text: "I am easily fatigued.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 7, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "FSS_4", text: "Fatigue interferes with my physical functioning.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 7, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "FSS_5", text: "Fatigue causes frequent problems for me.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 7, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "FSS_6", text: "My fatigue prevents sustained physical functioning.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 7, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "FSS_7", text: "Fatigue interferes with carrying out certain duties and responsibilities.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 7, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "FSS_8", text: "Fatigue is among my three most disabling symptoms.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 7, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree"),
+            Question(id: "FSS_9", text: "Fatigue interferes with my work, family, or social life.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 7, scaleMinLabel: "Strongly Disagree", scaleMaxLabel: "Strongly Agree")
+        ],
+
+        // FOSQ-10 Part 1 - Functional Outcomes of Sleep (Day 11)
+        "expansion_fosq_part1": [
+            Question(id: "FOSQ_1", text: "Difficulty concentrating on things you do because of sleepiness or fatigue?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty"),
+            Question(id: "FOSQ_2", text: "Difficulty remembering things because of sleepiness or fatigue?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty"),
+            Question(id: "FOSQ_3", text: "Difficulty finishing a meal because you became sleepy?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty"),
+            Question(id: "FOSQ_4", text: "Difficulty working on a hobby because of sleepiness or fatigue?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty"),
+            Question(id: "FOSQ_5", text: "Difficulty doing work or accomplishing tasks at home or work?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty")
+        ],
+
+        // FOSQ-10 Part 2 (Day 12)
+        "expansion_fosq_part2": [
+            Question(id: "FOSQ_6", text: "Difficulty operating a motor vehicle for short distances (<1 hour)?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty"),
+            Question(id: "FOSQ_7", text: "Difficulty operating a motor vehicle for long distances (>1 hour)?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty"),
+            Question(id: "FOSQ_8", text: "Difficulty visiting with family or friends in your home?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty"),
+            Question(id: "FOSQ_9", text: "Difficulty watching a movie or video?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty"),
+            Question(id: "FOSQ_10", text: "Difficulty taking care of financial affairs or doing paperwork?", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 4, scaleMinLabel: "No difficulty", scaleMaxLabel: "Extreme difficulty")
+        ],
+
+        // DASS-21 Part 1 (Day 13) - Depression & Anxiety items
+        "expansion_dass21_part1": [
+            Question(id: "DASS_1", text: "I found it hard to wind down.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_2", text: "I was aware of dryness of my mouth.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_3", text: "I couldn't seem to experience any positive feeling at all.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_4", text: "I experienced breathing difficulty (e.g. excessively rapid breathing).", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_5", text: "I found it difficult to work up the initiative to do things.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_6", text: "I tended to over-react to situations.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_7", text: "I experienced trembling (e.g. in the hands).", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_8", text: "I felt that I was using a lot of nervous energy.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_9", text: "I was worried about situations in which I might panic.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_10", text: "I felt that I had nothing to look forward to.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_11", text: "I found myself getting agitated.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much")
+        ],
+
+        // DASS-21 Part 2 (Day 14)
+        "expansion_dass21_part2": [
+            Question(id: "DASS_12", text: "I found it difficult to relax.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_13", text: "I felt down-hearted and blue.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_14", text: "I was intolerant of anything that kept me from getting on with what I was doing.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_15", text: "I felt I was close to panic.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_16", text: "I was unable to become enthusiastic about anything.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_17", text: "I felt I wasn't worth much as a person.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_18", text: "I felt that I was rather touchy.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_19", text: "I felt scared without any good reason.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_20", text: "I felt that life was meaningless.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much"),
+            Question(id: "DASS_21", text: "I found it hard to calm down after something upset me.", pillar: .mentalHealth, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 3, scaleMinLabel: "Did not apply to me", scaleMaxLabel: "Applied very much")
+        ],
+
+        // PROMIS Cognitive Function (Day 13)
+        "expansion_promis_cognitive": [
+            Question(id: "PROMIS_COG_1", text: "In the past 7 days, my thinking has been slow.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Very Often"),
+            Question(id: "PROMIS_COG_2", text: "In the past 7 days, it has seemed like my brain was not working as well as usual.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Very Often"),
+            Question(id: "PROMIS_COG_3", text: "In the past 7 days, I have had trouble concentrating.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Very Often"),
+            Question(id: "PROMIS_COG_4", text: "In the past 7 days, I have had trouble forming thoughts.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Very Often"),
+            Question(id: "PROMIS_COG_5", text: "In the past 7 days, I have had trouble remembering things.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Very Often"),
+            Question(id: "PROMIS_COG_6", text: "In the past 7 days, I have had trouble thinking clearly.", pillar: .cognitive, tier: .expansion, questionType: .scale, scaleMin: 1, scaleMax: 5, scaleMinLabel: "Never", scaleMaxLabel: "Very Often")
+        ],
+
+        // Berlin Questionnaire (Day 14)
+        "expansion_berlin": [
+            Question(id: "BERLIN_1", text: "Do you snore?", pillar: .physical, tier: .expansion, questionType: .singleSelect, options: ["Yes", "No", "Don't know"]),
+            Question(id: "BERLIN_2", text: "Your snoring is:", pillar: .physical, tier: .expansion, questionType: .singleSelect, options: ["Slightly louder than breathing", "As loud as talking", "Louder than talking", "Very loud - can be heard in adjacent rooms"]),
+            Question(id: "BERLIN_3", text: "How often do you snore?", pillar: .physical, tier: .expansion, questionType: .singleSelect, options: ["Nearly every day", "3-4 times a week", "1-2 times a week", "1-2 times a month", "Never or nearly never"]),
+            Question(id: "BERLIN_4", text: "Has your snoring ever bothered other people?", pillar: .physical, tier: .expansion, questionType: .yesNo),
+            Question(id: "BERLIN_5", text: "Has anyone noticed that you quit breathing during your sleep?", pillar: .physical, tier: .expansion, questionType: .singleSelect, options: ["Nearly every day", "3-4 times a week", "1-2 times a week", "1-2 times a month", "Never or nearly never"]),
+            Question(id: "BERLIN_6", text: "How often do you feel tired or fatigued after your sleep?", pillar: .physical, tier: .expansion, questionType: .singleSelect, options: ["Nearly every day", "3-4 times a week", "1-2 times a week", "1-2 times a month", "Never or nearly never"]),
+            Question(id: "BERLIN_7", text: "During your waking time, do you feel tired, fatigued, or not up to par?", pillar: .physical, tier: .expansion, questionType: .singleSelect, options: ["Nearly every day", "3-4 times a week", "1-2 times a week", "1-2 times a month", "Never or nearly never"]),
+            Question(id: "BERLIN_8", text: "Have you ever nodded off or fallen asleep while driving a vehicle?", pillar: .physical, tier: .expansion, questionType: .yesNo),
+            Question(id: "BERLIN_9", text: "How often does this occur (nodding off while driving)?", pillar: .physical, tier: .expansion, questionType: .singleSelect, options: ["Nearly every day", "3-4 times a week", "1-2 times a week", "1-2 times a month", "Never or nearly never"]),
+            Question(id: "BERLIN_10", text: "Do you have high blood pressure?", pillar: .physical, tier: .expansion, questionType: .yesNo)
+        ],
+
+        // BPI - Brief Pain Inventory (Day 15)
+        "expansion_bpi": [
+            Question(id: "BPI_1", text: "Rate your pain at its WORST in the last 24 hours.", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "No pain", scaleMaxLabel: "Pain as bad as you can imagine"),
+            Question(id: "BPI_2", text: "Rate your pain at its LEAST in the last 24 hours.", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "No pain", scaleMaxLabel: "Pain as bad as you can imagine"),
+            Question(id: "BPI_3", text: "Rate your pain on AVERAGE.", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "No pain", scaleMaxLabel: "Pain as bad as you can imagine"),
+            Question(id: "BPI_4", text: "Rate your pain RIGHT NOW.", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "No pain", scaleMaxLabel: "Pain as bad as you can imagine"),
+            Question(id: "BPI_5", text: "Pain interference with: General activity", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Does not interfere", scaleMaxLabel: "Completely interferes"),
+            Question(id: "BPI_6", text: "Pain interference with: Mood", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Does not interfere", scaleMaxLabel: "Completely interferes"),
+            Question(id: "BPI_7", text: "Pain interference with: Walking ability", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Does not interfere", scaleMaxLabel: "Completely interferes"),
+            Question(id: "BPI_8", text: "Pain interference with: Normal work (including housework)", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Does not interfere", scaleMaxLabel: "Completely interferes"),
+            Question(id: "BPI_9", text: "Pain interference with: Relations with other people", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Does not interfere", scaleMaxLabel: "Completely interferes"),
+            Question(id: "BPI_10", text: "Pain interference with: Sleep", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Does not interfere", scaleMaxLabel: "Completely interferes"),
+            Question(id: "BPI_11", text: "Pain interference with: Enjoyment of life", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Does not interfere", scaleMaxLabel: "Completely interferes")
+        ],
+
+        // MEDAS - Mediterranean Diet Adherence Screener (Day 15)
+        "expansion_medas": [
+            Question(id: "MEDAS_1", text: "Do you use olive oil as the main source of fat for cooking?", pillar: .nutritional, tier: .expansion, questionType: .yesNo),
+            Question(id: "MEDAS_2", text: "How many tablespoons of olive oil do you consume per day (including frying, salads, meals, etc.)?", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 1", "1-2", "3-4", "4 or more"]),
+            Question(id: "MEDAS_3", text: "How many servings of vegetables do you consume per day? (1 serving = 200g)", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 1", "1-2", "3 or more"]),
+            Question(id: "MEDAS_4", text: "How many pieces of fruit (including fresh-squeezed juice) do you consume per day?", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 1", "1-2", "3 or more"]),
+            Question(id: "MEDAS_5", text: "How many servings of red meat, hamburger, or sausage do you consume per day? (1 serving = 100-150g)", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 1", "1 or more"]),
+            Question(id: "MEDAS_6", text: "How many servings of butter, margarine, or cream do you consume per day? (1 serving = 12g)", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 1", "1 or more"]),
+            Question(id: "MEDAS_7", text: "How many sweetened/carbonated beverages do you consume per day?", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 1", "1 or more"]),
+            Question(id: "MEDAS_8", text: "How many glasses of wine do you drink per week?", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 3", "3-7", "7 or more"]),
+            Question(id: "MEDAS_9", text: "How many servings of legumes (beans, lentils, peas) do you consume per week? (1 serving = 150g)", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 3", "3 or more"]),
+            Question(id: "MEDAS_10", text: "How many servings of fish/shellfish do you consume per week? (1 serving = 100-150g)", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 3", "3 or more"]),
+            Question(id: "MEDAS_11", text: "How many times per week do you consume commercial baked goods or sweets?", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 3", "3 or more"]),
+            Question(id: "MEDAS_12", text: "How many servings of nuts (including peanuts) do you consume per week? (1 serving = 30g)", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 3", "3 or more"]),
+            Question(id: "MEDAS_13", text: "Do you preferentially consume chicken, turkey, or rabbit instead of beef, pork, or sausages?", pillar: .nutritional, tier: .expansion, questionType: .yesNo),
+            Question(id: "MEDAS_14", text: "How many times per week do you consume cooked vegetables, pasta, rice, or other dishes with a sauce of tomato, garlic, onion, or leeks sautéed in olive oil?", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 2", "2 or more"])
+        ],
+
+        // MEQ - Morningness-Eveningness Questionnaire (Day 15)
+        "expansion_meq": [
+            Question(id: "MEQ_1", text: "What time would you get up if you were entirely free to plan your day?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["5:00-6:30 AM", "6:30-7:45 AM", "7:45-9:45 AM", "9:45-11:00 AM", "11:00 AM-12:00 PM"]),
+            Question(id: "MEQ_2", text: "What time would you go to bed if you were entirely free to plan your evening?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["8:00-9:00 PM", "9:00-10:15 PM", "10:15 PM-12:30 AM", "12:30-1:45 AM", "1:45-3:00 AM"]),
+            Question(id: "MEQ_3", text: "If you usually have to get up at a specific time in the morning, how much do you depend on an alarm clock?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Not at all", "Slightly", "Somewhat", "Very much"]),
+            Question(id: "MEQ_4", text: "How easy do you find it to get up in the morning (when you are not awakened unexpectedly)?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Very difficult", "Fairly difficult", "Fairly easy", "Very easy"]),
+            Question(id: "MEQ_5", text: "How alert do you feel during the first half hour after waking in the morning?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Not at all alert", "Slightly alert", "Fairly alert", "Very alert"]),
+            Question(id: "MEQ_6", text: "How hungry do you feel during the first half hour after waking?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Not at all hungry", "Slightly hungry", "Fairly hungry", "Very hungry"]),
+            Question(id: "MEQ_7", text: "During the first half hour after waking, how do you feel?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Very tired", "Fairly tired", "Fairly refreshed", "Very refreshed"]),
+            Question(id: "MEQ_8", text: "If you had no commitments the next day, what time would you go to bed compared to your usual bedtime?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Seldom or never later", "Less than 1 hour later", "1-2 hours later", "More than 2 hours later"]),
+            Question(id: "MEQ_9", text: "You have decided to do physical exercise. A friend suggests 7:00-8:00 AM. How would you perform?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Would be in good form", "Would be in reasonable form", "Would find it difficult", "Would find it very difficult"]),
+            Question(id: "MEQ_10", text: "At approximately what time in the evening do you feel tired and in need of sleep?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["8:00-9:00 PM", "9:00-10:15 PM", "10:15 PM-12:45 AM", "12:45-2:00 AM", "2:00-3:00 AM"]),
+            Question(id: "MEQ_11", text: "You want to be at peak performance for a test that you know is going to be mentally exhausting and will last 2 hours. Which time would you choose?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["8:00-10:00 AM", "11:00 AM-1:00 PM", "3:00-5:00 PM", "7:00-9:00 PM"]),
+            Question(id: "MEQ_12", text: "If you got into bed at 11:00 PM, how tired would you be?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Not at all tired", "A little tired", "Fairly tired", "Very tired"]),
+            Question(id: "MEQ_13", text: "For some reason you have gone to bed several hours later than usual, but there is no need to get up at any particular time the next morning. Which is most likely?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Will wake at usual time and not fall back asleep", "Will wake at usual time and doze", "Will wake at usual time but fall asleep again", "Will not wake until later than usual"]),
+            Question(id: "MEQ_14", text: "One night you have to remain awake between 4:00-6:00 AM to carry out a night watch. You have no commitments the next day. Which would you prefer?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Would not go to bed until watch was over", "Would take a nap before and sleep after", "Would take a good sleep before and nap after", "Would take all sleep before watch"]),
+            Question(id: "MEQ_15", text: "You have 2 hours of hard physical work. Which time would you choose?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["8:00-10:00 AM", "11:00 AM-1:00 PM", "3:00-5:00 PM", "7:00-9:00 PM"]),
+            Question(id: "MEQ_16", text: "You have decided to do physical exercise. A friend suggests 10:00-11:00 PM. How well would you perform?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Would be in good form", "Would be in reasonable form", "Would find it difficult", "Would find it very difficult"]),
+            Question(id: "MEQ_17", text: "Suppose you can choose your own work hours. Assume you work a 5-hour day. Which 5 consecutive hours would you select?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["4:00-8:00 AM", "8:00 AM-1:00 PM", "9:00 AM-2:00 PM", "2:00-7:00 PM", "5:00-12:00 PM"]),
+            Question(id: "MEQ_18", text: "At approximately what time of day do you usually feel your best?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["5:00-8:00 AM", "8:00-10:00 AM", "10:00 AM-5:00 PM", "5:00-9:00 PM", "9:00 PM-5:00 AM"]),
+            Question(id: "MEQ_19", text: "One hears about 'morning types' and 'evening types'. Which do you consider yourself to be?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["Definitely a morning type", "More a morning than evening type", "More an evening than morning type", "Definitely an evening type"])
         ]
     ]
 
@@ -1232,6 +1438,41 @@ class QuestionnaireManager: ObservableObject {
             self.error = error.localizedDescription
             isLoading = false
             print("[iOS] Error loading journey progress: \(error.localizedDescription)")
+        }
+    }
+
+    /// Load gateway states from Convex database
+    /// This syncs the local gateway states with what's stored in the database
+    @MainActor
+    func loadGatewayStatesFromServer() async {
+        guard convexService.isAuthenticated else {
+            print("[iOS] loadGatewayStatesFromServer: Not authenticated, skipping")
+            return
+        }
+
+        print("[iOS] Loading gateway states from Convex...")
+
+        do {
+            let serverGatewayStates = try await convexService.getGatewayStates()
+
+            // Create a map for quick lookup
+            let serverStateMap = Dictionary(uniqueKeysWithValues: serverGatewayStates.map { ($0.gatewayId, $0) })
+
+            // Update local gateway states from server
+            for i in 0..<gatewayStates.count {
+                let gatewayType = gatewayStates[i].gatewayType
+                if let serverState = serverStateMap[gatewayType.rawValue] {
+                    gatewayStates[i].triggered = serverState.isTriggered
+                    if let triggeredAt = serverState.triggeredAt {
+                        gatewayStates[i].triggeredAt = Date(timeIntervalSince1970: TimeInterval(triggeredAt / 1000))
+                    }
+                }
+            }
+
+            let triggeredCount = gatewayStates.filter { $0.triggered }.count
+            print("[iOS] Loaded \(serverGatewayStates.count) gateway states from server, \(triggeredCount) triggered")
+        } catch {
+            print("[iOS] Error loading gateway states: \(error.localizedDescription)")
         }
     }
 }

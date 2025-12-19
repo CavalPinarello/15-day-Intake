@@ -19,7 +19,6 @@
 		4A5E3BA22C8E123456789A0A /* HealthKitIntegrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BA12C8E123456789A0A /* HealthKitIntegrationView.swift */; };
 		4A5E3BA82C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BA72C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift */; };
 		4A5E3BAC2C8E123456789A0C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5E3BAB2C8E123456789A0C /* Assets.xcassets */; };
-		4A5E3BB02C8E123456789A0D /* ZoeSleep Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 4A5E3BA52C8E123456789A0E /* ZoeSleep Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4A5E3BB52C8E123456789A0F /* HealthKitWatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB42C8E123456789A0F /* HealthKitWatchManager.swift */; };
 		4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */; };
 		4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */; };
@@ -65,20 +64,16 @@
 		4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */; };
 		4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C812C8E123456789N02 /* ZoeLogo.swift */; };
 		4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */; };
+		5A316CB42EF4B0E00098C762 /* SourceComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CB32EF4B0E00098C762 /* SourceComparisonView.swift */; };
+		5A316CB62EF4B0F10098C762 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CB52EF4B0F10098C762 /* NotificationManager.swift */; };
+		5A316CB82EF4B1020098C762 /* MorningCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CB72EF4B1020098C762 /* MorningCheckInView.swift */; };
+		5A316CBA2EF4B10E0098C762 /* EveningReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CB92EF4B10E0098C762 /* EveningReportView.swift */; };
+		5A316CC12EF4B1200098C762 /* GamificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CC02EF4B1200098C762 /* GamificationManager.swift */; };
+		5A316CC32EF4B1210098C762 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CC22EF4B1210098C762 /* ConfettiView.swift */; };
+		5A316CC52EF4B1220098C762 /* XPDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CC42EF4B1220098C762 /* XPDisplayView.swift */; };
+		5A316CC72EF4B1230098C762 /* StreakBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CC62EF4B1230098C762 /* StreakBadgeView.swift */; };
+		5A316CC92EF4B1240098C762 /* BadgeUnlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CC82EF4B1240098C762 /* BadgeUnlockView.swift */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		4A5E3BAF2C8E123456789A13 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 4A5E3B7D2C8E123456789A14 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 4A5E3BA42C8E123456789A15;
-			remoteInfo = "ZoeSleep Watch App";
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		4A5E3B842C8E123456789A17 /* ZoeSleep.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZoeSleep.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -143,6 +138,15 @@
 		4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlaybackView.swift; sourceTree = "<group>"; };
 		4A5E3C812C8E123456789N02 /* ZoeLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoeLogo.swift; sourceTree = "<group>"; };
 		4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuroraBorealisView.swift; sourceTree = "<group>"; };
+		5A316CB32EF4B0E00098C762 /* SourceComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceComparisonView.swift; sourceTree = "<group>"; };
+		5A316CB52EF4B0F10098C762 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		5A316CB72EF4B1020098C762 /* MorningCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningCheckInView.swift; sourceTree = "<group>"; };
+		5A316CB92EF4B10E0098C762 /* EveningReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningReportView.swift; sourceTree = "<group>"; };
+		5A316CC02EF4B1200098C762 /* GamificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationManager.swift; sourceTree = "<group>"; };
+		5A316CC22EF4B1210098C762 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
+		5A316CC42EF4B1220098C762 /* XPDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPDisplayView.swift; sourceTree = "<group>"; };
+		5A316CC62EF4B1230098C762 /* StreakBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakBadgeView.swift; sourceTree = "<group>"; };
+		5A316CC82EF4B1240098C762 /* BadgeUnlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeUnlockView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -171,15 +175,6 @@
 				4A5E3BA62C8E123456789A20 /* ZoeSleep Watch App */,
 				4A5E3B852C8E123456789A21 /* Products */,
 			);
-			sourceTree = "<group>";
-		};
-		4A5E3BF72C8E123456789F04 /* Shared */ = {
-			isa = PBXGroup;
-			children = (
-				4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */,
-			);
-			name = Shared;
-			path = Shared;
 			sourceTree = "<group>";
 		};
 		4A5E3B852C8E123456789A21 /* Products */ = {
@@ -219,17 +214,6 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
-		4A5E3C782C8E123456789M09 /* DevTools */ = {
-			isa = PBXGroup;
-			children = (
-				4A5E3C712C8E123456789M02 /* MockDataTypes.swift */,
-				4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */,
-				4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */,
-				4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */,
-			);
-			path = DevTools;
-			sourceTree = "<group>";
-		};
 		4A5E3BA62C8E123456789A20 /* ZoeSleep Watch App */ = {
 			isa = PBXGroup;
 			children = (
@@ -256,7 +240,9 @@
 			isa = PBXGroup;
 			children = (
 				4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */,
+				5A316CC02EF4B1200098C762 /* GamificationManager.swift */,
 				4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */,
+				5A316CB52EF4B0F10098C762 /* NotificationManager.swift */,
 				4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */,
 				4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */,
 				4A5E3C132C8E123456789H04 /* RewardMomentManager.swift */,
@@ -286,6 +272,9 @@
 				4A5E3BDD2C8E123456789C0E /* SettingsView.swift */,
 				4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */,
 				4A5E3C152C8E123456789H06 /* SleepFactRewardCard.swift */,
+				5A316CB72EF4B1020098C762 /* MorningCheckInView.swift */,
+				5A316CB92EF4B10E0098C762 /* EveningReportView.swift */,
+				5A316CCA2EF4B1250098C762 /* Gamification */,
 				4A5E3C302C8E123456789I0D /* Insights */,
 				4A5E3BF12C8E123456789E02 /* CircadianWaveBackground.swift */,
 				4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */,
@@ -295,6 +284,17 @@
 				4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		5A316CCA2EF4B1250098C762 /* Gamification */ = {
+			isa = PBXGroup;
+			children = (
+				5A316CC82EF4B1240098C762 /* BadgeUnlockView.swift */,
+				5A316CC22EF4B1210098C762 /* ConfettiView.swift */,
+				5A316CC62EF4B1230098C762 /* StreakBadgeView.swift */,
+				5A316CC42EF4B1220098C762 /* XPDisplayView.swift */,
+			);
+			path = Gamification;
 			sourceTree = "<group>";
 		};
 		4A5E3BCF2C8E123456789B0B /* Models */ = {
@@ -307,6 +307,14 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		4A5E3BF72C8E123456789F04 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		4A5E3C302C8E123456789I0D /* Insights */ = {
 			isa = PBXGroup;
 			children = (
@@ -315,6 +323,7 @@
 				4A5E3C252C8E123456789I06 /* InsightCard.swift */,
 				4A5E3C272C8E123456789I08 /* PatternDetectionView.swift */,
 				4A5E3C292C8E123456789I0A /* PerceptionVsRealityCard.swift */,
+				5A316CB32EF4B0E00098C762 /* SourceComparisonView.swift */,
 				4A5E3C2B2C8E123456789I0C /* TrendChartView.swift */,
 			);
 			path = Insights;
@@ -326,6 +335,17 @@
 				4A5E3C612C8E123456789L02 /* SleepInsightsViewModel.swift */,
 			);
 			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		4A5E3C782C8E123456789M09 /* DevTools */ = {
+			isa = PBXGroup;
+			children = (
+				4A5E3C712C8E123456789M02 /* MockDataTypes.swift */,
+				4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */,
+				4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */,
+				4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */,
+			);
+			path = DevTools;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -429,7 +449,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A316CB42EF4B0E00098C762 /* SourceComparisonView.swift in Sources */,
 				4A5E3B8C2C8E123456789A02 /* ContentView.swift in Sources */,
+				5A316CBA2EF4B10E0098C762 /* EveningReportView.swift in Sources */,
 				4A5E3B982C8E123456789A05 /* Config.swift in Sources */,
 				4A5E3B9A2C8E123456789A06 /* AuthenticationManager.swift in Sources */,
 				4A5E3B9C2C8E123456789A07 /* HealthKitManager.swift in Sources */,
@@ -445,6 +467,7 @@
 				4A5E3C202C8E123456789I01 /* SleepInsightsDashboardView.swift in Sources */,
 				4A5E3C222C8E123456789I03 /* DataRequirementView.swift in Sources */,
 				4A5E3C242C8E123456789I05 /* InsightCard.swift in Sources */,
+				5A316CB62EF4B0F10098C762 /* NotificationManager.swift in Sources */,
 				4A5E3C262C8E123456789I07 /* PatternDetectionView.swift in Sources */,
 				4A5E3C282C8E123456789I09 /* PerceptionVsRealityCard.swift in Sources */,
 				4A5E3C2A2C8E123456789I0B /* TrendChartView.swift in Sources */,
@@ -464,12 +487,18 @@
 				4A5E3C022C8E123456789G03 /* OnboardingView.swift in Sources */,
 				4A5E3C042C8E123456789G05 /* ProfileSettingsView.swift in Sources */,
 				4A5E3C602C8E123456789L01 /* SleepInsightsViewModel.swift in Sources */,
+				5A316CB82EF4B1020098C762 /* MorningCheckInView.swift in Sources */,
 				4A5E3C702C8E123456789M01 /* MockDataTypes.swift in Sources */,
 				4A5E3C722C8E123456789M03 /* MockDataGenerator.swift in Sources */,
 				4A5E3C742C8E123456789M05 /* MockPlaybackController.swift in Sources */,
 				4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */,
 				4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */,
 				4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */,
+				5A316CC12EF4B1200098C762 /* GamificationManager.swift in Sources */,
+				5A316CC32EF4B1210098C762 /* ConfettiView.swift in Sources */,
+				5A316CC52EF4B1220098C762 /* XPDisplayView.swift in Sources */,
+				5A316CC72EF4B1230098C762 /* StreakBadgeView.swift in Sources */,
+				5A316CC92EF4B1240098C762 /* BadgeUnlockView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -494,9 +523,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		4A5E3BBD2C8E123456789A2F /* Debug */ = {

@@ -639,6 +639,221 @@ export const getSleepArchitecture = query({
 });
 
 // ============================================
+// Multi-Source Sleep Data Query
+// ============================================
+
+/**
+ * Get sleep data organized by source device for multi-wearable comparison.
+ * Returns data grouped by source (Apple Watch, Oura, Fitbit, etc.) with
+ * overlapping dates aligned for easy comparison charting.
+ */
+export const getMultiSourceSleepData = query({
+  args: {
+    userId: v.id("users"),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, days = 15 } = args;
+
+    const sleepData = await ctx.db
+      .query("user_sleep_data")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Get unique dates and sources
+    const allDates = new Set<string>();
+    const sourceData: Record<string, Array<{
+      date: string;
+      totalSleepMins: number | null;
+      efficiency: number | null;
+      deepMins: number | null;
+      remMins: number | null;
+      lightMins: number | null;
+    }>> = {};
+
+    // Collect all sources mentioned in all_sources_json
+    const allSourcesSet = new Set<string>();
+
+    for (const record of sleepData) {
+      allDates.add(record.date);
+
+      // Add primary source data
+      const primarySource = record.primary_source || "Unknown";
+      if (!sourceData[primarySource]) {
+        sourceData[primarySource] = [];
+      }
+      sourceData[primarySource].push({
+        date: record.date,
+        totalSleepMins: record.total_sleep_mins ?? null,
+        efficiency: record.sleep_efficiency ?? null,
+        deepMins: record.deep_sleep_mins ?? null,
+        remMins: record.rem_sleep_mins ?? null,
+        lightMins: record.light_sleep_mins ?? null,
+      });
+      allSourcesSet.add(primarySource);
+
+      // Parse all_sources_json to find all contributing sources
+      if (record.all_sources_json) {
+        try {
+          const allSources = JSON.parse(record.all_sources_json) as string[];
+          allSources.forEach(s => allSourcesSet.add(s));
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    }
+
+    // Sort dates and limit
+    const sortedDates = Array.from(allDates)
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, days);
+
+    // Build comparison data structure
+    const comparisonData = sortedDates.map(date => {
+      const dataForDate: Record<string, {
+        totalSleepMins: number | null;
+        efficiency: number | null;
+        deepMins: number | null;
+        remMins: number | null;
+        lightMins: number | null;
+      } | null> = {};
+
+      for (const source of Object.keys(sourceData)) {
+        const sourceRecord = sourceData[source].find(d => d.date === date);
+        dataForDate[source] = sourceRecord || null;
+      }
+
+      return {
+        date,
+        sources: dataForDate,
+      };
+    }).reverse();
+
+    // Calculate source statistics
+    const sourceStats = Object.keys(sourceData).map(source => {
+      const records = sourceData[source].filter(r => r.efficiency !== null);
+      const avgEfficiency = records.length > 0
+        ? Math.round(records.reduce((sum, r) => sum + (r.efficiency || 0), 0) / records.length)
+        : null;
+      const avgSleepMins = records.length > 0
+        ? Math.round(records.reduce((sum, r) => sum + (r.totalSleepMins || 0), 0) / records.length)
+        : null;
+
+      return {
+        source,
+        dataPoints: sourceData[source].length,
+        avgEfficiency,
+        avgSleepHours: avgSleepMins ? avgSleepMins / 60 : null,
+        hasDeepSleep: sourceData[source].some(r => r.deepMins !== null && r.deepMins > 0),
+        hasHeartRate: false, // Would need to check heart rate table
+      };
+    });
+
+    return {
+      hasMultipleSources: Object.keys(sourceData).length > 1,
+      sources: Object.keys(sourceData),
+      sourceStats,
+      comparisonData,
+      totalDays: sortedDates.length,
+    };
+  },
+});
+
+/**
+ * Get detailed source information including device quality assessment
+ */
+export const getSourceDetails = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+
+    // Get recent sleep data
+    const sleepData = await ctx.db
+      .query("user_sleep_data")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .order("desc")
+      .take(30);
+
+    // Get heart rate data to assess source capabilities
+    const hrData = await ctx.db
+      .query("user_heart_rate")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .take(30);
+
+    // Collect sources and their capabilities
+    const sourceCapabilities: Record<string, {
+      hasSleepStages: boolean;
+      hasHeartRate: boolean;
+      hasHrv: boolean;
+      daysOfData: number;
+      firstSeen: string;
+      lastSeen: string;
+      qualityScore: number; // 0-5
+    }> = {};
+
+    for (const record of sleepData) {
+      const source = record.primary_source || "Unknown";
+
+      if (!sourceCapabilities[source]) {
+        sourceCapabilities[source] = {
+          hasSleepStages: false,
+          hasHeartRate: false,
+          hasHrv: false,
+          daysOfData: 0,
+          firstSeen: record.date,
+          lastSeen: record.date,
+          qualityScore: 0,
+        };
+      }
+
+      const cap = sourceCapabilities[source];
+      cap.daysOfData++;
+      if (record.date < cap.firstSeen) cap.firstSeen = record.date;
+      if (record.date > cap.lastSeen) cap.lastSeen = record.date;
+
+      if (record.deep_sleep_mins !== undefined && record.deep_sleep_mins > 0) {
+        cap.hasSleepStages = true;
+      }
+    }
+
+    // Check heart rate data
+    if (hrData.length > 0) {
+      // Assume heart rate comes from primary wearable
+      const primarySource = sleepData[0]?.primary_source || "Unknown";
+      if (sourceCapabilities[primarySource]) {
+        sourceCapabilities[primarySource].hasHeartRate = hrData.some(h => h.resting_hr !== undefined);
+        sourceCapabilities[primarySource].hasHrv = hrData.some(h => h.hrv_avg !== undefined);
+      }
+    }
+
+    // Calculate quality scores
+    for (const source of Object.keys(sourceCapabilities)) {
+      const cap = sourceCapabilities[source];
+      let score = 1; // Base score for having any data
+      if (cap.hasSleepStages) score += 2;
+      if (cap.hasHeartRate) score += 1;
+      if (cap.hasHrv) score += 1;
+      cap.qualityScore = score;
+    }
+
+    return {
+      sources: Object.entries(sourceCapabilities).map(([name, cap]) => ({
+        name,
+        ...cap,
+        qualityLabel: cap.qualityScore >= 4 ? "Excellent"
+          : cap.qualityScore >= 3 ? "Good"
+          : cap.qualityScore >= 2 ? "Fair"
+          : "Limited",
+      })),
+      primarySource: sleepData[0]?.primary_source || null,
+      totalSources: Object.keys(sourceCapabilities).length,
+    };
+  },
+});
+
+// ============================================
 // Sleep Metrics Computation from Questionnaire Responses
 // ============================================
 
@@ -796,5 +1011,165 @@ export const computeSleepMetricsFromResponses = mutation({
     }
 
     return { success: true };
+  },
+});
+
+/**
+ * Retroactively compute sleep metrics for ALL existing CSD_ questionnaire responses.
+ * This is useful when mock data was generated before the computeSleepMetricsFromResponses
+ * function was in place, or to fix data integrity issues.
+ */
+export const computeAllSleepMetricsFromResponses = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+
+    // Get all CSD_ responses for this user, grouped by day
+    const allResponses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    const csdResponses = allResponses.filter(r => r.question_id.startsWith("CSD_"));
+
+    if (csdResponses.length === 0) {
+      console.log(`[computeAllSleepMetrics] No CSD_ responses found for user ${userId}`);
+      return { success: true, daysProcessed: 0 };
+    }
+
+    // Group responses by day_number
+    const responsesByDay = new Map<number, typeof csdResponses>();
+    for (const r of csdResponses) {
+      const day = r.day_number;
+      if (!responsesByDay.has(day)) {
+        responsesByDay.set(day, []);
+      }
+      responsesByDay.get(day)!.push(r);
+    }
+
+    console.log(`[computeAllSleepMetrics] Found ${responsesByDay.size} days of CSD_ responses`);
+
+    // Helper functions
+    const parseTimeToMinutes = (timeStr: string | undefined): number | null => {
+      if (!timeStr) return null;
+      const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+      if (!match) return null;
+      const hours = parseInt(match[1], 10);
+      const mins = parseInt(match[2], 10);
+      return hours * 60 + mins;
+    };
+
+    // Get user to find journey start date
+    const user = await ctx.db.get(userId);
+    const journeyStartDate = user?.journey_start_date
+      ? new Date(user.journey_start_date)
+      : new Date();
+
+    let daysProcessed = 0;
+
+    // Process each day
+    for (const [dayNumber, dayResponses] of responsesByDay.entries()) {
+      // Calculate the date for this day based on journey start
+      const dateObj = new Date(journeyStartDate);
+      dateObj.setDate(dateObj.getDate() + dayNumber - 1);
+      const date = dateObj.toISOString().split('T')[0];
+
+      // Build response map
+      const responseMap = new Map<string, { value?: string; number?: number }>();
+      for (const r of dayResponses) {
+        responseMap.set(r.question_id, {
+          value: r.response_value ?? undefined,
+          number: r.response_number ?? undefined,
+        });
+      }
+
+      // Extract values
+      const intoBedTime = parseTimeToMinutes(responseMap.get("CSD_INTO_BED")?.value);
+      const trySleepTime = parseTimeToMinutes(responseMap.get("CSD_TRY_SLEEP")?.value);
+      const finalWakeTime = parseTimeToMinutes(responseMap.get("CSD_FINAL_WAKE")?.value);
+      const outOfBedTime = parseTimeToMinutes(responseMap.get("CSD_OUT_BED")?.value);
+      const latencyMins = responseMap.get("CSD_LATENCY")?.number ?? null;
+      const awakenings = responseMap.get("CSD_AWAKENINGS")?.number ?? null;
+      const wasoMins = responseMap.get("CSD_WASO")?.number ?? null;
+      const quality = responseMap.get("CSD_QUALITY")?.number ?? null;
+
+      // Skip if missing critical data
+      if (intoBedTime === null || outOfBedTime === null) {
+        console.log(`[computeAllSleepMetrics] Skipping day ${dayNumber}: missing bed times`);
+        continue;
+      }
+
+      // Calculate metrics
+      let timeInBedMins: number;
+      if (outOfBedTime > intoBedTime) {
+        timeInBedMins = outOfBedTime - intoBedTime;
+      } else {
+        timeInBedMins = (24 * 60 - intoBedTime) + outOfBedTime;
+      }
+
+      const latency = latencyMins ?? 0;
+      const waso = wasoMins ?? 0;
+      const totalSleepMins = Math.max(0, timeInBedMins - latency - waso);
+      const sleepEfficiency = timeInBedMins > 0
+        ? Math.round((totalSleepMins / timeInBedMins) * 100)
+        : 0;
+
+      // Generate sleep stages
+      const qualityFactor = quality ? (quality / 5) : 0.7;
+      const deepSleepMins = Math.round(totalSleepMins * (0.15 + qualityFactor * 0.10));
+      const remSleepMins = Math.round(totalSleepMins * (0.18 + qualityFactor * 0.07));
+      const lightSleepMins = totalSleepMins - deepSleepMins - remSleepMins;
+
+      // Calculate timestamps
+      const dayDateObj = new Date(date + "T00:00:00");
+      const inBedTimestamp = new Date(dayDateObj.getTime() - 86400000 + intoBedTime * 60000).getTime();
+      const asleepTimestamp = trySleepTime !== null && latencyMins !== null
+        ? new Date(dayDateObj.getTime() - 86400000 + (trySleepTime + latencyMins) * 60000).getTime()
+        : undefined;
+      const wakeTimestamp = finalWakeTime !== null
+        ? new Date(dayDateObj.getTime() + finalWakeTime * 60000).getTime()
+        : undefined;
+
+      // Check for existing entry
+      const existing = await ctx.db
+        .query("user_sleep_data")
+        .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", date))
+        .first();
+
+      const now = Date.now();
+      const sleepData = {
+        in_bed_time: inBedTimestamp,
+        asleep_time: asleepTimestamp,
+        wake_time: wakeTimestamp,
+        total_sleep_mins: totalSleepMins,
+        sleep_efficiency: sleepEfficiency,
+        deep_sleep_mins: deepSleepMins,
+        light_sleep_mins: lightSleepMins,
+        rem_sleep_mins: remSleepMins,
+        awake_mins: wasoMins ?? undefined,
+        interruptions_count: awakenings ?? undefined,
+        sleep_latency_mins: latencyMins ?? undefined,
+        primary_source: "Questionnaire",
+        source_bundle_id: "com.zoesleep.app",
+        synced_at: now,
+      };
+
+      if (existing) {
+        await ctx.db.patch(existing._id, sleepData);
+      } else {
+        await ctx.db.insert("user_sleep_data", {
+          user_id: userId,
+          date,
+          ...sleepData,
+        });
+      }
+
+      daysProcessed++;
+      console.log(`[computeAllSleepMetrics] Day ${dayNumber} (${date}): ${totalSleepMins} mins, ${sleepEfficiency}% efficiency`);
+    }
+
+    return { success: true, daysProcessed };
   },
 });

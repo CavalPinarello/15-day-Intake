@@ -3,6 +3,7 @@
 //  Zoe Sleep for Longevity System
 //
 //  Treatment Mode: Daily tasks and interventions from physician
+//  Connected to Convex backend for real treatment data
 //
 
 import SwiftUI
@@ -11,12 +12,36 @@ import SwiftUI
 
 struct TreatmentTask: Identifiable {
     let id: String
+    let interventionId: String
     let name: String
     let category: String?
     let instructions: String
     let timing: String?
     let frequency: String?
     var isCompleted: Bool
+
+    init(from intervention: ActiveIntervention) {
+        self.id = intervention._id
+        self.interventionId = intervention.intervention_id
+        self.name = intervention.name
+        self.category = intervention.category
+        self.instructions = intervention.custom_instructions ?? intervention.instructions
+        self.timing = intervention.timing
+        self.frequency = intervention.frequency
+        self.isCompleted = intervention.todayCompleted
+    }
+
+    // Legacy initializer for fallback mock data
+    init(id: String, name: String, category: String?, instructions: String, timing: String?, frequency: String?, isCompleted: Bool) {
+        self.id = id
+        self.interventionId = id
+        self.name = name
+        self.category = category
+        self.instructions = instructions
+        self.timing = timing
+        self.frequency = frequency
+        self.isCompleted = isCompleted
+    }
 }
 
 // MARK: - Treatment View
@@ -30,6 +55,9 @@ struct TreatmentView: View {
     @State private var selectedTask: TreatmentTask?
     @State private var noteText = ""
     @State private var treatmentWeek: Int = 1
+    @State private var treatmentPhase: String = "intake"
+    @State private var weeklyHistory: [ComplianceHistoryDay] = []
+    @State private var errorMessage: String?
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
@@ -226,7 +254,7 @@ struct TreatmentView: View {
 
             HStack(spacing: 8) {
                 ForEach(0..<7, id: \.self) { index in
-                    let percentage = mockWeeklyProgress[index]
+                    let percentage = index < weeklyProgress.count ? weeklyProgress[index] : 0
                     VStack(spacing: 4) {
                         ZStack(alignment: .bottom) {
                             RoundedRectangle(cornerRadius: 4)
@@ -357,73 +385,67 @@ struct TreatmentView: View {
         return "Good evening!"
     }
 
-    // Mock weekly data
-    private var mockWeeklyProgress: [Int] {
-        [75, 100, 80, 90, 100, 60, progressPercentage]
+    // Weekly progress - use real data if available, otherwise show current day only
+    private var weeklyProgress: [Int] {
+        if !weeklyHistory.isEmpty {
+            // weeklyHistory is ordered from most recent to oldest, we need oldest to most recent
+            let reversedHistory = weeklyHistory.reversed()
+            return reversedHistory.map { day in
+                guard day.totalTasks > 0 else { return 0 }
+                return Int((Double(day.completedTasks) / Double(day.totalTasks)) * 100)
+            }
+        }
+        // Fallback: show zeros except for today
+        return [0, 0, 0, 0, 0, 0, progressPercentage]
     }
 
     // MARK: - Data Loading
 
     private func loadTasks() {
         isLoading = true
+        errorMessage = nil
 
-        // TODO: Replace with actual Convex API call
-        // For now, use mock data
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            tasks = [
-                TreatmentTask(
-                    id: "1",
-                    name: "Sleep Restriction Therapy",
-                    category: "CBT-I",
-                    instructions: "Go to bed at 11:00 PM. Wake up at 6:30 AM. Do not nap during the day.",
-                    timing: "Before bed",
-                    frequency: "Daily",
-                    isCompleted: false
-                ),
-                TreatmentTask(
-                    id: "2",
-                    name: "Relaxation Exercise",
-                    category: "Relaxation",
-                    instructions: "Practice deep breathing for 10 minutes using the 4-7-8 technique.",
-                    timing: "Evening",
-                    frequency: "Daily",
-                    isCompleted: true
-                ),
-                TreatmentTask(
-                    id: "3",
-                    name: "Melatonin",
-                    category: "Supplement",
-                    instructions: "Take 3mg melatonin 30 minutes before your scheduled bedtime.",
-                    timing: "Before bed",
-                    frequency: "Daily",
-                    isCompleted: false
-                ),
-                TreatmentTask(
-                    id: "4",
-                    name: "Caffeine Cutoff",
-                    category: "Lifestyle",
-                    instructions: "No caffeine after 2:00 PM. This includes coffee, tea, and sodas.",
-                    timing: "Afternoon",
-                    frequency: "Daily",
-                    isCompleted: true
-                ),
-                TreatmentTask(
-                    id: "5",
-                    name: "Morning Light Exposure",
-                    category: "Light Therapy",
-                    instructions: "Get 30 minutes of bright light exposure within 1 hour of waking.",
-                    timing: "Morning",
-                    frequency: "Daily",
-                    isCompleted: false
-                ),
-            ]
-            completedCount = tasks.filter { $0.isCompleted }.count
-            isLoading = false
+        Task {
+            do {
+                // Load treatment phase info
+                let phaseInfo = try await ConvexService.shared.getTreatmentPhase()
+                await MainActor.run {
+                    treatmentWeek = phaseInfo.treatmentWeek ?? 1
+                    treatmentPhase = phaseInfo.phase
+                }
+
+                // Load active interventions
+                let interventions = try await ConvexService.shared.getActiveInterventions()
+                await MainActor.run {
+                    tasks = interventions.map { TreatmentTask(from: $0) }
+                    completedCount = tasks.filter { $0.isCompleted }.count
+                }
+
+                // Load weekly history for streak display
+                let history = try await ConvexService.shared.getComplianceHistory(days: 7)
+                await MainActor.run {
+                    weeklyHistory = history
+                    isLoading = false
+                }
+
+            } catch {
+                print("[Treatment] Error loading tasks: \(error)")
+                await MainActor.run {
+                    errorMessage = "Failed to load treatment tasks"
+                    isLoading = false
+
+                    // Fallback to empty state or show error
+                    tasks = []
+                    completedCount = 0
+                }
+            }
         }
     }
 
     private func toggleTask(_ task: TreatmentTask) {
+        // Optimistic update
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+            let wasCompleted = tasks[index].isCompleted
             tasks[index].isCompleted.toggle()
             completedCount = tasks.filter { $0.isCompleted }.count
 
@@ -431,12 +453,53 @@ struct TreatmentView: View {
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
 
-            // TODO: Sync with Convex
+            // Sync with Convex
+            Task {
+                do {
+                    if wasCompleted {
+                        // Was completed, now uncompleting
+                        try await ConvexService.shared.uncompleteTask(userInterventionId: task.id)
+                    } else {
+                        // Was not completed, now completing
+                        _ = try await ConvexService.shared.completeTask(userInterventionId: task.id)
+                    }
+                    print("[Treatment] Task \(wasCompleted ? "uncompleted" : "completed"): \(task.name)")
+                } catch {
+                    print("[Treatment] Error toggling task: \(error)")
+                    // Revert optimistic update on error
+                    await MainActor.run {
+                        if let idx = tasks.firstIndex(where: { $0.id == task.id }) {
+                            tasks[idx].isCompleted = wasCompleted
+                            completedCount = tasks.filter { $0.isCompleted }.count
+                        }
+                    }
+                }
+            }
         }
     }
 
     private func saveNote() {
-        // TODO: Save note to Convex
+        guard let task = selectedTask, !noteText.isEmpty else {
+            showingNoteSheet = false
+            noteText = ""
+            selectedTask = nil
+            return
+        }
+
+        let noteToSave = noteText
+
+        Task {
+            do {
+                _ = try await ConvexService.shared.addTaskNote(
+                    userInterventionId: task.id,
+                    noteText: noteToSave
+                )
+                print("[Treatment] Note saved for task: \(task.name)")
+            } catch {
+                print("[Treatment] Error saving note: \(error)")
+            }
+        }
+
         showingNoteSheet = false
         noteText = ""
         selectedTask = nil

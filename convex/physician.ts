@@ -260,9 +260,10 @@ function calculateSTOPBANG(responses: Map<string, number>, demographics: { age?:
   const snore = responses.get("19");
   if (snore !== undefined) { if (snore === 1) score++; answered++; }
 
-  // T - Tired (question 21)
-  const tired = responses.get("21");
-  if (tired !== undefined) { if (tired === 1) score++; answered++; }
+  // T - Tired (question 17) - 5-point scale: Never(0), Rarely(1), Sometimes(2), Often(3), Always(4)
+  // Q21 was removed from iOS as redundant with Q17. Score point if Often (3) or Always (4)
+  const tired = responses.get("17");
+  if (tired !== undefined) { if (tired >= 3) score++; answered++; }
 
   // O - Observed apnea (question 20)
   const observed = responses.get("20");
@@ -306,6 +307,450 @@ function calculateSTOPBANG(responses: Map<string, number>, demographics: { age?:
   return { name: "STOP-BANG Sleep Apnea Screening", abbreviation: "STOP-BANG", score: null, maxScore: 8, interpretation, severity, questionsAnswered: answered, questionsRequired: 8 };
 }
 
+// PSQI (Pittsburgh Sleep Quality Index) - 7 component scores (0-3 each)
+// Components: Sleep Quality, Sleep Latency, Sleep Duration, Sleep Efficiency, Sleep Disturbances, Sleep Medication, Daytime Dysfunction
+function calculatePSQI(responses: Map<string, number>): QuestionnaireScore {
+  let totalScore = 0;
+  let componentsCalculated = 0;
+
+  // Component 1: Subjective Sleep Quality (PSQI_6)
+  const sleepQuality = responses.get("PSQI_6");
+  if (sleepQuality !== undefined) {
+    totalScore += Math.min(3, sleepQuality);
+    componentsCalculated++;
+  }
+
+  // Component 2: Sleep Latency (PSQI_2 + PSQI_5a)
+  const latency = responses.get("PSQI_2");
+  const latencyScore5a = responses.get("PSQI_5a");
+  if (latency !== undefined || latencyScore5a !== undefined) {
+    let comp2 = 0;
+    if (latency !== undefined) {
+      if (latency <= 15) comp2 += 0;
+      else if (latency <= 30) comp2 += 1;
+      else if (latency <= 60) comp2 += 2;
+      else comp2 += 3;
+    }
+    if (latencyScore5a !== undefined) comp2 += latencyScore5a;
+    // Convert sum to 0-3 scale
+    if (comp2 === 0) totalScore += 0;
+    else if (comp2 <= 2) totalScore += 1;
+    else if (comp2 <= 4) totalScore += 2;
+    else totalScore += 3;
+    componentsCalculated++;
+  }
+
+  // Component 3: Sleep Duration (PSQI_4)
+  const duration = responses.get("PSQI_4");
+  if (duration !== undefined) {
+    if (duration >= 7) totalScore += 0;
+    else if (duration >= 6) totalScore += 1;
+    else if (duration >= 5) totalScore += 2;
+    else totalScore += 3;
+    componentsCalculated++;
+  }
+
+  // Component 4: Sleep Efficiency (calculated from PSQI_1, PSQI_3, PSQI_4)
+  const bedtime = responses.get("PSQI_1"); // in hours (e.g., 23 for 11pm)
+  const wakeTime = responses.get("PSQI_3"); // in hours (e.g., 7 for 7am)
+  const hoursSlept = responses.get("PSQI_4");
+  if (bedtime !== undefined && wakeTime !== undefined && hoursSlept !== undefined) {
+    let timeInBed = wakeTime - bedtime;
+    if (timeInBed < 0) timeInBed += 24; // Handle crossing midnight
+    if (timeInBed > 0) {
+      const efficiency = (hoursSlept / timeInBed) * 100;
+      if (efficiency >= 85) totalScore += 0;
+      else if (efficiency >= 75) totalScore += 1;
+      else if (efficiency >= 65) totalScore += 2;
+      else totalScore += 3;
+      componentsCalculated++;
+    }
+  }
+
+  // Component 5: Sleep Disturbances (PSQI_5b through PSQI_5j sum)
+  const disturbanceQuestions = ["PSQI_5b", "PSQI_5c", "PSQI_5d", "PSQI_5e", "PSQI_5f", "PSQI_5g", "PSQI_5h", "PSQI_5i", "PSQI_5j"];
+  let disturbanceSum = 0;
+  let disturbanceCount = 0;
+  for (const q of disturbanceQuestions) {
+    const val = responses.get(q);
+    if (val !== undefined) {
+      disturbanceSum += val;
+      disturbanceCount++;
+    }
+  }
+  if (disturbanceCount >= 5) {
+    if (disturbanceSum === 0) totalScore += 0;
+    else if (disturbanceSum <= 9) totalScore += 1;
+    else if (disturbanceSum <= 18) totalScore += 2;
+    else totalScore += 3;
+    componentsCalculated++;
+  }
+
+  // Component 6: Use of Sleep Medication (PSQI_7)
+  const medication = responses.get("PSQI_7");
+  if (medication !== undefined) {
+    totalScore += Math.min(3, medication);
+    componentsCalculated++;
+  }
+
+  // Component 7: Daytime Dysfunction (PSQI_8 + PSQI_9)
+  const dysfunction8 = responses.get("PSQI_8");
+  const dysfunction9 = responses.get("PSQI_9");
+  if (dysfunction8 !== undefined || dysfunction9 !== undefined) {
+    let comp7 = (dysfunction8 ?? 0) + (dysfunction9 ?? 0);
+    if (comp7 === 0) totalScore += 0;
+    else if (comp7 <= 2) totalScore += 1;
+    else if (comp7 <= 4) totalScore += 2;
+    else totalScore += 3;
+    componentsCalculated++;
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (componentsCalculated >= 5) {
+    // Prorate to 7 components
+    const proratedScore = Math.round(totalScore * (7 / componentsCalculated));
+    if (proratedScore <= 5) { interpretation = "Good sleep quality"; severity = "normal"; }
+    else if (proratedScore <= 10) { interpretation = "Poor sleep quality"; severity = "mild"; }
+    else if (proratedScore <= 15) { interpretation = "Moderate sleep disturbance"; severity = "moderate"; }
+    else { interpretation = "Severe sleep disturbance"; severity = "severe"; }
+
+    return { name: "Pittsburgh Sleep Quality Index", abbreviation: "PSQI", score: proratedScore, maxScore: 21, interpretation, severity, questionsAnswered: componentsCalculated, questionsRequired: 7 };
+  }
+
+  return { name: "Pittsburgh Sleep Quality Index", abbreviation: "PSQI", score: null, maxScore: 21, interpretation, severity, questionsAnswered: componentsCalculated, questionsRequired: 7 };
+}
+
+// DBAS-16 (Dysfunctional Beliefs and Attitudes about Sleep) - 16 questions, each 0-10
+function calculateDBAS16(responses: Map<string, number>): QuestionnaireScore {
+  const dbasQuestions = Array.from({ length: 16 }, (_, i) => `DBAS_${i + 1}`);
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of dbasQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 12) {
+    // Average score (total / answered, then scaled to 0-10)
+    const avgScore = total / answered;
+    const score = Math.round(avgScore * 10) / 10; // One decimal place
+
+    if (score <= 3) { interpretation = "Low dysfunctional beliefs about sleep"; severity = "normal"; }
+    else if (score <= 5) { interpretation = "Moderate dysfunctional beliefs"; severity = "mild"; }
+    else if (score <= 7) { interpretation = "Elevated dysfunctional beliefs"; severity = "moderate"; }
+    else { interpretation = "High dysfunctional beliefs about sleep"; severity = "severe"; }
+
+    return { name: "Dysfunctional Beliefs and Attitudes about Sleep", abbreviation: "DBAS-16", score: Math.round(total), maxScore: 160, interpretation, severity, questionsAnswered: answered, questionsRequired: 16 };
+  }
+
+  return { name: "Dysfunctional Beliefs and Attitudes about Sleep", abbreviation: "DBAS-16", score: null, maxScore: 160, interpretation, severity, questionsAnswered: answered, questionsRequired: 16 };
+}
+
+// Berlin Questionnaire (Sleep Apnea Risk) - 3 categories
+function calculateBerlin(responses: Map<string, number>, demographics: { bmi?: number }): QuestionnaireScore {
+  let categoriesPositive = 0;
+  let answered = 0;
+
+  // Category 1: Snoring (BERLIN_1 to BERLIN_5)
+  let cat1Score = 0;
+  const snoreFreq = responses.get("BERLIN_1");
+  const snoreLoud = responses.get("BERLIN_2");
+  const snoreBother = responses.get("BERLIN_3");
+  const apneaObserved = responses.get("BERLIN_4");
+  const apneaFreq = responses.get("BERLIN_5");
+
+  if (snoreFreq !== undefined) { if (snoreFreq >= 3) cat1Score++; answered++; }
+  if (snoreLoud !== undefined) { if (snoreLoud >= 2) cat1Score++; answered++; }
+  if (snoreBother !== undefined) { if (snoreBother >= 2) cat1Score++; answered++; }
+  if (apneaObserved !== undefined) { if (apneaObserved === 1) cat1Score++; answered++; }
+  if (apneaFreq !== undefined) { if (apneaFreq >= 3) cat1Score++; answered++; }
+
+  if (cat1Score >= 2) categoriesPositive++;
+
+  // Category 2: Daytime Sleepiness (BERLIN_6 to BERLIN_9)
+  let cat2Score = 0;
+  const tiredFreq = responses.get("BERLIN_6");
+  const tiredDriving = responses.get("BERLIN_7");
+  const dozeDriving = responses.get("BERLIN_8");
+  const dozeFreq = responses.get("BERLIN_9");
+
+  if (tiredFreq !== undefined) { if (tiredFreq >= 3) cat2Score++; answered++; }
+  if (tiredDriving !== undefined) { if (tiredDriving >= 3) cat2Score++; answered++; }
+  if (dozeDriving !== undefined) { if (dozeDriving === 1) cat2Score++; answered++; }
+  if (dozeFreq !== undefined) { if (dozeFreq >= 3) cat2Score++; answered++; }
+
+  if (cat2Score >= 2) categoriesPositive++;
+
+  // Category 3: BMI/Hypertension (BERLIN_10 + demographics)
+  const hypertension = responses.get("BERLIN_10");
+  if (hypertension !== undefined) { answered++; }
+
+  if ((demographics.bmi !== undefined && demographics.bmi > 30) || hypertension === 1) {
+    categoriesPositive++;
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 6) {
+    if (categoriesPositive >= 2) {
+      interpretation = "High risk of sleep apnea";
+      severity = "moderate";
+    } else {
+      interpretation = "Low risk of sleep apnea";
+      severity = "normal";
+    }
+
+    return { name: "Berlin Questionnaire", abbreviation: "Berlin", score: categoriesPositive, maxScore: 3, interpretation, severity, questionsAnswered: answered, questionsRequired: 10 };
+  }
+
+  return { name: "Berlin Questionnaire", abbreviation: "Berlin", score: null, maxScore: 3, interpretation, severity, questionsAnswered: answered, questionsRequired: 10 };
+}
+
+// FSS (Fatigue Severity Scale) - 9 questions, each 1-7
+function calculateFSS(responses: Map<string, number>): QuestionnaireScore {
+  const fssQuestions = Array.from({ length: 9 }, (_, i) => `FSS_${i + 1}`);
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of fssQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 7) {
+    // Mean score
+    const meanScore = total / answered;
+    const score = Math.round(meanScore * 10) / 10;
+
+    if (score < 4) { interpretation = "No significant fatigue"; severity = "normal"; }
+    else if (score < 5) { interpretation = "Mild fatigue"; severity = "mild"; }
+    else if (score < 6) { interpretation = "Moderate fatigue"; severity = "moderate"; }
+    else { interpretation = "Severe fatigue"; severity = "severe"; }
+
+    return { name: "Fatigue Severity Scale", abbreviation: "FSS", score: Math.round(total), maxScore: 63, interpretation, severity, questionsAnswered: answered, questionsRequired: 9 };
+  }
+
+  return { name: "Fatigue Severity Scale", abbreviation: "FSS", score: null, maxScore: 63, interpretation, severity, questionsAnswered: answered, questionsRequired: 9 };
+}
+
+// FOSQ-10 (Functional Outcomes of Sleep Questionnaire) - 10 questions, 5 subscales
+function calculateFOSQ10(responses: Map<string, number>): QuestionnaireScore {
+  const fosqQuestions = Array.from({ length: 10 }, (_, i) => `FOSQ_${i + 1}`);
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of fosqQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 8) {
+    // Mean score * 10 / answered for standardized score (higher = better function)
+    const score = Math.round((total / answered) * 10);
+
+    if (score >= 35) { interpretation = "Good functional outcomes"; severity = "normal"; }
+    else if (score >= 30) { interpretation = "Mild functional impairment"; severity = "mild"; }
+    else if (score >= 25) { interpretation = "Moderate functional impairment"; severity = "moderate"; }
+    else { interpretation = "Severe functional impairment"; severity = "severe"; }
+
+    return { name: "Functional Outcomes of Sleep Questionnaire", abbreviation: "FOSQ-10", score, maxScore: 40, interpretation, severity, questionsAnswered: answered, questionsRequired: 10 };
+  }
+
+  return { name: "Functional Outcomes of Sleep Questionnaire", abbreviation: "FOSQ-10", score: null, maxScore: 40, interpretation, severity, questionsAnswered: answered, questionsRequired: 10 };
+}
+
+// DASS-21 (Depression Anxiety Stress Scales) - 21 questions, 3 subscales (0-3 each)
+function calculateDASS21(responses: Map<string, number>): { depression: QuestionnaireScore; anxiety: QuestionnaireScore; stress: QuestionnaireScore } {
+  // Depression items: 3, 5, 10, 13, 16, 17, 21
+  const depressionItems = [3, 5, 10, 13, 16, 17, 21];
+  // Anxiety items: 2, 4, 7, 9, 15, 19, 20
+  const anxietyItems = [2, 4, 7, 9, 15, 19, 20];
+  // Stress items: 1, 6, 8, 11, 12, 14, 18
+  const stressItems = [1, 6, 8, 11, 12, 14, 18];
+
+  const calculateSubscale = (items: number[], name: string, abbrev: string): QuestionnaireScore => {
+    let total = 0;
+    let answered = 0;
+
+    for (const i of items) {
+      const val = responses.get(`DASS_${i}`);
+      if (val !== undefined) {
+        total += val;
+        answered++;
+      }
+    }
+
+    let interpretation = "Not enough data";
+    let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+    if (answered >= 5) {
+      // Multiply by 2 to get equivalent of DASS-42
+      const score = Math.round(total * 2 * (7 / answered));
+
+      // Thresholds differ by subscale
+      if (name === "Depression") {
+        if (score <= 9) { interpretation = "Normal"; severity = "normal"; }
+        else if (score <= 13) { interpretation = "Mild depression"; severity = "mild"; }
+        else if (score <= 20) { interpretation = "Moderate depression"; severity = "moderate"; }
+        else { interpretation = "Severe depression"; severity = "severe"; }
+      } else if (name === "Anxiety") {
+        if (score <= 7) { interpretation = "Normal"; severity = "normal"; }
+        else if (score <= 9) { interpretation = "Mild anxiety"; severity = "mild"; }
+        else if (score <= 14) { interpretation = "Moderate anxiety"; severity = "moderate"; }
+        else { interpretation = "Severe anxiety"; severity = "severe"; }
+      } else { // Stress
+        if (score <= 14) { interpretation = "Normal"; severity = "normal"; }
+        else if (score <= 18) { interpretation = "Mild stress"; severity = "mild"; }
+        else if (score <= 25) { interpretation = "Moderate stress"; severity = "moderate"; }
+        else { interpretation = "Severe stress"; severity = "severe"; }
+      }
+
+      return { name: `DASS-21 ${name}`, abbreviation: abbrev, score, maxScore: 42, interpretation, severity, questionsAnswered: answered, questionsRequired: 7 };
+    }
+
+    return { name: `DASS-21 ${name}`, abbreviation: abbrev, score: null, maxScore: 42, interpretation, severity, questionsAnswered: answered, questionsRequired: 7 };
+  };
+
+  return {
+    depression: calculateSubscale(depressionItems, "Depression", "DASS-D"),
+    anxiety: calculateSubscale(anxietyItems, "Anxiety", "DASS-A"),
+    stress: calculateSubscale(stressItems, "Stress", "DASS-S"),
+  };
+}
+
+// BPI (Brief Pain Inventory) - Pain severity and interference
+function calculateBPI(responses: Map<string, number>): { severity: QuestionnaireScore; interference: QuestionnaireScore } {
+  // Severity items: worst, least, average, now (BPI_3 to BPI_6)
+  const severityItems = ["BPI_3", "BPI_4", "BPI_5", "BPI_6"];
+  // Interference items: general activity, mood, walking, work, relations, sleep, enjoyment (BPI_9a to BPI_9g)
+  const interferenceItems = ["BPI_9a", "BPI_9b", "BPI_9c", "BPI_9d", "BPI_9e", "BPI_9f", "BPI_9g"];
+
+  const calculateSubscale = (items: string[], name: string, abbrev: string): QuestionnaireScore => {
+    let total = 0;
+    let answered = 0;
+
+    for (const qId of items) {
+      const val = responses.get(qId);
+      if (val !== undefined) {
+        total += val;
+        answered++;
+      }
+    }
+
+    let interpretation = "Not enough data";
+    let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+    if (answered >= Math.ceil(items.length * 0.7)) {
+      const avgScore = total / answered;
+      const score = Math.round(avgScore * 10) / 10;
+
+      if (score <= 3) { interpretation = `Mild ${name.toLowerCase()}`; severity = "normal"; }
+      else if (score <= 5) { interpretation = `Moderate ${name.toLowerCase()}`; severity = "mild"; }
+      else if (score <= 7) { interpretation = `Moderately severe ${name.toLowerCase()}`; severity = "moderate"; }
+      else { interpretation = `Severe ${name.toLowerCase()}`; severity = "severe"; }
+
+      return { name: `Brief Pain Inventory - ${name}`, abbreviation: abbrev, score: Math.round(total), maxScore: items.length * 10, interpretation, severity, questionsAnswered: answered, questionsRequired: items.length };
+    }
+
+    return { name: `Brief Pain Inventory - ${name}`, abbreviation: abbrev, score: null, maxScore: items.length * 10, interpretation, severity, questionsAnswered: answered, questionsRequired: items.length };
+  };
+
+  return {
+    severity: calculateSubscale(severityItems, "Severity", "BPI-S"),
+    interference: calculateSubscale(interferenceItems, "Interference", "BPI-I"),
+  };
+}
+
+// MEDAS (Mediterranean Diet Adherence Screener) - 14 yes/no questions
+function calculateMEDAS(responses: Map<string, number>): QuestionnaireScore {
+  const medasQuestions = Array.from({ length: 14 }, (_, i) => `MEDAS_${i + 1}`);
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of medasQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      // Each favorable answer = 1 point
+      total += val === 1 ? 1 : 0;
+      answered++;
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 10) {
+    // Prorate to 14 questions
+    const score = Math.round(total * (14 / answered));
+
+    if (score >= 10) { interpretation = "Good Mediterranean diet adherence"; severity = "normal"; }
+    else if (score >= 7) { interpretation = "Moderate diet adherence"; severity = "mild"; }
+    else if (score >= 4) { interpretation = "Low diet adherence"; severity = "moderate"; }
+    else { interpretation = "Poor diet adherence"; severity = "severe"; }
+
+    return { name: "Mediterranean Diet Adherence Screener", abbreviation: "MEDAS", score, maxScore: 14, interpretation, severity, questionsAnswered: answered, questionsRequired: 14 };
+  }
+
+  return { name: "Mediterranean Diet Adherence Screener", abbreviation: "MEDAS", score: null, maxScore: 14, interpretation, severity, questionsAnswered: answered, questionsRequired: 14 };
+}
+
+// MEQ (Morningness-Eveningness Questionnaire) - Chronotype assessment
+function calculateMEQ(responses: Map<string, number>): QuestionnaireScore {
+  // MEQ has 19 questions with different scoring ranges
+  // For simplified version, using 5 key questions
+  const meqQuestions = Array.from({ length: 19 }, (_, i) => `MEQ_${i + 1}`);
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of meqQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 14) {
+    // Prorate to full scale
+    const score = Math.round(total * (19 / answered));
+
+    if (score >= 70) { interpretation = "Definite morning type"; severity = "normal"; }
+    else if (score >= 59) { interpretation = "Moderate morning type"; severity = "normal"; }
+    else if (score >= 42) { interpretation = "Neither type (intermediate)"; severity = "normal"; }
+    else if (score >= 31) { interpretation = "Moderate evening type"; severity = "mild"; }
+    else { interpretation = "Definite evening type"; severity = "mild"; }
+
+    return { name: "Morningness-Eveningness Questionnaire", abbreviation: "MEQ", score, maxScore: 86, interpretation, severity, questionsAnswered: answered, questionsRequired: 19 };
+  }
+
+  return { name: "Morningness-Eveningness Questionnaire", abbreviation: "MEQ", score: null, maxScore: 86, interpretation, severity, questionsAnswered: answered, questionsRequired: 19 };
+}
+
 // ============================================
 // Patient List & Overview Queries
 // ============================================
@@ -333,6 +778,7 @@ export const getAllPatientsWithProgress = query({
       onboarding_completed_at: v.optional(v.number()),
       review_status: v.optional(v.string()),
       progress_percentage: v.number(),
+      developer_mode: v.optional(v.boolean()),
     })
   ),
   handler: async (ctx, args) => {
@@ -386,6 +832,7 @@ export const getAllPatientsWithProgress = query({
           onboarding_completed_at: user.onboarding_completed_at,
           review_status: reviewStatus?.status,
           progress_percentage: progressPercentage,
+          developer_mode: user.developer_mode,
         };
       })
     );
@@ -1348,7 +1795,7 @@ export const getQuestionnaireResponses = query({
       // STOP-BANG - Sleep Apnea Screening (uses numeric IDs from gateway questions)
       "19": "Do you snore loudly?",
       "20": "Has anyone observed you stop breathing during sleep?",
-      "21": "Do you often feel tired, fatigued, or sleepy during daytime?",
+      "17": "Do you feel excessively tired or sleepy during the day?", // Q21 removed, use Q17 (5-point scale)
       "27": "Do you have or are you being treated for high blood pressure?",
     };
 
@@ -1371,8 +1818,9 @@ export const getQuestionnaireResponses = query({
       "Epworth Sleepiness Scale": ["ESS_1", "ESS_2", "ESS_3", "ESS_4", "ESS_5", "ESS_6", "ESS_7", "ESS_8"],
 
       // STOP-BANG - Sleep Apnea Screening (uses numeric question IDs)
-      "STOP-BANG": ["19", "20", "21", "27"],
-      "STOP-BANG Sleep Apnea Screening": ["19", "20", "21", "27"],
+      // Note: Q21 removed from iOS, use Q17 instead (5-point tiredness scale)
+      "STOP-BANG": ["19", "20", "17", "27"],
+      "STOP-BANG Sleep Apnea Screening": ["19", "20", "17", "27"],
     };
 
     const questionIds = questionnaireToQuestionIds[args.questionnaireName];
@@ -1870,13 +2318,28 @@ export const calculatePatientScores = query({
     const demographics = { age, sex: sexResponse, bmi };
 
     // Calculate all scores
-    const scores = [
+    const scores: QuestionnaireScore[] = [
       calculateISI(responseMap),
       calculatePHQ9(responseMap),
       calculateGAD7(responseMap),
       calculateESS(responseMap),
       calculateSTOPBANG(responseMap, demographics),
+      calculatePSQI(responseMap),
+      calculateDBAS16(responseMap),
+      calculateBerlin(responseMap, { bmi: demographics.bmi }),
+      calculateFSS(responseMap),
+      calculateFOSQ10(responseMap),
+      calculateMEDAS(responseMap),
+      calculateMEQ(responseMap),
     ];
+
+    // Add DASS-21 subscales
+    const dass21 = calculateDASS21(responseMap);
+    scores.push(dass21.depression, dass21.anxiety, dass21.stress);
+
+    // Add BPI subscales
+    const bpi = calculateBPI(responseMap);
+    scores.push(bpi.severity, bpi.interference);
 
     // Calculate sleep log metrics (SL_, SD_, and CSD_ prefixes)
     const sleepLogResponses = allResponses.filter(r =>
@@ -2026,7 +2489,22 @@ export const persistCalculatedScores = mutation({
       calculateGAD7(responseMap),
       calculateESS(responseMap),
       calculateSTOPBANG(responseMap, demographics),
+      calculatePSQI(responseMap),
+      calculateDBAS16(responseMap),
+      calculateBerlin(responseMap, { bmi: demographics.bmi }),
+      calculateFSS(responseMap),
+      calculateFOSQ10(responseMap),
+      calculateMEDAS(responseMap),
+      calculateMEQ(responseMap),
     ];
+
+    // Add DASS-21 subscales
+    const dass21 = calculateDASS21(responseMap);
+    scores.push(dass21.depression, dass21.anxiety, dass21.stress);
+
+    // Add BPI subscales
+    const bpi = calculateBPI(responseMap);
+    scores.push(bpi.severity, bpi.interference);
 
     // Persist each score that has a valid value
     const savedScores: string[] = [];
@@ -2069,6 +2547,108 @@ export const persistCalculatedScores = mutation({
       success: true,
       savedCount: savedScores.length,
       scores: savedScores,
+    };
+  },
+});
+
+// ============================================
+// Developer Mode (Fast-Track Testing)
+// ============================================
+
+/**
+ * Toggle developer mode for a patient
+ * When enabled, the patient can skip time gates and advance days instantly
+ */
+export const toggleDeveloperMode = mutation({
+  args: {
+    userId: v.id("users"),
+    enabled: v.boolean(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    developerMode: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(args.userId, {
+      developer_mode: args.enabled,
+    });
+
+    console.log(`[toggleDeveloperMode] User ${user.username}: developer_mode = ${args.enabled}`);
+
+    return {
+      success: true,
+      developerMode: args.enabled,
+    };
+  },
+});
+
+/**
+ * Set a patient's current day (for developer mode testing)
+ * This allows physicians to instantly advance a tester to any day
+ */
+export const setPatientDay = mutation({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    currentDay: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    // Validate dayNumber is 1-15
+    if (args.dayNumber < 1 || args.dayNumber > 15) {
+      throw new Error("Day must be between 1 and 15");
+    }
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Check if developer mode is enabled
+    if (!user.developer_mode) {
+      throw new Error("Developer mode must be enabled to change day");
+    }
+
+    await ctx.db.patch(args.userId, {
+      current_day: args.dayNumber,
+    });
+
+    console.log(`[setPatientDay] User ${user.username}: current_day = ${args.dayNumber}`);
+
+    return {
+      success: true,
+      currentDay: args.dayNumber,
+    };
+  },
+});
+
+/**
+ * Get developer mode status for a user
+ */
+export const getDeveloperModeStatus = query({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.object({
+    developerMode: v.boolean(),
+    currentDay: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return {
+      developerMode: user.developer_mode ?? false,
+      currentDay: user.current_day,
     };
   },
 });

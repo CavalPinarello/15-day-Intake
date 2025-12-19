@@ -80,6 +80,16 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Developer Mode for Testers:** Physician dashboard toggle for fast-track testing (Dec 19, 2025)
+  - Toggle developer mode on/off per patient from patient detail page
+  - Jump to any day (1-15) instantly when developer mode is enabled
+  - Purple badge in patient list indicates dev mode active
+  - Skip time gates and section completion for rapid testing
+  - Mutations: `toggleDeveloperMode`, `setPatientDay`, `getDeveloperModeStatus`
+- **Gamification System (Schema):** "Strava for Sleep" tables added (Dec 19, 2025)
+  - User streaks, badges, XP/levels, and challenges
+  - Evidence-based encouragement message library
+  - Cohort statistics for anonymous comparisons
 - **Dashboard 360° View data pipeline:** Complete data flow from iOS mock generator to dashboard (Dec 18, 2025)
   - `healthkit:computeSleepMetricsFromResponses` - Computes sleep metrics from CSD_ responses
   - `physician:persistCalculatedScores` - Calculates and persists ISI/PHQ-9/GAD-7/ESS/STOP-BANG scores

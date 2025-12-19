@@ -115,9 +115,19 @@ struct MockGenerationProgress {
 
     var totalQuestionsAnswered: Int = 0
     var startTime: Date = Date()
+    var endTime: Date? = nil  // Set when generation completes
 
     var elapsedTime: TimeInterval {
-        Date().timeIntervalSince(startTime)
+        // If generation is complete, show frozen time; otherwise show live time
+        if let endTime = endTime {
+            return endTime.timeIntervalSince(startTime)
+        }
+        return Date().timeIntervalSince(startTime)
+    }
+
+    /// Call this to freeze the elapsed time when generation completes
+    mutating func markComplete() {
+        endTime = Date()
     }
 
     var dayProgress: Double {
@@ -141,6 +151,7 @@ struct MockGenerationProgress {
         triggeredGateways = []
         totalQuestionsAnswered = 0
         startTime = Date()
+        endTime = nil
     }
 }
 
@@ -155,6 +166,11 @@ struct MockResponse {
     let numberValue: Double?
     let arrayValue: [String]?
     let objectValue: String?
+
+    /// Returns true if this response has no actual value (should be skipped)
+    var isEmpty: Bool {
+        stringValue == nil && numberValue == nil && arrayValue == nil && objectValue == nil
+    }
 
     /// Convert to dictionary for ConvexService.saveResponses()
     /// Uses Convex field names: responseValue, responseNumber, responseArray

@@ -179,13 +179,43 @@ struct SettingsView: View {
                             .foregroundColor(.orange)
                     }
                     .accessibleTapTarget()
+
+                    // Developer Panel (full controls)
+                    NavigationLink {
+                        DevPanelView(currentDay: $questionnaireManager.currentDay)
+                            .environmentObject(themeManager)
+                            .environmentObject(questionnaireManager)
+                    } label: {
+                        Label("Developer Panel", systemImage: "wrench.and.screwdriver.fill")
+                            .foregroundColor(.orange)
+                    }
+                    .accessibleTapTarget()
+
+                    #if DEBUG
+                    // Mock Data Generator
+                    NavigationLink {
+                        MockPlaybackView()
+                            .environmentObject(themeManager)
+                            .environmentObject(questionnaireManager)
+                    } label: {
+                        HStack {
+                            Label("Generate Mock Data", systemImage: "wand.and.stars")
+                                .foregroundColor(.purple)
+                            Spacer()
+                            Text("15 days")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .accessibleTapTarget()
+                    #endif
                 }
 
             } header: {
                 Text("Developer")
             } footer: {
                 if themeManager.debugMode {
-                    Text("Debug mode enables testing features. Use 'Advance to Next Day' to skip waiting.")
+                    Text("Debug mode enables testing features. Access Developer Panel for quick actions and mock data generation.")
                         .font(.caption)
                 }
             }

@@ -132,6 +132,11 @@ class MockDataGenerator {
         // Day-to-day variation can be applied to values if needed
         _ = dayNumber // Used for contextual variation
 
+        // Handle expansion questionnaire prefixes first
+        if let expansionValue = generateExpansionQuestionnaireValue(for: questionId) {
+            return expansionValue
+        }
+
         switch questionId {
         case "CSD_DAY_TYPE":
             let options = ["Work day", "Work day", "Work day", "Work day", "Day off", "Vacation"]
@@ -204,6 +209,161 @@ class MockDataGenerator {
         default:
             return nil
         }
+    }
+
+    // MARK: - Expansion Questionnaire Values
+
+    /// Generate mock data for expansion questionnaires (Days 8-15)
+    private func generateExpansionQuestionnaireValue(for questionId: String) -> (String?, Double?, [String]?, String?)? {
+        // ISI (Insomnia Severity Index) - 7 questions, each 0-4
+        if questionId.hasPrefix("ISI_") {
+            let severity = gatewaysToTrigger.contains(.insomnia) ? 3 : 1
+            let value = max(0, min(4, severity + Int.random(in: -1...1, using: &randomGenerator)))
+            return (nil, Double(value), nil, nil)
+        }
+
+        // PHQ9 (Depression) - 9 questions, each 0-3
+        if questionId.hasPrefix("PHQ9_") {
+            let severity = gatewaysToTrigger.contains(.depression) ? 2 : 0
+            let value = max(0, min(3, severity + Int.random(in: -1...1, using: &randomGenerator)))
+            return (nil, Double(value), nil, nil)
+        }
+
+        // GAD7 (Anxiety) - 7 questions, each 0-3
+        if questionId.hasPrefix("GAD7_") {
+            let severity = gatewaysToTrigger.contains(.anxiety) ? 2 : 0
+            let value = max(0, min(3, severity + Int.random(in: -1...1, using: &randomGenerator)))
+            return (nil, Double(value), nil, nil)
+        }
+
+        // ESS (Epworth Sleepiness Scale) - 8 questions, each 0-3
+        if questionId.hasPrefix("ESS_") {
+            let severity = gatewaysToTrigger.contains(.excessiveSleepiness) ? 2 : 1
+            let value = max(0, min(3, severity + Int.random(in: -1...1, using: &randomGenerator)))
+            return (nil, Double(value), nil, nil)
+        }
+
+        // PSQI (Pittsburgh Sleep Quality Index) - various components
+        if questionId.hasPrefix("PSQI_") {
+            // PSQI_1: Bedtime (hour, 22-24)
+            if questionId == "PSQI_1" {
+                return (nil, Double(Int.random(in: 22...24, using: &randomGenerator)), nil, nil)
+            }
+            // PSQI_2: Sleep latency in minutes
+            if questionId == "PSQI_2" {
+                let base = gatewaysToTrigger.contains(.insomnia) ? 35 : 15
+                return (nil, Double(base + Int.random(in: -10...10, using: &randomGenerator)), nil, nil)
+            }
+            // PSQI_3: Wake time (hour, 6-8)
+            if questionId == "PSQI_3" {
+                return (nil, Double(Int.random(in: 6...8, using: &randomGenerator)), nil, nil)
+            }
+            // PSQI_4: Hours of actual sleep
+            if questionId == "PSQI_4" {
+                let base = gatewaysToTrigger.contains(.insomnia) ? 5 : 7
+                return (nil, Double(base + Int.random(in: -1...1, using: &randomGenerator)), nil, nil)
+            }
+            // PSQI_5a-5j: Sleep disturbances (0-3 each)
+            if questionId.hasPrefix("PSQI_5") {
+                let severity = gatewaysToTrigger.contains(.insomnia) ? 2 : 1
+                let value = max(0, min(3, severity + Int.random(in: -1...1, using: &randomGenerator)))
+                return (nil, Double(value), nil, nil)
+            }
+            // PSQI_6: Sleep quality (0-3)
+            if questionId == "PSQI_6" {
+                let severity = gatewaysToTrigger.contains(.poorSleepQuality) ? 2 : 1
+                return (nil, Double(max(0, min(3, severity + Int.random(in: -1...1, using: &randomGenerator)))), nil, nil)
+            }
+            // PSQI_7: Sleep medication use (0-3)
+            if questionId == "PSQI_7" {
+                return (nil, Double(Int.random(in: 0...2, using: &randomGenerator)), nil, nil)
+            }
+            // PSQI_8, PSQI_9: Daytime dysfunction (0-3 each)
+            if questionId == "PSQI_8" || questionId == "PSQI_9" {
+                let severity = gatewaysToTrigger.contains(.excessiveSleepiness) ? 2 : 1
+                return (nil, Double(max(0, min(3, severity + Int.random(in: -1...1, using: &randomGenerator)))), nil, nil)
+            }
+            return (nil, Double(Int.random(in: 0...3, using: &randomGenerator)), nil, nil)
+        }
+
+        // DBAS-16 (Dysfunctional Beliefs) - 16 questions, each 0-10
+        if questionId.hasPrefix("DBAS_") {
+            let base = gatewaysToTrigger.contains(.cognitive) ? 6 : 4
+            let value = max(0, min(10, base + Int.random(in: -2...2, using: &randomGenerator)))
+            return (nil, Double(value), nil, nil)
+        }
+
+        // Berlin (Sleep Apnea) - various yes/no and frequency questions
+        if questionId.hasPrefix("BERLIN_") {
+            let isOSA = gatewaysToTrigger.contains(.osa)
+            // Most Berlin questions are 0-4 frequency or yes/no
+            if questionId == "BERLIN_4" || questionId == "BERLIN_8" || questionId == "BERLIN_10" {
+                // Yes/No questions
+                return (isOSA ? "Yes" : "No", nil, nil, nil)
+            }
+            // Frequency questions (0-4)
+            let severity = isOSA ? 3 : 1
+            return (nil, Double(max(0, min(4, severity + Int.random(in: -1...1, using: &randomGenerator)))), nil, nil)
+        }
+
+        // FSS (Fatigue Severity Scale) - 9 questions, each 1-7
+        if questionId.hasPrefix("FSS_") {
+            let base = gatewaysToTrigger.contains(.excessiveSleepiness) ? 5 : 3
+            let value = max(1, min(7, base + Int.random(in: -1...1, using: &randomGenerator)))
+            return (nil, Double(value), nil, nil)
+        }
+
+        // FOSQ-10 (Functional Outcomes) - 10 questions, each 1-4
+        if questionId.hasPrefix("FOSQ_") {
+            let base = gatewaysToTrigger.contains(.excessiveSleepiness) ? 2 : 3
+            let value = max(1, min(4, base + Int.random(in: -1...1, using: &randomGenerator)))
+            return (nil, Double(value), nil, nil)
+        }
+
+        // DASS-21 (Depression Anxiety Stress) - 21 questions, each 0-3
+        if questionId.hasPrefix("DASS_") {
+            // Extract item number to determine subscale
+            if let numStr = questionId.components(separatedBy: "_").last,
+               let itemNum = Int(numStr) {
+                let depressionItems = [3, 5, 10, 13, 16, 17, 21]
+                let anxietyItems = [2, 4, 7, 9, 15, 19, 20]
+                // stressItems = [1, 6, 8, 11, 12, 14, 18]
+
+                var severity = 1
+                if depressionItems.contains(itemNum) && gatewaysToTrigger.contains(.depression) {
+                    severity = 2
+                } else if anxietyItems.contains(itemNum) && gatewaysToTrigger.contains(.anxiety) {
+                    severity = 2
+                }
+                let value = max(0, min(3, severity + Int.random(in: -1...1, using: &randomGenerator)))
+                return (nil, Double(value), nil, nil)
+            }
+            return (nil, Double(Int.random(in: 0...2, using: &randomGenerator)), nil, nil)
+        }
+
+        // BPI (Brief Pain Inventory) - 0-10 scales
+        if questionId.hasPrefix("BPI_") {
+            let hasPain = gatewaysToTrigger.contains(.pain)
+            let severity = hasPain ? 6 : 2
+            let value = max(0, min(10, severity + Int.random(in: -2...2, using: &randomGenerator)))
+            return (nil, Double(value), nil, nil)
+        }
+
+        // MEDAS (Mediterranean Diet) - yes/no questions
+        if questionId.hasPrefix("MEDAS_") {
+            // 60% favorable answers for healthy diet pattern
+            let favorable = Double.random(in: 0...1, using: &randomGenerator) < 0.6
+            return (favorable ? "Yes" : "No", nil, nil, nil)
+        }
+
+        // MEQ (Morningness-Eveningness) - various 1-5 or 1-4 scales
+        if questionId.hasPrefix("MEQ_") {
+            // Bias toward intermediate type (score around 45-55)
+            let value = Int.random(in: 2...4, using: &randomGenerator)
+            return (nil, Double(value), nil, nil)
+        }
+
+        return nil
     }
 
     // MARK: - Generic Type Generators
@@ -334,9 +494,10 @@ class MockDataGenerator {
         // Context-aware text generation based on question ID
         let questionId = question.id.lowercased()
 
-        // D1 is the patient name question in demographics
+        // D1 is the patient name question in demographics - SKIP this to preserve user's real name
+        // The name is entered during onboarding and should not be overwritten
         if questionId == "d1" || questionId.contains("name") {
-            return ("Test Patient", nil, nil, nil)
+            return (nil, nil, nil, nil)  // Return nil to skip this question
         }
         if questionId.contains("medication") || questionId.contains("medicine") {
             return ("Melatonin 3mg", nil, nil, nil)

@@ -15,6 +15,7 @@ struct QuestionnaireView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var questionnaireManager = QuestionnaireManager.shared
+    @ObservedObject private var gamificationManager = GamificationManager.shared
 
     // Which section to start with (and optionally limit to)
     var startSection: QuestionnaireSection = .sleepLog
@@ -170,6 +171,33 @@ struct QuestionnaireView: View {
             }
         } message: {
             Text(saveError ?? "An error occurred while saving your responses. Please check your internet connection and try again.")
+        }
+        // Gamification Overlays
+        .overlay {
+            // Badge Unlock Animation
+            if gamificationManager.showBadgeUnlockedAnimation, let badge = gamificationManager.unlockedBadge {
+                BadgeUnlockView(badge: badge) {
+                    gamificationManager.showBadgeUnlockedAnimation = false
+                    gamificationManager.unlockedBadge = nil
+                }
+                .transition(.opacity)
+                .zIndex(100)
+            }
+        }
+        .overlay {
+            // Level Up Animation
+            if gamificationManager.showLevelUpAnimation, let levelInfo = gamificationManager.newLevelInfo {
+                LevelUpCelebration(
+                    newLevel: levelInfo.level,
+                    levelName: levelInfo.name,
+                    isVisible: true
+                ) {
+                    gamificationManager.showLevelUpAnimation = false
+                    gamificationManager.newLevelInfo = nil
+                }
+                .transition(.opacity)
+                .zIndex(101)
+            }
         }
     }
 
@@ -1291,6 +1319,18 @@ struct QuestionnaireView: View {
                         }
                     }
 
+                    // Record gamification progress
+                    let triggeredGateways = questionnaireManager.gatewayStates
+                        .filter { $0.triggered }
+                        .map { $0.gatewayType.rawValue }
+
+                    await GamificationManager.shared.recordDayComplete(
+                        dayNumber: currentDay,
+                        completedSleepLog: section == .sleepLog || result.sleepLogCompleted,
+                        completedAssessment: section == .assessment || result.assessmentCompleted,
+                        triggeredGateways: triggeredGateways.isEmpty ? nil : triggeredGateways
+                    )
+
                     // Refresh journey progress to update dashboard
                     await questionnaireManager.loadJourneyProgress()
 
@@ -1304,6 +1344,19 @@ struct QuestionnaireView: View {
                     // Sync both sections' responses
                     try await syncResponsesToConvex()
                     try await questionnaireManager.completeDay(currentDay)
+
+                    // Record gamification progress for full day
+                    let triggeredGateways = questionnaireManager.gatewayStates
+                        .filter { $0.triggered }
+                        .map { $0.gatewayType.rawValue }
+
+                    await GamificationManager.shared.recordDayComplete(
+                        dayNumber: currentDay,
+                        completedSleepLog: true,
+                        completedAssessment: true,
+                        triggeredGateways: triggeredGateways.isEmpty ? nil : triggeredGateways
+                    )
+
                     await MainActor.run {
                         currentDay = min(currentDay + 1, 15)
                     }

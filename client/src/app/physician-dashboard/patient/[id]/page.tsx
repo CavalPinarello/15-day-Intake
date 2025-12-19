@@ -31,6 +31,7 @@ import {
   LayoutDashboard,
   Eye,
   Zap,
+  Code,
 } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
 
@@ -85,6 +86,9 @@ export default function PatientDetailPage() {
     interpretation?: string;
     calculated_at: number;
   } | null>(null);
+  const [targetDay, setTargetDay] = useState<number>(1);
+  const [isTogglingDevMode, setIsTogglingDevMode] = useState(false);
+  const [isChangingDay, setIsChangingDay] = useState(false);
 
   // Queries
   const patient = useQuery(api.physician.getPatientDetails, { userId });
@@ -101,10 +105,13 @@ export default function PatientDetailPage() {
     userId,
   });
   const notes = useQuery(api.physician.getPhysicianNotes, { userId });
+  const devModeStatus = useQuery(api.physician.getDeveloperModeStatus, { userId });
 
   // Mutations
   const saveNote = useMutation(api.physician.savePhysicianNote);
   const updateStatus = useMutation(api.physician.updatePatientReviewStatus);
+  const toggleDeveloperMode = useMutation(api.physician.toggleDeveloperMode);
+  const setPatientDay = useMutation(api.physician.setPatientDay);
 
   // Actions
   const analyzePatient = useAction(api.llm.analyzePatientResponses);
@@ -139,6 +146,32 @@ export default function PatientDetailPage() {
 
   const handleStatusChange = async (newStatus: string) => {
     await updateStatus({ userId, status: newStatus });
+  };
+
+  const handleToggleDeveloperMode = async () => {
+    if (!devModeStatus) return;
+    setIsTogglingDevMode(true);
+    try {
+      await toggleDeveloperMode({
+        userId,
+        enabled: !devModeStatus.developerMode,
+      });
+    } finally {
+      setIsTogglingDevMode(false);
+    }
+  };
+
+  const handleSetDay = async () => {
+    if (!devModeStatus?.developerMode) return;
+    setIsChangingDay(true);
+    try {
+      await setPatientDay({
+        userId,
+        dayNumber: targetDay,
+      });
+    } finally {
+      setIsChangingDay(false);
+    }
   };
 
   const formatDate = (timestamp: number) => {
@@ -254,6 +287,14 @@ export default function PatientDetailPage() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Developer Mode Badge */}
+              {devModeStatus?.developerMode && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                  <Code className="w-3 h-3" />
+                  DEV
+                </span>
+              )}
+
               <span
                 className={`px-3 py-1.5 rounded-full text-sm font-medium ${status.bgColor} ${status.color}`}
               >
@@ -281,6 +322,63 @@ export default function PatientDetailPage() {
                 <Pill className="w-4 h-4" />
                 Prescribe
               </Link>
+            </div>
+          </div>
+
+          {/* Developer Mode Controls */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-sm text-gray-600 flex items-center gap-1">
+                    <Code className="w-4 h-4" />
+                    Developer Mode
+                  </span>
+                  <button
+                    onClick={handleToggleDeveloperMode}
+                    disabled={isTogglingDevMode}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      devModeStatus?.developerMode
+                        ? "bg-purple-600"
+                        : "bg-gray-300"
+                    } ${isTogglingDevMode ? "opacity-50" : ""}`}
+                  >
+                    <span
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        devModeStatus?.developerMode ? "left-6" : "left-1"
+                      }`}
+                    />
+                  </button>
+                </label>
+                <span className="text-xs text-gray-400">
+                  Skip time gates & unlock any day
+                </span>
+              </div>
+
+              {/* Day Selector (visible when dev mode is ON) */}
+              {devModeStatus?.developerMode && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Jump to Day:</span>
+                  <select
+                    value={targetDay}
+                    onChange={(e) => setTargetDay(Number(e.target.value))}
+                    className="px-3 py-1.5 rounded-lg border border-purple-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-purple-50"
+                  >
+                    {Array.from({ length: 15 }, (_, i) => i + 1).map((day) => (
+                      <option key={day} value={day}>
+                        Day {day}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleSetDay}
+                    disabled={isChangingDay || targetDay === patient.user.current_day}
+                    className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isChangingDay ? "..." : "Go"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

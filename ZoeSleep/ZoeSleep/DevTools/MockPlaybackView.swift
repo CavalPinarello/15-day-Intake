@@ -15,6 +15,9 @@ struct MockPlaybackView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
 
+    @State private var isRepairingSleepData = false
+    @State private var repairResult: String?
+
     private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
@@ -100,6 +103,78 @@ struct MockPlaybackView: View {
                 .cornerRadius(CornerRadius.medium)
             }
             .padding(.top, Spacing.md)
+
+            // Repair sleep insights button
+            repairSleepDataSection
+        }
+    }
+
+    private var repairSleepDataSection: some View {
+        VStack(spacing: Spacing.sm) {
+            Divider()
+                .padding(.vertical, Spacing.sm)
+
+            Text("Already have data?")
+                .font(.system(size: Typography.caption, weight: .medium))
+                .foregroundColor(theme.textSecondary)
+
+            Button {
+                repairSleepData()
+            } label: {
+                HStack {
+                    if isRepairingSleepData {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .tint(.blue)
+                    } else {
+                        Image(systemName: "wrench.and.screwdriver.fill")
+                    }
+                    Text(isRepairingSleepData ? "Processing..." : "Repair Sleep Insights Data")
+                }
+                .font(.system(size: Typography.subheadline, weight: .medium))
+                .foregroundColor(.blue)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.sm)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(CornerRadius.medium)
+            }
+            .disabled(isRepairingSleepData)
+
+            Text("Computes sleep metrics from existing questionnaire responses to populate Sleep Insights dashboard")
+                .font(.system(size: Typography.caption2))
+                .foregroundColor(theme.textSecondary)
+                .multilineTextAlignment(.center)
+
+            if let result = repairResult {
+                HStack {
+                    Image(systemName: result.contains("Error") ? "xmark.circle.fill" : "checkmark.circle.fill")
+                        .foregroundColor(result.contains("Error") ? .red : .green)
+                    Text(result)
+                        .font(.system(size: Typography.caption))
+                        .foregroundColor(result.contains("Error") ? .red : .green)
+                }
+                .padding(.vertical, Spacing.xs)
+            }
+        }
+    }
+
+    private func repairSleepData() {
+        isRepairingSleepData = true
+        repairResult = nil
+
+        Task {
+            do {
+                let daysProcessed = try await ConvexService.shared.computeAllSleepMetricsFromResponses()
+                await MainActor.run {
+                    repairResult = "Success! Processed \(daysProcessed) days of sleep data"
+                    isRepairingSleepData = false
+                }
+            } catch {
+                await MainActor.run {
+                    repairResult = "Error: \(error.localizedDescription)"
+                    isRepairingSleepData = false
+                }
+            }
         }
     }
 
