@@ -356,20 +356,21 @@ export const unlockInsight = mutation({
  */
 export const getNextInsightTeaser = query({
   args: { userId: v.id("users") },
-  returns: v.optional(
+  returns: v.union(
     v.object({
       teaserId: v.string(),
       title: v.string(),
       teaserType: v.string(),
       displayText: v.string(),
       icon: v.string(),
-      daysUntilUnlock: v.optional(v.number()),
+      daysUntilUnlock: v.union(v.number(), v.null()),
       isDiscovery: v.boolean(),
-    })
+    }),
+    v.null()
   ),
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) return undefined;
+    if (!user) return null;
 
     const currentDay = user.current_day ?? 1;
 
@@ -457,7 +458,7 @@ export const getNextInsightTeaser = query({
         teaserType: "discovery",
         displayText,
         icon: teaser.icon,
-        daysUntilUnlock: undefined,
+        daysUntilUnlock: null,
         isDiscovery: true,
       };
     }
@@ -485,7 +486,7 @@ export const getNextInsightTeaser = query({
       };
     }
 
-    return undefined;
+    return null;
   },
 });
 

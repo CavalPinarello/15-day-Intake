@@ -12,10 +12,39 @@ struct ContentView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var themeManager: ThemeManager
+    @ObservedObject private var journeyPhaseManager = JourneyPhaseManager.shared
 
     var body: some View {
         NavigationStack {
+            phaseAwareContent
+        }
+        .onAppear {
+            // Load journey status when view appears
+            if let userId = authManager.user?.id {
+                Task {
+                    await journeyPhaseManager.loadJourneyStatus(userId: userId)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var phaseAwareContent: some View {
+        switch journeyPhaseManager.currentPhase {
+        case .intake:
+            // 15-day data collection journey
             MainDashboardView()
+
+        case .analysis:
+            // Waiting for physician analysis (Day 16+)
+            AnalysisPendingView()
+                .environmentObject(themeManager)
+
+        case .treatmentPending, .treatmentActive:
+            // Treatment plan with session cards
+            TreatmentDashboardView()
+                .environmentObject(themeManager)
+                .environmentObject(authManager)
         }
     }
 }

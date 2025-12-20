@@ -18,7 +18,6 @@ struct JourneyIntroScreen1: View {
     @State private var textOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 20 : 28) {
@@ -33,7 +32,7 @@ struct JourneyIntroScreen1: View {
             // Title
             Text("Your 15-Day Sleep Journey")
                 .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
-                .foregroundColor(palette.textPrimary)
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .opacity(textOpacity)
 
@@ -44,7 +43,11 @@ struct JourneyIntroScreen1: View {
                     isCompact: isCompact
                 )
                 JourneyIntroParagraph(
-                    "Each day takes just 5-10 minutes and brings you closer to better, longer sleep.",
+                    "Plan for 10-15 minutes daily — this investment helps us calibrate your subjective experience and see the complete picture.",
+                    isCompact: isCompact
+                )
+                JourneyIntroParagraph(
+                    "It's time well spent for truly personalized care.",
                     isCompact: isCompact
                 )
             }
@@ -78,7 +81,6 @@ struct JourneyIntroScreen2: View {
     @State private var textOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 20 : 28) {
@@ -93,14 +95,14 @@ struct JourneyIntroScreen2: View {
             // Title
             Text("Daily Sleep Log")
                 .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
-                .foregroundColor(palette.textPrimary)
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .opacity(textOpacity)
 
             // Description
             VStack(spacing: isCompact ? 12 : 16) {
                 JourneyIntroParagraph(
-                    "Every morning, 5 quick questions from the Stanford Consensus Sleep Diary.",
+                    "Every morning, 10 questions from the Stanford Consensus Sleep Diary — repeated for all 15 days.",
                     isCompact: isCompact
                 )
                 JourneyIntroParagraph(
@@ -108,7 +110,7 @@ struct JourneyIntroScreen2: View {
                     isCompact: isCompact
                 )
                 JourneyIntroParagraph(
-                    "Same time each day helps us see your patterns.",
+                    "Consistency helps us identify true patterns and calibrate your perception.",
                     isCompact: isCompact
                 )
             }
@@ -142,7 +144,6 @@ struct JourneyIntroScreen3: View {
     @State private var textOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 20 : 28) {
@@ -157,22 +158,22 @@ struct JourneyIntroScreen3: View {
             // Title
             Text("Understanding Your Sleep")
                 .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
-                .foregroundColor(palette.textPrimary)
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .opacity(textOpacity)
 
             // Description
             VStack(spacing: isCompact ? 12 : 16) {
                 JourneyIntroParagraph(
-                    "During Days 1-7, we explore multiple facets of your sleep health.",
+                    "Across all 15 days, we explore multiple facets of your sleep health.",
                     isCompact: isCompact
                 )
                 JourneyIntroParagraph(
-                    "From environment to lifestyle, we examine the full picture.",
+                    "From environment to lifestyle to mental health — we examine the complete picture.",
                     isCompact: isCompact
                 )
                 JourneyIntroParagraph(
-                    "Questions are balanced so you're never overwhelmed.",
+                    "Questions are balanced daily so you're never overwhelmed.",
                     isCompact: isCompact
                 )
             }
@@ -206,7 +207,6 @@ struct JourneyIntroScreen4: View {
     @State private var textOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 20 : 28) {
@@ -221,7 +221,7 @@ struct JourneyIntroScreen4: View {
             // Title
             Text("Personalized Deep Dives")
                 .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
-                .foregroundColor(palette.textPrimary)
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .opacity(textOpacity)
 
@@ -270,7 +270,6 @@ struct JourneyIntroScreen5: View {
     @State private var textOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 20 : 28) {
@@ -285,7 +284,7 @@ struct JourneyIntroScreen5: View {
             // Title
             Text("Objective Data")
                 .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
-                .foregroundColor(palette.textPrimary)
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .opacity(textOpacity)
 
@@ -336,7 +335,10 @@ struct JourneyIntroScreen6: View {
     @State private var buttonOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
+
+    // Aurora accent colors
+    private let auroraAccent = Color(red: 0.1, green: 0.9, blue: 0.8)
+    private let auroraSecondary = Color(red: 0.0, green: 0.8, blue: 0.9)
 
     var body: some View {
         VStack(spacing: isCompact ? 20 : 28) {
@@ -351,7 +353,7 @@ struct JourneyIntroScreen6: View {
             // Title
             Text("Expert Review & Your Plan")
                 .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
-                .foregroundColor(palette.textPrimary)
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .opacity(textOpacity)
 
@@ -379,20 +381,20 @@ struct JourneyIntroScreen6: View {
             Button(action: onComplete) {
                 Text("Begin My Journey")
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundColor(palette.isDark ? .black : .white)
+                    .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, isCompact ? 14 : 16)
                     .background(
                         RoundedRectangle(cornerRadius: 14)
                             .fill(
                                 LinearGradient(
-                                    colors: [palette.accent, palette.wave],
+                                    colors: [auroraAccent, auroraSecondary],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
                     )
-                    .shadow(color: palette.accent.opacity(0.3), radius: 8, y: 4)
+                    .shadow(color: auroraAccent.opacity(0.4), radius: 12, y: 4)
             }
             .padding(.horizontal, isCompact ? 24 : 32)
             .padding(.bottom, isCompact ? 16 : 24)

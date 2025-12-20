@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F879436DEDFFFC4ECA1D9ED5 /* AnalysisPendingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */; };
+		4197EE59ED24841599CCADD0 /* TreatmentDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD95B6C3C94BAEE41801991 /* TreatmentDashboardView.swift */; };
+
+				ECE7FEC824179DC25AD315F8 /* JourneyPhaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */; };
+
 		4A5E3B8A2C8E123456789A01 /* ZoeSleepApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B892C8E123456789A01 /* ZoeSleepApp.swift */; };
 		4A5E3B8C2C8E123456789A02 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B8B2C8E123456789A02 /* ContentView.swift */; };
 		4A5E3B8E2C8E123456789A03 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5E3B8D2C8E123456789A03 /* Assets.xcassets */; };
@@ -80,12 +85,18 @@
 		5A316CD42EF4B12F0098C762 /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */; };
 		5A316CD62EF4B1310098C762 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD72EF4B1320098C762 /* PushNotificationManager.swift */; };
 		5A316CD82EF4B1330098C762 /* ProgressiveInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */; };
+		5A316CDA2EF4B1350098C762 /* SleepFingerprintCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CDB2EF4B1360098C762 /* SleepFingerprintCard.swift */; };
 		5A316CE22EF4C0030098C762 /* JourneyIntroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CE12EF4C0020098C762 /* JourneyIntroView.swift */; };
 		5A316CE42EF4C0050098C762 /* JourneyIntroScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CE32EF4C0040098C762 /* JourneyIntroScreens.swift */; };
 		5A316CE62EF4C0070098C762 /* JourneyIntroIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CE52EF4C0060098C762 /* JourneyIntroIcons.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisPendingView.swift; sourceTree = "<group>"; };
+		7BD95B6C3C94BAEE41801991 /* TreatmentDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentDashboardView.swift; sourceTree = "<group>"; };
+
+		CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyPhaseManager.swift; sourceTree = "<group>"; };
+
 		4A5E3B842C8E123456789A17 /* ZoeSleep.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZoeSleep.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A5E3B892C8E123456789A01 /* ZoeSleepApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoeSleepApp.swift; sourceTree = "<group>"; };
 		4A5E3B8B2C8E123456789A02 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -164,6 +175,7 @@
 		5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
 		5A316CD72EF4B1320098C762 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
 		5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressiveInsightsView.swift; sourceTree = "<group>"; };
+		5A316CDB2EF4B1360098C762 /* SleepFingerprintCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepFingerprintCard.swift; sourceTree = "<group>"; };
 		5A316CE12EF4C0020098C762 /* JourneyIntroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntroView.swift; sourceTree = "<group>"; };
 		5A316CE32EF4C0040098C762 /* JourneyIntroScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntroScreens.swift; sourceTree = "<group>"; };
 		5A316CE52EF4C0060098C762 /* JourneyIntroIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntroIcons.swift; sourceTree = "<group>"; };
@@ -187,6 +199,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4101092100CACE818B6EE578 /* PostIntake */ = {
+			isa = PBXGroup;
+			children = (
+				8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */,
+				7BD95B6C3C94BAEE41801991 /* TreatmentDashboardView.swift */,
+			);
+			path = PostIntake;
+			sourceTree = "<group>";
+		};
+
 		4A5E3B7C2C8E123456789A1E = {
 			isa = PBXGroup;
 			children = (
@@ -260,6 +282,7 @@
 		4A5E3BBC2C8E123456789A22 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */,
 				4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */,
 				5A316CC02EF4B1200098C762 /* GamificationManager.swift */,
 				4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */,
@@ -286,6 +309,7 @@
 		4A5E3BBE2C8E123456789A24 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				4101092100CACE818B6EE578 /* PostIntake */,
 				4A5E3B9F2C8E123456789A09 /* AuthenticationView.swift */,
 				4A5E3BA12C8E123456789A0A /* HealthKitIntegrationView.swift */,
 				4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */,
@@ -319,6 +343,7 @@
 				5A316CCB2EF4B1260098C762 /* CohortComparisonView.swift */,
 				5A316CC22EF4B1210098C762 /* ConfettiView.swift */,
 				5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */,
+				5A316CDB2EF4B1360098C762 /* SleepFingerprintCard.swift */,
 				5A316CC62EF4B1230098C762 /* StreakBadgeView.swift */,
 				5A316CD12EF4B12C0098C762 /* StreakFreezeView.swift */,
 				5A316CC42EF4B1220098C762 /* XPDisplayView.swift */,
@@ -495,6 +520,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F879436DEDFFFC4ECA1D9ED5 /* AnalysisPendingView.swift in Sources */,
+				4197EE59ED24841599CCADD0 /* TreatmentDashboardView.swift in Sources */,
+				ECE7FEC824179DC25AD315F8 /* JourneyPhaseManager.swift in Sources */,
 				5A316CB42EF4B0E00098C762 /* SourceComparisonView.swift in Sources */,
 				4A5E3B8C2C8E123456789A02 /* ContentView.swift in Sources */,
 				5A316CBA2EF4B10E0098C762 /* EveningReportView.swift in Sources */,
@@ -549,6 +577,7 @@
 				5A316CCE2EF4B1290098C762 /* AnticipationTeaser.swift in Sources */,
 				5A316CD02EF4B12B0098C762 /* ChallengesView.swift in Sources */,
 				5A316CD22EF4B12D0098C762 /* StreakFreezeView.swift in Sources */,
+				5A316CDA2EF4B1350098C762 /* SleepFingerprintCard.swift in Sources */,
 				5A316CD42EF4B12F0098C762 /* HapticFeedback.swift in Sources */,
 				5A316CD62EF4B1310098C762 /* PushNotificationManager.swift in Sources */,
 				5A316CD82EF4B1330098C762 /* ProgressiveInsightsView.swift in Sources */,
@@ -562,6 +591,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F879436DEDFFFC4ECA1D9ED5 /* AnalysisPendingView.swift in Sources */,
+				4197EE59ED24841599CCADD0 /* TreatmentDashboardView.swift in Sources */,
+				ECE7FEC824179DC25AD315F8 /* JourneyPhaseManager.swift in Sources */,
 				4A5E3BF62C8E123456789F03 /* SharedQuestionBank.swift in Sources */,
 				4A5E3BB52C8E123456789A0F /* HealthKitWatchManager.swift in Sources */,
 				4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */,

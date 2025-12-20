@@ -10,6 +10,7 @@ import { PillarSummaryCard, PillarKey, PILLARS } from "./PillarSummaryCard";
 import { PillarDetailModal } from "./PillarDetailModal";
 import { AIInsightsCard, generateSampleInsights } from "./AIInsightsCard";
 import { PatientEngagementCard } from "./PatientEngagementCard";
+import { PatientJourneyStatus } from "./PatientJourneyStatus";
 import { SleepTrendChart } from "@/components/charts/SleepTrendChart";
 import { ScoreGauge, SCORE_CONFIG } from "@/components/charts/ScoreProgressionChart";
 import { SleepBreakdown } from "@/components/charts/SleepArchitectureChart";
@@ -489,6 +490,9 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
 
         {/* Patient Engagement - Shows streak, XP, badges, and engagement insights */}
         <PatientEngagementCard userId={userId} />
+
+        {/* Journey Status - Shows current phase and analysis progress */}
+        <PatientJourneyStatus userId={userId} />
 
         {/* Sleep Architecture (if available) */}
         {sleepArchitecture && sleepArchitecture.length > 0 && (

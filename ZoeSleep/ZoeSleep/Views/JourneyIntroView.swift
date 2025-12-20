@@ -20,8 +20,17 @@ struct JourneyIntroView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Circadian-aware background (reused from onboarding)
-                OnboardingCircadianBackground()
+                // Animated aurora borealis background (like splash screen)
+                AuroraBorealisView()
+
+                // Subtle vignette for better text readability
+                RadialGradient(
+                    colors: [.clear, Color.black.opacity(0.4)],
+                    center: .center,
+                    startRadius: 100,
+                    endRadius: 500
+                )
+                .ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     // Skip button (top right)
@@ -30,7 +39,7 @@ struct JourneyIntroView: View {
                         Button(action: dismiss) {
                             Text("Skip")
                                 .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundColor(palette.textSecondary)
+                                .foregroundColor(.white.opacity(0.8))
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
                         }
@@ -89,15 +98,16 @@ struct JourneyIntroPageIndicator: View {
     let currentPage: Int
     let totalPages: Int
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    // Aurora teal accent color
+    private let auroraAccent = Color(red: 0.1, green: 0.9, blue: 0.8)
 
     var body: some View {
         HStack(spacing: 8) {
             ForEach(0..<totalPages, id: \.self) { index in
                 Circle()
                     .fill(index == currentPage
-                          ? palette.accent
-                          : palette.textSecondary.opacity(0.3))
+                          ? auroraAccent
+                          : Color.white.opacity(0.3))
                     .frame(
                         width: index == currentPage ? 10 : 8,
                         height: index == currentPage ? 10 : 8

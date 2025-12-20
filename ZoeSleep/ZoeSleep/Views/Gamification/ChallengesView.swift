@@ -347,12 +347,12 @@ struct WeeklyChallengeCard: View {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(
                             challenge.isCompleted
-                                ? Color.green
-                                : LinearGradient(
+                                ? AnyShapeStyle(Color.green)
+                                : AnyShapeStyle(LinearGradient(
                                     colors: [challenge.category.color, challenge.category.color.opacity(0.7)],
                                     startPoint: .leading,
                                     endPoint: .trailing
-                                )
+                                ))
                         )
                         .frame(width: geometry.size.width * progressPercent, height: 6)
                 }

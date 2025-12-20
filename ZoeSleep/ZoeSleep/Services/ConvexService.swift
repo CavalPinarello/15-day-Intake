@@ -1560,32 +1560,122 @@ enum ConvexError: LocalizedError {
     }
 }
 
+// MARK: - Journey Phase Response Types
+
+struct JourneyStatusResponse: Codable {
+    let phase: String
+    let currentDay: Int?
+    let analysisStage: Int?
+    let treatmentActive: Bool?
+}
+
+struct AnalysisProgressResponse: Codable {
+    let currentStage: Int
+    let stages: [AnalysisStageData]?
+
+    struct AnalysisStageData: Codable {
+        let id: Int
+        let title: String
+        let description: String
+        let icon: String
+        let isComplete: Bool
+        let isCurrent: Bool
+    }
+}
+
+struct TransitionResponse: Codable {
+    let success: Bool
+    let newPhase: String?
+    let message: String?
+}
+
+struct InsightResponse: Codable {
+    let id: String
+    let title: String
+    let category: String
+    let icon: String
+    let color: String?
+    let isUnlocked: Bool
+    let daysUntilUnlock: Int?
+    let lockedDescription: String?
+    let unlockedDescription: String?
+    let discoveryHint: String?
+    let discoveryHintLevel: Int?
+    let dataPointsCollected: Int?
+}
+
+struct TasksByWindowResponse: Codable {
+    let morning: [TaskData]?
+    let afternoon: [TaskData]?
+    let evening: [TaskData]?
+    let night: [TaskData]?
+    let currentWindow: String?
+
+    struct TaskData: Codable {
+        let id: String
+        let title: String?
+        let description: String?
+        let taskName: String?
+        let taskInstructions: String?
+        let timeWindow: String?
+        let status: String?
+        let scheduledTime: String?
+        let priority: Int?
+        let interventionId: String?
+        let isLocked: Bool?
+        let unlocksAt: String?
+        let isCompleted: Bool?
+
+        // Use CodingKeys to map snake_case from backend
+        enum CodingKeys: String, CodingKey {
+            case id = "_id"
+            case title
+            case description
+            case taskName = "task_name"
+            case taskInstructions = "task_instructions"
+            case timeWindow = "time_window"
+            case status
+            case scheduledTime = "scheduled_time"
+            case priority
+            case interventionId = "intervention_id"
+            case isLocked
+            case unlocksAt
+            case isCompleted
+        }
+    }
+}
+
+struct TaskActionResponse: Codable {
+    let success: Bool
+    let message: String?
+}
+
 // MARK: - Journey Phase Management
 
 extension ConvexService {
     /// Get the current journey phase status
-    func getJourneyStatus(userId: String) async throws -> [String: Any] {
+    func getJourneyStatus(userId: String) async throws -> JourneyStatusResponse {
         return try await client.query("journey:getJourneyStatus", args: [
             "userId": userId
         ])
     }
 
     /// Get analysis progress stages
-    func getAnalysisProgress(userId: String) async throws -> [String: Any] {
+    func getAnalysisProgress(userId: String) async throws -> AnalysisProgressResponse {
         return try await client.query("journey:getAnalysisProgress", args: [
             "userId": userId
         ])
     }
 
     /// Transition from intake to analysis phase
-    func transitionToAnalysis(userId: String) async throws -> [String: Any] {
+    func transitionToAnalysis(userId: String) async throws -> TransitionResponse {
         return try await client.mutation("journey:transitionToAnalysis", args: [
             "userId": userId
         ])
     }
 
     /// Advance analysis stage (for testing/debug)
-    func advanceAnalysisStage(userId: String, newStage: Int) async throws -> [String: Any] {
+    func advanceAnalysisStage(userId: String, newStage: Int) async throws -> TransitionResponse {
         return try await client.mutation("journey:advanceAnalysisStage", args: [
             "userId": userId,
             "newStage": newStage
@@ -1597,21 +1687,21 @@ extension ConvexService {
 
 extension ConvexService {
     /// Get all progressive insights with unlock status
-    func getProgressiveInsights(userId: String) async throws -> [[String: Any]] {
+    func getProgressiveInsights(userId: String) async throws -> [InsightResponse] {
         return try await client.query("insights:getProgressiveInsights", args: [
             "userId": userId
         ])
     }
 
     /// Get the next insight teaser to show
-    func getNextInsightTeaser(userId: String) async throws -> [String: Any]? {
+    func getNextInsightTeaser(userId: String) async throws -> InsightResponse? {
         return try await client.query("insights:getNextInsightTeaser", args: [
             "userId": userId
         ])
     }
 
     /// Get discovery hints based on patterns
-    func getDiscoveryHints(userId: String, dayNumber: Int) async throws -> [[String: Any]] {
+    func getDiscoveryHints(userId: String, dayNumber: Int) async throws -> [InsightResponse] {
         return try await client.query("insights:getDiscoveryHints", args: [
             "userId": userId,
             "dayNumber": dayNumber
@@ -1619,7 +1709,7 @@ extension ConvexService {
     }
 
     /// Initialize insight progress for user
-    func initializeInsightProgress(userId: String) async throws -> [String: Any] {
+    func initializeInsightProgress(userId: String) async throws -> SuccessResponse {
         return try await client.mutation("insights:initializeInsightProgress", args: [
             "userId": userId
         ])
@@ -1630,14 +1720,14 @@ extension ConvexService {
 
 extension ConvexService {
     /// Get tasks grouped by time window
-    func getTasksByTimeWindow(userId: String) async throws -> [String: Any] {
+    func getTasksByTimeWindow(userId: String) async throws -> TasksByWindowResponse {
         return try await client.query("interventionLibrary:getTasksByTimeWindow", args: [
             "userId": userId
         ])
     }
 
     /// Complete a task (with time window enforcement)
-    func completeTask(taskId: String, difficultyRating: Int?, notes: String?) async throws -> [String: Any] {
+    func completeTask(taskId: String, difficultyRating: Int?, notes: String?) async throws -> TaskActionResponse {
         var args: [String: Any] = ["taskId": taskId]
         if let rating = difficultyRating {
             args["difficultyRating"] = rating
@@ -1649,7 +1739,7 @@ extension ConvexService {
     }
 
     /// Skip a task
-    func skipTask(taskId: String, reason: String?) async throws -> [String: Any] {
+    func skipTask(taskId: String, reason: String?) async throws -> TaskActionResponse {
         var args: [String: Any] = ["taskId": taskId]
         if let reasonText = reason {
             args["reason"] = reasonText
@@ -1658,7 +1748,7 @@ extension ConvexService {
     }
 
     /// Get today's tasks (simpler format)
-    func getTodaysTasks(userId: String) async throws -> [[String: Any]] {
+    func getTodaysTasks(userId: String) async throws -> [TasksByWindowResponse.TaskData] {
         return try await client.query("interventionLibrary:getTodaysTasks", args: [
             "userId": userId
         ])

@@ -80,6 +80,16 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Post-15-Day Experience:** Complete treatment journey implementation (Dec 20, 2025)
+  - **Journey Phases:** intake → analysis → treatment_pending → treatment_active
+  - **Progressive Insights:** Countdown and discovery teasers during Days 1-15
+  - **Analysis Pending View:** 4-stage timeline (data collected → patterns → preparing → ready)
+  - **Treatment Dashboard:** Session-based cards (Morning/Afternoon/Evening/Night)
+  - **Time-Windowed Tasks:** Tasks only completable during scheduled time windows
+  - **New Convex APIs:** `convex/journey.ts`, `convex/insights.ts` (phase management, teasers)
+  - **iOS:** JourneyPhaseManager.swift, AnalysisPendingView.swift, TreatmentDashboardView.swift
+  - **Dashboard:** PatientJourneyStatus.tsx, InterventionTimeWindows.tsx
+  - Physicians can advance analysis stages and assign time windows to interventions
 - **Sleep Insights Bug Fix & Repair Tool:** Fixed "0 days" bug in Sleep Insights (Dec 20, 2025)
   - Root cause: Mock data generator created questionnaire responses but not `user_sleep_data` entries
   - Added `healthkit:computeAllSleepMetricsFromResponses` - retroactively computes sleep metrics from CSD_ responses

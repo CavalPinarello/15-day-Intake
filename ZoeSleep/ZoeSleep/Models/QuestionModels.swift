@@ -493,6 +493,48 @@ struct ColorTheme {
             endPoint: .bottom
         )
     }
+
+    // MARK: - Aliases for Compatibility
+
+    /// Alias for textPrimary (used in some views)
+    var primaryText: Color {
+        textPrimary
+    }
+
+    /// Alias for textSecondary (used in some views)
+    var secondaryText: Color {
+        textSecondary
+    }
+
+    /// Background gradient for full-screen views - circadian-aware
+    var backgroundGradient: LinearGradient {
+        switch effectivePeriod {
+        case .morning:
+            return LinearGradient(
+                colors: [Color(hex: "#F0F9FF")!, Color(hex: "#E0F2FE")!],  // Light sky blue tints
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        case .afternoon:
+            return LinearGradient(
+                colors: [Color(hex: "#FFFBEB")!, Color(hex: "#FEF3C7")!],  // Warm cream
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        case .evening:
+            return LinearGradient(
+                colors: [Color(hex: "#2D1810")!, Color(hex: "#1A0F0A")!],  // Dark warm brown
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        case .night:
+            return LinearGradient(
+                colors: [Color(hex: "#1A0F0A")!, Color(hex: "#0F0805")!],  // Very dark warm
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
 }
 
 // Note: ThemeManager is defined in Managers/ThemeManager.swift

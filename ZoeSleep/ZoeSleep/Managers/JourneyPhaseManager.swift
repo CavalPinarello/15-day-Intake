@@ -213,23 +213,14 @@ class JourneyPhaseManager: ObservableObject {
             let response = try await ConvexService.shared.getJourneyStatus(userId: userId)
 
             // Update phase
-            if let phaseString = response["phase"] as? String,
-               let phase = JourneyPhase(rawValue: phaseString) {
+            if let phase = JourneyPhase(rawValue: response.phase) {
                 self.currentPhase = phase
             }
 
             // Update analysis stage
-            if let stage = response["analysisStage"] as? Int {
+            if let stage = response.analysisStage {
                 self.analysisStage = stage
                 updateAnalysisStages(currentStage: stage)
-            }
-
-            // Update timestamps
-            if let intakeTimestamp = response["intakeCompletedAt"] as? Double {
-                self.intakeCompletedAt = Date(timeIntervalSince1970: intakeTimestamp / 1000)
-            }
-            if let treatmentTimestamp = response["treatmentActivatedAt"] as? Double {
-                self.treatmentActivatedAt = Date(timeIntervalSince1970: treatmentTimestamp / 1000)
             }
 
             isLoading = false
@@ -257,34 +248,34 @@ class JourneyPhaseManager: ObservableObject {
 
             self.insightTeasers = response.map { item in
                 InsightTeaser(
-                    id: item["teaserId"] as? String ?? "",
-                    title: item["title"] as? String ?? "",
-                    category: item["category"] as? String ?? "",
-                    icon: item["icon"] as? String ?? "sparkles",
-                    color: item["color"] as? String,
-                    teaserType: item["teaserType"] as? String ?? "countdown",
-                    isUnlocked: item["isUnlocked"] as? Bool ?? false,
-                    daysUntilUnlock: item["daysUntilUnlock"] as? Int,
-                    lockedDescription: item["lockedDescription"] as? String ?? "",
-                    unlockedDescription: item["unlockedDescription"] as? String,
-                    discoveryHint: item["discoveryHint"] as? String,
-                    discoveryHintLevel: item["discoveryHintLevel"] as? Int ?? 0,
-                    dataPointsCollected: item["dataPointsCollected"] as? Int ?? 0
+                    id: item.id,
+                    title: item.title,
+                    category: item.category,
+                    icon: item.icon,
+                    color: item.color,
+                    teaserType: "countdown",  // Default value since not in response
+                    isUnlocked: item.isUnlocked,
+                    daysUntilUnlock: item.daysUntilUnlock,
+                    lockedDescription: item.lockedDescription ?? "",
+                    unlockedDescription: item.unlockedDescription,
+                    discoveryHint: item.discoveryHint,
+                    discoveryHintLevel: item.discoveryHintLevel ?? 0,
+                    dataPointsCollected: item.dataPointsCollected ?? 0
                 )
             }
 
             // Load next insight teaser
             if let next = try await ConvexService.shared.getNextInsightTeaser(userId: userId) {
                 self.nextInsight = InsightTeaser(
-                    id: next["teaserId"] as? String ?? "",
-                    title: next["title"] as? String ?? "",
+                    id: next.id,
+                    title: next.title,
                     category: "",
-                    icon: next["icon"] as? String ?? "sparkles",
+                    icon: next.icon,
                     color: nil,
-                    teaserType: next["teaserType"] as? String ?? "countdown",
+                    teaserType: "countdown",
                     isUnlocked: false,
-                    daysUntilUnlock: next["daysUntilUnlock"] as? Int,
-                    lockedDescription: next["displayText"] as? String ?? "",
+                    daysUntilUnlock: next.daysUntilUnlock,
+                    lockedDescription: next.lockedDescription ?? "",
                     unlockedDescription: nil,
                     discoveryHint: nil,
                     discoveryHintLevel: 0,
@@ -302,12 +293,12 @@ class JourneyPhaseManager: ObservableObject {
         do {
             let response = try await ConvexService.shared.getTasksByTimeWindow(userId: userId)
 
-            self.morningTasks = parseTasks(response["morning"] as? [[String: Any]] ?? [])
-            self.afternoonTasks = parseTasks(response["afternoon"] as? [[String: Any]] ?? [])
-            self.eveningTasks = parseTasks(response["evening"] as? [[String: Any]] ?? [])
-            self.nightTasks = parseTasks(response["night"] as? [[String: Any]] ?? [])
+            self.morningTasks = parseTasks(response.morning ?? [])
+            self.afternoonTasks = parseTasks(response.afternoon ?? [])
+            self.eveningTasks = parseTasks(response.evening ?? [])
+            self.nightTasks = parseTasks(response.night ?? [])
 
-            if let windowStr = response["currentWindow"] as? String {
+            if let windowStr = response.currentWindow {
                 switch windowStr {
                 case "morning": currentWindow = .morning
                 case "afternoon": currentWindow = .afternoon
@@ -321,20 +312,19 @@ class JourneyPhaseManager: ObservableObject {
         }
     }
 
-    private func parseTasks(_ items: [[String: Any]]) -> [WindowedTask] {
-        items.compactMap { item in
-            guard let id = item["_id"] as? String else { return nil }
-            return WindowedTask(
-                id: id,
-                taskName: item["task_name"] as? String ?? "",
-                taskInstructions: item["task_instructions"] as? String ?? "",
-                timeWindow: item["time_window"] as? String ?? "morning",
-                status: item["status"] as? String ?? "pending",
-                scheduledTime: item["scheduled_time"] as? String,
-                priority: item["priority"] as? Int,
-                interventionId: item["intervention_id"] as? String ?? "",
-                isLocked: item["isLocked"] as? Bool ?? false,
-                unlocksAt: item["unlocksAt"] as? String
+    private func parseTasks(_ items: [TasksByWindowResponse.TaskData]) -> [WindowedTask] {
+        items.map { item in
+            WindowedTask(
+                id: item.id,
+                taskName: item.taskName ?? item.title ?? "",
+                taskInstructions: item.taskInstructions ?? item.description ?? "",
+                timeWindow: item.timeWindow ?? "morning",
+                status: item.status ?? "pending",
+                scheduledTime: item.scheduledTime,
+                priority: item.priority,
+                interventionId: item.interventionId ?? "",
+                isLocked: item.isLocked ?? false,
+                unlocksAt: item.unlocksAt
             )
         }
     }
@@ -349,13 +339,12 @@ class JourneyPhaseManager: ObservableObject {
                 notes: notes
             )
 
-            if let success = result["success"] as? Bool, success {
+            if result.success {
                 // Update local state
                 updateTaskStatus(taskId: taskId, newStatus: "completed")
                 return (true, nil)
             } else {
-                let error = result["error"] as? String ?? "Unknown error"
-                return (false, error)
+                return (false, result.message ?? "Unknown error")
             }
         } catch {
             return (false, error.localizedDescription)

@@ -1089,6 +1089,7 @@ export const getTasksByTimeWindow = query({
           scheduled_time: task.scheduled_time,
           priority: task.priority,
           intervention_id: task.intervention_id,
+          time_window: window,
           isLocked: task.isLocked,
           unlocksAt: task.unlocksAt,
         });

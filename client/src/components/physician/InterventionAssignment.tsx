@@ -22,8 +22,13 @@ import {
   Sparkles,
   Save,
   Send,
+  Sun,
+  SunMedium,
+  Sunset,
+  Moon,
 } from "lucide-react";
 import { InterventionLibrary } from "./InterventionLibrary";
+import { InterventionTimeWindows, TimeWindowId } from "@/components/patient/InterventionTimeWindows";
 
 interface InterventionAssignmentProps {
   userId: Id<"users">;
@@ -40,6 +45,7 @@ interface DraftIntervention {
   endDate?: string;
   frequency: string;
   timing?: string;
+  timeWindow?: TimeWindowId;
   specificTime?: string;
   dosage?: string;
   customInstructions?: string;
@@ -156,6 +162,7 @@ export function InterventionAssignment({
           endDate: draft.endDate,
           frequency: draft.frequency,
           timing: draft.timing,
+          timeWindow: draft.timeWindow,
           specificTime: draft.specificTime,
           dosage: draft.dosage,
           customInstructions: draft.customInstructions,
@@ -472,6 +479,12 @@ function DraftInterventionCard({
           <p className="font-medium text-gray-900 truncate">{draft.name}</p>
           <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
             <span>{draft.frequency}</span>
+            {draft.timeWindow && (
+              <>
+                <span>•</span>
+                <span className="capitalize">{draft.timeWindow}</span>
+              </>
+            )}
             {draft.timing && (
               <>
                 <span>•</span>
@@ -569,7 +582,46 @@ function DraftInterventionCard({
                 ))}
               </select>
             </div>
+          </div>
 
+          {/* Time Window Selection */}
+          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+            <label className="block text-xs font-medium text-gray-700 mb-2">
+              Session Time Window
+            </label>
+            <div className="flex gap-2">
+              {[
+                { id: "morning" as TimeWindowId, label: "Morning", range: "5AM-12PM", icon: Sun },
+                { id: "afternoon" as TimeWindowId, label: "Afternoon", range: "12PM-5PM", icon: SunMedium },
+                { id: "evening" as TimeWindowId, label: "Evening", range: "5PM-9PM", icon: Sunset },
+                { id: "night" as TimeWindowId, label: "Night", range: "9PM-12AM", icon: Moon },
+              ].map((window) => {
+                const Icon = window.icon;
+                const isSelected = draft.timeWindow === window.id;
+                return (
+                  <button
+                    key={window.id}
+                    type="button"
+                    onClick={() => onUpdate({ timeWindow: isSelected ? undefined : window.id })}
+                    className={`flex-1 flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                      isSelected
+                        ? "border-teal-500 bg-teal-50 text-teal-700"
+                        : "border-gray-200 hover:border-gray-300 text-gray-600"
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isSelected ? "text-teal-500" : "text-gray-400"}`} />
+                    <span className="text-xs font-medium">{window.label}</span>
+                    <span className="text-[10px] text-gray-400">{window.range}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Tasks will only be available to complete during the selected time window.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mt-3">
             {/* Specific Time */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
