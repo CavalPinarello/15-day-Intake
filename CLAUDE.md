@@ -80,6 +80,15 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Sleep Insights Bug Fix & Repair Tool:** Fixed "0 days" bug in Sleep Insights (Dec 20, 2025)
+  - Root cause: Mock data generator created questionnaire responses but not `user_sleep_data` entries
+  - Added `healthkit:computeAllSleepMetricsFromResponses` - retroactively computes sleep metrics from CSD_ responses
+  - Added "Repair Sleep Insights" button in iOS Profile > Developer section
+  - Computes total sleep, efficiency, stages, latency from questionnaire data
+- **Micro-Cohort System Schema:** "People Like You" dynamic peer groups (Dec 20, 2025)
+  - `user_cohort_memberships` - User's cohort based on demographics, gateways, chronotype
+  - `cohort_aggregate_stats` - Percentile comparisons, improvement rates
+  - `user_sleep_narrative` - Personalized sleep phenotype and narrative
 - **Cross-Platform Questionnaire Audit & Fix:** Complete scoring system verification (Dec 20, 2025)
   - Fixed STOP-BANG scoring: Now uses SB_1-8 IDs (was broken with numeric IDs)
   - Added 4 new scoring functions: PROMIS Cognitive, Sleep Hygiene, PSAS (cognitive+somatic)

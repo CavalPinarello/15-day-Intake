@@ -1126,6 +1126,185 @@ export default defineSchema({
     .index("by_type", ["challenge_type"]),
 
   // ============================================
+  // Micro-Cohort System - "People Like You"
+  // Dynamic peer groups for personalized comparisons
+  // ============================================
+
+  // User's micro-cohort membership (recomputed when user data changes)
+  user_cohort_memberships: defineTable({
+    user_id: v.id("users"),
+    cohort_hash: v.string(), // Hash of cohort dimensions for quick lookup
+    // Cohort dimensions
+    age_bracket: v.string(), // "20-30", "30-40", "40-50", "50-60", "60+"
+    gender: v.optional(v.string()), // "male", "female", "other"
+    life_stage: v.optional(v.string()), // "student", "early_career", "parent_young", "parent_teens", "empty_nest", "retired"
+    work_pattern: v.optional(v.string()), // "9_to_5", "variable", "shift_work", "remote", "high_stress", "retired"
+    primary_gateway: v.optional(v.string()), // Most significant gateway: "insomnia", "apnea", "anxiety", etc.
+    chronotype: v.optional(v.string()), // "early_bird", "normal", "night_owl", "irregular"
+    activity_level: v.optional(v.string()), // "low", "moderate", "high"
+    family_situation: v.optional(v.string()), // "no_kids", "young_children", "teens", "adult_children"
+    // Full dimension JSON for flexibility
+    cohort_dimensions_json: v.string(), // Complete JSON of all dimensions
+    // Cohort metadata
+    cohort_size: v.number(), // Number of users in this cohort
+    percentile_isi: v.optional(v.number()), // User's ISI percentile within cohort
+    percentile_sleep_efficiency: v.optional(v.number()),
+    percentile_sleep_duration: v.optional(v.number()),
+    percentile_consistency: v.optional(v.number()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_cohort_hash", ["cohort_hash"])
+    .index("by_age_gender", ["age_bracket", "gender"])
+    .index("by_gateway", ["primary_gateway"])
+    .index("by_chronotype", ["chronotype"]),
+
+  // Aggregate statistics for each cohort (computed nightly)
+  cohort_aggregate_stats: defineTable({
+    cohort_hash: v.string(), // Links to user_cohort_memberships.cohort_hash
+    // Cohort identifiers (denormalized for queries)
+    age_bracket: v.optional(v.string()),
+    gender: v.optional(v.string()),
+    primary_gateway: v.optional(v.string()),
+    // Stat type and data
+    stat_type: v.string(), // "isi_distribution", "sleep_efficiency", "improvement_rate", "intervention_success"
+    stat_data_json: v.string(), // JSON with percentiles, averages, distributions
+    sample_size: v.number(),
+    // Quality metrics
+    confidence_level: v.optional(v.number()), // Statistical confidence 0-100
+    min_sample_size: v.optional(v.number()), // Minimum needed for valid stats
+    // Timestamps
+    computed_at: v.number(),
+    expires_at: v.optional(v.number()), // When to recompute
+  })
+    .index("by_cohort_hash", ["cohort_hash"])
+    .index("by_cohort_stat", ["cohort_hash", "stat_type"])
+    .index("by_stat_type", ["stat_type"])
+    .index("by_computed_at", ["computed_at"]),
+
+  // User's personalized sleep narrative and phenotype
+  user_sleep_narrative: defineTable({
+    user_id: v.id("users"),
+    // Sleep phenotype classification
+    phenotype: v.string(), // "tired_but_wired", "compensator", "irregular_rhythm", "short_sleeper", etc.
+    phenotype_confidence: v.number(), // 0-100 confidence in classification
+    phenotype_description: v.string(), // Human-readable explanation of phenotype
+    // Key patterns detected
+    key_patterns_json: v.string(), // JSON array of detected patterns with evidence
+    // Leverage points (what can help this user most)
+    leverage_points_json: v.string(), // JSON array of intervention recommendations
+    // Full narrative text
+    narrative_title: v.string(), // e.g., "The Tired but Wired Sleeper"
+    narrative_text: v.string(), // Full personalized narrative (2-3 paragraphs)
+    narrative_highlights_json: v.optional(v.string()), // Key bullet points
+    // Weekly evolution
+    week_number: v.number(), // Which week of the journey this is for
+    previous_narrative_id: v.optional(v.id("user_sleep_narrative")), // For tracking changes
+    // What changed from last week
+    changes_from_last_week_json: v.optional(v.string()),
+    // Generation metadata
+    data_points_used: v.number(), // How many data points contributed
+    generated_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_week", ["user_id", "week_number"])
+    .index("by_phenotype", ["phenotype"]),
+
+  // Personalized insight queue for each user
+  user_insight_queue: defineTable({
+    user_id: v.id("users"),
+    insight_id: v.string(), // Unique ID for this insight instance
+    // Insight classification
+    insight_type: v.string(), // "pattern", "comparison", "education", "prediction", "solidarity", "aha_moment"
+    insight_category: v.string(), // "demographic", "gateway", "pattern", "cohort", "anticipation"
+    // Content
+    insight_title: v.string(), // Short title
+    insight_text: v.string(), // Full insight text
+    insight_data_json: v.optional(v.string()), // Supporting data (percentiles, comparisons, etc.)
+    // Targeting - why this insight was chosen
+    targeting_reason: v.string(), // Why this insight is relevant to this user
+    targeting_criteria_json: v.optional(v.string()), // Criteria that matched
+    // Evidence
+    source_citation: v.optional(v.string()), // Scientific source
+    evidence_level: v.optional(v.string()), // "strong", "moderate", "emerging"
+    // Scoring and prioritization
+    relevance_score: v.number(), // 0-100 how relevant to this user
+    timeliness_score: v.optional(v.number()), // 0-100 how timely (temporal context)
+    priority: v.number(), // Combined priority for display order
+    // Display state
+    shown: v.boolean(),
+    shown_at: v.optional(v.number()),
+    dismissed: v.optional(v.boolean()),
+    dismissed_at: v.optional(v.number()),
+    // User reaction
+    reaction: v.optional(v.string()), // "helpful", "not_helpful", "surprising", "already_knew"
+    reaction_at: v.optional(v.number()),
+    // Lifecycle
+    valid_from: v.number(), // When insight becomes relevant
+    valid_until: v.optional(v.number()), // When insight expires
+    created_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_shown", ["user_id", "shown"])
+    .index("by_user_type", ["user_id", "insight_type"])
+    .index("by_priority", ["user_id", "priority"])
+    .index("by_valid_from", ["valid_from"]),
+
+  // Intervention effectiveness by cohort
+  cohort_intervention_effectiveness: defineTable({
+    cohort_hash: v.string(),
+    intervention_id: v.string(), // References interventions.intervention_id
+    // Effectiveness metrics
+    success_rate: v.number(), // 0-100 percentage of users who improved
+    improvement_magnitude: v.optional(v.number()), // Average improvement (e.g., ISI point reduction)
+    adherence_rate: v.optional(v.number()), // How many stuck with it
+    // Time to effect
+    avg_days_to_improvement: v.optional(v.number()),
+    median_days_to_improvement: v.optional(v.number()),
+    // Sample quality
+    sample_size: v.number(),
+    confidence_interval_low: v.optional(v.number()),
+    confidence_interval_high: v.optional(v.number()),
+    // Cohort context (denormalized)
+    cohort_age_bracket: v.optional(v.string()),
+    cohort_gender: v.optional(v.string()),
+    cohort_gateway: v.optional(v.string()),
+    // Ranking within cohort
+    rank_in_cohort: v.optional(v.number()), // 1 = most effective for this cohort
+    // Timestamps
+    computed_at: v.number(),
+    data_start_date: v.optional(v.string()), // Date range of data
+    data_end_date: v.optional(v.string()),
+  })
+    .index("by_cohort", ["cohort_hash"])
+    .index("by_intervention", ["intervention_id"])
+    .index("by_cohort_intervention", ["cohort_hash", "intervention_id"])
+    .index("by_success_rate", ["cohort_hash", "success_rate"]),
+
+  // Anonymous solidarity moments ("You're not alone" real-time)
+  solidarity_moments: defineTable({
+    moment_type: v.string(), // "awake_now", "streak_milestone", "journey_complete", "improvement"
+    // For "awake_now" - cached count
+    awake_count: v.optional(v.number()),
+    awake_count_updated_at: v.optional(v.number()),
+    // For milestones - anonymous success stories
+    milestone_type: v.optional(v.string()), // "30_day_streak", "first_improvement", "treatment_success"
+    milestone_cohort_description: v.optional(v.string()), // "A 52-year-old father" (anonymized)
+    milestone_achievement: v.optional(v.string()), // "hit 30-day streak after 3 years of insomnia"
+    // For journey stats
+    journeys_completed_this_month: v.optional(v.number()),
+    improving_count: v.optional(v.number()),
+    // Timing
+    valid_for_minutes: v.number(), // How long this moment is valid (e.g., 5 mins for awake_now)
+    computed_at: v.number(),
+    expires_at: v.number(),
+  })
+    .index("by_moment_type", ["moment_type"])
+    .index("by_expires", ["expires_at"]),
+
+  // ============================================
   // Science-Backed Encouragement Library
   // ============================================
 
