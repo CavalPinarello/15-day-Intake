@@ -269,11 +269,20 @@ export default function PatientDetailPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-bold text-2xl">
-                {patient.name?.[0]?.toUpperCase() || "?"}
+                {(patient.name || patient.user.username)?.[0]?.toUpperCase() || "?"}
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {patient.name || patient.user.username}
+                  {patient.name ? (
+                    <>
+                      {patient.name}
+                      <span className="text-gray-400 font-normal text-lg ml-2">
+                        ({patient.user.username})
+                      </span>
+                    </>
+                  ) : (
+                    patient.user.username
+                  )}
                 </h2>
                 <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                   {patient.demographics.dateOfBirth && (

@@ -80,6 +80,25 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **"From Gamification to Indispensability" System:** Complete personalization engine (Dec 20, 2025)
+  - **Micro-Cohorts ("People Like You"):** Dynamic peer groups based on 8 dimensions
+    - Age, gender, life stage, work pattern, gateway, chronotype, activity, family
+    - Percentile comparisons within peer groups (not generic population)
+    - `convex/microCohorts.ts`, `convex/cohortCompute.ts`
+  - **Sleep Fingerprint ("This is who you are"):** Phenotype classification
+    - 9 phenotypes: tired_but_wired, sleep_state_misperception, compensator, etc.
+    - 8 pattern detectors with evidence collection
+    - `convex/sleepPhenotype.ts`
+    - iOS: `SleepFingerprintCard.swift`, Web: `SleepFingerprintCard.tsx`
+  - **Personalized Insights ("The Aha Factory"):** 100+ evidence-based messages
+    - Categories: demographic, gateway, pattern, cohort, prediction, solidarity
+    - Relevance scoring based on user profile matching
+    - `convex/insightLibrary.ts`
+  - **Anticipation Engine ("What's Coming"):** Predictive sleep forecasting
+    - Tonight's forecast based on 5 factors (day of week, activity, stress, consistency, weekend)
+    - Lifecycle-aware messaging (discovery → patterns → insights → treatment)
+    - Weekly progress summaries with trend analysis
+    - `convex/anticipationEngine.ts`
 - **Post-15-Day Experience:** Complete treatment journey implementation (Dec 20, 2025)
   - **Journey Phases:** intake → analysis → treatment_pending → treatment_active
   - **Progressive Insights:** Countdown and discovery teasers during Days 1-15

@@ -8,9 +8,163 @@
  * unauthorized access to other users' data.
  */
 
-import { query, mutation } from "./_generated/server";
+import { query, mutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 import { validateIOSSession } from "./auth";
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Compute sleep metrics from CSD_ questionnaire responses and save to user_sleep_data.
+ * This bridges subjective questionnaire data to the metrics format used by Sleep Insights.
+ * Called automatically when sleep log section is completed.
+ */
+async function computeSleepMetricsForDay(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  dayNumber: number,
+  date: string
+): Promise<void> {
+  // Get all CSD_ responses for this user and day
+  const responses = await ctx.db
+    .query("user_assessment_responses")
+    .withIndex("by_user_day", (q) =>
+      q.eq("user_id", userId).eq("day_number", dayNumber)
+    )
+    .collect();
+
+  // Filter to only CSD_ questions (Consensus Sleep Diary)
+  const csdResponses = responses.filter((r) => r.question_id.startsWith("CSD_"));
+
+  if (csdResponses.length === 0) {
+    console.log(`[computeSleepMetrics] No CSD_ responses found for user ${userId} day ${dayNumber}`);
+    return;
+  }
+
+  // Build response map for easy lookup
+  const responseMap = new Map<string, { value?: string; number?: number }>();
+  for (const r of csdResponses) {
+    responseMap.set(r.question_id, {
+      value: r.response_value ?? undefined,
+      number: r.response_number ?? undefined,
+    });
+  }
+
+  // Parse time string to minutes since midnight
+  const parseTimeToMinutes = (timeStr: string | undefined): number | null => {
+    if (!timeStr) return null;
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+    const hours = parseInt(match[1], 10);
+    const mins = parseInt(match[2], 10);
+    return hours * 60 + mins;
+  };
+
+  // Extract values from responses
+  const intoBedTime = parseTimeToMinutes(responseMap.get("CSD_INTO_BED")?.value);
+  const trySleepTime = parseTimeToMinutes(responseMap.get("CSD_TRY_SLEEP")?.value);
+  const finalWakeTime = parseTimeToMinutes(responseMap.get("CSD_FINAL_WAKE")?.value);
+  const outOfBedTime = parseTimeToMinutes(responseMap.get("CSD_OUT_BED")?.value);
+  const latencyMins = responseMap.get("CSD_LATENCY")?.number ?? null;
+  const awakenings = responseMap.get("CSD_AWAKENINGS")?.number ?? null;
+  const wasoMins = responseMap.get("CSD_WASO")?.number ?? null;
+  const quality = responseMap.get("CSD_QUALITY")?.number ?? null;
+
+  // Calculate derived metrics
+  let totalSleepMins: number | undefined;
+  let sleepEfficiency: number | undefined;
+  let timeInBedMins: number | undefined;
+
+  // Time in bed = outOfBed - intoBed (handling midnight crossing)
+  if (intoBedTime !== null && outOfBedTime !== null) {
+    if (outOfBedTime > intoBedTime) {
+      timeInBedMins = outOfBedTime - intoBedTime;
+    } else {
+      // Crossed midnight: e.g., 23:00 to 07:00 = 8 hours
+      timeInBedMins = 24 * 60 - intoBedTime + outOfBedTime;
+    }
+  }
+
+  // Total sleep time = Time in bed - latency - WASO
+  if (timeInBedMins !== undefined) {
+    const latency = latencyMins ?? 0;
+    const waso = wasoMins ?? 0;
+    totalSleepMins = Math.max(0, timeInBedMins - latency - waso);
+  }
+
+  // Sleep efficiency = (Total sleep time / Time in bed) * 100
+  if (totalSleepMins !== undefined && timeInBedMins !== undefined && timeInBedMins > 0) {
+    sleepEfficiency = Math.round((totalSleepMins / timeInBedMins) * 100);
+  }
+
+  // Generate realistic sleep stage distribution (estimated from total sleep)
+  let deepSleepMins: number | undefined;
+  let lightSleepMins: number | undefined;
+  let remSleepMins: number | undefined;
+
+  if (totalSleepMins !== undefined && totalSleepMins > 0) {
+    const qualityFactor = quality ? quality / 5 : 0.7;
+    deepSleepMins = Math.round(totalSleepMins * (0.15 + qualityFactor * 0.1));
+    remSleepMins = Math.round(totalSleepMins * (0.18 + qualityFactor * 0.07));
+    lightSleepMins = totalSleepMins - deepSleepMins - remSleepMins;
+  }
+
+  // Convert times to Unix timestamps
+  const dateObj = new Date(date + "T00:00:00");
+  const inBedTimestamp =
+    intoBedTime !== null
+      ? new Date(dateObj.getTime() - 86400000 + intoBedTime * 60000).getTime()
+      : undefined;
+  const asleepTimestamp =
+    trySleepTime !== null && latencyMins !== null
+      ? new Date(dateObj.getTime() - 86400000 + (trySleepTime + latencyMins) * 60000).getTime()
+      : undefined;
+  const wakeTimestamp =
+    finalWakeTime !== null ? new Date(dateObj.getTime() + finalWakeTime * 60000).getTime() : undefined;
+
+  // Check for existing entry
+  const existing = await ctx.db
+    .query("user_sleep_data")
+    .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", date))
+    .first();
+
+  const now = Date.now();
+  const sleepData = {
+    in_bed_time: inBedTimestamp,
+    asleep_time: asleepTimestamp,
+    wake_time: wakeTimestamp,
+    total_sleep_mins: totalSleepMins,
+    sleep_efficiency: sleepEfficiency,
+    deep_sleep_mins: deepSleepMins,
+    light_sleep_mins: lightSleepMins,
+    rem_sleep_mins: remSleepMins,
+    awake_mins: wasoMins ?? undefined,
+    interruptions_count: awakenings ?? undefined,
+    sleep_latency_mins: latencyMins ?? undefined,
+    primary_source: "Questionnaire",
+    source_bundle_id: "com.zoesleep.app",
+    synced_at: now,
+  };
+
+  if (existing) {
+    await ctx.db.patch(existing._id, sleepData);
+    console.log(
+      `[computeSleepMetrics] Updated sleep data for ${date}: ${totalSleepMins} mins, ${sleepEfficiency}% efficiency`
+    );
+  } else {
+    await ctx.db.insert("user_sleep_data", {
+      user_id: userId,
+      date,
+      ...sleepData,
+    });
+    console.log(
+      `[computeSleepMetrics] Created sleep data for ${date}: ${totalSleepMins} mins, ${sleepEfficiency}% efficiency`
+    );
+  }
+}
 
 // ============================================
 // Watch Authentication (Simple Username/Password)
@@ -397,16 +551,29 @@ export const completeSection = mutation({
       });
     }
 
-    // If both sections are now complete, advance to next day
+    // Check if both sections are now complete
     const dayFullyCompleted = sleepLogCompleted && assessmentCompleted;
     let newDay = user.current_day;
 
+    // FIX: Only auto-advance if in developer mode
+    // Normal users must wait until 4 AM local time and explicitly advance via advanceDay mutation
+    // This prevents bypassing the day lockout intended for circadian consistency
     if (dayFullyCompleted && user.current_day === args.dayNumber && args.dayNumber < 15) {
-      newDay = args.dayNumber + 1;
-      await ctx.db.patch(args.userId, {
-        current_day: newDay,
-        last_accessed: now,
-      });
+      const isDeveloperMode = user.developer_mode === true;
+
+      if (isDeveloperMode) {
+        // Developer mode: Advance immediately (for testing)
+        newDay = args.dayNumber + 1;
+        await ctx.db.patch(args.userId, {
+          current_day: newDay,
+          last_accessed: now,
+        });
+        console.log(`[completeSection] Developer mode: Auto-advanced to day ${newDay}`);
+      } else {
+        // Normal mode: Day is marked complete, but user stays on current day
+        // They must wait until 4 AM and use advanceDay to proceed
+        console.log(`[completeSection] Day ${args.dayNumber} completed, awaiting 4 AM unlock`);
+      }
     }
 
     // Mark journey complete if day 15 is fully done
@@ -415,6 +582,26 @@ export const completeSection = mutation({
         onboarding_completed: true,
         onboarding_completed_at: now,
       });
+    }
+
+    // FIX: Auto-compute sleep metrics when sleep log is completed
+    // This ensures user_sleep_data is populated for Sleep Insights dashboard
+    if (args.section === "sleepLog" && sleepLogCompleted) {
+      // Get the date for this day's sleep data (based on user's journey start)
+      const userStartDate = new Date(user.started_at);
+      const sleepDate = new Date(userStartDate);
+      sleepDate.setDate(sleepDate.getDate() + args.dayNumber - 1);
+      const dateStr = sleepDate.toISOString().split("T")[0];
+
+      // Import and call the sleep metrics computation
+      // We'll call it inline here to avoid circular imports
+      try {
+        await computeSleepMetricsForDay(ctx, args.userId, args.dayNumber, dateStr);
+        console.log(`[completeSection] Computed sleep metrics for day ${args.dayNumber}`);
+      } catch (error) {
+        // Log but don't fail the section completion if metrics computation fails
+        console.error(`[completeSection] Failed to compute sleep metrics: ${error}`);
+      }
     }
 
     // Mark the questionnaire_session as completed for this section

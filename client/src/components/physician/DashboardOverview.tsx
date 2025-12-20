@@ -379,7 +379,16 @@ function PatientRow({
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium text-gray-900 truncate">
-          {patient.name || patient.username}
+          {patient.name ? (
+            <>
+              {patient.name}
+              <span className="text-gray-400 font-normal ml-1">
+                ({patient.username})
+              </span>
+            </>
+          ) : (
+            patient.username
+          )}
         </p>
         <p className="text-xs text-gray-500">
           Day {patient.current_day} • {formatTimeAgo(patient.last_accessed)}

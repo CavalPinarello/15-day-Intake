@@ -423,8 +423,6 @@ struct JourneyIntroParagraph: View {
     let text: String
     let isCompact: Bool
 
-    private var palette: CircadianPalette { CircadianPalette.current }
-
     init(_ text: String, isCompact: Bool) {
         self.text = text
         self.isCompact = isCompact
@@ -433,7 +431,7 @@ struct JourneyIntroParagraph: View {
     var body: some View {
         Text(text)
             .font(.system(size: isCompact ? 15 : 16, weight: .regular, design: .rounded))
-            .foregroundColor(palette.textSecondary)
+            .foregroundColor(.white.opacity(0.85))
             .multilineTextAlignment(.center)
             .lineSpacing(4)
     }
@@ -443,14 +441,14 @@ struct JourneyIntroParagraph: View {
 
 #Preview("Screen 1") {
     ZStack {
-        OnboardingCircadianBackground()
+        AuroraBorealisView()
         JourneyIntroScreen1(screenHeight: 844)
     }
 }
 
 #Preview("Screen 6") {
     ZStack {
-        OnboardingCircadianBackground()
+        AuroraBorealisView()
         JourneyIntroScreen6(screenHeight: 844, onComplete: {})
     }
 }

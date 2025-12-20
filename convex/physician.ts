@@ -925,10 +925,13 @@ export const getAllPatientsWithProgress = query({
           100
         );
 
+        // Priority: 1) full_name from profile, 2) D1 questionnaire response, 3) null
+        const fullName = user.full_name || nameResponse?.response_value || null;
+
         return {
           _id: user._id,
           username: user.username,
-          name: nameResponse?.response_value || user.username, // Use username as fallback
+          name: fullName, // Full name if available, null otherwise
           email: user.email,
           current_day: user.current_day,
           started_at: user.started_at,
@@ -1104,7 +1107,7 @@ export const getPatientDetails = query({
         onboarding_completed: user.onboarding_completed,
         onboarding_completed_at: user.onboarding_completed_at,
       },
-      name: nameResponse?.response_value || user.username, // Use username as fallback
+      name: user.full_name || nameResponse?.response_value || null, // Priority: profile full_name, then D1 response
       demographics: {
         dateOfBirth: dobResponse?.response_value,
         sex: sexResponse?.response_value,

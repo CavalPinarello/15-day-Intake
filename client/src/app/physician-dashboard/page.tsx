@@ -349,7 +349,16 @@ export default function PhysicianDashboard() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-gray-900 truncate">
-                              {patient.name || patient.username}
+                              {patient.name ? (
+                                <>
+                                  {patient.name}
+                                  <span className="text-gray-400 font-normal ml-1">
+                                    ({patient.username})
+                                  </span>
+                                </>
+                              ) : (
+                                patient.username
+                              )}
                             </h3>
                             {/* Developer Mode Badge */}
                             {patient.developer_mode && (

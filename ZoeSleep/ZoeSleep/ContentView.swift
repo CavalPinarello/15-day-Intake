@@ -1307,12 +1307,23 @@ struct DayOverviewCard: View {
     }
 }
 
+/// Model for a single assessment response with readable question and answer
+struct AssessmentResponse: Identifiable {
+    let id = UUID()
+    let questionId: String
+    let questionText: String
+    let answerText: String
+    let category: String  // e.g., "Demographics", "Mental Health", etc.
+}
+
 struct SleepDiaryHistoryView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var questionnaireManager = QuestionnaireManager.shared
     @State private var selectedDay: Int
     @State private var sleepEntries: [Int: SleepDiaryEntry] = [:]
+    @State private var assessmentResponses: [Int: [AssessmentResponse]] = [:]  // Assessment responses by day
     @State private var isLoading = true
+    @State private var showAssessmentDetails = false  // Collapsible toggle
     private let hasInitialDay: Bool
 
     /// Initialize with an optional pre-selected day
