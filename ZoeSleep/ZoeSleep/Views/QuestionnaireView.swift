@@ -657,6 +657,16 @@ struct QuestionnaireView: View {
     // MARK: - Actions
 
     private func loadQuestions() {
+        // Update HealthKit demographics cache BEFORE loading questions
+        // This ensures shouldSkipDemographicQuestion() has access to HealthKit data
+        let demographics = healthKitManager.demographics
+        questionnaireManager.updateHealthKitDemographics(
+            dateOfBirth: demographics.dateOfBirth,
+            biologicalSex: demographics.biologicalSex,
+            heightCm: demographics.heightCm,
+            weightKg: demographics.weightKg
+        )
+
         // Use async task to fetch questions from Convex (THE SINGLE SOURCE OF TRUTH)
         Task {
             do {
@@ -1408,9 +1418,13 @@ struct QuestionnaireView: View {
             } else if let intValue = value as? Int {
                 response["responseNumber"] = Double(intValue)
             } else if let dateValue = value as? Date {
-                // Convert Date to time string
+                // Format based on question type: use full date for .date, time only for .time
                 let formatter = DateFormatter()
-                formatter.dateFormat = "HH:mm"
+                if questionnaireManager.getQuestionType(for: questionId) == .date {
+                    formatter.dateFormat = "yyyy-MM-dd"  // Full date for date of birth, etc.
+                } else {
+                    formatter.dateFormat = "HH:mm"  // Time only for bedtime/wake time
+                }
                 response["responseValue"] = formatter.string(from: dateValue)
             } else if let arrayValue = value as? [String] {
                 response["responseArray"] = arrayValue
@@ -1438,8 +1452,13 @@ struct QuestionnaireView: View {
             } else if let intValue = value as? Int {
                 response["responseNumber"] = Double(intValue)
             } else if let dateValue = value as? Date {
+                // Format based on question type: use full date for .date, time only for .time
                 let formatter = DateFormatter()
-                formatter.dateFormat = "HH:mm"
+                if questionnaireManager.getQuestionType(for: questionId) == .date {
+                    formatter.dateFormat = "yyyy-MM-dd"  // Full date for date of birth, etc.
+                } else {
+                    formatter.dateFormat = "HH:mm"  // Time only for bedtime/wake time
+                }
                 response["responseValue"] = formatter.string(from: dateValue)
             } else if let arrayValue = value as? [String] {
                 response["responseArray"] = arrayValue
@@ -1448,14 +1467,38 @@ struct QuestionnaireView: View {
             convexResponses.append(response)
         }
 
+        // Add derived responses for complete clinical scoring
+        // These are answers auto-populated from equivalent questions that were asked
+        let derivedResponses = questionnaireManager.getDerivedResponsesForScoring()
+        for derived in derivedResponses {
+            var response: [String: Any] = [
+                "questionId": derived.questionId,
+                "isDerived": true  // Mark as derived for the physician dashboard
+            ]
+
+            if let stringValue = derived.stringValue {
+                response["responseValue"] = stringValue
+            } else if let numberValue = derived.numberValue {
+                response["responseNumber"] = numberValue
+            } else if let arrayValue = derived.arrayValue {
+                response["responseArray"] = arrayValue
+            }
+
+            convexResponses.append(response)
+        }
+
+        if !derivedResponses.isEmpty {
+            print("[iOS] Added \(derivedResponses.count) derived responses for complete clinical scoring")
+        }
+
         // Only sync if we have responses
-        print("[iOS] Total user-interacted responses to sync: \(convexResponses.count)")
+        print("[iOS] Total responses to sync: \(convexResponses.count) (user + derived)")
         if !convexResponses.isEmpty {
             print("[iOS] Calling ConvexService.saveResponses for day \(currentDay)...")
             let result = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
             print("[iOS] Synced \(result.savedCount) responses to Convex")
         } else {
-            print("[iOS] No user-interacted responses to sync!")
+            print("[iOS] No responses to sync!")
         }
     }
 

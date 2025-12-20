@@ -166,6 +166,149 @@ async function computeSleepMetricsForDay(
   }
 }
 
+/**
+ * Compute and store the expansion schedule for a user.
+ * Called when Day 2 is completed (all gateway trigger questions have been asked).
+ */
+async function computeExpansionScheduleForUser(
+  ctx: MutationCtx,
+  userId: Id<"users">
+): Promise<void> {
+  // Define expansion modules with their metadata
+  const EXPANSION_MODULES = [
+    { id: "expansion_isi", name: "ISI", questionCount: 7, estimatedMinutes: 5, requiredGateways: ["insomnia", "poor_sleep_quality"], priority: 1 },
+    { id: "expansion_phq9", name: "PHQ-9", questionCount: 9, estimatedMinutes: 6, requiredGateways: ["depression"], priority: 1 },
+    { id: "expansion_gad7", name: "GAD-7", questionCount: 7, estimatedMinutes: 5, requiredGateways: ["anxiety"], priority: 1 },
+    { id: "expansion_stop_bang", name: "STOP-BANG", questionCount: 8, estimatedMinutes: 5, requiredGateways: ["osa"], priority: 1 },
+    { id: "expansion_ess", name: "ESS", questionCount: 8, estimatedMinutes: 5, requiredGateways: ["excessive_sleepiness"], priority: 2 },
+    { id: "expansion_berlin", name: "Berlin", questionCount: 10, estimatedMinutes: 7, requiredGateways: ["osa"], priority: 2 },
+    { id: "expansion_dbas", name: "DBAS-16", questionCount: 16, estimatedMinutes: 12, requiredGateways: ["insomnia"], priority: 3 },
+    { id: "expansion_sleep_hygiene", name: "Sleep Hygiene", questionCount: 10, estimatedMinutes: 7, requiredGateways: ["insomnia", "poor_sleep_quality"], priority: 3 },
+    { id: "expansion_psas", name: "PSAS", questionCount: 16, estimatedMinutes: 10, requiredGateways: ["insomnia"], priority: 3 },
+    { id: "expansion_fss", name: "FSS", questionCount: 9, estimatedMinutes: 6, requiredGateways: ["excessive_sleepiness"], priority: 4 },
+    { id: "expansion_fosq", name: "FOSQ-10", questionCount: 10, estimatedMinutes: 7, requiredGateways: ["excessive_sleepiness"], priority: 4 },
+    { id: "expansion_dass21", name: "DASS-21", questionCount: 21, estimatedMinutes: 15, requiredGateways: ["depression", "anxiety"], priority: 4 },
+    { id: "expansion_promis_cognitive", name: "PROMIS Cognitive", questionCount: 6, estimatedMinutes: 4, requiredGateways: ["cognitive"], priority: 4 },
+    { id: "expansion_bpi", name: "BPI", questionCount: 11, estimatedMinutes: 8, requiredGateways: ["pain"], priority: 5 },
+    { id: "expansion_medas", name: "MEDAS", questionCount: 14, estimatedMinutes: 10, requiredGateways: ["diet_impact"], priority: 5 },
+    { id: "expansion_meq", name: "MEQ", questionCount: 19, estimatedMinutes: 12, requiredGateways: ["sleep_timing"], priority: 5 },
+  ];
+
+  const TARGET_QUESTIONS_PER_DAY = 14;
+  const MAX_QUESTIONS_PER_DAY = 18;
+  const EXPANSION_START_DAY = 6;  // Expansions start Day 6 (after core Days 1-5)
+  const TOTAL_DAYS = 15;
+
+  // Get user's triggered gateways
+  const gatewayStates = await ctx.db
+    .query("user_gateway_states")
+    .withIndex("by_user", (q) => q.eq("user_id", userId))
+    .collect();
+
+  const triggeredGateways = gatewayStates
+    .filter((g) => g.triggered)
+    .map((g) => g.gateway_id);
+
+  console.log(`[computeExpansionSchedule] Triggered gateways: ${triggeredGateways.join(", ")}`);
+
+  // Filter modules to only those triggered
+  const triggeredModules = EXPANSION_MODULES.filter((module) =>
+    module.requiredGateways.some((gateway) => triggeredGateways.includes(gateway))
+  );
+
+  if (triggeredModules.length === 0) {
+    console.log(`[computeExpansionSchedule] No gateways triggered, no expansion schedule needed`);
+    return;
+  }
+
+  // Sort by priority
+  const sortedModules = [...triggeredModules].sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return a.questionCount - b.questionCount;
+  });
+
+  // Distribute modules across days using bin-packing
+  const dayAssignments: Array<{
+    day_number: number;
+    module_ids: string[];
+    question_count: number;
+    estimated_minutes: number;
+    completed: boolean;
+  }> = [];
+
+  let currentDay = EXPANSION_START_DAY;
+  let currentDayModules: typeof sortedModules = [];
+  let currentDayQuestions = 0;
+
+  for (const module of sortedModules) {
+    if (currentDayQuestions + module.questionCount > MAX_QUESTIONS_PER_DAY && currentDayModules.length > 0) {
+      dayAssignments.push({
+        day_number: currentDay,
+        module_ids: currentDayModules.map((m) => m.id),
+        question_count: currentDayQuestions,
+        estimated_minutes: currentDayModules.reduce((sum, m) => sum + m.estimatedMinutes, 0),
+        completed: false,
+      });
+      currentDay++;
+      currentDayModules = [];
+      currentDayQuestions = 0;
+    }
+
+    currentDayModules.push(module);
+    currentDayQuestions += module.questionCount;
+
+    if (currentDayQuestions >= TARGET_QUESTIONS_PER_DAY && currentDay < TOTAL_DAYS) {
+      dayAssignments.push({
+        day_number: currentDay,
+        module_ids: currentDayModules.map((m) => m.id),
+        question_count: currentDayQuestions,
+        estimated_minutes: currentDayModules.reduce((sum, m) => sum + m.estimatedMinutes, 0),
+        completed: false,
+      });
+      currentDay++;
+      currentDayModules = [];
+      currentDayQuestions = 0;
+    }
+  }
+
+  // Don't forget the last day
+  if (currentDayModules.length > 0) {
+    dayAssignments.push({
+      day_number: currentDay,
+      module_ids: currentDayModules.map((m) => m.id),
+      question_count: currentDayQuestions,
+      estimated_minutes: currentDayModules.reduce((sum, m) => sum + m.estimatedMinutes, 0),
+      completed: false,
+    });
+  }
+
+  const totalQuestions = dayAssignments.reduce((sum, d) => sum + d.question_count, 0);
+  const totalMinutes = dayAssignments.reduce((sum, d) => sum + d.estimated_minutes, 0);
+
+  console.log(`[computeExpansionSchedule] Schedule: ${dayAssignments.length} days, ${totalQuestions} questions, ~${totalMinutes} minutes`);
+
+  // Store the schedule
+  const existing = await ctx.db
+    .query("user_expansion_schedules")
+    .withIndex("by_user", (q) => q.eq("user_id", userId))
+    .first();
+
+  const scheduleData = {
+    user_id: userId,
+    computed_at: Date.now(),
+    triggered_gateways: triggeredGateways,
+    day_assignments: dayAssignments,
+    total_expansion_questions: totalQuestions,
+    total_estimated_minutes: totalMinutes,
+  };
+
+  if (existing) {
+    await ctx.db.patch(existing._id, scheduleData);
+  } else {
+    await ctx.db.insert("user_expansion_schedules", scheduleData);
+  }
+}
+
 // ============================================
 // Watch Authentication (Simple Username/Password)
 // ============================================
@@ -582,6 +725,18 @@ export const completeSection = mutation({
         onboarding_completed: true,
         onboarding_completed_at: now,
       });
+    }
+
+    // Compute expansion schedule when Day 5 is fully completed
+    // By Day 5, all gateway trigger questions have been asked (Days 1-5 contain all gateways)
+    // This schedules expansions dynamically for Days 6-15 based on triggered gateways
+    if (args.dayNumber === 5 && dayFullyCompleted) {
+      try {
+        await computeExpansionScheduleForUser(ctx, args.userId);
+        console.log(`[completeSection] Computed expansion schedule for user ${args.userId}`);
+      } catch (error) {
+        console.error(`[completeSection] Failed to compute expansion schedule: ${error}`);
+      }
     }
 
     // FIX: Auto-compute sleep metrics when sleep log is completed
@@ -1125,7 +1280,8 @@ export const saveResponse = mutation({
 });
 
 /**
- * Save multiple responses at once (batch save from Watch)
+ * Save multiple responses at once (batch save from Watch/iOS)
+ * Supports derived answers for complete clinical scoring
  */
 export const saveResponses = mutation({
   args: {
@@ -1137,12 +1293,17 @@ export const saveResponses = mutation({
         responseValue: v.optional(v.string()),
         responseNumber: v.optional(v.number()),
         responseArray: v.optional(v.array(v.string())),
+        // Derived answer fields - for answers auto-populated from equivalent questions
+        isDerived: v.optional(v.boolean()),
+        derivedFromQuestionId: v.optional(v.string()),
       })
     ),
     source: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    let savedCount = 0;
+    let derivedCount = 0;
 
     for (const response of args.responses) {
       // Use day-aware lookup to support repeating questions (like sleep log) across multiple days
@@ -1153,12 +1314,20 @@ export const saveResponses = mutation({
         )
         .first();
 
+      // Don't overwrite user-provided answer with derived answer
+      if (existing && !existing.is_derived && response.isDerived) {
+        console.log(`[saveResponses] Skipping derived ${response.questionId} - user already answered directly`);
+        continue;
+      }
+
       if (existing) {
         await ctx.db.patch(existing._id, {
           response_value: response.responseValue,
           response_number: response.responseNumber,
           response_array: response.responseArray ? JSON.stringify(response.responseArray) : undefined,
           day_number: args.dayNumber,
+          is_derived: response.isDerived ?? false,
+          derived_from_question_id: response.derivedFromQuestionId,
           updated_at: now,
         });
       } else {
@@ -1169,13 +1338,23 @@ export const saveResponses = mutation({
           response_number: response.responseNumber,
           response_array: response.responseArray ? JSON.stringify(response.responseArray) : undefined,
           day_number: args.dayNumber,
+          is_derived: response.isDerived ?? false,
+          derived_from_question_id: response.derivedFromQuestionId,
           created_at: now,
           updated_at: now,
         });
       }
+
+      savedCount++;
+      if (response.isDerived) derivedCount++;
     }
 
-    return { success: true, savedCount: args.responses.length };
+    return {
+      success: true,
+      savedCount,
+      derivedCount,
+      message: derivedCount > 0 ? `Saved ${savedCount} responses (${derivedCount} derived for complete scoring)` : undefined
+    };
   },
 });
 
@@ -1200,6 +1379,8 @@ export const getDayResponses = query({
       responseValue: r.response_value,
       responseNumber: r.response_number,
       responseArray: r.response_array ? JSON.parse(r.response_array) : null,
+      isDerived: r.is_derived ?? false,
+      derivedFromQuestionId: r.derived_from_question_id,
     }));
   },
 });
@@ -2203,5 +2384,257 @@ export const removeDateQuestion = mutation({
     }
 
     return { deleted: false, message: "SD_DATE question not found in database" };
+  },
+});
+
+// ============================================
+// Expansion Schedule Queries
+// ============================================
+
+// Module metadata for expansion schedule display
+const EXPANSION_MODULE_METADATA: Record<string, { name: string; instrument: string; description: string; icon: string }> = {
+  expansion_isi: { name: "Insomnia Severity", instrument: "ISI", description: "Assess insomnia severity and impact", icon: "moon.zzz.fill" },
+  expansion_phq9: { name: "Depression Screen", instrument: "PHQ-9", description: "Screen for depression symptoms", icon: "heart.fill" },
+  expansion_gad7: { name: "Anxiety Screen", instrument: "GAD-7", description: "Screen for anxiety symptoms", icon: "bolt.heart.fill" },
+  expansion_stop_bang: { name: "Sleep Apnea Screen", instrument: "STOP-BANG", description: "Screen for sleep apnea risk", icon: "lungs.fill" },
+  expansion_ess: { name: "Sleepiness Scale", instrument: "ESS", description: "Measure daytime sleepiness", icon: "sun.max.fill" },
+  expansion_berlin: { name: "Berlin Questionnaire", instrument: "Berlin", description: "Additional sleep apnea screening", icon: "waveform.path.ecg" },
+  expansion_dbas: { name: "Sleep Beliefs", instrument: "DBAS-16", description: "Assess beliefs about sleep", icon: "brain.head.profile" },
+  expansion_sleep_hygiene: { name: "Sleep Hygiene", instrument: "Sleep Hygiene", description: "Evaluate sleep habits", icon: "bed.double.fill" },
+  expansion_psas: { name: "Pre-Sleep Arousal", instrument: "PSAS", description: "Measure pre-sleep arousal", icon: "figure.mind.and.body" },
+  expansion_fss: { name: "Fatigue Scale", instrument: "FSS", description: "Assess fatigue severity", icon: "battery.25" },
+  expansion_fosq: { name: "Functional Outcomes", instrument: "FOSQ-10", description: "Measure sleep impact on function", icon: "figure.walk" },
+  expansion_dass21: { name: "Stress & Anxiety", instrument: "DASS-21", description: "Comprehensive mental health screen", icon: "brain" },
+  expansion_promis_cognitive: { name: "Cognitive Function", instrument: "PROMIS", description: "Assess cognitive function", icon: "lightbulb.fill" },
+  expansion_bpi: { name: "Pain Inventory", instrument: "BPI", description: "Assess pain and sleep", icon: "bandage.fill" },
+  expansion_medas: { name: "Diet Assessment", instrument: "MEDAS", description: "Evaluate diet impact on sleep", icon: "fork.knife" },
+  expansion_meq: { name: "Chronotype", instrument: "MEQ", description: "Determine your sleep-wake preference", icon: "clock.fill" },
+};
+
+/**
+ * Get the expansion schedule for a user.
+ * Returns the full schedule with module metadata.
+ */
+export const getExpansionSchedule = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const schedule = await ctx.db
+      .query("user_expansion_schedules")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!schedule) {
+      return null;
+    }
+
+    // Enrich with module metadata
+    const enrichedDays = schedule.day_assignments.map((day) => {
+      const modules = day.module_ids.map((id) => {
+        const meta = EXPANSION_MODULE_METADATA[id];
+        return meta ? { id, ...meta, questionCount: day.question_count } : { id, name: id };
+      });
+
+      return {
+        dayNumber: day.day_number,
+        modules,
+        questionCount: day.question_count,
+        estimatedMinutes: day.estimated_minutes,
+        completed: day.completed || false,
+      };
+    });
+
+    return {
+      triggeredGateways: schedule.triggered_gateways,
+      totalQuestions: schedule.total_expansion_questions,
+      totalMinutes: schedule.total_estimated_minutes || 0,
+      dayAssignments: enrichedDays,
+    };
+  },
+});
+
+/**
+ * Get expansion modules for a specific day.
+ * Used by iOS/web to show expansion tasks in Today's Focus.
+ */
+export const getExpansionForDay = query({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const schedule = await ctx.db
+      .query("user_expansion_schedules")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!schedule) {
+      return { hasExpansion: false, modules: [], questionCount: 0, estimatedMinutes: 0 };
+    }
+
+    const dayAssignment = schedule.day_assignments.find(
+      (d) => d.day_number === args.dayNumber
+    );
+
+    if (!dayAssignment) {
+      return { hasExpansion: false, modules: [], questionCount: 0, estimatedMinutes: 0 };
+    }
+
+    // Get module details
+    const modules = dayAssignment.module_ids.map((id) => {
+      const meta = EXPANSION_MODULE_METADATA[id];
+      return meta
+        ? { id, name: meta.name, instrument: meta.instrument, description: meta.description, icon: meta.icon }
+        : { id, name: id, instrument: "", description: "", icon: "questionmark.circle" };
+    });
+
+    return {
+      hasExpansion: true,
+      modules,
+      questionCount: dayAssignment.question_count,
+      estimatedMinutes: dayAssignment.estimated_minutes,
+      completed: dayAssignment.completed || false,
+    };
+  },
+});
+
+/**
+ * Mark expansion modules as completed for a day.
+ * Called when user completes the expansion assessment section.
+ */
+export const markExpansionCompleted = mutation({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const schedule = await ctx.db
+      .query("user_expansion_schedules")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!schedule) {
+      return { success: false, error: "No expansion schedule found" };
+    }
+
+    const updatedAssignments = schedule.day_assignments.map((d) => {
+      if (d.day_number === args.dayNumber) {
+        return { ...d, completed: true };
+      }
+      return d;
+    });
+
+    await ctx.db.patch(schedule._id, {
+      day_assignments: updatedAssignments,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Preview expansion schedule for testing.
+ * Shows what schedule would be computed for given gateways.
+ */
+export const previewExpansionSchedule = query({
+  args: {
+    triggeredGateways: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Use the same module definitions as computeExpansionScheduleForUser
+    const EXPANSION_MODULES = [
+      { id: "expansion_isi", name: "ISI", questionCount: 7, estimatedMinutes: 5, requiredGateways: ["insomnia", "poor_sleep_quality"], priority: 1 },
+      { id: "expansion_phq9", name: "PHQ-9", questionCount: 9, estimatedMinutes: 6, requiredGateways: ["depression"], priority: 1 },
+      { id: "expansion_gad7", name: "GAD-7", questionCount: 7, estimatedMinutes: 5, requiredGateways: ["anxiety"], priority: 1 },
+      { id: "expansion_stop_bang", name: "STOP-BANG", questionCount: 8, estimatedMinutes: 5, requiredGateways: ["osa"], priority: 1 },
+      { id: "expansion_ess", name: "ESS", questionCount: 8, estimatedMinutes: 5, requiredGateways: ["excessive_sleepiness"], priority: 2 },
+      { id: "expansion_berlin", name: "Berlin", questionCount: 10, estimatedMinutes: 7, requiredGateways: ["osa"], priority: 2 },
+      { id: "expansion_dbas", name: "DBAS-16", questionCount: 16, estimatedMinutes: 12, requiredGateways: ["insomnia"], priority: 3 },
+      { id: "expansion_sleep_hygiene", name: "Sleep Hygiene", questionCount: 10, estimatedMinutes: 7, requiredGateways: ["insomnia", "poor_sleep_quality"], priority: 3 },
+      { id: "expansion_psas", name: "PSAS", questionCount: 16, estimatedMinutes: 10, requiredGateways: ["insomnia"], priority: 3 },
+      { id: "expansion_fss", name: "FSS", questionCount: 9, estimatedMinutes: 6, requiredGateways: ["excessive_sleepiness"], priority: 4 },
+      { id: "expansion_fosq", name: "FOSQ-10", questionCount: 10, estimatedMinutes: 7, requiredGateways: ["excessive_sleepiness"], priority: 4 },
+      { id: "expansion_dass21", name: "DASS-21", questionCount: 21, estimatedMinutes: 15, requiredGateways: ["depression", "anxiety"], priority: 4 },
+      { id: "expansion_promis_cognitive", name: "PROMIS Cognitive", questionCount: 6, estimatedMinutes: 4, requiredGateways: ["cognitive"], priority: 4 },
+      { id: "expansion_bpi", name: "BPI", questionCount: 11, estimatedMinutes: 8, requiredGateways: ["pain"], priority: 5 },
+      { id: "expansion_medas", name: "MEDAS", questionCount: 14, estimatedMinutes: 10, requiredGateways: ["diet_impact"], priority: 5 },
+      { id: "expansion_meq", name: "MEQ", questionCount: 19, estimatedMinutes: 12, requiredGateways: ["sleep_timing"], priority: 5 },
+    ];
+
+    const TARGET_QUESTIONS_PER_DAY = 14;
+    const MAX_QUESTIONS_PER_DAY = 18;
+    const EXPANSION_START_DAY = 6;
+    const TOTAL_DAYS = 15;
+
+    // Filter modules
+    const triggeredModules = EXPANSION_MODULES.filter((module) =>
+      module.requiredGateways.some((gateway) => args.triggeredGateways.includes(gateway))
+    );
+
+    // Sort by priority
+    const sortedModules = [...triggeredModules].sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return a.questionCount - b.questionCount;
+    });
+
+    // Distribute
+    const dayAssignments: Array<{ dayNumber: number; modules: string[]; questionCount: number; estimatedMinutes: number }> = [];
+    let currentDay = EXPANSION_START_DAY;
+    let currentDayModules: typeof sortedModules = [];
+    let currentDayQuestions = 0;
+
+    for (const module of sortedModules) {
+      if (currentDayQuestions + module.questionCount > MAX_QUESTIONS_PER_DAY && currentDayModules.length > 0) {
+        dayAssignments.push({
+          dayNumber: currentDay,
+          modules: currentDayModules.map((m) => m.name),
+          questionCount: currentDayQuestions,
+          estimatedMinutes: currentDayModules.reduce((sum, m) => sum + m.estimatedMinutes, 0),
+        });
+        currentDay++;
+        currentDayModules = [];
+        currentDayQuestions = 0;
+      }
+
+      currentDayModules.push(module);
+      currentDayQuestions += module.questionCount;
+
+      if (currentDayQuestions >= TARGET_QUESTIONS_PER_DAY && currentDay < TOTAL_DAYS) {
+        dayAssignments.push({
+          dayNumber: currentDay,
+          modules: currentDayModules.map((m) => m.name),
+          questionCount: currentDayQuestions,
+          estimatedMinutes: currentDayModules.reduce((sum, m) => sum + m.estimatedMinutes, 0),
+        });
+        currentDay++;
+        currentDayModules = [];
+        currentDayQuestions = 0;
+      }
+    }
+
+    if (currentDayModules.length > 0) {
+      dayAssignments.push({
+        dayNumber: currentDay,
+        modules: currentDayModules.map((m) => m.name),
+        questionCount: currentDayQuestions,
+        estimatedMinutes: currentDayModules.reduce((sum, m) => sum + m.estimatedMinutes, 0),
+      });
+    }
+
+    const totalQuestions = dayAssignments.reduce((sum, d) => sum + d.questionCount, 0);
+    const totalMinutes = dayAssignments.reduce((sum, d) => sum + d.estimatedMinutes, 0);
+    const avgQuestionsPerDay = dayAssignments.length > 0 ? Math.round(totalQuestions / dayAssignments.length) : 0;
+
+    return {
+      triggeredGateways: args.triggeredGateways,
+      triggeredModulesCount: triggeredModules.length,
+      dayAssignments,
+      totalQuestions,
+      totalMinutes,
+      expansionDays: dayAssignments.length,
+      avgQuestionsPerDay,
+      summary: `${totalQuestions} questions across ${dayAssignments.length} days (~${avgQuestionsPerDay}/day, ~${totalMinutes} minutes total)`,
+    };
   },
 });

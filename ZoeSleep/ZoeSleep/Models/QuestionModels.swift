@@ -722,6 +722,54 @@ enum GatewayType: String, Codable, CaseIterable {
             return ["expansion_nutritional"]
         }
     }
+
+    /// SF Symbol icon for this gateway
+    var icon: String {
+        switch self {
+        case .insomnia: return "moon.zzz"
+        case .poorSleepQuality: return "bed.double"
+        case .excessiveSleepiness: return "zzz"
+        case .depression: return "cloud.rain"
+        case .anxiety: return "exclamationmark.triangle"
+        case .cognitive: return "brain.head.profile"
+        case .osa: return "lungs"
+        case .pain: return "bolt.heart"
+        case .sleepTiming: return "clock"
+        case .dietImpact: return "fork.knife"
+        }
+    }
+
+    /// Color for debug UI
+    var color: Color {
+        switch self {
+        case .insomnia: return .purple
+        case .poorSleepQuality: return .indigo
+        case .excessiveSleepiness: return .orange
+        case .depression: return .blue
+        case .anxiety: return .red
+        case .cognitive: return .pink
+        case .osa: return .cyan
+        case .pain: return .yellow
+        case .sleepTiming: return .green
+        case .dietImpact: return .mint
+        }
+    }
+
+    /// Trigger description for debug UI
+    var triggerDescription: String {
+        switch self {
+        case .insomnia: return "Sleep difficulties >=3 nights/week"
+        case .poorSleepQuality: return "PSQI global score >=5"
+        case .excessiveSleepiness: return "ESS score >=10 or fatigue"
+        case .depression: return "Low mood, loss of interest"
+        case .anxiety: return "Worry, nervousness"
+        case .cognitive: return "Memory/concentration issues"
+        case .osa: return "Snoring, breathing pauses"
+        case .pain: return "Pain affecting sleep"
+        case .sleepTiming: return "Delayed/advanced sleep phase"
+        case .dietImpact: return "Caffeine/alcohol affecting sleep"
+        }
+    }
 }
 
 // MARK: - Question Model
@@ -856,8 +904,11 @@ struct QuestionResponse: Identifiable, Codable {
     var numberValue: Double?
     var arrayValue: [String]?
     var objectValue: [String: String]?
-    let answeredAt: Date
+    var answeredAt: Date
     var answeredInSeconds: Int?
+    /// True if this answer was derived from an equivalent question (not directly answered)
+    /// Used to distinguish user-provided answers from system-derived ones for clinical scoring
+    var isDerived: Bool
 
     init(
         id: UUID = UUID(),
@@ -868,7 +919,8 @@ struct QuestionResponse: Identifiable, Codable {
         arrayValue: [String]? = nil,
         objectValue: [String: String]? = nil,
         answeredAt: Date = Date(),
-        answeredInSeconds: Int? = nil
+        answeredInSeconds: Int? = nil,
+        isDerived: Bool = false
     ) {
         self.id = id
         self.questionId = questionId
@@ -879,6 +931,7 @@ struct QuestionResponse: Identifiable, Codable {
         self.objectValue = objectValue
         self.answeredAt = answeredAt
         self.answeredInSeconds = answeredInSeconds
+        self.isDerived = isDerived
     }
 
     var displayValue: String {

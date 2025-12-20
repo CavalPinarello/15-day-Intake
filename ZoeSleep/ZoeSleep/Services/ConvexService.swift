@@ -1532,6 +1532,115 @@ extension ConvexService {
     }
 }
 
+// MARK: - Expansion Schedule Types
+
+struct ExpansionModuleInfo: Codable {
+    let id: String
+    let name: String
+    let instrument: String
+    let questionCount: Int
+    let estimatedMinutes: Int
+    let priority: Int
+}
+
+struct ExpansionDayInfo: Codable {
+    let dayNumber: Int
+    let modules: [ExpansionModuleInfo]
+    let totalQuestions: Int
+    let estimatedMinutes: Int
+    let completed: Bool
+}
+
+struct ExpansionScheduleSummary: Codable {
+    let hasSchedule: Bool
+    let triggeredGateways: [String]
+    let totalDays: Int
+    let totalQuestions: Int
+    let totalMinutes: Int?
+    let completedDays: Int
+    let remainingDays: Int
+    let dayAssignments: [DayAssignmentSummary]?
+
+    struct DayAssignmentSummary: Codable {
+        let dayNumber: Int
+        let questionCount: Int
+        let estimatedMinutes: Int
+        let completed: Bool
+    }
+}
+
+// MARK: - Expansion Scheduler Queries
+
+extension ConvexService {
+    /// Get expansion modules scheduled for a specific day
+    /// Returns nil if no expansion is scheduled for this day
+    func getExpansionForDay(dayNumber: Int) async throws -> ExpansionDayInfo? {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("expansionScheduler:getExpansionForDay", args: [
+            "userId": userId,
+            "dayNumber": dayNumber
+        ])
+    }
+
+    /// Get full expansion schedule summary
+    func getExpansionScheduleSummary() async throws -> ExpansionScheduleSummary {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("expansionScheduler:getScheduleSummary", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Mark a day's expansion modules as completed
+    func markDayExpansionCompleted(dayNumber: Int) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let _: SuccessResponse = try await client.mutation("expansionScheduler:markDayExpansionCompleted", args: [
+            "userId": userId,
+            "dayNumber": dayNumber
+        ])
+    }
+
+    /// Preview expansion schedule for given gateways (doesn't persist)
+    /// Used for testing schedule computation before running full journey
+    func previewExpansionSchedule(triggeredGateways: [String]) async throws -> SchedulePreviewResponse {
+        return try await client.query("expansionScheduler:previewSchedule", args: [
+            "triggeredGateways": triggeredGateways
+        ])
+    }
+}
+
+// MARK: - Schedule Preview Response
+
+struct SchedulePreviewResponse: Codable {
+    let triggeredGateways: [String]
+    let dayAssignments: [PreviewDayAssignment]
+    let totalQuestions: Int
+    let totalMinutes: Int
+    let averageQuestionsPerDay: Int
+
+    struct PreviewDayAssignment: Codable {
+        let dayNumber: Int
+        let questionCount: Int
+        let estimatedMinutes: Int
+        let moduleIds: [String]
+        let modules: [PreviewModule]
+
+        struct PreviewModule: Codable {
+            let id: String
+            let name: String
+            let instrument: String?
+        }
+    }
+}
+
 // MARK: - Errors
 
 enum ConvexError: LocalizedError {

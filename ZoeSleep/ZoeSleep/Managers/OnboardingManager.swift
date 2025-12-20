@@ -109,8 +109,8 @@ enum OnboardingStep: Int, CaseIterable {
 struct OnboardingProfile: Codable {
     var name: String = ""
     var measurementSystem: String = MeasurementSystem.metric.rawValue
-    var heightCm: Double = 170
-    var weightKg: Double = 70
+    var heightCm: Double? = nil  // Optional - only set when user provides or HealthKit fills
+    var weightKg: Double? = nil  // Optional - only set when user provides or HealthKit fills
     var gender: String = Gender.preferNotToSay.rawValue
     var birthYear: Int = 1990
     var wearables: [String] = []
@@ -119,6 +119,11 @@ struct OnboardingProfile: Codable {
     var completedAt: Date?
     var userId: String? // Track which user this profile belongs to
 
+    /// Whether height and weight have been set (from HealthKit or user input)
+    var hasBodyMetrics: Bool {
+        return heightCm != nil && weightKg != nil
+    }
+
     /// Calculate age from birth year
     var age: Int {
         let currentYear = Calendar.current.component(.year, from: Date())
@@ -126,19 +131,22 @@ struct OnboardingProfile: Codable {
     }
 
     /// Height in feet and inches (for imperial display)
-    var heightFeet: Int {
-        let totalInches = heightCm / 2.54
+    var heightFeet: Int? {
+        guard let height = heightCm else { return nil }
+        let totalInches = height / 2.54
         return Int(totalInches / 12)
     }
 
-    var heightInches: Int {
-        let totalInches = heightCm / 2.54
+    var heightInches: Int? {
+        guard let height = heightCm else { return nil }
+        let totalInches = height / 2.54
         return Int(totalInches) % 12
     }
 
     /// Weight in pounds (for imperial display)
-    var weightLbs: Double {
-        return weightKg * 2.20462
+    var weightLbs: Double? {
+        guard let weight = weightKg else { return nil }
+        return weight * 2.20462
     }
 }
 
@@ -154,10 +162,12 @@ class OnboardingManager: ObservableObject {
     @Published var isCheckingServerState: Bool = false
     @Published var hasSeenJourneyIntro: Bool = false
 
-    // Temporary editing state
+    // Temporary editing state for height/weight input (default values for UI pickers)
     @Published var tempHeightFeet: Int = 5
     @Published var tempHeightInches: Int = 7
-    @Published var tempWeightLbs: Double = 154
+    @Published var tempWeightLbs: Double = 150
+    @Published var tempHeightCm: Double = 170
+    @Published var tempWeightKg: Double = 70
 
     // MARK: - Private Properties
 
@@ -274,18 +284,26 @@ class OnboardingManager: ObservableObject {
     /// Save onboarding completion and profile to server
     private func saveOnboardingToServer() async {
         do {
-            // Save onboarding completion flag
-            try await ConvexService.shared.updateUserProfile(updates: [
+            // Build updates dictionary, only including values that exist
+            var updates: [String: Any] = [
                 "onboardingCompleted": true,
                 "displayName": profile.name,
-                "heightCm": profile.heightCm,
-                "weightKg": profile.weightKg,
                 "gender": profile.gender,
                 "birthYear": profile.birthYear,
                 "wearables": profile.wearables,
                 "appleHealthConnected": profile.hasConnectedHealthKit,
                 "measurementSystem": profile.measurementSystem
-            ])
+            ]
+
+            // Only include height/weight if they've been set
+            if let height = profile.heightCm {
+                updates["heightCm"] = height
+            }
+            if let weight = profile.weightKg {
+                updates["weightKg"] = weight
+            }
+
+            try await ConvexService.shared.updateUserProfile(updates: updates)
             print("[Onboarding] ✅ Saved to server")
         } catch {
             print("[Onboarding] ⚠️ Failed to save to server: \(error)")
@@ -339,10 +357,16 @@ class OnboardingManager: ObservableObject {
 
     /// Update imperial temp values from metric profile values
     func updateImperialFromMetric() {
-        let totalInches = profile.heightCm / 2.54
-        tempHeightFeet = Int(totalInches / 12)
-        tempHeightInches = Int(totalInches) % 12
-        tempWeightLbs = profile.weightKg * 2.20462
+        if let height = profile.heightCm {
+            let totalInches = height / 2.54
+            tempHeightFeet = Int(totalInches / 12)
+            tempHeightInches = Int(totalInches) % 12
+            tempHeightCm = height
+        }
+        if let weight = profile.weightKg {
+            tempWeightLbs = weight * 2.20462
+            tempWeightKg = weight
+        }
     }
 
     /// Update metric profile values from imperial temp values
@@ -350,6 +374,12 @@ class OnboardingManager: ObservableObject {
         let totalInches = Double(tempHeightFeet * 12 + tempHeightInches)
         profile.heightCm = totalInches * 2.54
         profile.weightKg = tempWeightLbs / 2.20462
+    }
+
+    /// Update profile from metric temp values
+    func updateProfileFromMetric() {
+        profile.heightCm = tempHeightCm
+        profile.weightKg = tempWeightKg
     }
 
     // MARK: - Pre-fill from Sign Up / Login
@@ -422,9 +452,12 @@ class OnboardingManager: ObservableObject {
         case .heightWeight:
             // Skip entirely if HealthKit provided height and weight data
             // This is the key change from Issue 2
+            guard let height = profile.heightCm, let weight = profile.weightKg else {
+                return false  // Don't skip if no data available
+            }
             return profile.hasConnectedHealthKit &&
-                   profile.heightCm > 100 && profile.heightCm < 250 &&
-                   profile.weightKg > 30 && profile.weightKg < 300
+                   height > 100 && height < 250 &&
+                   weight > 30 && weight < 300
         case .genderAge:
             // Skip if we got complete data from HealthKit
             return profile.hasConnectedHealthKit &&
@@ -467,7 +500,10 @@ class OnboardingManager: ObservableObject {
         case .measurementSystem:
             return true
         case .heightWeight:
-            return profile.heightCm > 0 && profile.weightKg > 0
+            guard let height = profile.heightCm, let weight = profile.weightKg else {
+                return false
+            }
+            return height > 0 && weight > 0
         case .genderAge:
             return profile.birthYear > 1900 && profile.birthYear <= Calendar.current.component(.year, from: Date())
         case .wearables:

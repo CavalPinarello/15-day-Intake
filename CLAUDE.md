@@ -80,6 +80,15 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Measurement System & Body Metrics Overhaul:** Proper height/weight handling (Dec 20, 2025)
+  - **Measurement system from locale:** Auto-detects Metric/Imperial from device locale (US = Imperial)
+  - **User can change units:** Picker in onboarding Body Metrics step AND in Profile settings
+  - **Height/weight now optional:** `nil` by default, shows "Not set" in Profile if never provided
+  - **Tap-to-edit:** Profile > Height/Weight opens BodyMetricsEditorView with sliders/pickers
+  - **HealthKit integration:** If connected, height/weight auto-filled from Apple Health
+  - **Files changed:** OnboardingManager.swift, ProfileSettingsView.swift, OnboardingView.swift
+  - **New views:** DebugDataView.swift, NotificationsSettingsView.swift
+  - **Archived:** SettingsView.swift (replaced by ProfileSettingsView)
 - **"From Gamification to Indispensability" System:** Complete personalization engine (Dec 20, 2025)
   - **Micro-Cohorts ("People Like You"):** Dynamic peer groups based on 8 dimensions
     - Age, gender, life stage, work pattern, gateway, chronotype, activity, family

@@ -925,8 +925,8 @@ export const getAllPatientsWithProgress = query({
           100
         );
 
-        // Priority: 1) full_name from profile, 2) D1 questionnaire response, 3) null
-        const fullName = user.full_name || nameResponse?.response_value || null;
+        // Priority: 1) full_name from profile, 2) D1 questionnaire response, 3) undefined
+        const fullName = user.full_name || nameResponse?.response_value || undefined;
 
         return {
           _id: user._id,
@@ -1107,7 +1107,7 @@ export const getPatientDetails = query({
         onboarding_completed: user.onboarding_completed,
         onboarding_completed_at: user.onboarding_completed_at,
       },
-      name: user.full_name || nameResponse?.response_value || null, // Priority: profile full_name, then D1 response
+      name: user.full_name || nameResponse?.response_value || undefined, // Priority: profile full_name, then D1 response
       demographics: {
         dateOfBirth: dobResponse?.response_value,
         sex: sexResponse?.response_value,
@@ -1847,6 +1847,9 @@ export const getQuestionnaireResponses = query({
       questionText: v.string(),
       responseValue: v.string(),
       responseNumber: v.optional(v.number()),
+      // Derived answer indicator - true if auto-populated from equivalent question
+      isDerived: v.optional(v.boolean()),
+      derivedFromQuestionId: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -1941,6 +1944,8 @@ export const getQuestionnaireResponses = query({
       questionText: string;
       responseValue: string;
       responseNumber?: number;
+      isDerived?: boolean;
+      derivedFromQuestionId?: string;
     }> = [];
 
     for (const qId of questionIds) {
@@ -1951,6 +1956,8 @@ export const getQuestionnaireResponses = query({
           questionText: questionTexts[qId] || `Question ${qId}`,
           responseValue: response.response_value || String(response.response_number ?? ""),
           responseNumber: response.response_number,
+          isDerived: response.is_derived ?? false,
+          derivedFromQuestionId: response.derived_from_question_id,
         });
       }
     }

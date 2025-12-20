@@ -1,0 +1,908 @@
+//
+//  UnifiedDebugPanel.swift
+//  ZoeSleep
+//
+//  Single, unified debug panel consolidating all developer tools
+//  Replaces: DevPanelView, MockPlaybackView, ExpansionSchedulerTestView
+//
+//  Architecture:
+//  - Section 1: Status Overview (current state)
+//  - Section 2: Data Generation (all mock data options)
+//  - Section 3: Schedule Preview (gateway-based)
+//  - Section 4: Journey Controls (advance, reset)
+//  - Section 5: Repair Tools (fix data issues)
+//
+
+#if DEBUG
+
+import SwiftUI
+
+// MARK: - Generation Mode
+
+enum DataGenerationMode: String, CaseIterable, Identifiable {
+    case fullRandom = "Full Journey (Random)"
+    case maxLoad = "Max Load (All Gateways)"
+    case selective = "Selective (Choose Gateways)"
+    case quickTest = "Quick Test (Days 1-5)"
+
+    var id: String { rawValue }
+
+    var description: String {
+        switch self {
+        case .fullRandom: return "15 days with ~40% gateway triggers"
+        case .maxLoad: return "15 days with ALL 10 gateways triggered"
+        case .selective: return "Choose which gateways to trigger"
+        case .quickTest: return "Days 1-5 only, ~30 seconds"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .fullRandom: return "dice"
+        case .maxLoad: return "flame"
+        case .selective: return "checklist"
+        case .quickTest: return "hare"
+        }
+    }
+
+    var estimatedTime: String {
+        switch self {
+        case .fullRandom: return "~2 min"
+        case .maxLoad: return "~3 min"
+        case .selective: return "~2-3 min"
+        case .quickTest: return "~30 sec"
+        }
+    }
+
+    var days: ClosedRange<Int> {
+        switch self {
+        case .quickTest: return 1...5
+        default: return 1...15
+        }
+    }
+}
+
+// MARK: - Unified Debug Panel
+
+struct UnifiedDebugPanel: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var questionnaireManager: QuestionnaireManager
+    @Environment(\.dismiss) var dismiss
+
+    // State
+    @State private var selectedMode: DataGenerationMode = .fullRandom
+    @State private var selectedGateways: Set<GatewayType> = []
+    @State private var isGenerating = false
+    @State private var showConfirmation = false
+    @State private var statusMessage: String?
+    @State private var statusIsError = false
+
+    // Generation progress - created dynamically with the right config
+    @State private var generator: MockPlaybackController?
+
+    // Progress tracking (updated via timer since @State doesn't observe ObservableObject)
+    @State private var progressCurrentDay: Int = 1
+    @State private var progressTotalDays: Int = 15
+    @State private var progressSection: String = "Sleep Log"
+    @State private var progressQuestionIndex: Int = 0
+    @State private var progressTotalQuestions: Int = 0
+    @State private var progressAnswered: Int = 0
+    @State private var progressElapsed: TimeInterval = 0
+    @State private var progressDayProgress: Double = 0
+
+    // Schedule preview
+    @State private var schedulePreview: SchedulePreview?
+    @State private var isLoadingPreview = false
+
+    // Journey controls
+    @State private var isAdvancingDay = false
+    @State private var isResetting = false
+    @State private var isRepairing = false
+
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    var body: some View {
+        NavigationView {
+            List {
+                // MARK: - Section 1: Status Overview
+                statusSection
+
+                // MARK: - Section 2: Data Generation
+                dataGenerationSection
+
+                // MARK: - Section 3: Gateway Selection (if selective mode)
+                if selectedMode == .selective {
+                    gatewaySelectionSection
+                }
+
+                // MARK: - Section 4: Schedule Preview
+                if selectedMode == .selective || selectedMode == .maxLoad {
+                    schedulePreviewSection
+                }
+
+                // MARK: - Section 5: Generation Progress (if running)
+                if isGenerating {
+                    generationProgressSection
+                }
+
+                // MARK: - Section 6: Journey Controls
+                journeyControlsSection
+
+                // MARK: - Section 7: Repair Tools
+                repairToolsSection
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Debug Tools")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+            .confirmationDialog("Generate Mock Data?", isPresented: $showConfirmation) {
+                Button("Generate \(selectedMode.days.count) Days", role: .destructive) {
+                    startGeneration()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will reset your journey progress and generate mock data. All existing responses will be cleared.")
+            }
+            .task {
+                await refreshPreview()
+            }
+            .onChange(of: selectedMode) { _, _ in
+                Task { await refreshPreview() }
+            }
+            .onChange(of: selectedGateways) { _, _ in
+                Task { await refreshPreview() }
+            }
+        }
+    }
+
+    // MARK: - Status Section
+
+    private var statusSection: some View {
+        Section {
+            // Current Day
+            HStack {
+                Label("Current Day", systemImage: "calendar")
+                Spacer()
+                Text("Day \(questionnaireManager.currentDay)")
+                    .fontWeight(.bold)
+                    .foregroundColor(.orange)
+            }
+
+            // Section Status
+            HStack {
+                Label("Sleep Log", systemImage: "moon.zzz")
+                Spacer()
+                StatusBadge(
+                    isComplete: questionnaireManager.journeyProgress?.sleepLogCompleted == true,
+                    completeText: "Done",
+                    pendingText: "Pending"
+                )
+            }
+
+            HStack {
+                Label("Assessment", systemImage: "clipboard")
+                Spacer()
+                StatusBadge(
+                    isComplete: questionnaireManager.journeyProgress?.assessmentCompleted == true,
+                    completeText: "Done",
+                    pendingText: "Pending"
+                )
+            }
+
+            // Completed Days
+            HStack {
+                Label("Completed Days", systemImage: "checkmark.circle")
+                Spacer()
+                Text("\(questionnaireManager.journeyProgress?.completedDays.count ?? 0) of 15")
+                    .foregroundColor(.secondary)
+            }
+
+            // Triggered Gateways
+            let triggeredCount = questionnaireManager.gatewayStates.filter { $0.triggered }.count
+            HStack {
+                Label("Gateways Triggered", systemImage: "exclamationmark.triangle")
+                Spacer()
+                Text("\(triggeredCount) of 10")
+                    .foregroundColor(triggeredCount > 0 ? .orange : .secondary)
+            }
+        } header: {
+            Label("Current Status", systemImage: "info.circle")
+        }
+    }
+
+    // MARK: - Data Generation Section
+
+    private var dataGenerationSection: some View {
+        Section {
+            // Mode Picker
+            ForEach(DataGenerationMode.allCases) { mode in
+                HStack {
+                    Image(systemName: mode.icon)
+                        .foregroundColor(mode == selectedMode ? .white : .purple)
+                        .frame(width: 28)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(mode.rawValue)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text(mode.description)
+                            .font(.caption2)
+                            .foregroundColor(mode == selectedMode ? .white.opacity(0.8) : .secondary)
+                    }
+
+                    Spacer()
+
+                    Text(mode.estimatedTime)
+                        .font(.caption)
+                        .foregroundColor(mode == selectedMode ? .white.opacity(0.8) : .secondary)
+
+                    if mode == selectedMode {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.white)
+                    }
+                }
+                .foregroundColor(mode == selectedMode ? .white : .primary)
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedMode = mode
+                }
+                .listRowBackground(
+                    mode == selectedMode ?
+                    Color.purple.opacity(0.9) :
+                    Color(UIColor.secondarySystemGroupedBackground)
+                )
+            }
+
+            // Generate Button - using onTapGesture for reliable touch handling
+            HStack {
+                Spacer()
+                HStack {
+                    Image(systemName: "play.fill")
+                    Text("Generate Mock Data")
+                        .fontWeight(.semibold)
+                }
+                Spacer()
+            }
+            .foregroundColor(.white)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if !isGenerating {
+                    showConfirmation = true
+                }
+            }
+            .listRowBackground(isGenerating ? Color.gray : Color.green)
+            .listRowInsets(EdgeInsets())
+
+        } header: {
+            Label("Data Generation", systemImage: "wand.and.stars")
+        } footer: {
+            Text("Select a mode and tap Generate. \(selectedMode.rawValue) will create \(selectedMode.days.count) days of questionnaire responses.")
+        }
+    }
+
+    // MARK: - Gateway Selection Section
+
+    private var gatewaySelectionSection: some View {
+        Section {
+            // Quick actions
+            HStack {
+                Button("Select All") {
+                    selectedGateways = Set(GatewayType.allCases)
+                }
+                .buttonStyle(.bordered)
+                .tint(.purple)
+
+                Button("Clear All") {
+                    selectedGateways = []
+                }
+                .buttonStyle(.bordered)
+                .tint(.secondary)
+
+                Spacer()
+
+                Text("\(selectedGateways.count) selected")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // Gateway toggles
+            ForEach(GatewayType.allCases, id: \.self) { gateway in
+                Toggle(isOn: Binding(
+                    get: { selectedGateways.contains(gateway) },
+                    set: { isSelected in
+                        if isSelected {
+                            selectedGateways.insert(gateway)
+                        } else {
+                            selectedGateways.remove(gateway)
+                        }
+                    }
+                )) {
+                    HStack {
+                        Image(systemName: gateway.icon)
+                            .foregroundColor(gateway.color)
+                            .frame(width: 24)
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(gateway.displayName)
+                                .font(.subheadline)
+                            Text(gateway.triggerDescription)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .tint(gateway.color)
+            }
+        } header: {
+            Label("Select Gateways to Trigger", systemImage: "checklist")
+        }
+    }
+
+    // MARK: - Schedule Preview Section
+
+    private var schedulePreviewSection: some View {
+        Section {
+            if isLoadingPreview {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Computing schedule...")
+                        .foregroundColor(.secondary)
+                }
+            } else if let preview = schedulePreview {
+                // Summary stats
+                HStack {
+                    VStack {
+                        Text("\(preview.totalQuestions)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        Text("Questions")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    VStack {
+                        Text("\(preview.totalDays)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        Text("Days")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    VStack {
+                        Text("~\(preview.totalMinutes)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        Text("Minutes")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .padding(.vertical, 4)
+
+                Divider()
+
+                // Day breakdown
+                ForEach(preview.days, id: \.dayNumber) { day in
+                    HStack {
+                        Text("Day \(day.dayNumber)")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .frame(width: 50, alignment: .leading)
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 4) {
+                                ForEach(day.modules, id: \.self) { moduleId in
+                                    Text(moduleId.replacingOccurrences(of: "expansion_", with: ""))
+                                        .font(.system(size: 10, weight: .medium))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.blue.opacity(0.2))
+                                        .cornerRadius(4)
+                                }
+                            }
+                        }
+
+                        Spacer()
+
+                        Text("\(day.questionCount)Q")
+                            .font(.caption)
+                            .foregroundColor(day.questionCount > 18 ? .red : .secondary)
+                    }
+                }
+            } else {
+                Text("Select gateways to preview expansion schedule")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        } header: {
+            Label("Expansion Schedule (Days 6-15)", systemImage: "calendar.badge.clock")
+        }
+    }
+
+    // MARK: - Generation Progress Section
+
+    private var generationProgressSection: some View {
+        Section {
+            // Day progress
+            HStack {
+                Text("Day \(progressCurrentDay)")
+                    .font(.headline)
+                Spacer()
+                Text("\(progressCurrentDay) of \(progressTotalDays)")
+                    .foregroundColor(.secondary)
+            }
+
+            // Progress bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(height: 8)
+                        .cornerRadius(4)
+
+                    Rectangle()
+                        .fill(Color.purple)
+                        .frame(width: geometry.size.width * progressDayProgress, height: 8)
+                        .cornerRadius(4)
+                        .animation(.easeInOut(duration: 0.3), value: progressDayProgress)
+                }
+            }
+            .frame(height: 8)
+
+            // Current section
+            HStack {
+                Image(systemName: progressSection == "Sleep Log" ? "moon.zzz.fill" : "clipboard.fill")
+                    .foregroundColor(.purple)
+                Text(progressSection)
+                Spacer()
+                Text("Q\(progressQuestionIndex)/\(progressTotalQuestions)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // Stats
+            HStack {
+                Label("\(progressAnswered)", systemImage: "checkmark.circle")
+                    .font(.caption)
+                Spacer()
+                Label(formatTime(progressElapsed), systemImage: "clock")
+                    .font(.caption)
+            }
+            .foregroundColor(.secondary)
+
+            // Cancel button
+            Button {
+                generator?.cancel()
+                isGenerating = false
+            } label: {
+                HStack {
+                    Image(systemName: "stop.fill")
+                    Text("Cancel")
+                }
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity)
+            }
+        } header: {
+            Label("Generation Progress", systemImage: "arrow.triangle.2.circlepath")
+        }
+    }
+
+    // MARK: - Journey Controls Section
+
+    private var journeyControlsSection: some View {
+        Section {
+            // Advance Day
+            Button {
+                advanceDay()
+            } label: {
+                HStack {
+                    Label("Advance to Next Day", systemImage: "forward.fill")
+                        .foregroundColor(.orange)
+                    Spacer()
+                    if isAdvancingDay {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Text("→ Day \(min(questionnaireManager.currentDay + 1, 15))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .disabled(questionnaireManager.currentDay >= 15 || isAdvancingDay)
+
+            // Reset Progress
+            Button {
+                resetProgress()
+            } label: {
+                HStack {
+                    Label("Reset to Day 1", systemImage: "arrow.counterclockwise")
+                        .foregroundColor(.red)
+                    Spacer()
+                    if isResetting {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                }
+            }
+            .disabled(isResetting)
+
+            // Refresh from Server
+            Button {
+                refreshFromServer()
+            } label: {
+                Label("Refresh from Server", systemImage: "arrow.triangle.2.circlepath")
+                    .foregroundColor(.blue)
+            }
+        } header: {
+            Label("Journey Controls", systemImage: "slider.horizontal.3")
+        }
+    }
+
+    // MARK: - Repair Tools Section
+
+    private var repairToolsSection: some View {
+        Section {
+            // Repair Sleep Insights
+            Button {
+                repairSleepInsights()
+            } label: {
+                HStack {
+                    Label("Repair Sleep Insights", systemImage: "wrench.and.screwdriver.fill")
+                        .foregroundColor(.blue)
+                    Spacer()
+                    if isRepairing {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                }
+            }
+            .disabled(isRepairing)
+
+            // Calculate Scores
+            Button {
+                calculateScores()
+            } label: {
+                Label("Recalculate All Scores", systemImage: "function")
+                    .foregroundColor(.indigo)
+            }
+
+            // Status message
+            if let message = statusMessage {
+                HStack {
+                    Image(systemName: statusIsError ? "xmark.circle.fill" : "checkmark.circle.fill")
+                        .foregroundColor(statusIsError ? .red : .green)
+                    Text(message)
+                        .font(.caption)
+                        .foregroundColor(statusIsError ? .red : .green)
+                }
+            }
+        } header: {
+            Label("Repair Tools", systemImage: "wrench.adjustable")
+        } footer: {
+            Text("Use these tools to fix data issues without regenerating everything.")
+        }
+    }
+
+    // MARK: - Actions
+
+    private func startGeneration() {
+        isGenerating = true
+        statusMessage = nil
+
+        // Reset progress tracking
+        progressCurrentDay = 1
+        progressTotalDays = selectedMode.days.count
+        progressSection = "Preparing..."
+        progressQuestionIndex = 0
+        progressTotalQuestions = 0
+        progressAnswered = 0
+        progressElapsed = 0
+        progressDayProgress = 0
+
+        // Configure based on mode
+        var config = MockGeneratorConfig()
+        config.dayRange = selectedMode.days
+        config.questionDelay = 0.05 // Balanced speed
+
+        switch selectedMode {
+        case .fullRandom:
+            config.gatewayTriggerProbability = 0.4
+        case .maxLoad:
+            config.gatewayTriggerProbability = 1.0
+        case .selective:
+            config.gatewayTriggerProbability = 1.0
+            // TODO: Pass specific gateways to generator
+        case .quickTest:
+            config.gatewayTriggerProbability = 0.4
+        }
+
+        // Create generator with the configured settings
+        let newGenerator = MockPlaybackController(config: config)
+        generator = newGenerator
+
+        // Start generation
+        newGenerator.startGeneration()
+
+        // Monitor progress and completion
+        Task {
+            while newGenerator.state.isActive {
+                // Update progress state from generator
+                await MainActor.run {
+                    progressCurrentDay = newGenerator.progress.currentDay
+                    progressTotalDays = newGenerator.progress.totalDays
+                    progressSection = newGenerator.progress.currentSection
+                    progressQuestionIndex = newGenerator.progress.currentQuestionIndex
+                    progressTotalQuestions = newGenerator.progress.totalQuestionsForSection
+                    progressAnswered = newGenerator.progress.totalQuestionsAnswered
+                    progressElapsed = newGenerator.progress.elapsedTime
+                    progressDayProgress = newGenerator.progress.dayProgress
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
+            }
+
+            await MainActor.run {
+                isGenerating = false
+
+                switch newGenerator.state {
+                case .completed:
+                    statusMessage = "Generated \(newGenerator.progress.totalQuestionsAnswered) responses"
+                    statusIsError = false
+                case .failed(let error):
+                    statusMessage = "Failed: \(error)"
+                    statusIsError = true
+                case .cancelled:
+                    statusMessage = "Cancelled"
+                    statusIsError = false
+                default:
+                    break
+                }
+
+                // Refresh status
+                Task {
+                    await questionnaireManager.loadJourneyProgress()
+                    await questionnaireManager.loadGatewayStatesFromServer()
+                }
+            }
+        }
+    }
+
+    private func advanceDay() {
+        isAdvancingDay = true
+        statusMessage = nil
+
+        Task {
+            do {
+                let response = try await ConvexService.shared.advanceToNextDay(debugMode: true)
+                await MainActor.run {
+                    if response.success {
+                        questionnaireManager.currentDay = response.newDay ?? questionnaireManager.currentDay
+                        statusMessage = "Advanced to Day \(response.newDay ?? 0)"
+                        statusIsError = false
+                    } else {
+                        statusMessage = response.error ?? "Failed"
+                        statusIsError = true
+                    }
+                    isAdvancingDay = false
+                }
+                await questionnaireManager.loadJourneyProgress()
+            } catch {
+                await MainActor.run {
+                    statusMessage = error.localizedDescription
+                    statusIsError = true
+                    isAdvancingDay = false
+                }
+            }
+        }
+    }
+
+    private func resetProgress() {
+        isResetting = true
+        statusMessage = nil
+
+        Task {
+            do {
+                _ = try await ConvexService.shared.resetJourneyProgress()
+                await questionnaireManager.loadJourneyProgress()
+                await MainActor.run {
+                    questionnaireManager.currentDay = 1
+                    statusMessage = "Reset to Day 1"
+                    statusIsError = false
+                    isResetting = false
+                }
+            } catch {
+                await MainActor.run {
+                    statusMessage = error.localizedDescription
+                    statusIsError = true
+                    isResetting = false
+                }
+            }
+        }
+    }
+
+    private func refreshFromServer() {
+        Task {
+            await questionnaireManager.loadJourneyProgress()
+            await questionnaireManager.loadGatewayStatesFromServer()
+            await MainActor.run {
+                statusMessage = "Refreshed from server"
+                statusIsError = false
+            }
+        }
+    }
+
+    private func repairSleepInsights() {
+        isRepairing = true
+        statusMessage = nil
+
+        Task {
+            do {
+                let daysProcessed = try await ConvexService.shared.computeAllSleepMetricsFromResponses()
+                await MainActor.run {
+                    statusMessage = "Repaired \(daysProcessed) days of sleep data"
+                    statusIsError = false
+                    isRepairing = false
+                }
+            } catch {
+                await MainActor.run {
+                    statusMessage = error.localizedDescription
+                    statusIsError = true
+                    isRepairing = false
+                }
+            }
+        }
+    }
+
+    private func calculateScores() {
+        Task {
+            do {
+                _ = try await ConvexService.shared.persistCalculatedScores()
+                await MainActor.run {
+                    statusMessage = "Scores recalculated"
+                    statusIsError = false
+                }
+            } catch {
+                await MainActor.run {
+                    statusMessage = error.localizedDescription
+                    statusIsError = true
+                }
+            }
+        }
+    }
+
+    private func refreshPreview() async {
+        guard selectedMode == .selective || selectedMode == .maxLoad else {
+            schedulePreview = nil
+            return
+        }
+
+        isLoadingPreview = true
+
+        let gateways: Set<GatewayType>
+        if selectedMode == .maxLoad {
+            gateways = Set(GatewayType.allCases)
+        } else {
+            gateways = selectedGateways
+        }
+
+        let gatewayIds = gateways.map { $0.rawValue }
+        let schedule = computeLocalSchedule(triggeredGateways: gatewayIds)
+
+        await MainActor.run {
+            schedulePreview = SchedulePreview(
+                totalQuestions: schedule.reduce(0) { $0 + $1.questionCount },
+                totalDays: schedule.count,
+                totalMinutes: schedule.reduce(0) { $0 + $1.estimatedMinutes },
+                days: schedule.map { day in
+                    SchedulePreview.DayPreview(
+                        dayNumber: day.dayNumber,
+                        modules: day.modules,
+                        questionCount: day.questionCount,
+                        estimatedMinutes: day.estimatedMinutes
+                    )
+                }
+            )
+            isLoadingPreview = false
+        }
+    }
+
+    // MARK: - Schedule Computation (mirrors Convex algorithm)
+
+    private func computeLocalSchedule(triggeredGateways: [String]) -> [(dayNumber: Int, modules: [String], questionCount: Int, estimatedMinutes: Int)] {
+        let maxQuestionsPerDay = 18
+        let expansionStartDay = 6
+        let expansionEndDay = 15
+
+        var eligibleModules = ExpansionModule.allModules.filter { module in
+            triggeredGateways.contains(module.requiredGateway.rawValue)
+        }
+        eligibleModules.sort { $0.priority < $1.priority }
+
+        var dayAssignments: [(dayNumber: Int, modules: [String], questionCount: Int, estimatedMinutes: Int)] = []
+        var currentDay = expansionStartDay
+        var currentDayModules: [String] = []
+        var currentDayQuestions = 0
+        var currentDayMinutes = 0
+
+        for module in eligibleModules {
+            if currentDayQuestions + module.questionCount <= maxQuestionsPerDay {
+                currentDayModules.append(module.id)
+                currentDayQuestions += module.questionCount
+                currentDayMinutes += module.estimatedMinutes
+            } else {
+                if !currentDayModules.isEmpty {
+                    dayAssignments.append((currentDay, currentDayModules, currentDayQuestions, currentDayMinutes))
+                }
+                currentDay += 1
+                if currentDay > expansionEndDay { break }
+                currentDayModules = [module.id]
+                currentDayQuestions = module.questionCount
+                currentDayMinutes = module.estimatedMinutes
+            }
+
+            if currentDayQuestions >= 14 && currentDay < expansionEndDay {
+                dayAssignments.append((currentDay, currentDayModules, currentDayQuestions, currentDayMinutes))
+                currentDay += 1
+                currentDayModules = []
+                currentDayQuestions = 0
+                currentDayMinutes = 0
+            }
+        }
+
+        if !currentDayModules.isEmpty && currentDay <= expansionEndDay {
+            dayAssignments.append((currentDay, currentDayModules, currentDayQuestions, currentDayMinutes))
+        }
+
+        return dayAssignments
+    }
+
+    private func formatTime(_ seconds: TimeInterval) -> String {
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%d:%02d", mins, secs)
+    }
+}
+
+// MARK: - Supporting Views
+
+struct StatusBadge: View {
+    let isComplete: Bool
+    let completeText: String
+    let pendingText: String
+
+    var body: some View {
+        Text(isComplete ? completeText : pendingText)
+            .font(.caption)
+            .fontWeight(.medium)
+            .foregroundColor(isComplete ? .green : .orange)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background((isComplete ? Color.green : Color.orange).opacity(0.15))
+            .cornerRadius(4)
+    }
+}
+
+// MARK: - Preview
+
+struct UnifiedDebugPanel_Previews: PreviewProvider {
+    static var previews: some View {
+        UnifiedDebugPanel()
+            .environmentObject(ThemeManager.shared)
+            .environmentObject(QuestionnaireManager.shared)
+    }
+}
+
+#endif

@@ -361,19 +361,51 @@ struct HeightWeightStepView: View {
                     .foregroundColor(palette.textPrimary)
             }
 
+            // Unit System Picker
+            Picker("Units", selection: Binding(
+                get: {
+                    MeasurementSystem(rawValue: onboardingManager.profile.measurementSystem) ?? .metric
+                },
+                set: { newValue in
+                    onboardingManager.profile.measurementSystem = newValue.rawValue
+                    // Sync temp values when switching systems
+                    if newValue == .metric {
+                        // Imperial → Metric: Update temp metric values from imperial
+                        let totalInches = Double(onboardingManager.tempHeightFeet * 12 + onboardingManager.tempHeightInches)
+                        onboardingManager.tempHeightCm = totalInches * 2.54
+                        onboardingManager.tempWeightKg = onboardingManager.tempWeightLbs / 2.20462
+                    } else {
+                        // Metric → Imperial: Update temp imperial values from metric
+                        let totalInches = onboardingManager.tempHeightCm / 2.54
+                        onboardingManager.tempHeightFeet = Int(totalInches / 12)
+                        onboardingManager.tempHeightInches = Int(totalInches) % 12
+                        onboardingManager.tempWeightLbs = onboardingManager.tempWeightKg * 2.20462
+                    }
+                }
+            )) {
+                ForEach(MeasurementSystem.allCases) { system in
+                    Text(system.rawValue).tag(system)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 40)
+
             // Height & Weight in single compact view
             VStack(spacing: isCompact ? 10 : 14) {
                 // Height
                 MetricInputRow(
                     label: "Height",
                     value: isMetric
-                        ? "\(Int(onboardingManager.profile.heightCm)) cm"
+                        ? "\(Int(onboardingManager.tempHeightCm)) cm"
                         : "\(onboardingManager.tempHeightFeet)' \(onboardingManager.tempHeightInches)\"",
                     isCompact: isCompact
                 ) {
                     if isMetric {
-                        Slider(value: $onboardingManager.profile.heightCm, in: 120...220, step: 1)
+                        Slider(value: $onboardingManager.tempHeightCm, in: 120...220, step: 1)
                             .tint(palette.accent)
+                            .onChange(of: onboardingManager.tempHeightCm) { _, _ in
+                                onboardingManager.updateProfileFromMetric()
+                            }
                     } else {
                         HStack(spacing: 8) {
                             Picker("Feet", selection: $onboardingManager.tempHeightFeet) {
@@ -407,13 +439,16 @@ struct HeightWeightStepView: View {
                 MetricInputRow(
                     label: "Weight",
                     value: isMetric
-                        ? "\(Int(onboardingManager.profile.weightKg)) kg"
+                        ? "\(Int(onboardingManager.tempWeightKg)) kg"
                         : "\(Int(onboardingManager.tempWeightLbs)) lbs",
                     isCompact: isCompact
                 ) {
                     if isMetric {
-                        Slider(value: $onboardingManager.profile.weightKg, in: 30...200, step: 0.5)
+                        Slider(value: $onboardingManager.tempWeightKg, in: 30...200, step: 0.5)
                             .tint(palette.accent)
+                            .onChange(of: onboardingManager.tempWeightKg) { _, _ in
+                                onboardingManager.updateProfileFromMetric()
+                            }
                     } else {
                         Slider(value: $onboardingManager.tempWeightLbs, in: 66...440, step: 1)
                             .tint(palette.accent)
@@ -434,6 +469,16 @@ struct HeightWeightStepView: View {
             )
             .padding(.horizontal, 20)
             .padding(.bottom, isCompact ? 24 : 32)
+        }
+        .onAppear {
+            // Initialize profile values from temp values if not already set
+            // This ensures users can proceed even if they don't touch the sliders
+            if onboardingManager.profile.heightCm == nil {
+                onboardingManager.profile.heightCm = onboardingManager.tempHeightCm
+            }
+            if onboardingManager.profile.weightKg == nil {
+                onboardingManager.profile.weightKg = onboardingManager.tempWeightKg
+            }
         }
     }
 }

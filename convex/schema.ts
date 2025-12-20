@@ -732,19 +732,42 @@ export default defineSchema({
     .index("by_user_gateway", ["user_id", "gateway_id"])
     .index("by_gateway", ["gateway_id"]),
 
+  // Dynamic expansion schedule - computed when Day 2 completes
+  // Stores the optimal distribution of expansion modules based on triggered gateways
+  user_expansion_schedules: defineTable({
+    user_id: v.id("users"),
+    computed_at: v.number(),
+    triggered_gateways: v.array(v.string()), // Gateway IDs that were triggered
+    day_assignments: v.array(v.object({
+      day_number: v.number(),
+      module_ids: v.array(v.string()),
+      question_count: v.number(),
+      estimated_minutes: v.number(),
+      completed: v.optional(v.boolean()),
+    })),
+    total_expansion_questions: v.number(),
+    total_estimated_minutes: v.optional(v.number()),
+  })
+    .index("by_user", ["user_id"]),
+
   user_assessment_responses: defineTable({
     user_id: v.id("users"),
     question_id: v.string(), // References assessment_questions.question_id
-    
+
     // Response storage (use appropriate field based on answer_format)
     response_value: v.optional(v.string()), // For: time_picker, single_select_chips, date_picker (string values)
     response_number: v.optional(v.number()), // For: minutes_scroll, number_scroll, slider_scale, number_input (numeric values)
     response_array: v.optional(v.string()), // For: multi_select_chips (JSON array string)
     response_object: v.optional(v.string()), // For: repeating_group (JSON object string)
-    
+
     // Metadata
     day_number: v.optional(v.number()),
     answered_in_seconds: v.optional(v.number()), // Track how long user took to answer
+    // Derived answer flag - true if this answer was auto-populated from an equivalent question
+    // for complete clinical scoring (e.g., SB_1 derived from Q19 snoring answer)
+    is_derived: v.optional(v.boolean()),
+    // Source question ID when is_derived is true (for audit trail)
+    derived_from_question_id: v.optional(v.string()),
     created_at: v.number(),
     updated_at: v.number(),
   })

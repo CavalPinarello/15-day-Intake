@@ -27,10 +27,51 @@ class QuestionnaireManager: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: String?
 
+    // Cached expansion schedule from Convex (for Days 6+)
+    @Published var scheduledExpansionForToday: ExpansionDayInfo?
+
+    // HealthKit demographics cache - set by views with HealthKitManager access
+    // Used to skip demographic questions if HealthKit has the data
+    var healthKitDateOfBirth: Date?
+    var healthKitBiologicalSex: String?
+    var healthKitHeightCm: Double?
+    var healthKitWeightKg: Double?
+
+    /// Update HealthKit demographics cache from HealthKitManager
+    /// Call this from views that have access to HealthKitManager
+    func updateHealthKitDemographics(dateOfBirth: Date?, biologicalSex: String?, heightCm: Double?, weightKg: Double?) {
+        self.healthKitDateOfBirth = dateOfBirth
+        self.healthKitBiologicalSex = biologicalSex
+        self.healthKitHeightCm = heightCm
+        self.healthKitWeightKg = weightKg
+    }
+
     // MARK: - Private Properties
 
     private var cancellables = Set<AnyCancellable>()
     private let convexService = ConvexService.shared
+
+    /// Maps Convex consolidated module IDs to iOS module parts
+    /// Convex uses single IDs like "expansion_dbas" while iOS has split modules like "expansion_dbas_part1", "expansion_dbas_part2"
+    private static let convexToIOSModuleMapping: [String: [String]] = [
+        // Consolidated modules -> iOS parts
+        "expansion_isi": ["expansion_isi"],
+        "expansion_phq9": ["expansion_phq9"],
+        "expansion_gad7": ["expansion_gad7_part1", "expansion_gad7_part2"],
+        "expansion_stop_bang": ["expansion_stop_bang"],
+        "expansion_ess": ["expansion_ess"],
+        "expansion_berlin": ["expansion_berlin"],
+        "expansion_dbas": ["expansion_dbas_part1", "expansion_dbas_part2"],
+        "expansion_sleep_hygiene": ["expansion_sleep_hygiene_part1", "expansion_sleep_hygiene_part2"],
+        "expansion_psas": ["expansion_psas_part1", "expansion_psas_part2"],
+        "expansion_fss": ["expansion_fss"],
+        "expansion_fosq": ["expansion_fosq_part1", "expansion_fosq_part2"],
+        "expansion_dass21": ["expansion_dass21_part1", "expansion_dass21_part2"],
+        "expansion_promis_cognitive": ["expansion_promis_cognitive"],
+        "expansion_bpi": ["expansion_bpi"],
+        "expansion_medas": ["expansion_medas"],
+        "expansion_meq": ["expansion_meq"]
+    ]
 
     // MARK: - Initialization
 
@@ -50,7 +91,35 @@ class QuestionnaireManager: ObservableObject {
         journeyProgress = nil
         responses = [:]
         error = nil
+        scheduledExpansionForToday = nil
+        answeredSemanticConcepts.removeAll()  // Reset redundancy tracking
         initializeGatewayStates()
+    }
+
+    /// Load the expansion schedule for today from Convex (for Days 6+)
+    func loadExpansionScheduleForDay(_ dayNumber: Int) async {
+        // Only load for expansion days (6+)
+        guard dayNumber >= 6 else {
+            scheduledExpansionForToday = nil
+            return
+        }
+
+        do {
+            let expansion = try await convexService.getExpansionForDay(dayNumber: dayNumber)
+            await MainActor.run {
+                self.scheduledExpansionForToday = expansion
+                if let exp = expansion {
+                    print("[QuestionnaireManager] Loaded expansion for day \(dayNumber): \(exp.modules.count) modules, \(exp.totalQuestions) questions")
+                } else {
+                    print("[QuestionnaireManager] No expansion scheduled for day \(dayNumber)")
+                }
+            }
+        } catch {
+            print("[QuestionnaireManager] Failed to load expansion schedule: \(error)")
+            await MainActor.run {
+                self.scheduledExpansionForToday = nil
+            }
+        }
     }
 
     // MARK: - Day Configuration
@@ -1054,11 +1123,15 @@ class QuestionnaireManager: ObservableObject {
     ]
 
     /// Get expansion pack info for newly triggered gateways on the current day
-    /// Returns nil if no gateways were triggered or no expansion is available
+    /// - Days 1-5: Returns same-day expansion for triggered gateways (existing logic)
+    /// - Days 6+: Returns scheduled expansion from Convex dynamic scheduler
     func getExpansionPackForDay(_ dayNumber: Int) -> ExpansionPackInfo? {
-        // Only offer same-day expansion during core phase (Days 1-5)
-        guard dayNumber <= 5 else { return nil }
+        // For Days 6+, use the dynamic expansion schedule from Convex
+        if dayNumber >= 6 {
+            return getScheduledExpansionPack()
+        }
 
+        // Days 1-5: Same-day expansion logic
         // Get completed expansion gateways
         let completedExpansions = journeyProgress?.completedExpansionGateways ?? []
 
@@ -1107,18 +1180,304 @@ class QuestionnaireManager: ObservableObject {
         )
     }
 
-    /// Filter out expansion questions that are redundant (already answered in core assessment or derivable from profile)
+    /// Get expansion pack from the Convex-scheduled expansion (for Days 6+)
+    /// Returns nil if no expansion is scheduled or it's already completed
+    private func getScheduledExpansionPack() -> ExpansionPackInfo? {
+        guard let scheduled = scheduledExpansionForToday,
+              !scheduled.completed else {
+            return nil
+        }
+
+        // Convert Convex module IDs to iOS questions
+        var expansionQuestions: [Question] = []
+
+        for module in scheduled.modules {
+            // Get iOS module IDs for this Convex module
+            let iOSModuleIds = Self.convexToIOSModuleMapping[module.id] ?? [module.id]
+
+            for iOSModuleId in iOSModuleIds {
+                if let moduleQuestions = Self.expansionQuestionsByModule[iOSModuleId] {
+                    expansionQuestions.append(contentsOf: moduleQuestions)
+                }
+            }
+        }
+
+        guard !expansionQuestions.isEmpty else { return nil }
+
+        // For scheduled expansions, we don't have gateway associations,
+        // so we use an empty array (the shortExplanation will handle this gracefully)
+        return ExpansionPackInfo(
+            triggeredGateways: [],
+            questions: expansionQuestions,
+            totalEstimatedMinutes: scheduled.estimatedMinutes
+        )
+    }
+
+    // MARK: - Cross-Module Redundancy Mapping & Answer Derivation
+
+    /// Maps question IDs to semantic concepts for cross-module deduplication
+    /// When the first question of a concept is answered, subsequent questions are skipped
+    /// Key: question ID, Value: semantic concept name
+    private static let questionSemanticConcepts: [String: String] = [
+        // Snoring questions (OSA screening)
+        "SB_1": "snoring_presence",
+        "BERLIN_1": "snoring_presence",
+        "19": "snoring_presence",  // Core gateway question
+        // Keep BERLIN_2 (loudness) and BERLIN_3 (frequency) - they add detail
+
+        // Observed apnea
+        "SB_3": "observed_apnea",
+        "BERLIN_5": "observed_apnea",
+        "20": "observed_apnea",  // Core gateway question
+
+        // Blood pressure
+        "SB_4": "high_blood_pressure",
+        "BERLIN_10": "high_blood_pressure",
+
+        // Daytime fatigue/tiredness (general)
+        "SB_2": "daytime_fatigue_general",
+        "BERLIN_6": "daytime_fatigue_general",
+        "BERLIN_7": "daytime_fatigue_general",
+        "17": "daytime_fatigue_general",  // Core gateway question
+        // Note: PHQ9_4 and FSS items are clinically distinct - PHQ9 measures depression symptom,
+        // FSS measures functional impact. Keep them separate for scoring validity.
+
+        // Concentration difficulty
+        "PHQ9_7": "concentration_difficulty",
+        "FOSQ_1": "concentration_difficulty",
+        "PROMIS_COG_3": "concentration_difficulty",
+
+        // Memory problems
+        "FOSQ_2": "memory_problems",
+        "PROMIS_COG_5": "memory_problems",
+
+        // Depression gateway
+        "15": "depression_feeling",
+        "PHQ9_2": "depression_feeling",
+
+        // Anxiety gateway
+        "16": "anxiety_feeling",
+        "GAD7_1": "anxiety_feeling"
+    ]
+
+    /// Defines how to derive answers for skipped questions from equivalent source questions
+    /// Key: target question ID (to be derived), Value: (source question ID, conversion function name)
+    private static let answerDerivationRules: [String: (sourceId: String, conversionType: AnswerConversionType)] = [
+        // STOP-BANG derivations from core gateway questions
+        "SB_1": ("19", .snoringToYesNo),       // Q19 "Do you snore?" -> SB_1 yes/no
+        "SB_2": ("17", .tirednessToYesNo),     // Q17 tiredness scale -> SB_2 yes/no
+        "SB_3": ("20", .observedApneaToYesNo), // Q20 "observed apnea" -> SB_3 yes/no
+
+        // Berlin derivations from STOP-BANG or core questions
+        "BERLIN_1": ("SB_1", .yesNoPassthrough),   // Same yes/no format
+        "BERLIN_5": ("SB_3", .yesNoToFrequency),   // yes/no -> frequency scale
+        "BERLIN_10": ("SB_4", .yesNoPassthrough),  // Same yes/no format
+        "BERLIN_6": ("17", .tirednessToFrequency), // tiredness scale -> frequency
+        "BERLIN_7": ("17", .tirednessToFrequency), // tiredness scale -> frequency
+
+        // PHQ-9 derivations from core gateway
+        "PHQ9_2": ("15", .depressionToFrequency),  // Q15 depression scale -> PHQ9 frequency
+
+        // GAD-7 derivations from core gateway
+        "GAD7_1": ("16", .anxietyToFrequency),     // Q16 anxiety scale -> GAD7 frequency
+
+        // FOSQ derivations from PHQ-9 (when PHQ-9 answered first)
+        "FOSQ_1": ("PHQ9_7", .frequencyToDifficulty), // concentration frequency -> difficulty
+        "FOSQ_2": ("PROMIS_COG_5", .frequencyToDifficulty), // memory frequency -> difficulty
+
+        // PROMIS derivations from PHQ-9 (when PHQ-9 answered first)
+        "PROMIS_COG_3": ("PHQ9_7", .frequencyPassthrough), // Same frequency scale
+        "PROMIS_COG_5": ("FOSQ_2", .difficultyToFrequency)  // difficulty -> frequency
+    ]
+
+    /// Types of answer conversions between equivalent questions
+    enum AnswerConversionType {
+        case yesNoPassthrough           // Direct yes/no copy
+        case snoringToYesNo            // "Yes/Sometimes/Never" -> "Yes/No"
+        case tirednessToYesNo          // 5-point tiredness scale -> yes/no
+        case tirednessToFrequency      // 5-point tiredness -> frequency scale
+        case observedApneaToYesNo      // "Yes/No/Not sure" -> "Yes/No"
+        case yesNoToFrequency          // yes/no -> frequency scale
+        case depressionToFrequency     // 5-point depression -> PHQ9 frequency
+        case anxietyToFrequency        // 5-point anxiety -> GAD7 frequency
+        case frequencyToDifficulty     // PHQ/GAD frequency -> FOSQ difficulty
+        case difficultyToFrequency     // FOSQ difficulty -> PROMIS frequency
+        case frequencyPassthrough      // Same frequency scale
+    }
+
+    /// Track which semantic concepts have been answered in this session
+    /// Reset when day changes or questionnaire is completed
+    @Published var answeredSemanticConcepts: Set<String> = []
+
+    /// Clear answered concepts when starting a new questionnaire session
+    func resetAnsweredConcepts() {
+        answeredSemanticConcepts.removeAll()
+    }
+
+    /// Mark a question's semantic concept as answered and derive answers for equivalent questions
+    func markQuestionAnswered(_ questionId: String) {
+        if let concept = Self.questionSemanticConcepts[questionId] {
+            answeredSemanticConcepts.insert(concept)
+
+            // Derive answers for equivalent questions that might be skipped
+            deriveAnswersForEquivalentQuestions(sourceQuestionId: questionId)
+        }
+    }
+
+    /// Check if a question should be skipped due to cross-module redundancy
+    func shouldSkipForRedundancy(_ questionId: String) -> Bool {
+        guard let concept = Self.questionSemanticConcepts[questionId] else {
+            return false // Not in the redundancy map, show the question
+        }
+        return answeredSemanticConcepts.contains(concept)
+    }
+
+    /// Derive and save answers for questions that are equivalent to the source question
+    /// This ensures clinical scoring instruments have complete data even when questions are skipped
+    private func deriveAnswersForEquivalentQuestions(sourceQuestionId: String) {
+        guard let sourceResponse = responses[sourceQuestionId] else { return }
+
+        // Find all questions that can be derived from this source
+        for (targetId, rule) in Self.answerDerivationRules {
+            // Check if this target derives from our source
+            guard rule.sourceId == sourceQuestionId else { continue }
+
+            // Don't overwrite if already answered
+            guard responses[targetId] == nil else { continue }
+
+            // Convert the answer
+            if let derivedResponse = convertAnswer(
+                from: sourceResponse,
+                toQuestionId: targetId,
+                conversionType: rule.conversionType
+            ) {
+                responses[targetId] = derivedResponse
+                print("[QuestionnaireManager] Derived \(targetId) from \(sourceQuestionId) for complete scoring")
+            }
+        }
+    }
+
+    /// Convert an answer from one question format to another
+    private func convertAnswer(from source: QuestionResponse, toQuestionId: String, conversionType: AnswerConversionType) -> QuestionResponse? {
+        var derived = QuestionResponse(questionId: toQuestionId, dayNumber: source.dayNumber)
+        derived.answeredAt = source.answeredAt
+        derived.isDerived = true  // Mark as derived, not directly answered
+
+        switch conversionType {
+        case .yesNoPassthrough:
+            derived.stringValue = source.stringValue
+            return derived
+
+        case .snoringToYesNo:
+            // "Yes" / "Sometimes" / "Rarely" / "Never" -> "Yes" / "No"
+            if let value = source.stringValue?.lowercased() {
+                derived.stringValue = (value == "yes" || value == "sometimes" || value == "rarely") ? "Yes" : "No"
+                return derived
+            }
+
+        case .tirednessToYesNo:
+            // 5-point scale (1-5) -> Yes (>=3) / No (<3)
+            if let value = source.numberValue {
+                derived.stringValue = value >= 3 ? "Yes" : "No"
+                return derived
+            }
+
+        case .tirednessToFrequency:
+            // 5-point tiredness -> 4-point frequency (never/sometimes/often/always)
+            if let value = source.numberValue {
+                let frequencies = ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
+                let index = min(Int((value - 1) / 1.25), 3)
+                derived.stringValue = frequencies[index]
+                return derived
+            }
+
+        case .observedApneaToYesNo:
+            // "Yes" / "No" / "Not sure" -> "Yes" / "No"
+            if let value = source.stringValue?.lowercased() {
+                derived.stringValue = (value == "yes") ? "Yes" : "No"
+                return derived
+            }
+
+        case .yesNoToFrequency:
+            // yes/no -> frequency (never vs 3+ times/week)
+            if let value = source.stringValue?.lowercased() {
+                derived.stringValue = (value == "yes") ? "Three or more times a week" : "Not during the past month"
+                return derived
+            }
+
+        case .depressionToFrequency:
+            // 5-point depression scale -> PHQ9 4-point (0-3)
+            if let value = source.numberValue {
+                let phq9Options = ["Not at all", "Several days", "More than half the days", "Nearly every day"]
+                let index = min(Int((value - 1) / 1.25), 3)
+                derived.stringValue = phq9Options[index]
+                return derived
+            }
+
+        case .anxietyToFrequency:
+            // 5-point anxiety scale -> GAD7 4-point (0-3)
+            if let value = source.numberValue {
+                let gad7Options = ["Not at all", "Several days", "More than half the days", "Nearly every day"]
+                let index = min(Int((value - 1) / 1.25), 3)
+                derived.stringValue = gad7Options[index]
+                return derived
+            }
+
+        case .frequencyToDifficulty:
+            // PHQ/GAD frequency -> FOSQ difficulty (1-4)
+            if let value = source.stringValue?.lowercased() {
+                let difficultyMap: [String: Double] = [
+                    "not at all": 1.0,
+                    "several days": 2.0,
+                    "more than half the days": 3.0,
+                    "nearly every day": 4.0
+                ]
+                derived.numberValue = difficultyMap[value] ?? 1.0
+                return derived
+            }
+
+        case .difficultyToFrequency:
+            // FOSQ difficulty (1-4) -> PROMIS frequency
+            if let value = source.numberValue {
+                let promisOptions = ["Never", "Rarely", "Sometimes", "Often", "Very often"]
+                let index = min(Int(value) - 1, 4)
+                derived.stringValue = promisOptions[max(0, index)]
+                return derived
+            }
+
+        case .frequencyPassthrough:
+            derived.stringValue = source.stringValue
+            derived.numberValue = source.numberValue
+            return derived
+        }
+
+        return nil
+    }
+
+    /// Get all derived responses that should be saved to Convex for complete clinical scoring
+    /// Call this when saving expansion pack responses
+    func getDerivedResponsesForScoring() -> [QuestionResponse] {
+        return responses.values.filter { $0.isDerived == true }
+    }
+
+    /// Filter out expansion questions that are redundant (already answered in core assessment, derivable from profile,
+    /// or semantically equivalent to questions already answered in other expansion modules)
     private func filterRedundantExpansionQuestions(_ questions: [Question]) -> [Question] {
         return questions.filter { question in
+            // First check cross-module redundancy (questions answered in other expansion packs)
+            if shouldSkipForRedundancy(question.id) {
+                print("[QuestionnaireManager] Skipping \(question.id) - semantic equivalent already answered")
+                return false
+            }
+
             switch question.id {
 
-            // ===== STOP-BANG Redundancies =====
+            // ===== STOP-BANG Redundancies (core assessment & profile) =====
             case "SB_1":
                 // "Do you snore loudly?" - already asked as Question 19 (gateway trigger)
                 return false
             case "SB_2":
                 // "Do you feel tired during daytime?" - derived from Question 17 (gateway)
-                // Q17 asks the same with a 5-point scale
                 return false
             case "SB_3":
                 // "Has anyone observed you stop breathing?" - already asked as Question 20 (gateway trigger)
@@ -1136,24 +1495,26 @@ class QuestionnaireManager: ObservableObject {
             // ===== PHQ-9 Redundancies =====
             case "PHQ9_2":
                 // "Feeling down, depressed, or hopeless?" - already asked as Question 15 (gateway trigger)
-                // We use Q15 answer to derive this
                 return false
 
             // ===== GAD-7 Redundancies =====
             case "GAD7_1":
                 // "Feeling nervous, anxious, or on edge?" - already asked as Question 16 (gateway trigger)
-                // We use Q16 answer to derive this
                 return false
 
-            // ===== ESS Potential Redundancy =====
-            // Note: ESS_* questions are specific situational doziness - NOT redundant with Q17/Q21
-            // Those ask general tiredness, ESS asks probability of dozing in specific situations
-            // Keep all ESS questions
-
-            // ===== ISI Potential Redundancy =====
-            // Note: ISI questions ask SEVERITY ratings (0-4 scale) while core questions ask yes/no
-            // ISI_1 (difficulty falling asleep) is MORE DETAILED than Q3 (general insomnia yes/no)
-            // Keep all ISI questions - they provide clinical scoring detail
+            // ===== Berlin Questionnaire (when STOP-BANG also triggered) =====
+            // Note: If OSA gateway triggered both, prefer STOP-BANG's validated binary format
+            // Skip Berlin duplicates that overlap with STOP-BANG
+            case "BERLIN_1":
+                // "Do you snore?" - covered by SB_1 (already filtered above as gateway question)
+                return responses["19"] != nil // Skip if snoring question was answered
+            case "BERLIN_5":
+                // "Has anyone noticed you quit breathing?" - covered by SB_3
+                return responses["20"] != nil // Skip if observed apnea question was answered
+            case "BERLIN_10":
+                // "Do you have high blood pressure?" - same as SB_4
+                // Only skip if SB_4 would be asked (OSA gateway day)
+                return responses["SB_4"] != nil
 
             default:
                 return true
@@ -1193,6 +1554,10 @@ class QuestionnaireManager: ObservableObject {
 
     func saveResponse(_ response: QuestionResponse) {
         responses[response.questionId] = response
+
+        // Track semantic concept for cross-module redundancy filtering
+        markQuestionAnswered(response.questionId)
+
         evaluateGateways()
     }
 
@@ -1200,9 +1565,166 @@ class QuestionnaireManager: ObservableObject {
         return responses[questionId]
     }
 
+    /// Look up the question text for a given question ID
+    /// Used by Sleep Diary to display human-readable questions
+    func getQuestionText(for questionId: String) -> String? {
+        // Search in all question sources
+
+        // Core questions by day
+        for (_, questions) in Self.coreQuestionsByDay {
+            if let question = questions.first(where: { $0.id == questionId }) {
+                return question.text
+            }
+        }
+
+        // Expansion questions by module
+        for (_, questions) in Self.expansionQuestionsByModule {
+            if let question = questions.first(where: { $0.id == questionId }) {
+                return question.text
+            }
+        }
+
+        // Consensus Sleep Diary questions
+        if let question = Self.consensusSleepDiaryQuestions.first(where: { $0.id == questionId }) {
+            return question.text
+        }
+
+        // Sleep context questions
+        if let question = Self.sleepContextQuestions.first(where: { $0.id == questionId }) {
+            return question.text
+        }
+
+        return nil
+    }
+
+    /// Get the category/pillar for a question ID
+    /// Used by Sleep Diary to group questions by topic
+    func getQuestionCategory(for questionId: String) -> String? {
+        // Derive category from question ID prefix or pillar
+
+        // Check for known prefixes
+        let prefix = String(questionId.prefix(while: { $0.isLetter || $0 == "_" }))
+
+        switch prefix {
+        case "D", "D_":
+            return "Demographics"
+        case "ISI", "ISI_":
+            return "Insomnia"
+        case "PHQ", "PHQ9", "PHQ9_":
+            return "Mental Health"
+        case "GAD", "GAD7", "GAD7_":
+            return "Anxiety"
+        case "ESS", "ESS_":
+            return "Sleepiness"
+        case "PSQI", "PSQI_":
+            return "Sleep Quality"
+        case "DBAS", "DBAS_":
+            return "Sleep Beliefs"
+        case "STOP", "SB", "SB_":
+            return "Sleep Apnea Screening"
+        case "FSS", "FSS_":
+            return "Fatigue"
+        case "BPI", "BPI_":
+            return "Pain"
+        case "FOSQ", "FOSQ_":
+            return "Functional Outcomes"
+        case "DASS", "DASS_":
+            return "Stress & Anxiety"
+        case "PROMIS", "PROMIS_":
+            return "Cognitive Function"
+        case "MEQ", "MEQ_":
+            return "Chronotype"
+        case "MEDAS", "MEDAS_":
+            return "Diet"
+        case "BERLIN", "BERLIN_":
+            return "Sleep Apnea"
+        case "Q":
+            // Core assessment questions - look up pillar
+            return lookupQuestionPillar(questionId)
+        default:
+            // Try to look up from question data
+            return lookupQuestionPillar(questionId)
+        }
+    }
+
+    /// Helper to look up a question's pillar from the question data
+    private func lookupQuestionPillar(_ questionId: String) -> String? {
+        // Search all question sources for pillar
+        for (_, questions) in Self.coreQuestionsByDay {
+            if let question = questions.first(where: { $0.id == questionId }) {
+                return pillarDisplayName(question.pillar)
+            }
+        }
+
+        for (_, questions) in Self.expansionQuestionsByModule {
+            if let question = questions.first(where: { $0.id == questionId }) {
+                return pillarDisplayName(question.pillar)
+            }
+        }
+
+        return "Assessment"
+    }
+
+    /// Convert pillar enum to display name
+    private func pillarDisplayName(_ pillar: Pillar) -> String {
+        switch pillar {
+        case .sleepQuality:
+            return "Sleep Quality"
+        case .sleepQuantity:
+            return "Sleep Quantity"
+        case .sleepRegularity:
+            return "Sleep Regularity"
+        case .sleepTiming:
+            return "Circadian Rhythm"
+        case .mentalHealth:
+            return "Mental Health"
+        case .physical:
+            return "Physical Health"
+        case .cognitive:
+            return "Cognitive Function"
+        case .metabolic:
+            return "Metabolic Health"
+        case .social:
+            return "Social & Lifestyle"
+        case .nutritional:
+            return "Nutrition"
+        case .sleepDiary:
+            return "Sleep Diary"
+        case .sleepLog:
+            return "Sleep Log"
+        }
+    }
+
+    /// Get the question type for a given question ID
+    /// Used by QuestionnaireView to properly format date vs time values
+    func getQuestionType(for questionId: String) -> QuestionType? {
+        // Search in all question sources
+
+        // Core questions by day
+        for (_, questions) in Self.coreQuestionsByDay {
+            if let question = questions.first(where: { $0.id == questionId }) {
+                return question.questionType
+            }
+        }
+
+        // Sleep log questions
+        if let question = Self.stanfordSleepLogQuestions.first(where: { $0.id == questionId }) {
+            return question.questionType
+        }
+
+        // Expansion questions by module
+        for (_, questions) in Self.expansionQuestionsByModule {
+            if let question = questions.first(where: { $0.id == questionId }) {
+                return question.questionType
+            }
+        }
+
+        return nil
+    }
+
     // MARK: - Duplicate Question Prevention (Issues 7-11)
 
-    /// Check if a demographic question should be skipped because it was already answered during onboarding
+    /// Check if a demographic question should be skipped because it was already answered during onboarding or available from HealthKit
     /// This prevents asking name, DOB, gender, height, weight again in Day 1 assessment
     func shouldSkipDemographicQuestion(_ questionId: String) -> Bool {
         let profile = OnboardingManager.shared.profile
@@ -1211,62 +1733,95 @@ class QuestionnaireManager: ObservableObject {
         case "D1": // Full name
             return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case "D2": // Date of birth
-            // Skip if birth year is not the default (1990) - meaning user provided it
-            return profile.birthYear != 1990
+            // Skip if birth year provided during onboarding OR available from HealthKit
+            let hasOnboardingDOB = profile.birthYear != 1990
+            let hasHealthKitDOB = healthKitDateOfBirth != nil
+            return hasOnboardingDOB || hasHealthKitDOB
         case "D4": // Sex assigned at birth
-            return profile.gender != Gender.preferNotToSay.rawValue
+            // Skip if provided during onboarding OR available from HealthKit
+            let hasOnboardingGender = profile.gender != Gender.preferNotToSay.rawValue
+            let hasHealthKitGender = healthKitBiologicalSex != nil
+            return hasOnboardingGender || hasHealthKitGender
         case "D5": // Height
-            // Always skip - height is always collected during onboarding
-            return true
+            // Skip if collected during onboarding OR available from HealthKit
+            let hasOnboardingHeight = profile.heightCm != nil && (profile.heightCm ?? 0) > 0
+            let hasHealthKitHeight = healthKitHeightCm != nil
+            return hasOnboardingHeight || hasHealthKitHeight
         case "D6": // Weight
-            // Always skip - weight is always collected during onboarding
-            return true
+            // Skip if collected during onboarding OR available from HealthKit
+            let hasOnboardingWeight = profile.weightKg != nil && (profile.weightKg ?? 0) > 0
+            let hasHealthKitWeight = healthKitWeightKg != nil
+            return hasOnboardingWeight || hasHealthKitWeight
         default:
             return false
         }
     }
 
-    /// Get demographic responses from onboarding profile to pre-populate in questionnaire
-    /// This ensures data collected during onboarding is available for clinical analysis
+    /// Get demographic responses from onboarding profile AND HealthKit to pre-populate in questionnaire
+    /// This ensures data collected during onboarding or from HealthKit is available for clinical analysis
+    /// Priority: Onboarding data > HealthKit data (onboarding is more recent/user-confirmed)
     func getDemographicResponsesFromOnboarding() -> [String: QuestionResponse] {
         let profile = OnboardingManager.shared.profile
         var responses: [String: QuestionResponse] = [:]
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
 
-        // D1: Full name
+        // D1: Full name (onboarding only - not in HealthKit)
         if !profile.name.isEmpty {
             var response = QuestionResponse(questionId: "D1", dayNumber: 1)
             response.stringValue = profile.name
             responses["D1"] = response
         }
 
-        // D2: Date of birth (convert birth year to date string)
+        // D2: Date of birth - try onboarding first, then HealthKit
         if profile.birthYear != 1990 {
             var response = QuestionResponse(questionId: "D2", dayNumber: 1)
-            // Format as a date string for consistency
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
             if let date = Calendar.current.date(from: DateComponents(year: profile.birthYear, month: 1, day: 1)) {
                 response.stringValue = dateFormatter.string(from: date)
             }
             responses["D2"] = response
+        } else if let healthKitDOB = healthKitDateOfBirth {
+            var response = QuestionResponse(questionId: "D2", dayNumber: 1)
+            response.stringValue = dateFormatter.string(from: healthKitDOB)
+            responses["D2"] = response
+            print("[QuestionnaireManager] Using HealthKit date of birth")
         }
 
-        // D4: Sex assigned at birth
+        // D4: Sex assigned at birth - try onboarding first, then HealthKit
         if profile.gender != Gender.preferNotToSay.rawValue {
             var response = QuestionResponse(questionId: "D4", dayNumber: 1)
             response.stringValue = profile.gender
             responses["D4"] = response
+        } else if let healthKitSex = healthKitBiologicalSex {
+            var response = QuestionResponse(questionId: "D4", dayNumber: 1)
+            response.stringValue = healthKitSex
+            responses["D4"] = response
+            print("[QuestionnaireManager] Using HealthKit biological sex")
         }
 
-        // D5: Height (in cm)
-        var heightResponse = QuestionResponse(questionId: "D5", dayNumber: 1)
-        heightResponse.numberValue = profile.heightCm
-        responses["D5"] = heightResponse
+        // D5: Height (in cm) - try onboarding first, then HealthKit
+        if let onboardingHeight = profile.heightCm, onboardingHeight > 0 {
+            var heightResponse = QuestionResponse(questionId: "D5", dayNumber: 1)
+            heightResponse.numberValue = onboardingHeight
+            responses["D5"] = heightResponse
+        } else if let healthKitHeight = healthKitHeightCm {
+            var heightResponse = QuestionResponse(questionId: "D5", dayNumber: 1)
+            heightResponse.numberValue = healthKitHeight
+            responses["D5"] = heightResponse
+            print("[QuestionnaireManager] Using HealthKit height")
+        }
 
-        // D6: Weight (in kg)
-        var weightResponse = QuestionResponse(questionId: "D6", dayNumber: 1)
-        weightResponse.numberValue = profile.weightKg
-        responses["D6"] = weightResponse
+        // D6: Weight (in kg) - try onboarding first, then HealthKit
+        if let onboardingWeight = profile.weightKg, onboardingWeight > 0 {
+            var weightResponse = QuestionResponse(questionId: "D6", dayNumber: 1)
+            weightResponse.numberValue = onboardingWeight
+            responses["D6"] = weightResponse
+        } else if let healthKitWeight = healthKitWeightKg {
+            var weightResponse = QuestionResponse(questionId: "D6", dayNumber: 1)
+            weightResponse.numberValue = healthKitWeight
+            responses["D6"] = weightResponse
+            print("[QuestionnaireManager] Using HealthKit weight")
+        }
 
         return responses
     }
@@ -1403,6 +1958,13 @@ class QuestionnaireManager: ObservableObject {
 
         do {
             let progress = try await convexService.getJourneyProgress()
+
+            // Reset semantic concepts if day changed (new questionnaire session)
+            if currentDay != progress.currentDay {
+                answeredSemanticConcepts.removeAll()
+                print("[iOS] Day changed from \(currentDay) to \(progress.currentDay), resetting answered concepts")
+            }
+
             currentDay = progress.currentDay
             // Handle optional startedAt - use current date if not provided
             let startDate: Date

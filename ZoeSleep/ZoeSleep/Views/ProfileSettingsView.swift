@@ -16,11 +16,7 @@ struct ProfileSettingsView: View {
 
     @State private var showingSignOutConfirmation = false
     @State private var showingResetOnboardingConfirmation = false
-    @State private var showingAdvanceDayConfirmation = false
-    @State private var showingResetJourneyConfirmation = false
-    @State private var isAdvancingDay = false
-    @State private var isRepairingSleepData = false
-    @State private var repairSleepDataResult: String?
+    @State private var showingBodyMetricsEditor = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -37,6 +33,9 @@ struct ProfileSettingsView: View {
 
                 // MARK: - Personal Info Section
                 personalInfoSection
+
+                // MARK: - Units Section
+                unitsSection
 
                 // MARK: - Appearance Section
                 appearanceSection
@@ -82,22 +81,9 @@ struct ProfileSettingsView: View {
                 Text("This will reset your profile information and show the onboarding again.")
             }
 
-            .confirmationDialog("Advance to Next Day?", isPresented: $showingAdvanceDayConfirmation) {
-                Button("Advance to Day \(min(questionnaireManager.currentDay + 1, 15))") {
-                    advanceDay()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will move your journey to the next day. This action is for testing purposes.")
-            }
-
-            .confirmationDialog("Reset Journey Progress?", isPresented: $showingResetJourneyConfirmation) {
-                Button("Reset to Day 1", role: .destructive) {
-                    resetProgress()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will reset all your progress and start the 15-day journey from Day 1. All responses will be cleared.")
+            // Body Metrics Editor Sheet
+            .sheet(isPresented: $showingBodyMetricsEditor) {
+                BodyMetricsEditorView(onboardingManager: onboardingManager, themeManager: themeManager)
             }
         }
     }
@@ -233,28 +219,55 @@ struct ProfileSettingsView: View {
                     .foregroundColor(.secondary)
             }
 
-            // Height
-            HStack {
-                Label("Height", systemImage: "ruler")
-                Spacer()
-                if onboardingManager.profile.measurementSystem == MeasurementSystem.metric.rawValue {
-                    Text("\(Int(onboardingManager.profile.heightCm)) cm")
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("\(onboardingManager.profile.heightFeet)' \(onboardingManager.profile.heightInches)\"")
+            // Height - show "Not set" if nil, tap to edit
+            Button {
+                showingBodyMetricsEditor = true
+            } label: {
+                HStack {
+                    Label("Height", systemImage: "ruler")
+                        .foregroundColor(.primary)
+                    Spacer()
+                    if let height = onboardingManager.profile.heightCm {
+                        if onboardingManager.profile.measurementSystem == MeasurementSystem.metric.rawValue {
+                            Text("\(Int(height)) cm")
+                                .foregroundColor(.secondary)
+                        } else if let feet = onboardingManager.profile.heightFeet,
+                                  let inches = onboardingManager.profile.heightInches {
+                            Text("\(feet)' \(inches)\"")
+                                .foregroundColor(.secondary)
+                        }
+                    } else {
+                        Text("Not set")
+                            .foregroundColor(theme.primary)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
 
-            // Weight
-            HStack {
-                Label("Weight", systemImage: "scalemass")
-                Spacer()
-                if onboardingManager.profile.measurementSystem == MeasurementSystem.metric.rawValue {
-                    Text("\(Int(onboardingManager.profile.weightKg)) kg")
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("\(Int(onboardingManager.profile.weightLbs)) lbs")
+            // Weight - show "Not set" if nil, tap to edit
+            Button {
+                showingBodyMetricsEditor = true
+            } label: {
+                HStack {
+                    Label("Weight", systemImage: "scalemass")
+                        .foregroundColor(.primary)
+                    Spacer()
+                    if let weight = onboardingManager.profile.weightKg {
+                        if onboardingManager.profile.measurementSystem == MeasurementSystem.metric.rawValue {
+                            Text("\(Int(weight)) kg")
+                                .foregroundColor(.secondary)
+                        } else if let lbs = onboardingManager.profile.weightLbs {
+                            Text("\(Int(lbs)) lbs")
+                                .foregroundColor(.secondary)
+                        }
+                    } else {
+                        Text("Not set")
+                            .foregroundColor(theme.primary)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
@@ -269,16 +282,35 @@ struct ProfileSettingsView: View {
                         .lineLimit(1)
                 }
             }
-
-            // Note: Profile editing requires Debug Mode > Reset Onboarding
-            // A proper profile editor could be added in the future
         } header: {
             Text("Personal Information")
-        } footer: {
-            if themeManager.debugMode {
-                Text("Enable Debug Mode in Settings to reset and edit profile.")
-                    .font(.caption)
+        }
+    }
+
+    // MARK: - Units Section
+
+    private var unitsSection: some View {
+        Section {
+            Picker(selection: Binding(
+                get: {
+                    MeasurementSystem(rawValue: onboardingManager.profile.measurementSystem) ?? .metric
+                },
+                set: { newValue in
+                    onboardingManager.profile.measurementSystem = newValue.rawValue
+                    onboardingManager.updateImperialFromMetric()
+                    saveUnitsToServer()
+                }
+            )) {
+                ForEach(MeasurementSystem.allCases) { system in
+                    Text(system.rawValue).tag(system)
+                }
+            } label: {
+                Label("Units", systemImage: "ruler.fill")
             }
+        } header: {
+            Text("Measurement Units")
+        } footer: {
+            Text("Changes how height and weight are displayed throughout the app.")
         }
     }
 
@@ -381,48 +413,26 @@ struct ProfileSettingsView: View {
 
     private var developerSection: some View {
         Section {
-            // Advance to Next Day
-            Button {
-                showingAdvanceDayConfirmation = true
+            #if DEBUG
+            // Unified Debug Tools (combines all debug functionality)
+            NavigationLink {
+                UnifiedDebugPanel()
+                    .environmentObject(themeManager)
+                    .environmentObject(questionnaireManager)
             } label: {
                 HStack {
-                    Label("Advance to Next Day", systemImage: "forward.fill")
-                        .foregroundColor(.orange)
-
+                    Label("Debug Tools", systemImage: "hammer.fill")
+                        .foregroundColor(.purple)
                     Spacer()
-
-                    if isAdvancingDay {
-                        ProgressView()
-                            .tint(.orange)
-                    } else {
-                        Text("Day \(questionnaireManager.currentDay) → \(min(questionnaireManager.currentDay + 1, 15))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text("Data, Controls, Repair")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
             .accessibleTapTarget()
-            .disabled(questionnaireManager.currentDay >= 15 || isAdvancingDay)
+            #endif
 
-            // Reset Journey Progress
-            Button {
-                showingResetJourneyConfirmation = true
-            } label: {
-                Label("Reset Journey Progress", systemImage: "arrow.counterclockwise")
-                    .foregroundColor(.red)
-            }
-            .accessibleTapTarget()
-
-            // Reset Onboarding (Debug only)
-            Button {
-                showingResetOnboardingConfirmation = true
-            } label: {
-                Label("Reset Onboarding", systemImage: "person.crop.circle.badge.minus")
-                    .foregroundColor(.red)
-            }
-            .accessibleTapTarget()
-
-            // View Raw Data
+            // View Raw Data (quick access)
             NavigationLink {
                 DebugDataView()
                     .environmentObject(questionnaireManager)
@@ -432,63 +442,19 @@ struct ProfileSettingsView: View {
             }
             .accessibleTapTarget()
 
-            // Repair Sleep Insights Data
+            // Reset Onboarding
             Button {
-                repairSleepInsightsData()
+                showingResetOnboardingConfirmation = true
             } label: {
-                HStack {
-                    Label("Repair Sleep Insights", systemImage: "wrench.and.screwdriver.fill")
-                        .foregroundColor(.blue)
-
-                    Spacer()
-
-                    if isRepairingSleepData {
-                        ProgressView()
-                            .tint(.blue)
-                    } else if let result = repairSleepDataResult {
-                        Text(result)
-                            .font(.caption)
-                            .foregroundColor(result.contains("Error") ? .red : .green)
-                    }
-                }
+                Label("Reset Onboarding", systemImage: "person.crop.circle.badge.minus")
+                    .foregroundColor(.red)
             }
             .accessibleTapTarget()
-            .disabled(isRepairingSleepData)
-
-            // Developer Panel (full controls)
-            NavigationLink {
-                DevPanelView(currentDay: $questionnaireManager.currentDay)
-                    .environmentObject(themeManager)
-                    .environmentObject(questionnaireManager)
-            } label: {
-                Label("Developer Panel", systemImage: "gearshape.2.fill")
-                    .foregroundColor(.orange)
-            }
-            .accessibleTapTarget()
-
-            #if DEBUG
-            // Mock Data Generator
-            NavigationLink {
-                MockPlaybackView()
-                    .environmentObject(themeManager)
-                    .environmentObject(questionnaireManager)
-            } label: {
-                HStack {
-                    Label("Generate Mock Data", systemImage: "wand.and.stars")
-                        .foregroundColor(.purple)
-                    Spacer()
-                    Text("15 days")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .accessibleTapTarget()
-            #endif
 
         } header: {
             Text("Developer")
         } footer: {
-            Text("Debug mode enables testing features. Use 'Generate Mock Data' to create 15 days of test questionnaire responses.")
+            Text("Debug Tools provides mock data generation, journey controls, gateway testing, and repair utilities in one place.")
                 .font(.caption)
         }
     }
@@ -570,58 +536,177 @@ struct ProfileSettingsView: View {
         }
     }
 
-    private func advanceDay() {
-        isAdvancingDay = true
-
+    private func saveUnitsToServer() {
         Task {
             do {
-                let response = try await ConvexService.shared.advanceToNextDay(debugMode: true)
-                await MainActor.run {
-                    if response.success, let newDay = response.newDay {
-                        questionnaireManager.currentDay = newDay
+                try await ConvexService.shared.updateUserProfile(updates: [
+                    "measurementSystem": onboardingManager.profile.measurementSystem
+                ])
+                print("[Profile] Units saved to server: \(onboardingManager.profile.measurementSystem)")
+            } catch {
+                print("[Profile] Failed to save units: \(error)")
+            }
+        }
+    }
+}
+
+// MARK: - Body Metrics Editor View
+
+struct BodyMetricsEditorView: View {
+    @ObservedObject var onboardingManager: OnboardingManager
+    @ObservedObject var themeManager: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var tempHeightCm: Double
+    @State private var tempWeightKg: Double
+    @State private var tempHeightFeet: Int
+    @State private var tempHeightInches: Int
+    @State private var tempWeightLbs: Double
+
+    private var isMetric: Bool {
+        onboardingManager.profile.measurementSystem == MeasurementSystem.metric.rawValue
+    }
+
+    init(onboardingManager: OnboardingManager, themeManager: ThemeManager) {
+        self.onboardingManager = onboardingManager
+        self.themeManager = themeManager
+
+        // Initialize with existing values or defaults
+        let heightCm = onboardingManager.profile.heightCm ?? 170
+        let weightKg = onboardingManager.profile.weightKg ?? 70
+
+        _tempHeightCm = State(initialValue: heightCm)
+        _tempWeightKg = State(initialValue: weightKg)
+
+        let totalInches = heightCm / 2.54
+        _tempHeightFeet = State(initialValue: Int(totalInches / 12))
+        _tempHeightInches = State(initialValue: Int(totalInches) % 12)
+        _tempWeightLbs = State(initialValue: weightKg * 2.20462)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    if isMetric {
+                        // Metric height input
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Height")
+                                .font(.headline)
+                            HStack {
+                                Slider(value: $tempHeightCm, in: 100...250, step: 1)
+                                    .tint(themeManager.accentColor)
+                                Text("\(Int(tempHeightCm)) cm")
+                                    .frame(width: 70, alignment: .trailing)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        // Metric weight input
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Weight")
+                                .font(.headline)
+                            HStack {
+                                Slider(value: $tempWeightKg, in: 30...200, step: 0.5)
+                                    .tint(themeManager.accentColor)
+                                Text("\(Int(tempWeightKg)) kg")
+                                    .frame(width: 70, alignment: .trailing)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    } else {
+                        // Imperial height input
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Height")
+                                .font(.headline)
+                            HStack {
+                                Picker("Feet", selection: $tempHeightFeet) {
+                                    ForEach(3...8, id: \.self) { ft in
+                                        Text("\(ft) ft").tag(ft)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(width: 100)
+
+                                Picker("Inches", selection: $tempHeightInches) {
+                                    ForEach(0...11, id: \.self) { inches in
+                                        Text("\(inches) in").tag(inches)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(width: 100)
+                            }
+                            .frame(height: 120)
+                        }
+
+                        // Imperial weight input
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Weight")
+                                .font(.headline)
+                            HStack {
+                                Slider(value: $tempWeightLbs, in: 66...440, step: 1)
+                                    .tint(themeManager.accentColor)
+                                Text("\(Int(tempWeightLbs)) lbs")
+                                    .frame(width: 80, alignment: .trailing)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
-                    isAdvancingDay = false
+                } header: {
+                    Text("Body Measurements")
+                } footer: {
+                    Text("Connect Apple Health in settings to sync these values automatically.")
                 }
-            } catch {
-                await MainActor.run {
-                    isAdvancingDay = false
-                    print("Failed to advance day: \(error)")
+            }
+            .navigationTitle("Edit Body Metrics")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveMetrics()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
                 }
             }
         }
     }
 
-    private func resetProgress() {
-        Task {
-            do {
-                try await ConvexService.shared.resetJourneyProgress()
-                await MainActor.run {
-                    questionnaireManager.currentDay = 1
-                    questionnaireManager.responses = [:]
-                }
-            } catch {
-                print("Failed to reset progress: \(error)")
-            }
+    private func saveMetrics() {
+        if isMetric {
+            onboardingManager.profile.heightCm = tempHeightCm
+            onboardingManager.profile.weightKg = tempWeightKg
+        } else {
+            // Convert imperial to metric
+            let totalInches = Double(tempHeightFeet * 12 + tempHeightInches)
+            onboardingManager.profile.heightCm = totalInches * 2.54
+            onboardingManager.profile.weightKg = tempWeightLbs / 2.20462
         }
-    }
 
-    private func repairSleepInsightsData() {
-        isRepairingSleepData = true
-        repairSleepDataResult = nil
+        // Update temp values in OnboardingManager
+        onboardingManager.updateImperialFromMetric()
 
+        // Save to server
         Task {
             do {
-                let daysProcessed = try await ConvexService.shared.computeAllSleepMetricsFromResponses()
-                await MainActor.run {
-                    repairSleepDataResult = "\(daysProcessed) days"
-                    isRepairingSleepData = false
+                var updates: [String: Any] = [:]
+                if let height = onboardingManager.profile.heightCm {
+                    updates["heightCm"] = height
+                }
+                if let weight = onboardingManager.profile.weightKg {
+                    updates["weightKg"] = weight
+                }
+                if !updates.isEmpty {
+                    try await ConvexService.shared.updateUserProfile(updates: updates)
+                    print("[Profile] Body metrics saved to server")
                 }
             } catch {
-                await MainActor.run {
-                    repairSleepDataResult = "Error"
-                    isRepairingSleepData = false
-                    print("Failed to repair sleep data: \(error)")
-                }
+                print("[Profile] Failed to save body metrics: \(error)")
             }
         }
     }

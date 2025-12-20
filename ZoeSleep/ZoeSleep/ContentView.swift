@@ -74,6 +74,9 @@ struct MainDashboardView: View {
     // Journey introduction for first-time users
     @State private var showJourneyIntro = false
 
+    // Motivational message - stored to prevent flickering on re-renders
+    @State private var motivationalMessage: String = ""
+
     // Poll every 5 seconds when app is active (for cross-device sync)
     private let refreshInterval: TimeInterval = 5.0
 
@@ -135,6 +138,11 @@ struct MainDashboardView: View {
         .onAppear {
             loadProgress()
             startRefreshTimer()
+
+            // Set motivational message once to prevent flickering
+            if motivationalMessage.isEmpty {
+                motivationalMessage = FriendlyCopy.randomDayMessage()
+            }
 
             // Show journey introduction for first-time users
             if !OnboardingManager.shared.hasSeenJourneyIntro {
@@ -231,6 +239,11 @@ struct MainDashboardView: View {
         }
 
         await questionnaireManager.loadJourneyProgress()
+
+        // Load expansion schedule for Days 6+ (dynamic expansion from Convex)
+        if let progress = questionnaireManager.journeyProgress, progress.currentDay >= 6 {
+            await questionnaireManager.loadExpansionScheduleForDay(progress.currentDay)
+        }
 
         await MainActor.run {
             // Check if there was an error during the refresh
@@ -331,7 +344,7 @@ struct MainDashboardView: View {
                     .foregroundColor(theme.textPrimary)
                     .multilineTextAlignment(.center)
 
-                Text(FriendlyCopy.randomDayMessage())
+                Text(motivationalMessage)
                     .font(.system(size: Typography.body, weight: .regular, design: .rounded))
                     .foregroundColor(theme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -345,6 +358,13 @@ struct MainDashboardView: View {
 
     private var completedDaysCount: Int {
         questionnaireManager.journeyProgress?.completedDays.count ?? 0
+    }
+
+    /// Sanitized completed days - only days before currentDay can be marked as completed
+    /// This prevents data integrity issues from showing incorrect progress
+    private var validatedCompletedDays: [Int] {
+        (questionnaireManager.journeyProgress?.completedDays ?? [])
+            .filter { $0 < currentDay }
     }
 
     private var journeyProgressCard: some View {
@@ -372,22 +392,22 @@ struct MainDashboardView: View {
 
             // Interactive progress dots - tap completed days to view history
             InteractiveProgressDots(
-                current: completedDaysCount + 1,
+                current: currentDay,
                 total: 15,
-                completedDays: questionnaireManager.journeyProgress?.completedDays ?? []
+                completedDays: validatedCompletedDays
             ) { day in
                 sleepDiarySelectedDay = day
                 navigateToSleepDiary = true
             }
 
             // Encouraging message based on progress - HIGH CONTRAST
-            Text(progressMessage(completedCount: completedDaysCount))
+            Text(progressMessage(completedCount: max(0, currentDay - 1)))
                 .font(.system(size: Typography.subheadline, weight: .regular, design: .rounded))
                 .foregroundColor(theme.textOnCardSecondary)
                 .multilineTextAlignment(.center)
 
             // Hint text for interactive dots
-            if completedDaysCount > 0 {
+            if currentDay > 1 {
                 Text("Tap a completed day to view details")
                     .font(.system(size: Typography.caption, design: .rounded))
                     .foregroundColor(theme.textOnCardMuted)
@@ -402,7 +422,10 @@ struct MainDashboardView: View {
     }
 
     private var progressPercentage: Int {
-        Int((Double(completedDaysCount) / 15.0) * 100)
+        // Use currentDay - 1 as the number of fully completed days
+        // This is more reliable than completedDays.count which can have data integrity issues
+        let daysCompleted = max(0, currentDay - 1)
+        return Int((Double(daysCompleted) / 15.0) * 100)
     }
 
     private func progressMessage(completedCount: Int) -> String {
@@ -447,6 +470,21 @@ struct MainDashboardView: View {
         questionnaireManager.journeyProgress?.assessmentCompleted ?? false
     }
 
+    /// Check if expansion pack was completed today
+    private var expansionPackCompletedToday: Bool {
+        questionnaireManager.journeyProgress?.expansionPackCompleted ?? false
+    }
+
+    /// Check if there were gateways triggered that HAD expansion options (even if now completed)
+    private var hadExpansionPackToday: Bool {
+        // Check if any triggered gateways have expansion modules available
+        let triggeredGateways = questionnaireManager.gatewayStates.filter { $0.triggered }
+        let expansionGateways = triggeredGateways.filter { state in
+            QuestionnaireManager.sameDayExpansionModules.keys.contains(state.gatewayType)
+        }
+        return !expansionGateways.isEmpty && currentDay <= 5
+    }
+
     /// Returns expansion pack info if gateways were triggered and assessment is done
     private var availableExpansionPack: ExpansionPackInfo? {
         // Only show expansion pack after assessment is complete
@@ -456,8 +494,8 @@ struct MainDashboardView: View {
 
     private var todaysTasksCard: some View {
         VStack(spacing: Spacing.lg) {
-            // Day Complete Celebration (only if no expansion pack available)
-            if isDayComplete && availableExpansionPack == nil {
+            // Day Complete Celebration (only if no expansion pack available AND no expansion was done)
+            if isDayComplete && availableExpansionPack == nil && !hadExpansionPackToday {
                 DayCompleteCelebrationView(
                     currentDay: currentDay,
                     isDebugMode: themeManager.debugMode,
@@ -514,6 +552,49 @@ struct MainDashboardView: View {
                             .font(.caption)
                             .foregroundColor(theme.textOnCardMuted)
                     }
+                }
+            } else if isDayComplete && hadExpansionPackToday && expansionPackCompletedToday {
+                // Show all 3 tasks completed (including Deeper Dive)
+                VStack(spacing: Spacing.md) {
+                    // Header with completion status
+                    HStack {
+                        Text("Today's focus")
+                            .font(.system(size: Typography.subheadline, weight: .medium, design: .rounded))
+                            .foregroundColor(theme.textOnCardSecondary)
+                        Spacer()
+                        Text("3 of 3")
+                            .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                            .foregroundColor(theme.success)
+                    }
+
+                    // All tasks completed
+                    TaskRowView(
+                        icon: "moon.zzz.fill",
+                        title: "Sleep Log",
+                        subtitle: "Completed",
+                        isCompleted: true
+                    )
+
+                    TaskRowView(
+                        icon: "list.bullet.clipboard",
+                        title: "Assessment",
+                        subtitle: "Completed",
+                        isCompleted: true
+                    )
+
+                    TaskRowView(
+                        icon: "sparkles",
+                        title: "Deeper Dive",
+                        subtitle: "Completed",
+                        isCompleted: true
+                    )
+
+                    // Day complete celebration button
+                    DayCompleteCelebrationView(
+                        currentDay: currentDay,
+                        isDebugMode: themeManager.debugMode,
+                        onAdvanceDay: advanceToNextDay
+                    )
                 }
             } else {
                 // Today's focus - clean task list
@@ -847,6 +928,11 @@ struct MainDashboardView: View {
             await questionnaireManager.loadJourneyProgress()
             if let progress = questionnaireManager.journeyProgress {
                 currentDay = progress.currentDay
+
+                // Load expansion schedule for Days 6+ (dynamic expansion from Convex)
+                if progress.currentDay >= 6 {
+                    await questionnaireManager.loadExpansionScheduleForDay(progress.currentDay)
+                }
             }
         }
     }
@@ -1183,7 +1269,8 @@ struct TaskRowView: View {
                 Text(subtitle)
                     .font(.system(size: Typography.caption, design: .rounded))
                     .foregroundColor(theme.textOnCardSecondary)
-                    .lineLimit(1)
+                    .lineLimit(2)  // Allow 2 lines to prevent truncation of longer subtitles
+                    .fixedSize(horizontal: false, vertical: true)  // Allow vertical expansion
             }
 
             Spacer()
@@ -1467,7 +1554,86 @@ struct SleepDiaryHistoryView: View {
             if entry.hasContextData {
                 contextCard(entry: entry)
             }
+
+            // Assessment Responses Card (collapsible)
+            if let responses = assessmentResponses[selectedDay], !responses.isEmpty {
+                assessmentResponsesCard(responses: responses)
+            }
         }
+    }
+
+    // MARK: - Assessment Responses Card
+
+    private func assessmentResponsesCard(responses: [AssessmentResponse]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header with collapse toggle
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showAssessmentDetails.toggle()
+                }
+            }) {
+                HStack {
+                    Label("Assessment Responses", systemImage: "list.clipboard.fill")
+                        .font(.headline)
+                        .foregroundColor(theme.primary)
+
+                    Spacer()
+
+                    HStack(spacing: 4) {
+                        Text("\(responses.count) answers")
+                            .font(.caption)
+                            .foregroundColor(theme.textOnCardSecondary)
+                        Image(systemName: showAssessmentDetails ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(theme.textOnCardMuted)
+                    }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            if showAssessmentDetails {
+                // Group by category
+                let groupedResponses = Dictionary(grouping: responses) { $0.category }
+                let sortedCategories = groupedResponses.keys.sorted()
+
+                ForEach(sortedCategories, id: \.self) { category in
+                    if let categoryResponses = groupedResponses[category] {
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Category header
+                            Text(category)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(theme.primary.opacity(0.8))
+                                .padding(.top, 8)
+
+                            // Questions in this category
+                            ForEach(categoryResponses) { response in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(response.questionText)
+                                        .font(.caption)
+                                        .foregroundColor(theme.textOnCardSecondary)
+                                        .lineLimit(2)
+
+                                    Text(response.answerText)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(theme.textOnCard)
+                                }
+                                .padding(.vertical, 4)
+
+                                if response.id != categoryResponses.last?.id {
+                                    Divider()
+                                        .background(theme.textOnCardMuted.opacity(0.2))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(GlassyCardBackground(opacity: 0.5))
+        .cornerRadius(16)
     }
 
     private func sleepTimingCard(entry: SleepDiaryEntry) -> some View {
@@ -1757,21 +1923,150 @@ struct SleepDiaryHistoryView: View {
             selectedDay = lastDay
         }
 
-        // Load sleep entries from responses
+        // Load sleep entries and assessment responses
         Task {
             var entries: [Int: SleepDiaryEntry] = [:]
+            var allAssessmentResponses: [Int: [AssessmentResponse]] = [:]
 
             for day in completedDays {
-                if let entry = await loadDayEntry(day: day) {
+                let (entry, dayAssessmentResponses) = await loadDayData(day: day)
+                if let entry = entry {
                     entries[day] = entry
+                }
+                if !dayAssessmentResponses.isEmpty {
+                    allAssessmentResponses[day] = dayAssessmentResponses
                 }
             }
 
             await MainActor.run {
                 sleepEntries = entries
+                assessmentResponses = allAssessmentResponses
                 isLoading = false
             }
         }
+    }
+
+    /// Load both sleep diary entry and assessment responses for a day
+    private func loadDayData(day: Int) async -> (SleepDiaryEntry?, [AssessmentResponse]) {
+        do {
+            let savedResponses = try await ConvexService.shared.getSavedResponses(dayNumber: day)
+
+            #if DEBUG
+            print("[SleepDiaryHistory] Day \(day) - loaded \(savedResponses.count) responses")
+            #endif
+
+            // Separate CSD/sleep log responses from assessment responses
+            var sleepLogResponses: [String: Any] = [:]
+            var assessmentResponsesList: [AssessmentResponse] = []
+
+            for (questionId, responseValue) in savedResponses {
+                // Check if this is a sleep log question (CSD_, SL_, SD_ prefixes)
+                let isSleepLog = questionId.hasPrefix("CSD_") || questionId.hasPrefix("SL_") || questionId.hasPrefix("SD_")
+
+                // Parse the response value
+                var parsedValue: Any = ""
+                if let stringValue = responseValue.stringValue {
+                    // Check if it's a time string (ISO8601) and convert to Date
+                    let isoFormatter = ISO8601DateFormatter()
+                    isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    if let date = isoFormatter.date(from: stringValue) {
+                        parsedValue = date
+                    } else {
+                        isoFormatter.formatOptions = [.withInternetDateTime]
+                        if let date = isoFormatter.date(from: stringValue) {
+                            parsedValue = date
+                        } else {
+                            parsedValue = stringValue
+                        }
+                    }
+                } else if let numberValue = responseValue.numberValue {
+                    parsedValue = numberValue
+                } else if let arrayValue = responseValue.arrayValue {
+                    parsedValue = arrayValue
+                }
+
+                if isSleepLog {
+                    sleepLogResponses[questionId] = parsedValue
+                } else {
+                    // Create assessment response with readable question text
+                    let assessmentResponse = createAssessmentResponse(
+                        questionId: questionId,
+                        value: parsedValue
+                    )
+                    if let response = assessmentResponse {
+                        assessmentResponsesList.append(response)
+                    }
+                }
+            }
+
+            // Create sleep diary entry
+            let entry = SleepDiaryEntry(from: sleepLogResponses, day: day)
+
+            #if DEBUG
+            print("[SleepDiaryHistory] Day \(day): \(sleepLogResponses.count) sleep log, \(assessmentResponsesList.count) assessment")
+            #endif
+
+            return (entry, assessmentResponsesList)
+        } catch {
+            print("[SleepDiaryHistory] Failed to load day \(day): \(error)")
+            return (nil, [])
+        }
+    }
+
+    /// Create an AssessmentResponse from a question ID and value
+    private func createAssessmentResponse(questionId: String, value: Any) -> AssessmentResponse? {
+        // Look up question text from QuestionnaireManager
+        let questionText = questionnaireManager.getQuestionText(for: questionId) ?? questionId
+        let category = questionnaireManager.getQuestionCategory(for: questionId) ?? "Other"
+
+        // Format the answer text based on value type
+        let answerText: String
+        if let stringValue = value as? String {
+            // Check if it's a date string (yyyy-MM-dd) and format nicely
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            if let date = dateFormatter.date(from: stringValue) {
+                dateFormatter.dateStyle = .medium
+                dateFormatter.timeStyle = .none
+                answerText = dateFormatter.string(from: date)
+            } else {
+                answerText = stringValue
+            }
+        } else if let numberValue = value as? Double {
+            // Check if it's likely an integer
+            if numberValue == floor(numberValue) {
+                answerText = String(Int(numberValue))
+            } else {
+                answerText = String(format: "%.1f", numberValue)
+            }
+        } else if let intValue = value as? Int {
+            answerText = String(intValue)
+        } else if let dateValue = value as? Date {
+            // Format based on question type
+            let formatter = DateFormatter()
+            if questionnaireManager.getQuestionType(for: questionId) == .date {
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .none
+            } else {
+                formatter.dateStyle = .none
+                formatter.timeStyle = .short
+            }
+            answerText = formatter.string(from: dateValue)
+        } else if let arrayValue = value as? [String] {
+            answerText = arrayValue.joined(separator: ", ")
+        } else {
+            answerText = String(describing: value)
+        }
+
+        // Skip empty or very short answers
+        guard !answerText.isEmpty else { return nil }
+
+        return AssessmentResponse(
+            questionId: questionId,
+            questionText: questionText,
+            answerText: answerText,
+            category: category
+        )
     }
 
     private func loadDayEntry(day: Int) async -> SleepDiaryEntry? {
@@ -2238,218 +2533,6 @@ struct DayCompleteCelebrationView: View {
     }
 }
 
-// MARK: - Developer Panel View
-
-struct DevPanelView: View {
-    @Binding var currentDay: Int
-    @EnvironmentObject var themeManager: ThemeManager
-    @EnvironmentObject var questionnaireManager: QuestionnaireManager
-    @Environment(\.dismiss) var dismiss
-
-    @State private var isAdvancingDay = false
-    @State private var isResetting = false
-    @State private var statusMessage: String?
-
-    var body: some View {
-        NavigationView {
-            List {
-                // Current Status
-                Section {
-                    HStack {
-                        Text("Current Day")
-                        Spacer()
-                        Text("Day \(currentDay)")
-                            .fontWeight(.bold)
-                            .foregroundColor(.orange)
-                    }
-
-                    HStack {
-                        Text("Sleep Log")
-                        Spacer()
-                        Text(questionnaireManager.journeyProgress?.sleepLogCompleted == true ? "Complete" : "Pending")
-                            .foregroundColor(questionnaireManager.journeyProgress?.sleepLogCompleted == true ? .green : .orange)
-                    }
-
-                    HStack {
-                        Text("Assessment")
-                        Spacer()
-                        Text(questionnaireManager.journeyProgress?.assessmentCompleted == true ? "Complete" : "Pending")
-                            .foregroundColor(questionnaireManager.journeyProgress?.assessmentCompleted == true ? .green : .orange)
-                    }
-
-                    HStack {
-                        Text("Completed Days")
-                        Spacer()
-                        Text("\(questionnaireManager.journeyProgress?.completedDays.count ?? 0) of 15")
-                            .foregroundColor(.secondary)
-                    }
-                } header: {
-                    Text("Current Status")
-                }
-
-                // Quick Actions
-                Section {
-                    // Advance to Next Day
-                    Button {
-                        advanceDay()
-                    } label: {
-                        HStack {
-                            Label("Advance to Next Day", systemImage: "forward.fill")
-                                .foregroundColor(.orange)
-                            Spacer()
-                            if isAdvancingDay {
-                                ProgressView()
-                                    .tint(.orange)
-                            } else {
-                                Text("→ Day \(min(currentDay + 1, 15))")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    .disabled(currentDay >= 15 || isAdvancingDay)
-
-                    // Reset Progress
-                    Button {
-                        resetProgress()
-                    } label: {
-                        HStack {
-                            Label("Reset to Day 1", systemImage: "arrow.counterclockwise")
-                                .foregroundColor(.red)
-                            Spacer()
-                            if isResetting {
-                                ProgressView()
-                                    .tint(.red)
-                            }
-                        }
-                    }
-                    .disabled(isResetting)
-
-                    // Refresh from Server
-                    Button {
-                        Task {
-                            await questionnaireManager.loadJourneyProgress()
-                            await questionnaireManager.loadGatewayStatesFromServer()
-                            currentDay = questionnaireManager.journeyProgress?.currentDay ?? currentDay
-                            statusMessage = "Refreshed from server"
-                        }
-                    } label: {
-                        Label("Refresh from Server", systemImage: "arrow.triangle.2.circlepath")
-                            .foregroundColor(.blue)
-                    }
-
-                    #if DEBUG
-                    // Generate Mock Data (14 days)
-                    NavigationLink {
-                        MockPlaybackView()
-                            .environmentObject(themeManager)
-                            .environmentObject(questionnaireManager)
-                    } label: {
-                        HStack {
-                            Label("Generate 14 Days Data", systemImage: "wand.and.stars")
-                                .foregroundColor(.purple)
-                            Spacer()
-                            Text("~2 min")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    #endif
-                } header: {
-                    Text("Quick Actions")
-                } footer: {
-                    if let message = statusMessage {
-                        Text(message)
-                            .foregroundColor(.green)
-                    }
-                }
-
-                // Gateway States
-                Section {
-                    ForEach(questionnaireManager.gatewayStates, id: \.gatewayType) { state in
-                        HStack {
-                            Text(state.gatewayType.rawValue)
-                                .font(.caption)
-                            Spacer()
-                            Text(state.triggered ? "Triggered" : "Not triggered")
-                                .font(.caption)
-                                .foregroundColor(state.triggered ? .orange : .secondary)
-                        }
-                    }
-                } header: {
-                    Text("Gateway States")
-                }
-            }
-            .navigationTitle("Developer Panel")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-
-    private func advanceDay() {
-        isAdvancingDay = true
-        statusMessage = nil
-
-        Task {
-            do {
-                let response = try await ConvexService.shared.advanceToNextDay(debugMode: true)
-
-                if response.success {
-                    await questionnaireManager.loadJourneyProgress()
-                    await MainActor.run {
-                        if let newDay = response.newDay {
-                            currentDay = newDay
-                        }
-                        isAdvancingDay = false
-                        statusMessage = "Advanced to Day \(response.newDay ?? currentDay)"
-                        NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
-                    }
-                } else {
-                    await MainActor.run {
-                        isAdvancingDay = false
-                        statusMessage = "Failed: \(response.error ?? "Unknown error")"
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    isAdvancingDay = false
-                    statusMessage = "Error: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-
-    private func resetProgress() {
-        isResetting = true
-        statusMessage = nil
-
-        Task {
-            do {
-                try await ConvexService.shared.resetJourneyProgress()
-                await questionnaireManager.loadJourneyProgress()
-                await MainActor.run {
-                    currentDay = 1
-                    questionnaireManager.currentDay = 1
-                    isResetting = false
-                    statusMessage = "Reset to Day 1"
-                    NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
-                }
-            } catch {
-                await MainActor.run {
-                    isResetting = false
-                    statusMessage = "Reset failed: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Expansion Pack Task Card
 
 struct ExpansionPackTaskCard: View {
@@ -2838,9 +2921,20 @@ struct ExpansionPackQuestionnaireView: View {
                     _ = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
                 }
 
+                // For Days 6+, mark the scheduled expansion as completed in Convex
+                if currentDay >= 6 {
+                    try await ConvexService.shared.markDayExpansionCompleted(dayNumber: currentDay)
+                    print("[ExpansionPack] Marked day \(currentDay) expansion as completed in Convex")
+                }
+
                 await MainActor.run {
-                    // Mark these gateways as having completed their expansion
+                    // Mark these gateways as having completed their expansion (for Days 1-5)
                     QuestionnaireManager.shared.markExpansionCompleted(gateways: expansionInfo.triggeredGateways)
+
+                    // Also clear the cached scheduled expansion so UI updates
+                    if currentDay >= 6 {
+                        QuestionnaireManager.shared.scheduledExpansionForToday = nil
+                    }
 
                     isSaving = false
                     withAnimation {
@@ -2852,6 +2946,11 @@ struct ExpansionPackQuestionnaireView: View {
                 await MainActor.run {
                     // Still mark as completed locally
                     QuestionnaireManager.shared.markExpansionCompleted(gateways: expansionInfo.triggeredGateways)
+
+                    // Clear the cached expansion even on error - user completed it
+                    if currentDay >= 6 {
+                        QuestionnaireManager.shared.scheduledExpansionForToday = nil
+                    }
 
                     isSaving = false
                     // Still show completion - responses saved locally
@@ -2873,9 +2972,10 @@ struct ExpansionPackQuestionnaireView: View {
         // ===== STOP-BANG Auto-Derived =====
 
         // SB_5: BMI > 35?
-        if profile.heightCm > 0 && profile.weightKg > 0 {
-            let heightM = profile.heightCm / 100.0
-            let bmi = profile.weightKg / (heightM * heightM)
+        if let heightCm = profile.heightCm, let weightKg = profile.weightKg,
+           heightCm > 0 && weightKg > 0 {
+            let heightM = heightCm / 100.0
+            let bmi = weightKg / (heightM * heightM)
             let bmiOver35 = bmi > 35
             derivedResponses.append([
                 "questionId": "SB_5",

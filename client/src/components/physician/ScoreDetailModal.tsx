@@ -17,6 +17,7 @@ import {
   FileText,
   BarChart3,
   Clock,
+  Link2,
 } from "lucide-react";
 
 interface QuestionResponse {
@@ -24,6 +25,8 @@ interface QuestionResponse {
   questionText: string;
   responseValue: string;
   responseNumber?: number;
+  isDerived?: boolean;
+  derivedFromQuestionId?: string;
 }
 
 interface ScoreDetailModalProps {
@@ -448,11 +451,19 @@ export function ScoreDetailModal({
 
           {/* Question Responses */}
           <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700">
-            <div className="flex items-center gap-2 mb-3">
-              <FileText className="w-4 h-4 text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-400">
-                Individual Responses {displayResponses.length > 0 && `(${displayResponses.length} questions)`}
-              </h3>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-gray-400" />
+                <h3 className="text-sm font-medium text-gray-400">
+                  Individual Responses {displayResponses.length > 0 && `(${displayResponses.length} questions)`}
+                </h3>
+              </div>
+              {displayResponses.some(q => q.isDerived) && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 text-amber-400 text-xs rounded-full border border-amber-500/20">
+                  <Link2 className="w-3 h-3" />
+                  {displayResponses.filter(q => q.isDerived).length} derived from equivalent questions
+                </span>
+              )}
             </div>
             {questionResponses.length === 0 && fetchedResponses === undefined ? (
               <div className="flex items-center justify-center py-6">
@@ -462,13 +473,30 @@ export function ScoreDetailModal({
             ) : displayResponses.length > 0 ? (
               <div className="space-y-3 max-h-60 overflow-y-auto">
                 {displayResponses.map((q, i) => (
-                  <div key={i} className="flex items-start justify-between gap-4 p-3 bg-gray-900/50 rounded-lg">
+                  <div key={i} className={`flex items-start justify-between gap-4 p-3 rounded-lg ${
+                    q.isDerived ? "bg-amber-900/20 border border-amber-500/20" : "bg-gray-900/50"
+                  }`}>
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs text-gray-500 font-mono">{q.questionId}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 font-mono">{q.questionId}</span>
+                        {q.isDerived && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded border border-amber-500/30" title={`Derived from ${q.derivedFromQuestionId}`}>
+                            <Link2 className="w-3 h-3" />
+                            Derived
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-300 truncate">{q.questionText}</p>
+                      {q.isDerived && q.derivedFromQuestionId && (
+                        <p className="text-xs text-amber-400/70 mt-0.5">
+                          Inferred from response to {q.derivedFromQuestionId}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-medium text-white">{q.responseValue}</span>
+                      <span className={`text-sm font-medium ${q.isDerived ? "text-amber-300" : "text-white"}`}>
+                        {q.responseValue}
+                      </span>
                       {q.responseNumber !== undefined && (
                         <span className="text-xs text-gray-500 block">({q.responseNumber})</span>
                       )}

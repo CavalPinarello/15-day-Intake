@@ -39,7 +39,6 @@
 		4A5E3BD62C8E123456789C07 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD72C8E123456789C08 /* SettingsView.swift */; };
 		4A5E3BD82C8E123456789C09 /* TreatmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD92C8E123456789C0A /* TreatmentView.swift */; };
 		4A5E3BDA2C8E123456789C0B /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */; };
-		4A5E3BDC2C8E123456789C0D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDD2C8E123456789C0E /* SettingsView.swift */; };
 		4A5E3BDE2C8E123456789C0F /* QuestionnaireSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */; };
 		4A5E3BE02C8E123456789D01 /* WatchThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */; };
 		4A5E3BE22C8E123456789D03 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */; };
@@ -52,6 +51,8 @@
 		4A5E3C002C8E123456789G01 /* OnboardingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C012C8E123456789G02 /* OnboardingManager.swift */; };
 		4A5E3C022C8E123456789G03 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C032C8E123456789G04 /* OnboardingView.swift */; };
 		4A5E3C042C8E123456789G05 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */; };
+		4A5E3C062C8E123456789G07 /* DebugDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C072C8E123456789G08 /* DebugDataView.swift */; };
+		4A5E3C082C8E123456789G09 /* NotificationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C092C8E123456789G0A /* NotificationsSettingsView.swift */; };
 		4A5E3C102C8E123456789H01 /* SleepFactModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C112C8E123456789H02 /* SleepFactModels.swift */; };
 		4A5E3C122C8E123456789H03 /* RewardMomentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C132C8E123456789H04 /* RewardMomentManager.swift */; };
 		4A5E3C142C8E123456789H05 /* SleepFactRewardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C152C8E123456789H06 /* SleepFactRewardCard.swift */; };
@@ -67,6 +68,8 @@
 		4A5E3C722C8E123456789M03 /* MockDataGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */; };
 		4A5E3C742C8E123456789M05 /* MockPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */; };
 		4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */; };
+		4A5E3C7A2C8E123456789M11 /* ExpansionSchedulerTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C7B2C8E123456789M12 /* ExpansionSchedulerTestView.swift */; };
+		4A5E3C7C2C8E123456789M13 /* UnifiedDebugPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */; };
 		4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C812C8E123456789N02 /* ZoeLogo.swift */; };
 		4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */; };
 		5A316CB42EF4B0E00098C762 /* SourceComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CB32EF4B0E00098C762 /* SourceComparisonView.swift */; };
@@ -130,7 +133,6 @@
 		4A5E3BD72C8E123456789C08 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4A5E3BD92C8E123456789C0A /* TreatmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentView.swift; sourceTree = "<group>"; };
 		4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
-		4A5E3BDD2C8E123456789C0E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireSections.swift; sourceTree = "<group>"; };
 		4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchThemeManager.swift; sourceTree = "<group>"; };
 		4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
@@ -142,6 +144,8 @@
 		4A5E3C012C8E123456789G02 /* OnboardingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingManager.swift; sourceTree = "<group>"; };
 		4A5E3C032C8E123456789G04 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
+		4A5E3C072C8E123456789G08 /* DebugDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugDataView.swift; sourceTree = "<group>"; };
+		4A5E3C092C8E123456789G0A /* NotificationsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsView.swift; sourceTree = "<group>"; };
 		4A5E3C112C8E123456789H02 /* SleepFactModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepFactModels.swift; sourceTree = "<group>"; };
 		4A5E3C132C8E123456789H04 /* RewardMomentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RewardMomentManager.swift; sourceTree = "<group>"; };
 		4A5E3C152C8E123456789H06 /* SleepFactRewardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepFactRewardCard.swift; sourceTree = "<group>"; };
@@ -157,6 +161,8 @@
 		4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataGenerator.swift; sourceTree = "<group>"; };
 		4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlaybackController.swift; sourceTree = "<group>"; };
 		4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlaybackView.swift; sourceTree = "<group>"; };
+		4A5E3C7B2C8E123456789M12 /* ExpansionSchedulerTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpansionSchedulerTestView.swift; sourceTree = "<group>"; };
+		4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedDebugPanel.swift; sourceTree = "<group>"; };
 		4A5E3C812C8E123456789N02 /* ZoeLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoeLogo.swift; sourceTree = "<group>"; };
 		4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuroraBorealisView.swift; sourceTree = "<group>"; };
 		5A316CB32EF4B0E00098C762 /* SourceComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceComparisonView.swift; sourceTree = "<group>"; };
@@ -315,7 +321,6 @@
 				4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */,
 				4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */,
 				4A5E3BD92C8E123456789C0A /* TreatmentView.swift */,
-				4A5E3BDD2C8E123456789C0E /* SettingsView.swift */,
 				4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */,
 				4A5E3C152C8E123456789H06 /* SleepFactRewardCard.swift */,
 				5A316CB72EF4B1020098C762 /* MorningCheckInView.swift */,
@@ -326,6 +331,8 @@
 				4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */,
 				4A5E3C032C8E123456789G04 /* OnboardingView.swift */,
 				4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */,
+				4A5E3C072C8E123456789G08 /* DebugDataView.swift */,
+				4A5E3C092C8E123456789G0A /* NotificationsSettingsView.swift */,
 				4A5E3C812C8E123456789N02 /* ZoeLogo.swift */,
 				4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */,
 				5A316CE12EF4C0020098C762 /* JourneyIntroView.swift */,
@@ -415,6 +422,8 @@
 				4A5E3C732C8E123456789M04 /* MockDataGenerator.swift */,
 				4A5E3C752C8E123456789M06 /* MockPlaybackController.swift */,
 				4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */,
+				4A5E3C7B2C8E123456789M12 /* ExpansionSchedulerTestView.swift */,
+				4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */,
 			);
 			path = DevTools;
 			sourceTree = "<group>";
@@ -551,7 +560,6 @@
 				4A5E3BCD2C8E123456789B09 /* ConvexService.swift in Sources */,
 				4A5E3BD82C8E123456789C09 /* TreatmentView.swift in Sources */,
 				4A5E3BDA2C8E123456789C0B /* ThemeManager.swift in Sources */,
-				4A5E3BDC2C8E123456789C0D /* SettingsView.swift in Sources */,
 				4A5E3BDE2C8E123456789C0F /* QuestionnaireSections.swift in Sources */,
 				4A5E3BE22C8E123456789D03 /* WatchConnectivityManager.swift in Sources */,
 				4A5E3BF02C8E123456789E01 /* CircadianWaveBackground.swift in Sources */,
@@ -560,12 +568,16 @@
 				4A5E3C002C8E123456789G01 /* OnboardingManager.swift in Sources */,
 				4A5E3C022C8E123456789G03 /* OnboardingView.swift in Sources */,
 				4A5E3C042C8E123456789G05 /* ProfileSettingsView.swift in Sources */,
+				4A5E3C062C8E123456789G07 /* DebugDataView.swift in Sources */,
+				4A5E3C082C8E123456789G09 /* NotificationsSettingsView.swift in Sources */,
 				4A5E3C602C8E123456789L01 /* SleepInsightsViewModel.swift in Sources */,
 				5A316CB82EF4B1020098C762 /* MorningCheckInView.swift in Sources */,
 				4A5E3C702C8E123456789M01 /* MockDataTypes.swift in Sources */,
 				4A5E3C722C8E123456789M03 /* MockDataGenerator.swift in Sources */,
 				4A5E3C742C8E123456789M05 /* MockPlaybackController.swift in Sources */,
 				4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */,
+				4A5E3C7A2C8E123456789M11 /* ExpansionSchedulerTestView.swift in Sources */,
+				4A5E3C7C2C8E123456789M13 /* UnifiedDebugPanel.swift in Sources */,
 				4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */,
 				4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */,
 				5A316CC12EF4B1200098C762 /* GamificationManager.swift in Sources */,

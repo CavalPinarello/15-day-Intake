@@ -63,3 +63,4 @@ __pycache__/
 linear_client.py
 
 ZoeSleep/build/
+.build/
