@@ -73,6 +73,16 @@
 		5A316CC52EF4B1220098C762 /* XPDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CC42EF4B1220098C762 /* XPDisplayView.swift */; };
 		5A316CC72EF4B1230098C762 /* StreakBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CC62EF4B1230098C762 /* StreakBadgeView.swift */; };
 		5A316CC92EF4B1240098C762 /* BadgeUnlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CC82EF4B1240098C762 /* BadgeUnlockView.swift */; };
+		5A316CCC2EF4B1270098C762 /* CohortComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CCB2EF4B1260098C762 /* CohortComparisonView.swift */; };
+		5A316CCE2EF4B1290098C762 /* AnticipationTeaser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CCD2EF4B1280098C762 /* AnticipationTeaser.swift */; };
+		5A316CD02EF4B12B0098C762 /* ChallengesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CCF2EF4B12A0098C762 /* ChallengesView.swift */; };
+		5A316CD22EF4B12D0098C762 /* StreakFreezeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD12EF4B12C0098C762 /* StreakFreezeView.swift */; };
+		5A316CD42EF4B12F0098C762 /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */; };
+		5A316CD62EF4B1310098C762 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD72EF4B1320098C762 /* PushNotificationManager.swift */; };
+		5A316CD82EF4B1330098C762 /* ProgressiveInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */; };
+		5A316CE22EF4C0030098C762 /* JourneyIntroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CE12EF4C0020098C762 /* JourneyIntroView.swift */; };
+		5A316CE42EF4C0050098C762 /* JourneyIntroScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CE32EF4C0040098C762 /* JourneyIntroScreens.swift */; };
+		5A316CE62EF4C0070098C762 /* JourneyIntroIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CE52EF4C0060098C762 /* JourneyIntroIcons.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -147,6 +157,16 @@
 		5A316CC42EF4B1220098C762 /* XPDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPDisplayView.swift; sourceTree = "<group>"; };
 		5A316CC62EF4B1230098C762 /* StreakBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakBadgeView.swift; sourceTree = "<group>"; };
 		5A316CC82EF4B1240098C762 /* BadgeUnlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeUnlockView.swift; sourceTree = "<group>"; };
+		5A316CCB2EF4B1260098C762 /* CohortComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CohortComparisonView.swift; sourceTree = "<group>"; };
+		5A316CCD2EF4B1280098C762 /* AnticipationTeaser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnticipationTeaser.swift; sourceTree = "<group>"; };
+		5A316CCF2EF4B12A0098C762 /* ChallengesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengesView.swift; sourceTree = "<group>"; };
+		5A316CD12EF4B12C0098C762 /* StreakFreezeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakFreezeView.swift; sourceTree = "<group>"; };
+		5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
+		5A316CD72EF4B1320098C762 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
+		5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressiveInsightsView.swift; sourceTree = "<group>"; };
+		5A316CE12EF4C0020098C762 /* JourneyIntroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntroView.swift; sourceTree = "<group>"; };
+		5A316CE32EF4C0040098C762 /* JourneyIntroScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntroScreens.swift; sourceTree = "<group>"; };
+		5A316CE52EF4C0060098C762 /* JourneyIntroIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntroIcons.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -199,6 +219,7 @@
 				4A5E3BBD2C8E123456789A23 /* Services */,
 				4A5E3BBE2C8E123456789A24 /* Views */,
 				4A5E3C622C8E123456789L03 /* ViewModels */,
+				5A316CD52EF4B1300098C762 /* Utilities */,
 				4A5E3C782C8E123456789M09 /* DevTools */,
 				4A5E3B8D2C8E123456789A03 /* Assets.xcassets */,
 				4A5E3B8F2C8E123456789A25 /* Preview Content */,
@@ -243,6 +264,7 @@
 				5A316CC02EF4B1200098C762 /* GamificationManager.swift */,
 				4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */,
 				5A316CB52EF4B0F10098C762 /* NotificationManager.swift */,
+				5A316CD72EF4B1320098C762 /* PushNotificationManager.swift */,
 				4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */,
 				4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */,
 				4A5E3C132C8E123456789H04 /* RewardMomentManager.swift */,
@@ -282,6 +304,8 @@
 				4A5E3C052C8E123456789G06 /* ProfileSettingsView.swift */,
 				4A5E3C812C8E123456789N02 /* ZoeLogo.swift */,
 				4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */,
+				5A316CE12EF4C0020098C762 /* JourneyIntroView.swift */,
+				5A316CE02EF4C0010098C762 /* JourneyIntro */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -289,12 +313,34 @@
 		5A316CCA2EF4B1250098C762 /* Gamification */ = {
 			isa = PBXGroup;
 			children = (
+				5A316CCD2EF4B1280098C762 /* AnticipationTeaser.swift */,
 				5A316CC82EF4B1240098C762 /* BadgeUnlockView.swift */,
+				5A316CCF2EF4B12A0098C762 /* ChallengesView.swift */,
+				5A316CCB2EF4B1260098C762 /* CohortComparisonView.swift */,
 				5A316CC22EF4B1210098C762 /* ConfettiView.swift */,
+				5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */,
 				5A316CC62EF4B1230098C762 /* StreakBadgeView.swift */,
+				5A316CD12EF4B12C0098C762 /* StreakFreezeView.swift */,
 				5A316CC42EF4B1220098C762 /* XPDisplayView.swift */,
 			);
 			path = Gamification;
+			sourceTree = "<group>";
+		};
+		5A316CE02EF4C0010098C762 /* JourneyIntro */ = {
+			isa = PBXGroup;
+			children = (
+				5A316CE32EF4C0040098C762 /* JourneyIntroScreens.swift */,
+				5A316CE52EF4C0060098C762 /* JourneyIntroIcons.swift */,
+			);
+			path = JourneyIntro;
+			sourceTree = "<group>";
+		};
+		5A316CD52EF4B1300098C762 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */,
+			);
+			path = Utilities;
 			sourceTree = "<group>";
 		};
 		4A5E3BCF2C8E123456789B0B /* Models */ = {
@@ -499,6 +545,16 @@
 				5A316CC52EF4B1220098C762 /* XPDisplayView.swift in Sources */,
 				5A316CC72EF4B1230098C762 /* StreakBadgeView.swift in Sources */,
 				5A316CC92EF4B1240098C762 /* BadgeUnlockView.swift in Sources */,
+				5A316CCC2EF4B1270098C762 /* CohortComparisonView.swift in Sources */,
+				5A316CCE2EF4B1290098C762 /* AnticipationTeaser.swift in Sources */,
+				5A316CD02EF4B12B0098C762 /* ChallengesView.swift in Sources */,
+				5A316CD22EF4B12D0098C762 /* StreakFreezeView.swift in Sources */,
+				5A316CD42EF4B12F0098C762 /* HapticFeedback.swift in Sources */,
+				5A316CD62EF4B1310098C762 /* PushNotificationManager.swift in Sources */,
+				5A316CD82EF4B1330098C762 /* ProgressiveInsightsView.swift in Sources */,
+				5A316CE22EF4C0030098C762 /* JourneyIntroView.swift in Sources */,
+				5A316CE42EF4C0050098C762 /* JourneyIntroScreens.swift in Sources */,
+				5A316CE62EF4C0070098C762 /* JourneyIntroIcons.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -93,6 +93,100 @@ const scoreThresholds: Record<string, { ranges: Array<{ max: number; severity: s
       { max: 8, severity: "moderate", label: "High risk for OSA" },
     ],
   },
+  PSQI: {
+    ranges: [
+      { max: 5, severity: "normal", label: "Good sleep quality" },
+      { max: 10, severity: "mild", label: "Poor sleep quality" },
+      { max: 15, severity: "moderate", label: "Moderate sleep difficulty" },
+      { max: 21, severity: "severe", label: "Severe sleep difficulty" },
+    ],
+  },
+  "DBAS-16": {
+    ranges: [
+      { max: 40, severity: "normal", label: "Low dysfunctional beliefs" },
+      { max: 80, severity: "mild", label: "Mild dysfunctional beliefs" },
+      { max: 120, severity: "moderate", label: "Moderate dysfunctional beliefs" },
+      { max: 160, severity: "severe", label: "Severe dysfunctional beliefs" },
+    ],
+  },
+  FSS: {
+    ranges: [
+      { max: 3, severity: "normal", label: "No significant fatigue" },
+      { max: 4, severity: "mild", label: "Mild fatigue" },
+      { max: 5, severity: "moderate", label: "Moderate fatigue" },
+      { max: 7, severity: "severe", label: "Severe fatigue" },
+    ],
+  },
+  "FOSQ-10": {
+    ranges: [
+      { max: 15, severity: "severe", label: "Severe functional impairment" },
+      { max: 25, severity: "moderate", label: "Moderate functional impairment" },
+      { max: 35, severity: "mild", label: "Mild functional impairment" },
+      { max: 40, severity: "normal", label: "Normal functioning" },
+    ],
+  },
+  "DASS-21": {
+    ranges: [
+      { max: 9, severity: "normal", label: "Normal" },
+      { max: 13, severity: "mild", label: "Mild" },
+      { max: 20, severity: "moderate", label: "Moderate" },
+      { max: 27, severity: "severe", label: "Severe" },
+    ],
+  },
+  Berlin: {
+    ranges: [
+      { max: 1, severity: "normal", label: "Low risk for OSA" },
+      { max: 3, severity: "moderate", label: "High risk for OSA" },
+    ],
+  },
+  BPI: {
+    ranges: [
+      { max: 3, severity: "normal", label: "Mild pain" },
+      { max: 5, severity: "mild", label: "Moderate pain" },
+      { max: 7, severity: "moderate", label: "Moderately severe pain" },
+      { max: 10, severity: "severe", label: "Severe pain" },
+    ],
+  },
+  MEDAS: {
+    ranges: [
+      { max: 5, severity: "severe", label: "Poor Mediterranean diet adherence" },
+      { max: 8, severity: "moderate", label: "Moderate Mediterranean diet adherence" },
+      { max: 11, severity: "mild", label: "Good Mediterranean diet adherence" },
+      { max: 14, severity: "normal", label: "High Mediterranean diet adherence" },
+    ],
+  },
+  PROMIS: {
+    ranges: [
+      { max: 40, severity: "severe", label: "Severe cognitive impairment" },
+      { max: 45, severity: "moderate", label: "Moderate cognitive impairment" },
+      { max: 50, severity: "mild", label: "Mild cognitive impairment" },
+      { max: 100, severity: "normal", label: "Normal cognitive function" },
+    ],
+  },
+  "Sleep Hygiene": {
+    ranges: [
+      { max: 20, severity: "normal", label: "Good sleep hygiene" },
+      { max: 30, severity: "mild", label: "Fair sleep hygiene" },
+      { max: 40, severity: "moderate", label: "Poor sleep hygiene" },
+      { max: 50, severity: "severe", label: "Very poor sleep hygiene" },
+    ],
+  },
+  "PSAS-Cognitive": {
+    ranges: [
+      { max: 16, severity: "normal", label: "Low cognitive arousal" },
+      { max: 24, severity: "mild", label: "Mild cognitive arousal" },
+      { max: 32, severity: "moderate", label: "Moderate cognitive arousal" },
+      { max: 40, severity: "severe", label: "High cognitive arousal" },
+    ],
+  },
+  "PSAS-Somatic": {
+    ranges: [
+      { max: 16, severity: "normal", label: "Low somatic arousal" },
+      { max: 24, severity: "mild", label: "Mild somatic arousal" },
+      { max: 32, severity: "moderate", label: "Moderate somatic arousal" },
+      { max: 40, severity: "severe", label: "High somatic arousal" },
+    ],
+  },
 };
 
 function getSeverityForScore(questionnaireName: string, score: number): string {
@@ -162,6 +256,28 @@ export function ScoreDetailModal({
     "PSQI": 21,
     "Pittsburgh Sleep Quality Index": 21,
     "DBAS-16": 160,
+    "Dysfunctional Beliefs and Attitudes about Sleep": 160,
+    "FSS": 63,
+    "Fatigue Severity Scale": 63,
+    "FOSQ-10": 40,
+    "Functional Outcomes of Sleep Questionnaire": 40,
+    "DASS-21": 63,
+    "Depression Anxiety Stress Scales": 63,
+    "Berlin": 3,
+    "Berlin Questionnaire": 3,
+    "BPI": 10,
+    "Brief Pain Inventory": 10,
+    "MEDAS": 14,
+    "Mediterranean Diet Adherence Screener": 14,
+    "MEQ": 86,
+    "Morningness-Eveningness Questionnaire": 86,
+    "PROMIS": 100,
+    "PROMIS Cognitive": 100,
+    "Sleep Hygiene": 50,
+    "Sleep Hygiene Index": 50,
+    "PSAS-Cognitive": 40,
+    "PSAS-Somatic": 40,
+    "Pre-Sleep Arousal Scale": 80,
   };
   const maxScore = score.max_score || questionnaireMaxScores[score.questionnaire_name] || 28;
   const percentage = Math.round((score.score / maxScore) * 100);

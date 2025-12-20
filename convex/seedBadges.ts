@@ -253,6 +253,8 @@ const BADGE_DEFINITIONS = [
   // ============================================
   // Clinical Milestone Badges
   // ============================================
+
+  // Core Clinical Assessments
   {
     badge_id: "insomnia_informed",
     name: "Insomnia Informed",
@@ -313,20 +315,202 @@ const BADGE_DEFINITIONS = [
     rarity: "uncommon",
     order_index: 33,
   },
+
+  // Sleep Quality & Beliefs
   {
-    badge_id: "full_picture",
-    name: "Full Picture",
-    description: "Complete all 5 clinical assessments",
+    badge_id: "quality_questioner",
+    name: "Quality Questioner",
+    description: "Complete the PSQI (Pittsburgh Sleep Quality Index)",
     category: "clinical",
-    icon: "🔬",
+    icon: "📊",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 1,
+    unlock_condition_json: JSON.stringify({
+      assessment: "PSQI",
+    }),
+    xp_reward: 100,
+    rarity: "uncommon",
+    order_index: 34,
+  },
+  {
+    badge_id: "belief_buster",
+    name: "Belief Buster",
+    description: "Complete the DBAS-16 (Dysfunctional Beliefs about Sleep)",
+    category: "clinical",
+    icon: "💡",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 1,
+    unlock_condition_json: JSON.stringify({
+      assessment: "DBAS-16",
+    }),
+    xp_reward: 100,
+    rarity: "uncommon",
+    order_index: 35,
+  },
+  {
+    badge_id: "berlin_complete",
+    name: "Berlin Graduate",
+    description: "Complete the Berlin Questionnaire for sleep apnea risk",
+    category: "clinical",
+    icon: "🏛️",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 1,
+    unlock_condition_json: JSON.stringify({
+      assessment: "Berlin",
+    }),
+    xp_reward: 100,
+    rarity: "uncommon",
+    order_index: 36,
+  },
+
+  // Fatigue & Function
+  {
+    badge_id: "fatigue_fighter",
+    name: "Fatigue Fighter",
+    description: "Complete the FSS (Fatigue Severity Scale)",
+    category: "clinical",
+    icon: "⚡",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 1,
+    unlock_condition_json: JSON.stringify({
+      assessment: "FSS",
+    }),
+    xp_reward: 100,
+    rarity: "uncommon",
+    order_index: 37,
+  },
+  {
+    badge_id: "function_focused",
+    name: "Function Focused",
+    description: "Complete the FOSQ-10 (Functional Outcomes of Sleep)",
+    category: "clinical",
+    icon: "🎯",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 1,
+    unlock_condition_json: JSON.stringify({
+      assessment: "FOSQ-10",
+    }),
+    xp_reward: 100,
+    rarity: "uncommon",
+    order_index: 38,
+  },
+
+  // Chronotype & Lifestyle
+  {
+    badge_id: "chronotype_check",
+    name: "Chronotype Explorer",
+    description: "Complete the MEQ (Morningness-Eveningness Questionnaire)",
+    category: "clinical",
+    icon: "🌅",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 1,
+    unlock_condition_json: JSON.stringify({
+      assessment: "MEQ",
+    }),
+    xp_reward: 100,
+    rarity: "uncommon",
+    order_index: 39,
+  },
+  {
+    badge_id: "diet_detective",
+    name: "Diet Detective",
+    description: "Complete the MEDAS (Mediterranean Diet Adherence Screener)",
+    category: "clinical",
+    icon: "🥗",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 1,
+    unlock_condition_json: JSON.stringify({
+      assessment: "MEDAS",
+    }),
+    xp_reward: 100,
+    rarity: "uncommon",
+    order_index: 40,
+  },
+
+  // Mental Health (DASS-21)
+  {
+    badge_id: "dass_complete",
+    name: "Mental Health Check",
+    description: "Complete all three DASS-21 subscales (Depression, Anxiety, Stress)",
+    category: "clinical",
+    icon: "🧘",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 3,
+    unlock_condition_json: JSON.stringify({
+      assessments: ["DASS-D", "DASS-A", "DASS-S"],
+    }),
+    xp_reward: 150,
+    rarity: "uncommon",
+    order_index: 41,
+  },
+
+  // Pain Assessment
+  {
+    badge_id: "pain_profiler",
+    name: "Pain Profiler",
+    description: "Complete both BPI scales (Severity & Interference)",
+    category: "clinical",
+    icon: "💪",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 2,
+    unlock_condition_json: JSON.stringify({
+      assessments: ["BPI-S", "BPI-I"],
+    }),
+    xp_reward: 150,
+    rarity: "uncommon",
+    order_index: 42,
+  },
+
+  // Milestone Badges
+  {
+    badge_id: "core_five",
+    name: "Core Five",
+    description: "Complete the 5 core clinical assessments (ISI, PHQ-9, GAD-7, ESS, STOP-BANG)",
+    category: "clinical",
+    icon: "⭐",
     unlock_type: "assessment_complete",
     unlock_threshold: 5,
     unlock_condition_json: JSON.stringify({
-      assessments: ["ISI", "PHQ-9", "GAD-7", "STOP-BANG", "ESS"],
+      assessments: ["ISI", "PHQ-9", "GAD-7", "ESS", "STOP-BANG"],
     }),
     xp_reward: 300,
+    rarity: "rare",
+    order_index: 50,
+  },
+  {
+    badge_id: "sleep_scholar",
+    name: "Sleep Scholar",
+    description: "Complete 10 different clinical assessments",
+    category: "clinical",
+    icon: "📚",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 10,
+    unlock_condition_json: JSON.stringify({
+      min_assessments: 10,
+    }),
+    xp_reward: 500,
     rarity: "epic",
-    order_index: 34,
+    order_index: 51,
+  },
+  {
+    badge_id: "full_picture",
+    name: "Full Picture",
+    description: "Complete all available clinical assessments",
+    category: "clinical",
+    icon: "🔬",
+    unlock_type: "assessment_complete",
+    unlock_threshold: 17,
+    unlock_condition_json: JSON.stringify({
+      assessments: [
+        "ISI", "PHQ-9", "GAD-7", "ESS", "STOP-BANG",
+        "PSQI", "DBAS-16", "Berlin", "FSS", "FOSQ-10",
+        "MEQ", "MEDAS", "DASS-D", "DASS-A", "DASS-S",
+        "BPI-S", "BPI-I"
+      ],
+    }),
+    xp_reward: 1000,
+    rarity: "legendary",
+    order_index: 52,
   },
 ];
 
@@ -350,6 +534,7 @@ export const seedAll = mutation({
 
     // Insert all badge definitions
     let insertedCount = 0;
+    const now = Date.now();
     for (const badge of BADGE_DEFINITIONS) {
       await ctx.db.insert("badge_definitions", {
         badge_id: badge.badge_id,
@@ -364,6 +549,7 @@ export const seedAll = mutation({
         rarity: badge.rarity,
         order_index: badge.order_index,
         is_active: true,
+        created_at: now,
       });
       insertedCount++;
     }

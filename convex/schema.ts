@@ -485,6 +485,9 @@ export default defineSchema({
     priority: v.optional(v.number()), // 1-5, higher = more important
     display_order: v.optional(v.number()),
 
+    // Time window for session-based display
+    time_window: v.optional(v.string()), // "morning", "afternoon", "evening", "night"
+
     // Status tracking
     status: v.string(), // 'draft', 'active', 'paused', 'completed', 'cancelled'
     paused_reason: v.optional(v.string()),
@@ -513,6 +516,11 @@ export default defineSchema({
     task_instructions: v.string(),
     timing: v.optional(v.string()), // "morning", "evening", etc.
     scheduled_time: v.optional(v.string()), // HH:MM
+
+    // Time window enforcement (for session-based UI)
+    time_window: v.optional(v.string()), // "morning", "afternoon", "evening", "night"
+    window_start_hour: v.optional(v.number()), // 5 for 5 AM
+    window_end_hour: v.optional(v.number()), // 12 for noon
 
     // Completion tracking
     status: v.string(), // "pending", "completed", "skipped", "missed"
@@ -1187,5 +1195,80 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_user_message", ["user_id", "message_id"])
     .index("by_shown_at", ["shown_at"]),
+
+  // ============================================
+  // Patient Journey & Progressive Insights
+  // Post-15-Day Treatment Experience
+  // ============================================
+
+  // Tracks patient's overall journey phase (intake → analysis → treatment)
+  patient_journey_status: defineTable({
+    user_id: v.id("users"),
+    phase: v.string(), // "intake", "analysis", "treatment_pending", "treatment_active"
+    intake_completed_at: v.optional(v.number()),
+    // Analysis stage progression (1-4)
+    analysis_stage: v.optional(v.number()), // 1=collected, 2=patterns, 3=preparing, 4=ready
+    analysis_stage_updated_at: v.optional(v.number()),
+    // Treatment activation
+    treatment_activated_at: v.optional(v.number()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_phase", ["phase"]),
+
+  // Progressive insight teaser definitions
+  insight_teasers: defineTable({
+    teaser_id: v.string(), // e.g., "sleep_efficiency_trend", "wake_pattern"
+    unlock_day: v.number(), // Day when insight becomes available
+    unlock_data_points: v.optional(v.number()), // Alternative: unlock after N data points
+    teaser_type: v.string(), // "countdown" | "discovery"
+    title: v.string(), // "Sleep Efficiency Trend"
+    locked_description: v.string(), // Shown before unlock: "3 more nights to detect your rhythm"
+    unlocked_description: v.optional(v.string()), // Full insight text when unlocked
+    // Discovery hints (progressive hints as data builds)
+    discovery_hints_json: v.optional(v.string()), // JSON array of hint levels
+    // Categorization
+    category: v.string(), // "efficiency", "timing", "quality", "pattern"
+    icon: v.string(), // SF Symbol name
+    color: v.optional(v.string()), // Hex color for UI
+    order_index: v.number(),
+    is_active: v.boolean(),
+    created_at: v.number(),
+  })
+    .index("by_teaser_id", ["teaser_id"])
+    .index("by_unlock_day", ["unlock_day"])
+    .index("by_category", ["category"]),
+
+  // User's progress toward unlocking insights
+  user_insight_progress: defineTable({
+    user_id: v.id("users"),
+    teaser_id: v.string(), // References insight_teasers.teaser_id
+    unlocked: v.boolean(),
+    unlocked_at: v.optional(v.number()),
+    data_points_collected: v.number(), // How many data points contributed
+    discovery_hint_level: v.number(), // 0-3 for progressive hints
+    last_hint_shown_at: v.optional(v.number()),
+    // Insight data when unlocked
+    insight_value_json: v.optional(v.string()), // JSON with computed insight data
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_teaser", ["user_id", "teaser_id"])
+    .index("by_unlocked", ["unlocked"]),
+
+  // Time window definitions for treatment tasks
+  task_time_windows: defineTable({
+    window_id: v.string(), // "morning", "afternoon", "evening", "night"
+    name: v.string(), // "Morning"
+    description: v.optional(v.string()), // "5 AM - 12 PM"
+    icon: v.string(), // SF Symbol name
+    color: v.string(), // Hex color
+    start_hour: v.number(), // 5 for 5 AM
+    end_hour: v.number(), // 12 for noon
+    order_index: v.number(),
+  })
+    .index("by_window_id", ["window_id"]),
 });
 

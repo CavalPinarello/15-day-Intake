@@ -152,6 +152,7 @@ class OnboardingManager: ObservableObject {
     @Published var profile: OnboardingProfile = OnboardingProfile()
     @Published var isOnboardingComplete: Bool = false
     @Published var isCheckingServerState: Bool = false
+    @Published var hasSeenJourneyIntro: Bool = false
 
     // Temporary editing state
     @Published var tempHeightFeet: Int = 5
@@ -163,12 +164,14 @@ class OnboardingManager: ObservableObject {
     private let userDefaultsKey = "onboardingProfile"
     private let onboardingCompleteKey = "onboardingComplete"
     private let lastUserIdKey = "lastOnboardingUserId"
+    private let journeyIntroSeenKey = "hasSeenJourneyIntro"
 
     // MARK: - Initialization
 
     private init() {
         loadLocalProfile()
         detectSystemMeasurementSystem()
+        hasSeenJourneyIntro = UserDefaults.standard.bool(forKey: journeyIntroSeenKey)
     }
 
     // MARK: - User-Aware Onboarding State
@@ -295,8 +298,10 @@ class OnboardingManager: ObservableObject {
         profile = OnboardingProfile()
         currentStep = .name  // Start at name step (no welcome step)
         isOnboardingComplete = false
+        hasSeenJourneyIntro = false
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
+        UserDefaults.standard.set(false, forKey: journeyIntroSeenKey)
         detectSystemMeasurementSystem()
     }
 
@@ -306,8 +311,10 @@ class OnboardingManager: ObservableObject {
         profile = OnboardingProfile()
         currentStep = .name  // Start at name step (no welcome step)
         isOnboardingComplete = false
+        hasSeenJourneyIntro = false
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
+        UserDefaults.standard.set(false, forKey: journeyIntroSeenKey)
         print("[Onboarding] Cleared for sign out")
     }
 
@@ -572,5 +579,21 @@ class OnboardingManager: ObservableObject {
     /// Whether onboarding has been completed (for app root view)
     var hasCompletedOnboarding: Bool {
         return isOnboardingComplete || profile.onboardingCompleted
+    }
+
+    // MARK: - Journey Introduction
+
+    /// Mark the journey introduction as seen (called when user completes or skips intro)
+    func markJourneyIntroSeen() {
+        hasSeenJourneyIntro = true
+        UserDefaults.standard.set(true, forKey: journeyIntroSeenKey)
+        print("[Onboarding] Journey intro marked as seen")
+    }
+
+    /// Reset journey intro for testing purposes
+    func resetJourneyIntro() {
+        hasSeenJourneyIntro = false
+        UserDefaults.standard.set(false, forKey: journeyIntroSeenKey)
+        print("[Onboarding] Journey intro reset")
     }
 }

@@ -80,6 +80,13 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Cross-Platform Questionnaire Audit & Fix:** Complete scoring system verification (Dec 20, 2025)
+  - Fixed STOP-BANG scoring: Now uses SB_1-8 IDs (was broken with numeric IDs)
+  - Added 4 new scoring functions: PROMIS Cognitive, Sleep Hygiene, PSAS (cognitive+somatic)
+  - Fixed PSQI Component 5: Prorated scoring for fewer disturbance questions
+  - Added 16 missing expansion modules to iOS QuestionnaireManager
+  - Updated physician dashboard ScoreDetailModal with 12 new questionnaire thresholds
+  - Verified gateway detection works correctly across iOS → Convex → Dashboard
 - **Developer Mode for Testers:** Physician dashboard toggle for fast-track testing (Dec 19, 2025)
   - Toggle developer mode on/off per patient from patient detail page
   - Jump to any day (1-15) instantly when developer mode is enabled

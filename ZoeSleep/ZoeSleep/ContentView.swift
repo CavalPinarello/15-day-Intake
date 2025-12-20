@@ -42,6 +42,9 @@ struct MainDashboardView: View {
     @State private var navigateToSleepDiary = false
     @State private var sleepDiarySelectedDay: Int? = nil
 
+    // Journey introduction for first-time users
+    @State private var showJourneyIntro = false
+
     // Poll every 5 seconds when app is active (for cross-device sync)
     private let refreshInterval: TimeInterval = 5.0
 
@@ -84,6 +87,11 @@ struct MainDashboardView: View {
             JourneyOverviewView(currentDay: $currentDay)
                 .environmentObject(themeManager)
         }
+        // Journey Introduction for first-time users
+        .fullScreenCover(isPresented: $showJourneyIntro) {
+            JourneyIntroView(isPresented: $showJourneyIntro)
+                .environmentObject(themeManager)
+        }
         // Hidden NavigationLink for programmatic navigation to Sleep Diary
         .background(
             NavigationLink(
@@ -98,6 +106,14 @@ struct MainDashboardView: View {
         .onAppear {
             loadProgress()
             startRefreshTimer()
+
+            // Show journey introduction for first-time users
+            if !OnboardingManager.shared.hasSeenJourneyIntro {
+                // Small delay to ensure dashboard is visible first
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showJourneyIntro = true
+                }
+            }
         }
         .onDisappear {
             stopRefreshTimer()

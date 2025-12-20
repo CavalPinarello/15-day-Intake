@@ -252,46 +252,42 @@ function calculateESS(responses: Map<string, number>): QuestionnaireScore {
 }
 
 // STOP-BANG (Sleep Apnea Risk) - 8 yes/no questions
+// iOS uses SB_1 through SB_8 with yesNo type (1=Yes, 0=No)
 function calculateSTOPBANG(responses: Map<string, number>, demographics: { age?: number; sex?: string; bmi?: number }): QuestionnaireScore {
   let score = 0;
   let answered = 0;
 
-  // S - Snore (question 19)
-  const snore = responses.get("19");
+  // S - Snore loudly (SB_1)
+  const snore = responses.get("SB_1");
   if (snore !== undefined) { if (snore === 1) score++; answered++; }
 
-  // T - Tired (question 17) - 5-point scale: Never(0), Rarely(1), Sometimes(2), Often(3), Always(4)
-  // Q21 was removed from iOS as redundant with Q17. Score point if Often (3) or Always (4)
-  const tired = responses.get("17");
-  if (tired !== undefined) { if (tired >= 3) score++; answered++; }
+  // T - Tired/fatigued during daytime (SB_2)
+  const tired = responses.get("SB_2");
+  if (tired !== undefined) { if (tired === 1) score++; answered++; }
 
-  // O - Observed apnea (question 20)
-  const observed = responses.get("20");
+  // O - Observed stop breathing (SB_3)
+  const observed = responses.get("SB_3");
   if (observed !== undefined) { if (observed === 1) score++; answered++; }
 
-  // P - Pressure (high blood pressure, question 27)
-  const pressure = responses.get("27");
+  // P - Blood Pressure high (SB_4)
+  const pressure = responses.get("SB_4");
   if (pressure !== undefined) { if (pressure === 1) score++; answered++; }
 
-  // B - BMI > 35
-  if (demographics.bmi !== undefined) {
-    if (demographics.bmi > 35) score++;
-    answered++;
-  }
+  // B - BMI > 35 (SB_5) - asked directly as yes/no in iOS
+  const bmi = responses.get("SB_5");
+  if (bmi !== undefined) { if (bmi === 1) score++; answered++; }
 
-  // A - Age > 50
-  if (demographics.age !== undefined) {
-    if (demographics.age > 50) score++;
-    answered++;
-  }
+  // A - Age > 50 (SB_6) - asked directly as yes/no in iOS
+  const age = responses.get("SB_6");
+  if (age !== undefined) { if (age === 1) score++; answered++; }
 
-  // N - Neck circumference > 40cm (usually not collected, skip)
+  // N - Neck circumference > 40cm (SB_7)
+  const neck = responses.get("SB_7");
+  if (neck !== undefined) { if (neck === 1) score++; answered++; }
 
-  // G - Gender = Male
-  if (demographics.sex !== undefined) {
-    if (demographics.sex.toLowerCase() === "male") score++;
-    answered++;
-  }
+  // G - Gender = Male (SB_8)
+  const gender = responses.get("SB_8");
+  if (gender !== undefined) { if (gender === 1) score++; answered++; }
 
   let interpretation = "Not enough data";
   let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
@@ -367,7 +363,8 @@ function calculatePSQI(responses: Map<string, number>): QuestionnaireScore {
     }
   }
 
-  // Component 5: Sleep Disturbances (PSQI_5b through PSQI_5j sum)
+  // Component 5: Sleep Disturbances (PSQI_5b, PSQI_5c minimum - prorated if fewer questions answered)
+  // iOS app uses shortened version: PSQI_5b (difficulty breathing) and PSQI_5c (bathroom)
   const disturbanceQuestions = ["PSQI_5b", "PSQI_5c", "PSQI_5d", "PSQI_5e", "PSQI_5f", "PSQI_5g", "PSQI_5h", "PSQI_5i", "PSQI_5j"];
   let disturbanceSum = 0;
   let disturbanceCount = 0;
@@ -378,10 +375,12 @@ function calculatePSQI(responses: Map<string, number>): QuestionnaireScore {
       disturbanceCount++;
     }
   }
-  if (disturbanceCount >= 5) {
-    if (disturbanceSum === 0) totalScore += 0;
-    else if (disturbanceSum <= 9) totalScore += 1;
-    else if (disturbanceSum <= 18) totalScore += 2;
+  if (disturbanceCount >= 2) {
+    // Prorate to 9-question equivalent (max 27 points for original scale)
+    const proratedSum = (disturbanceSum / disturbanceCount) * 9;
+    if (proratedSum === 0) totalScore += 0;
+    else if (proratedSum <= 9) totalScore += 1;
+    else if (proratedSum <= 18) totalScore += 2;
     else totalScore += 3;
     componentsCalculated++;
   }
@@ -642,10 +641,10 @@ function calculateDASS21(responses: Map<string, number>): { depression: Question
 
 // BPI (Brief Pain Inventory) - Pain severity and interference
 function calculateBPI(responses: Map<string, number>): { severity: QuestionnaireScore; interference: QuestionnaireScore } {
-  // Severity items: worst, least, average, now (BPI_3 to BPI_6)
-  const severityItems = ["BPI_3", "BPI_4", "BPI_5", "BPI_6"];
-  // Interference items: general activity, mood, walking, work, relations, sleep, enjoyment (BPI_9a to BPI_9g)
-  const interferenceItems = ["BPI_9a", "BPI_9b", "BPI_9c", "BPI_9d", "BPI_9e", "BPI_9f", "BPI_9g"];
+  // Severity items: worst (1), least (2), average (3), now (4) - 0-10 scale each
+  const severityItems = ["BPI_1", "BPI_2", "BPI_3", "BPI_4"];
+  // Interference items: general activity, mood, walking, work, relations, sleep, enjoyment (5-11) - 0-10 scale each
+  const interferenceItems = ["BPI_5", "BPI_6", "BPI_7", "BPI_8", "BPI_9", "BPI_10", "BPI_11"];
 
   const calculateSubscale = (items: string[], name: string, abbrev: string): QuestionnaireScore => {
     let total = 0;
@@ -749,6 +748,112 @@ function calculateMEQ(responses: Map<string, number>): QuestionnaireScore {
   }
 
   return { name: "Morningness-Eveningness Questionnaire", abbreviation: "MEQ", score: null, maxScore: 86, interpretation, severity, questionsAnswered: answered, questionsRequired: 19 };
+}
+
+// PROMIS Cognitive Function - 6 questions, 1-5 scale each (higher = worse)
+function calculatePROMIS(responses: Map<string, number>): QuestionnaireScore {
+  const promisQuestions = Array.from({ length: 6 }, (_, i) => `PROMIS_COG_${i + 1}`);
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of promisQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 4) {
+    // Raw score 6-30, convert to T-score approximation
+    // T-score: 50 is average, higher = more cognitive concerns
+    const rawMean = total / answered;
+    const tScore = Math.round(50 + (rawMean - 3) * 10);
+
+    if (tScore <= 45) { interpretation = "No cognitive concerns"; severity = "normal"; }
+    else if (tScore <= 55) { interpretation = "Mild cognitive concerns"; severity = "mild"; }
+    else if (tScore <= 65) { interpretation = "Moderate cognitive concerns"; severity = "moderate"; }
+    else { interpretation = "Significant cognitive concerns"; severity = "severe"; }
+
+    return { name: "PROMIS Cognitive Function", abbreviation: "PROMIS-Cog", score: tScore, maxScore: 80, interpretation, severity, questionsAnswered: answered, questionsRequired: 6 };
+  }
+
+  return { name: "PROMIS Cognitive Function", abbreviation: "PROMIS-Cog", score: null, maxScore: 80, interpretation, severity, questionsAnswered: answered, questionsRequired: 6 };
+}
+
+// Sleep Hygiene Index - 10 questions, 1-5 scale each (higher = better hygiene)
+function calculateSleepHygiene(responses: Map<string, number>): QuestionnaireScore {
+  const shQuestions = Array.from({ length: 10 }, (_, i) => `SH_${i + 1}`);
+  let total = 0;
+  let answered = 0;
+
+  for (const qId of shQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      total += val;
+      answered++;
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 7) {
+    const avgScore = total / answered;
+    const score = Math.round(avgScore * 10) / 10;
+
+    if (score >= 4) { interpretation = "Excellent sleep hygiene"; severity = "normal"; }
+    else if (score >= 3) { interpretation = "Good sleep hygiene"; severity = "normal"; }
+    else if (score >= 2) { interpretation = "Fair sleep hygiene - room for improvement"; severity = "mild"; }
+    else { interpretation = "Poor sleep hygiene - significant changes recommended"; severity = "moderate"; }
+
+    return { name: "Sleep Hygiene Index", abbreviation: "SHI", score: Math.round(total), maxScore: 50, interpretation, severity, questionsAnswered: answered, questionsRequired: 10 };
+  }
+
+  return { name: "Sleep Hygiene Index", abbreviation: "SHI", score: null, maxScore: 50, interpretation, severity, questionsAnswered: answered, questionsRequired: 10 };
+}
+
+// PSAS (Pre-Sleep Arousal Scale) - Cognitive (8) + Somatic (8) = 16 questions, 1-5 scale
+function calculatePSAS(responses: Map<string, number>): { cognitive: QuestionnaireScore; somatic: QuestionnaireScore } {
+  const cognitiveItems = Array.from({ length: 8 }, (_, i) => `PSAS_C${i + 1}`);
+  const somaticItems = Array.from({ length: 8 }, (_, i) => `PSAS_S${i + 1}`);
+
+  const calculateSubscale = (items: string[], name: string, abbrev: string): QuestionnaireScore => {
+    let total = 0;
+    let answered = 0;
+
+    for (const qId of items) {
+      const val = responses.get(qId);
+      if (val !== undefined) {
+        total += val;
+        answered++;
+      }
+    }
+
+    let interpretation = "Not enough data";
+    let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+    if (answered >= 6) {
+      const avgScore = total / answered;
+
+      if (avgScore <= 2) { interpretation = `Low ${name.toLowerCase()} arousal`; severity = "normal"; }
+      else if (avgScore <= 3) { interpretation = `Moderate ${name.toLowerCase()} arousal`; severity = "mild"; }
+      else if (avgScore <= 4) { interpretation = `High ${name.toLowerCase()} arousal`; severity = "moderate"; }
+      else { interpretation = `Very high ${name.toLowerCase()} arousal`; severity = "severe"; }
+
+      return { name: `Pre-Sleep Arousal - ${name}`, abbreviation: abbrev, score: Math.round(total), maxScore: 40, interpretation, severity, questionsAnswered: answered, questionsRequired: 8 };
+    }
+
+    return { name: `Pre-Sleep Arousal - ${name}`, abbreviation: abbrev, score: null, maxScore: 40, interpretation, severity, questionsAnswered: answered, questionsRequired: 8 };
+  };
+
+  return {
+    cognitive: calculateSubscale(cognitiveItems, "Cognitive", "PSAS-C"),
+    somatic: calculateSubscale(somaticItems, "Somatic", "PSAS-S"),
+  };
 }
 
 // ============================================
@@ -1353,14 +1458,6 @@ export const getPillarStats = query({
  */
 export const getPatientVisibleFields = query({
   args: { userId: v.id("users") },
-  returns: v.optional(
-    v.object({
-      _id: v.id("patient_visible_fields"),
-      field_config_json: v.string(),
-      updated_at: v.number(),
-      updated_by_physician_id: v.optional(v.string()),
-    })
-  ),
   handler: async (ctx, args) => {
     const config = await ctx.db
       .query("patient_visible_fields")
@@ -2341,6 +2438,16 @@ export const calculatePatientScores = query({
     const bpi = calculateBPI(responseMap);
     scores.push(bpi.severity, bpi.interference);
 
+    // Add PROMIS Cognitive
+    scores.push(calculatePROMIS(responseMap));
+
+    // Add Sleep Hygiene
+    scores.push(calculateSleepHygiene(responseMap));
+
+    // Add PSAS subscales
+    const psas = calculatePSAS(responseMap);
+    scores.push(psas.cognitive, psas.somatic);
+
     // Calculate sleep log metrics (SL_, SD_, and CSD_ prefixes)
     const sleepLogResponses = allResponses.filter(r =>
       r.question_id.startsWith("SL_") || r.question_id.startsWith("SD_") || r.question_id.startsWith("CSD_")
@@ -2505,6 +2612,16 @@ export const persistCalculatedScores = mutation({
     // Add BPI subscales
     const bpi = calculateBPI(responseMap);
     scores.push(bpi.severity, bpi.interference);
+
+    // Add PROMIS Cognitive
+    scores.push(calculatePROMIS(responseMap));
+
+    // Add Sleep Hygiene
+    scores.push(calculateSleepHygiene(responseMap));
+
+    // Add PSAS subscales
+    const psas = calculatePSAS(responseMap);
+    scores.push(psas.cognitive, psas.somatic);
 
     // Persist each score that has a valid value
     const savedScores: string[] = [];

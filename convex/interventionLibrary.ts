@@ -569,6 +569,7 @@ export const assignIntervention = mutation({
     customInstructions: v.optional(v.string()),
     priority: v.optional(v.number()),
     physicianId: v.optional(v.string()),
+    timeWindow: v.optional(v.string()), // "morning", "afternoon", "evening", "night"
   },
   returns: v.id("user_interventions"),
   handler: async (ctx, args) => {
@@ -578,6 +579,21 @@ export const assignIntervention = mutation({
     const intervention = await ctx.db.get(args.interventionId);
     if (!intervention) {
       throw new Error("Intervention not found");
+    }
+
+    // Determine time window from timing if not explicitly provided
+    let timeWindow = args.timeWindow;
+    if (!timeWindow && args.timing) {
+      // Map timing to time window
+      const timingToWindow: Record<string, string> = {
+        morning: "morning",
+        midday: "afternoon",
+        afternoon: "afternoon",
+        evening: "evening",
+        pre_bed: "night",
+        post_meal: "afternoon",
+      };
+      timeWindow = timingToWindow[args.timing];
     }
 
     const userInterventionId = await ctx.db.insert("user_interventions", {
@@ -594,6 +610,7 @@ export const assignIntervention = mutation({
       custom_instructions: args.customInstructions,
       patient_instructions: intervention.instructions_text,
       priority: args.priority || 3,
+      time_window: timeWindow,
       status: "draft",
       assigned_at: now,
     });
@@ -692,6 +709,9 @@ export const activatePatientInterventions = mutation({
       const interventionData = await ctx.db.get(intervention.intervention_id);
       if (!interventionData) continue;
 
+      // Get time window hours for the assigned window
+      const timeWindowHours = getTimeWindowHours(intervention.time_window);
+
       for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
         const taskDate = new Date();
         taskDate.setDate(taskDate.getDate() + dayOffset);
@@ -709,6 +729,10 @@ export const activatePatientInterventions = mutation({
               intervention.patient_instructions || interventionData.instructions_text,
             timing: intervention.timing,
             scheduled_time: intervention.specific_time,
+            // Time window enforcement
+            time_window: intervention.time_window,
+            window_start_hour: timeWindowHours?.start,
+            window_end_hour: timeWindowHours?.end,
             status: "pending",
             created_at: now,
             updated_at: now,
@@ -766,6 +790,22 @@ function shouldCreateTaskForDate(
   }
 
   return false;
+}
+
+// Time window definitions (matches seedInsightTeasers.ts)
+const TIME_WINDOW_HOURS: Record<string, { start: number; end: number }> = {
+  morning: { start: 5, end: 12 },
+  afternoon: { start: 12, end: 17 },
+  evening: { start: 17, end: 21 },
+  night: { start: 21, end: 24 },
+};
+
+// Helper function to get time window hours
+function getTimeWindowHours(
+  timeWindow?: string
+): { start: number; end: number } | undefined {
+  if (!timeWindow) return undefined;
+  return TIME_WINDOW_HOURS[timeWindow];
 }
 
 /**
@@ -917,17 +957,235 @@ export const getTodaysTasks = query({
 });
 
 /**
- * Complete a task
+ * Get tasks grouped by time window for session-based display
+ */
+export const getTasksByTimeWindow = query({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.object({
+    morning: v.array(
+      v.object({
+        _id: v.id("user_daily_tasks"),
+        task_name: v.string(),
+        task_instructions: v.string(),
+        status: v.string(),
+        scheduled_time: v.optional(v.string()),
+        priority: v.optional(v.number()),
+        intervention_id: v.string(),
+        isLocked: v.boolean(),
+        unlocksAt: v.optional(v.string()),
+      })
+    ),
+    afternoon: v.array(
+      v.object({
+        _id: v.id("user_daily_tasks"),
+        task_name: v.string(),
+        task_instructions: v.string(),
+        status: v.string(),
+        scheduled_time: v.optional(v.string()),
+        priority: v.optional(v.number()),
+        intervention_id: v.string(),
+        isLocked: v.boolean(),
+        unlocksAt: v.optional(v.string()),
+      })
+    ),
+    evening: v.array(
+      v.object({
+        _id: v.id("user_daily_tasks"),
+        task_name: v.string(),
+        task_instructions: v.string(),
+        status: v.string(),
+        scheduled_time: v.optional(v.string()),
+        priority: v.optional(v.number()),
+        intervention_id: v.string(),
+        isLocked: v.boolean(),
+        unlocksAt: v.optional(v.string()),
+      })
+    ),
+    night: v.array(
+      v.object({
+        _id: v.id("user_daily_tasks"),
+        task_name: v.string(),
+        task_instructions: v.string(),
+        status: v.string(),
+        scheduled_time: v.optional(v.string()),
+        priority: v.optional(v.number()),
+        intervention_id: v.string(),
+        isLocked: v.boolean(),
+        unlocksAt: v.optional(v.string()),
+      })
+    ),
+    currentWindow: v.string(),
+    nextWindowUnlock: v.optional(
+      v.object({
+        window: v.string(),
+        unlocksAt: v.string(),
+        minutesUntilUnlock: v.number(),
+      })
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const today = new Date().toISOString().split("T")[0];
+    const currentHour = new Date().getHours();
+
+    // Determine current window
+    let currentWindow = "morning";
+    if (currentHour >= 21) currentWindow = "night";
+    else if (currentHour >= 17) currentWindow = "evening";
+    else if (currentHour >= 12) currentWindow = "afternoon";
+    else if (currentHour >= 5) currentWindow = "morning";
+    else currentWindow = "night"; // Before 5 AM is still "night"
+
+    // Get today's tasks
+    const tasks = await ctx.db
+      .query("user_daily_tasks")
+      .withIndex("by_user_date", (q) =>
+        q.eq("user_id", args.userId).eq("task_date", today)
+      )
+      .collect();
+
+    // Group tasks by time window
+    const grouped: Record<string, typeof enrichedTasks> = {
+      morning: [],
+      afternoon: [],
+      evening: [],
+      night: [],
+    };
+
+    const enrichedTasks = await Promise.all(
+      tasks.map(async (task) => {
+        const userIntervention = await ctx.db.get(task.user_intervention_id);
+        const intervention = await ctx.db.get(task.intervention_id);
+
+        const window = task.time_window || "morning";
+        const isLocked = isWindowLocked(window, currentHour);
+        const unlocksAt = isLocked ? getWindowUnlockTime(window) : undefined;
+
+        return {
+          _id: task._id,
+          task_name: task.task_name,
+          task_instructions: task.task_instructions,
+          status: task.status,
+          scheduled_time: task.scheduled_time,
+          priority: userIntervention?.priority,
+          intervention_id: intervention?.intervention_id || "",
+          time_window: window,
+          isLocked,
+          unlocksAt,
+        };
+      })
+    );
+
+    // Group tasks
+    for (const task of enrichedTasks) {
+      const window = task.time_window;
+      if (grouped[window]) {
+        grouped[window].push({
+          _id: task._id,
+          task_name: task.task_name,
+          task_instructions: task.task_instructions,
+          status: task.status,
+          scheduled_time: task.scheduled_time,
+          priority: task.priority,
+          intervention_id: task.intervention_id,
+          isLocked: task.isLocked,
+          unlocksAt: task.unlocksAt,
+        });
+      }
+    }
+
+    // Sort each group by priority
+    for (const window of Object.keys(grouped)) {
+      grouped[window].sort((a, b) => (b.priority || 3) - (a.priority || 3));
+    }
+
+    // Calculate next window unlock
+    let nextWindowUnlock: {
+      window: string;
+      unlocksAt: string;
+      minutesUntilUnlock: number;
+    } | undefined;
+
+    const windowOrder = ["morning", "afternoon", "evening", "night"];
+    const currentIndex = windowOrder.indexOf(currentWindow);
+    if (currentIndex < windowOrder.length - 1) {
+      const nextWindow = windowOrder[currentIndex + 1];
+      const unlockHour = TIME_WINDOW_HOURS[nextWindow]?.start || 12;
+      const minutesUntil = (unlockHour - currentHour) * 60 - new Date().getMinutes();
+
+      if (minutesUntil > 0) {
+        nextWindowUnlock = {
+          window: nextWindow,
+          unlocksAt: `${unlockHour}:00`,
+          minutesUntilUnlock: minutesUntil,
+        };
+      }
+    }
+
+    return {
+      morning: grouped.morning,
+      afternoon: grouped.afternoon,
+      evening: grouped.evening,
+      night: grouped.night,
+      currentWindow,
+      nextWindowUnlock,
+    };
+  },
+});
+
+// Helper to check if a window is locked
+function isWindowLocked(window: string, currentHour: number): boolean {
+  const windowHours = TIME_WINDOW_HOURS[window];
+  if (!windowHours) return false;
+  return currentHour < windowHours.start || currentHour >= windowHours.end;
+}
+
+// Helper to get window unlock time as string
+function getWindowUnlockTime(window: string): string {
+  const windowHours = TIME_WINDOW_HOURS[window];
+  if (!windowHours) return "";
+  const hour = windowHours.start;
+  return hour >= 12 ? `${hour === 12 ? 12 : hour - 12} PM` : `${hour} AM`;
+}
+
+/**
+ * Complete a task (with time window enforcement)
  */
 export const completeTask = mutation({
   args: {
     taskId: v.id("user_daily_tasks"),
     difficultyRating: v.optional(v.number()),
     notes: v.optional(v.string()),
+    forceComplete: v.optional(v.boolean()), // For testing/debug mode
   },
-  returns: v.null(),
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
   handler: async (ctx, args) => {
     const now = Date.now();
+    const currentHour = new Date().getHours();
+
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      return { success: false, error: "Task not found" };
+    }
+
+    // Check time window enforcement (unless force complete)
+    if (!args.forceComplete && task.time_window) {
+      const windowHours = TIME_WINDOW_HOURS[task.time_window];
+      if (windowHours) {
+        const isOutsideWindow =
+          currentHour < windowHours.start || currentHour >= windowHours.end;
+        if (isOutsideWindow) {
+          return {
+            success: false,
+            error: `This task can only be completed during ${task.time_window} (${getWindowUnlockTime(task.time_window)})`,
+          };
+        }
+      }
+    }
 
     await ctx.db.patch(args.taskId, {
       status: "completed",
@@ -938,18 +1196,15 @@ export const completeTask = mutation({
     });
 
     // Update compliance tracking
-    const task = await ctx.db.get(args.taskId);
-    if (task) {
-      await ctx.db.insert("intervention_compliance", {
-        user_intervention_id: task.user_intervention_id,
-        scheduled_date: task.task_date,
-        completed: true,
-        completed_at: now,
-        note_text: args.notes,
-      });
-    }
+    await ctx.db.insert("intervention_compliance", {
+      user_intervention_id: task.user_intervention_id,
+      scheduled_date: task.task_date,
+      completed: true,
+      completed_at: now,
+      note_text: args.notes,
+    });
 
-    return null;
+    return { success: true };
   },
 });
 
