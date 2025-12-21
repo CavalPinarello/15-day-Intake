@@ -80,6 +80,11 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **App Icon Alpha Channel Fix:** Removed transparency from all iOS app icons (Dec 21, 2025)
+  - App Store validation was failing: "large app icon can't be transparent or contain an alpha channel"
+  - Converted all 15 PNG icons through JPEG format to strip alpha channel
+  - All icons now have `hasAlpha: no` while preserving visual appearance
+  - **Files changed:** All icons in `ZoeSleep/ZoeSleep/Assets.xcassets/AppIcon.appiconset/`
 - **Journey Introduction Sequence:** 6-screen Aurora-animated intro for new users (Dec 21, 2025)
   - Full-screen modal on first MainDashboard visit with swipeable pages
   - **Aurora borealis background:** Matches splash screen aesthetic with animated waves and stars
