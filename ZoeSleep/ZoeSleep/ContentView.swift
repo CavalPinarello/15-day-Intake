@@ -193,8 +193,9 @@ struct MainDashboardView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .questionnaireProgressDidChange)) { _ in
             // Refresh when questionnaire signals progress change
+            // Use force=true to bypass throttle since this is an explicit completion notification
             Task {
-                await refreshFromConvex(silent: false)
+                await refreshFromConvex(silent: false, force: true)
             }
         }
     }
@@ -219,9 +220,10 @@ struct MainDashboardView: View {
         print("[iOS Dashboard] Stopped refresh timer")
     }
 
-    private func refreshFromConvex(silent: Bool = false) async {
+    private func refreshFromConvex(silent: Bool = false, force: Bool = false) async {
         // Avoid refreshing too frequently (min 2 seconds between refreshes)
-        guard Date().timeIntervalSince(lastRefreshTime) > 2 else {
+        // Unless force=true (e.g., after section completion notification)
+        guard force || Date().timeIntervalSince(lastRefreshTime) > 2 else {
             if !silent {
                 print("[iOS Dashboard] Skipping refresh (too soon)")
             }
@@ -422,9 +424,15 @@ struct MainDashboardView: View {
     }
 
     private var progressPercentage: Int {
-        // Use currentDay - 1 as the number of fully completed days
-        // This is more reliable than completedDays.count which can have data integrity issues
-        let daysCompleted = max(0, currentDay - 1)
+        // Start with completed days (days before current day)
+        var daysCompleted = max(0, currentDay - 1)
+
+        // If current day's sections are BOTH complete, count current day as completed too
+        // This fixes the 93% bug where Day 15 completion wasn't counted
+        if isDayComplete {
+            daysCompleted = currentDay
+        }
+
         return Int((Double(daysCompleted) / 15.0) * 100)
     }
 

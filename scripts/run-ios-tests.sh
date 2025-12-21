@@ -87,9 +87,9 @@ run_unit_tests() {
         -only-testing:ZoeSleepTests/HealthKitManagerTests \
         -only-testing:ZoeSleepTests/ThemeManagerTests \
         $COVERAGE_FLAGS \
-        2>&1 | xcpretty
+        2>&1 | tee "$RESULTS_DIR/unit-tests.log" | grep -E "(Test Suite|Test Case|passed|failed|error:)"
 
-    if [ $? -eq 0 ]; then
+    if [ ${PIPESTATUS[0]} -eq 0 ]; then
         print_success "Unit tests passed"
     else
         print_error "Unit tests failed"
@@ -109,9 +109,9 @@ run_ui_tests() {
         -resultBundlePath "$RESULTS_DIR/UITests.xcresult" \
         -only-testing:ZoeSleepUITests \
         $COVERAGE_FLAGS \
-        2>&1 | xcpretty
+        2>&1 | tee "$RESULTS_DIR/unit-tests.log" | grep -E "(Test Suite|Test Case|passed|failed|error:)"
 
-    if [ $? -eq 0 ]; then
+    if [ ${PIPESTATUS[0]} -eq 0 ]; then
         print_success "UI tests passed"
     else
         print_error "UI tests failed"
@@ -131,9 +131,9 @@ run_integration_tests() {
         -resultBundlePath "$RESULTS_DIR/IntegrationTests.xcresult" \
         -only-testing:ZoeSleepTests/IntegrationTests \
         $COVERAGE_FLAGS \
-        2>&1 | xcpretty
+        2>&1 | tee "$RESULTS_DIR/unit-tests.log" | grep -E "(Test Suite|Test Case|passed|failed|error:)"
 
-    if [ $? -eq 0 ]; then
+    if [ ${PIPESTATUS[0]} -eq 0 ]; then
         print_success "Integration tests passed"
     else
         print_error "Integration tests failed"
@@ -153,9 +153,9 @@ run_clinical_tests() {
         -resultBundlePath "$RESULTS_DIR/ClinicalTests.xcresult" \
         -only-testing:ZoeSleepTests/ClinicalScoringTests \
         $COVERAGE_FLAGS \
-        2>&1 | xcpretty
+        2>&1 | tee "$RESULTS_DIR/unit-tests.log" | grep -E "(Test Suite|Test Case|passed|failed|error:)"
 
-    if [ $? -eq 0 ]; then
+    if [ ${PIPESTATUS[0]} -eq 0 ]; then
         print_success "Clinical scoring tests passed"
     else
         print_error "Clinical scoring tests failed"
@@ -174,9 +174,9 @@ run_all_tests() {
         -derivedDataPath "$DERIVED_DATA" \
         -resultBundlePath "$RESULTS_DIR/AllTests.xcresult" \
         $COVERAGE_FLAGS \
-        2>&1 | xcpretty
+        2>&1 | tee "$RESULTS_DIR/unit-tests.log" | grep -E "(Test Suite|Test Case|passed|failed|error:)"
 
-    if [ $? -eq 0 ]; then
+    if [ ${PIPESTATUS[0]} -eq 0 ]; then
         print_success "All tests passed"
     else
         print_error "Some tests failed"

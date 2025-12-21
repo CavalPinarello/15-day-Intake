@@ -80,6 +80,12 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Dashboard Progress Indicator Fix:** Fixed 3 bugs in journey progress card (Dec 21, 2025)
+  - **40% progress on Day 1:** Was using `completedDays.count` from corrupted backend data; now uses `currentDay - 1`
+  - **Day 7 dot highlighted:** Was passing `completedDaysCount + 1` to dots; now uses `currentDay` directly
+  - **Flickering motivational message:** `randomDayMessage()` called every render; now stored in `@State`
+  - **Data integrity guard:** Added `validatedCompletedDays` filter to sanitize corrupted backend data
+  - **Files changed:** ContentView.swift
 - **Measurement System & Body Metrics Overhaul:** Proper height/weight handling (Dec 20, 2025)
   - **Measurement system from locale:** Auto-detects Metric/Imperial from device locale (US = Imperial)
   - **User can change units:** Picker in onboarding Body Metrics step AND in Profile settings

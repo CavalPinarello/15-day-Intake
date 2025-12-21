@@ -28,6 +28,26 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A3E91560A42A76FE3322EA5A"
+               BuildableName = "ZoeSleepTests.xctest"
+               BlueprintName = "ZoeSleepTests"
+               ReferencedContainer = "container:ZoeSleep.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "58993131AE738BF7BEE9A534"
+               BuildableName = "ZoeSleepUITests.xctest"
+               BlueprintName = "ZoeSleepUITests"
+               ReferencedContainer = "container:ZoeSleep.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
