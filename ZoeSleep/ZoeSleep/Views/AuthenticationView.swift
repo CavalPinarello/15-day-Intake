@@ -197,6 +197,10 @@ struct AuthenticationView: View {
                 }
                 .padding(.bottom, 20)
                 }
+
+                // Floating accessibility button (bottom-right)
+                // Light style for dark aurora background
+                EnhancedReadabilityButton(lightStyle: true, edgePadding: 24)
             }
             .navigationTitle("")
             .navigationBarHidden(true)
@@ -271,7 +275,7 @@ struct ProfileView: View {
                         }
 
                         // Current Day
-                        Text("Day \(user.currentDay) of 15")
+                        Text("Day \(user.currentDay) of 14")
                             .font(.caption)
                             .foregroundColor(theme.primary)
                     }

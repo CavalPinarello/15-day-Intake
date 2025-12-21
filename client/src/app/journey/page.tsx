@@ -188,7 +188,7 @@ export default function JourneyPage() {
             <Moon className={`w-8 h-8 ${isWarm ? "text-[#F28C40]" : "text-blue-600"}`} />
           </div>
           <h2 className={`text-xl font-bold mb-2 ${textClasses.primary}`}>Welcome to Zoe Sleep</h2>
-          <p className={`mb-6 ${textClasses.secondary}`}>Sign in to start your 15-day sleep journey</p>
+          <p className={`mb-6 ${textClasses.secondary}`}>Sign in to start your 14-day sleep journey</p>
           <SignInButton mode="modal">
             <button className={`w-full py-3 px-6 ${buttonClasses.primary} font-semibold rounded-xl`}>
               Sign In to Continue
@@ -398,7 +398,7 @@ export default function JourneyPage() {
       <div className={`max-w-2xl mx-auto px-4 py-3 border-b ${isWarm ? "border-[#5C3D2E] bg-[#3D2418]/50" : "border-gray-100 bg-white/50"}`}>
         <div className="flex items-center justify-between">
           <div>
-            <span className={`text-sm ${textClasses.muted}`}>Day {currentDay} of 15</span>
+            <span className={`text-sm ${textClasses.muted}`}>Day {currentDay} of 14</span>
             {currentSection === "assessment" && (
               <h2 className={`font-medium ${textClasses.primary}`}>{dayConfig.title}</h2>
             )}

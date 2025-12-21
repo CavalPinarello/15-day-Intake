@@ -303,13 +303,13 @@ struct WatchHomeView: View {
                     )
                 )
 
-            Text("of 15")
+            Text("of 14")
                 .font(.caption)
                 .foregroundColor(palette.textSecondary)
 
             // Progress dots
             HStack(spacing: 3) {
-                ForEach(1...15, id: \.self) { day in
+                ForEach(1...14, id: \.self) { day in
                     Circle()
                         .fill(day <= currentDay ? palette.accent : palette.textSecondary.opacity(0.3))
                         .frame(width: day == currentDay ? 6 : 4, height: day == currentDay ? 6 : 4)
@@ -622,11 +622,11 @@ struct WatchHomeView: View {
                 Image(systemName: "figure.walk")
                     .font(.system(size: 12))
                     .foregroundColor(palette.accent)
-                Text("Your 15-Day Journey")
+                Text("Your 14-Day Journey")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(palette.textPrimary.opacity(0.9))
                 Spacer()
-                Text("\(currentDay)/15")
+                Text("\(currentDay)/14")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(palette.accent)
             }
@@ -662,7 +662,7 @@ struct WatchHomeView: View {
             }
 
             // Days remaining message
-            let daysLeft = 15 - currentDay
+            let daysLeft = 14 - currentDay
             Text(daysLeft == 1 ? "1 day left!" : "\(daysLeft) days remaining")
                 .font(.system(size: 9))
                 .foregroundColor(palette.textSecondary)
@@ -730,7 +730,7 @@ struct WatchHomeView: View {
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(celebrationColor)
 
-            Text("Congratulations! You've completed your 15-day sleep intake.")
+            Text("Congratulations! You've completed your 14-day sleep intake.")
                 .font(.system(size: 11))
                 .foregroundColor(palette.textPrimary.opacity(0.8))
                 .multilineTextAlignment(.center)

@@ -32,7 +32,7 @@ Zoe-Sleep-V1/
 │   └── ThemeManager.swift        # Theme & appearance
 ├── Views/
 │   ├── ContentView.swift         # Main dashboard
-│   ├── QuestionnaireView.swift   # 15-day questionnaire
+│   ├── QuestionnaireView.swift   # 14-day questionnaire
 │   ├── QuestionComponents.swift  # Question UI components
 │   ├── OnboardingView.swift      # User onboarding
 │   ├── TreatmentView.swift       # Post-intake treatment

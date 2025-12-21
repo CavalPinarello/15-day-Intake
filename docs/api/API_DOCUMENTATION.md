@@ -2,10 +2,10 @@
 
 ## Overview
 
-This Convex backend serves the **iOS application**, **Apple Watch application** (15-day intake journey), and **web application** (physician dashboard) with real-time data synchronization across all platforms.
+This Convex backend serves the **iOS application**, **Apple Watch application** (14-day intake journey), and **web application** (physician dashboard) with real-time data synchronization across all platforms.
 
 ## Platform Usage
-- **iOS Application**: Consumes Convex functions for 15-day intake journey, HealthKit data sync, and authentication
+- **iOS Application**: Consumes Convex functions for 14-day intake journey, HealthKit data sync, and authentication
 - **Apple Watch Application**: Uses Convex functions for questionnaire completion, recommendations delivery, and watchOS HealthKit sync
 - **Cross-device Sync**: WatchConnectivity ensures real-time synchronization between iPhone and Apple Watch
 - **Web Application**: Uses Convex functions for physician dashboard, patient management, and administrative functions

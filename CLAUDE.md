@@ -36,7 +36,7 @@ iPhone ←→ Convex ←→ Dashboard
  Web (Debug only)
 ```
 
-- **iPhone:** Full 15-day intake journey with all questionnaires (PRIMARY)
+- **iPhone:** Full 14-day intake journey with all questionnaires (PRIMARY)
 - **Dashboard:** Clinician interface for patient data (IN DEVELOPMENT)
 - **Web:** Debug/testing only, NOT for end users
 - **Watch:** ⏸️ PAUSED - See recovery branch below
@@ -51,16 +51,16 @@ iPhone ←→ Convex ←→ Dashboard
 
 ## 🧠 Smart Questionnaire System
 
-- **15-Day Journey:** Core (Days 1-7) + Conditional expansion (Days 8-15)
+- **14-Day Journey:** Core (Days 1-5) + Conditional expansion (Days 6-14)
 - **10 Gateways:** Insomnia, Sleep Apnea, Mental Health, Pain, etc.
 - **Daily Sleep Log:** 5 Stanford questions every morning
 - **Load Balanced:** 11-17 questions per day (core), expansions add when triggered
 
-### Day Distribution (Dec 13, 2025 Rebalance)
+### Day Distribution (Dec 21, 2025 - Updated to 14 days)
 | Days | Type | Questions/Day |
 |------|------|---------------|
-| 1-7 | Core Assessment | 11-17 |
-| 8-15 | Expansion Packs | 16-33 (conditional) |
+| 1-5 | Core Assessment | 7-12 |
+| 6-14 | Expansion Packs | 7-35 (conditional) |
 
 ## 📚 Documentation
 
@@ -80,6 +80,29 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **14-Day Journey Standardization:** Updated entire codebase from 15 to 14 days (Dec 21, 2025)
+  - **Merged Day 14 & 15:** Final day now includes DASS-21, STOP-BANG, Berlin, BPI, MEDAS, MEQ
+  - **Files updated:** Config.swift, QuestionnaireManager.swift, ContentView.swift, WatchHomeView.swift
+  - **Convex updated:** ios.ts, watch.ts, web.ts, physician.ts, expansionScheduler.ts, testingAPI.ts
+  - **Dashboard updated:** physician-dashboard/page.tsx, journey/page.tsx, patient/[id]/page.tsx
+  - **Tests updated:** QuestionnaireManagerTests, ConvexServiceTests, IntegrationTests
+  - **All progress indicators:** Now show "Day X of 14" consistently across iOS, Watch, and web
+- **PSQI Core Assessment Fix:** PSQI now always generates as core (Days 1-2), not expansion (Dec 21, 2025)
+  - Root cause: Mock generator only created PSQI when insomnia gateway triggered
+  - PSQI Part 1 (PSQI_1-4) on Day 1, Part 2 (PSQI_5a-5j, PSQI_6-9) on Day 2
+  - Added "Core" badge to PSQI in dashboard to distinguish from expansion questionnaires
+- **Gateway→Questionnaire Mapping:** Added iOS gateway display showing triggered questionnaires (Dec 21, 2025)
+  - New `triggeredQuestionnaires` and `questionnaireAbbreviations` properties on GatewayType
+  - UnifiedDebugPanel shows which questionnaires each gateway triggers
+  - Dashboard filter toggle for "Show only triggered" questionnaires
+- **Enhanced Readability Mode for Elderly Users:** Instant accessibility system (Dec 21, 2025)
+  - **Floating magnifying glass button:** Visible from splash screen, login, onboarding, and intro
+  - **One-tap activation:** Single toggle enables 1.5x text, large icons, high contrast, reduced motion
+  - **Entry points:** Splash screen (bottom-right), login, onboarding, journey intro, Settings > Accessibility
+  - **Persistent:** Setting saved to UserDefaults, applied consistently across entire app
+  - **Target audience:** Users in their 70s who need crystal-clear text and easier tapping
+  - **Files:** `Views/Accessibility/EnhancedReadabilityOverlay.swift`, `ThemeManager.swift` (enhancedReadabilityMode)
+  - **What it activates:** textSizeMultiplier=1.5, largeIconsMode=true, highContrast=true, reduceMotion=true
 - **App Icon Alpha Channel Fix:** Removed transparency from all iOS app icons (Dec 21, 2025)
   - App Store validation was failing: "large app icon can't be transparent or contain an alpha channel"
   - Converted all 15 PNG icons through JPEG format to strip alpha channel
@@ -88,7 +111,7 @@ iPhone ←→ Convex ←→ Dashboard
 - **Journey Introduction Sequence:** 6-screen Aurora-animated intro for new users (Dec 21, 2025)
   - Full-screen modal on first MainDashboard visit with swipeable pages
   - **Aurora borealis background:** Matches splash screen aesthetic with animated waves and stars
-  - **Content:** Explains 15-day journey, 10 Stanford Sleep Diary questions (repeated daily), personalized gateways, wearable integration, and expert review
+  - **Content:** Explains 14-day journey, 10 Stanford Sleep Diary questions (repeated daily), personalized gateways, wearable integration, and expert review
   - **Time framing:** "10-15 minutes daily investment" for better subjective calibration
   - Skip button available; marks as seen via `OnboardingManager.hasSeenJourneyIntro`
   - **Files:** `JourneyIntroView.swift`, `JourneyIntro/JourneyIntroScreens.swift`, `JourneyIntro/JourneyIntroIcons.swift`
@@ -132,9 +155,9 @@ iPhone ←→ Convex ←→ Dashboard
     - Lifecycle-aware messaging (discovery → patterns → insights → treatment)
     - Weekly progress summaries with trend analysis
     - `convex/anticipationEngine.ts`
-- **Post-15-Day Experience:** Complete treatment journey implementation (Dec 20, 2025)
+- **Post-Intake Experience:** Complete treatment journey implementation (Dec 20, 2025)
   - **Journey Phases:** intake → analysis → treatment_pending → treatment_active
-  - **Progressive Insights:** Countdown and discovery teasers during Days 1-15
+  - **Progressive Insights:** Countdown and discovery teasers during Days 1-14
   - **Analysis Pending View:** 4-stage timeline (data collected → patterns → preparing → ready)
   - **Treatment Dashboard:** Session-based cards (Morning/Afternoon/Evening/Night)
   - **Time-Windowed Tasks:** Tasks only completable during scheduled time windows
@@ -186,7 +209,7 @@ iPhone ←→ Convex ←→ Dashboard
   - Gateway/expansion preview with trigger conditions
 - **iOS smart task visibility:** Assessment task only shows if content exists (Dec 13, 2025)
   - Core days (1-7): Always show assessment
-  - Expansion days (8-15): Only show if gateways triggered
+  - Expansion days (6-14): Only show if gateways triggered
   - Dynamic title (Core Assessment vs Expansion Pack)
 - **Day-aware response storage:** Repeating questions (sleep log) now stored per day
 - **Consensus Sleep Diary (CSD):** Full iOS sleep log integration with dashboard

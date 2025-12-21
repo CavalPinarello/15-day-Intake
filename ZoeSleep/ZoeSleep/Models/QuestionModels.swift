@@ -770,6 +770,58 @@ enum GatewayType: String, Codable, CaseIterable {
         case .dietImpact: return "Caffeine/alcohol affecting sleep"
         }
     }
+
+    /// Questionnaires triggered by this gateway
+    var triggeredQuestionnaires: [String] {
+        switch self {
+        case .insomnia:
+            return ["ISI", "DBAS-16", "Sleep Hygiene", "PSAS (Cognitive)", "PSAS (Somatic)"]
+        case .poorSleepQuality:
+            return ["ISI", "Sleep Hygiene"]
+        case .depression:
+            return ["PHQ-9", "DASS-21 (Depression)", "DASS-21 (Anxiety)", "DASS-21 (Stress)"]
+        case .anxiety:
+            return ["GAD-7", "DASS-21 (Depression)", "DASS-21 (Anxiety)", "DASS-21 (Stress)"]
+        case .excessiveSleepiness:
+            return ["ESS", "FSS", "FOSQ-10"]
+        case .cognitive:
+            return ["PROMIS Cognitive"]
+        case .osa:
+            return ["STOP-BANG", "Berlin"]
+        case .pain:
+            return ["BPI (Severity)", "BPI (Interference)"]
+        case .sleepTiming:
+            return ["MEQ (Chronotype)"]
+        case .dietImpact:
+            return ["MEDAS"]
+        }
+    }
+
+    /// Short list of questionnaire abbreviations for compact display
+    var questionnaireAbbreviations: String {
+        switch self {
+        case .insomnia:
+            return "ISI, DBAS, SHI, PSAS"
+        case .poorSleepQuality:
+            return "ISI, SHI"
+        case .depression:
+            return "PHQ-9, DASS-21"
+        case .anxiety:
+            return "GAD-7, DASS-21"
+        case .excessiveSleepiness:
+            return "ESS, FSS, FOSQ"
+        case .cognitive:
+            return "PROMIS-Cog"
+        case .osa:
+            return "STOP-BANG, Berlin"
+        case .pain:
+            return "BPI"
+        case .sleepTiming:
+            return "MEQ"
+        case .dietImpact:
+            return "MEDAS"
+        }
+    }
 }
 
 // MARK: - Question Model

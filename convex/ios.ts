@@ -1110,14 +1110,14 @@ export const completeDay = mutation({
     });
 
     // Advance to next day if this was current day
-    if (user.current_day === args.dayNumber && args.dayNumber < 15) {
+    if (user.current_day === args.dayNumber && args.dayNumber < 14) {
       await ctx.db.patch(args.userId, {
         current_day: args.dayNumber + 1,
       });
     }
 
-    // Check if all 15 days completed
-    if (args.dayNumber === 15) {
+    // Check if all 14 days completed
+    if (args.dayNumber === 14) {
       await ctx.db.patch(args.userId, {
         onboarding_completed: true,
         onboarding_completed_at: Date.now(),
@@ -1126,8 +1126,8 @@ export const completeDay = mutation({
 
     return {
       success: true,
-      newDay: Math.min(args.dayNumber + 1, 15),
-      journeyComplete: args.dayNumber === 15,
+      newDay: Math.min(args.dayNumber + 1, 14),
+      journeyComplete: args.dayNumber === 14,
     };
   },
 });
@@ -1161,7 +1161,7 @@ export const getJourneyProgress = query({
     return {
       currentDay: user.current_day,
       completedDays: resolvedDays.filter(Boolean) as number[],
-      totalDays: 15,
+      totalDays: 14,
       journeyComplete: user.onboarding_completed ?? false,
       startedAt: user.started_at,
     };

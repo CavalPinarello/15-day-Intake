@@ -12,8 +12,8 @@
 //  - Section 4: Journey Controls (advance, reset)
 //  - Section 5: Repair Tools (fix data issues)
 //
-
-#if DEBUG
+//  NOTE: Available in all builds (including TestFlight) when Debug Mode is enabled
+//
 
 import SwiftUI
 
@@ -29,8 +29,8 @@ enum DataGenerationMode: String, CaseIterable, Identifiable {
 
     var description: String {
         switch self {
-        case .fullRandom: return "15 days with ~40% gateway triggers"
-        case .maxLoad: return "15 days with ALL 10 gateways triggered"
+        case .fullRandom: return "14 days with ~40% gateway triggers"
+        case .maxLoad: return "14 days with ALL 10 gateways triggered"
         case .selective: return "Choose which gateways to trigger"
         case .quickTest: return "Days 1-5 only, ~30 seconds"
         }
@@ -57,7 +57,7 @@ enum DataGenerationMode: String, CaseIterable, Identifiable {
     var days: ClosedRange<Int> {
         switch self {
         case .quickTest: return 1...5
-        default: return 1...15
+        default: return 1...14
         }
     }
 }
@@ -82,7 +82,7 @@ struct UnifiedDebugPanel: View {
 
     // Progress tracking (updated via timer since @State doesn't observe ObservableObject)
     @State private var progressCurrentDay: Int = 1
-    @State private var progressTotalDays: Int = 15
+    @State private var progressTotalDays: Int = 14
     @State private var progressSection: String = "Sleep Log"
     @State private var progressQuestionIndex: Int = 0
     @State private var progressTotalQuestions: Int = 0
@@ -199,17 +199,48 @@ struct UnifiedDebugPanel: View {
             HStack {
                 Label("Completed Days", systemImage: "checkmark.circle")
                 Spacer()
-                Text("\(questionnaireManager.journeyProgress?.completedDays.count ?? 0) of 15")
+                Text("\(questionnaireManager.journeyProgress?.completedDays.count ?? 0) of 14")
                     .foregroundColor(.secondary)
             }
 
-            // Triggered Gateways
-            let triggeredCount = questionnaireManager.gatewayStates.filter { $0.triggered }.count
-            HStack {
-                Label("Gateways Triggered", systemImage: "exclamationmark.triangle")
-                Spacer()
-                Text("\(triggeredCount) of 10")
-                    .foregroundColor(triggeredCount > 0 ? .orange : .secondary)
+            // Triggered Gateways with questionnaire mapping
+            let triggeredGateways = questionnaireManager.gatewayStates.filter { $0.triggered }
+            let triggeredCount = triggeredGateways.count
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Label("Gateways Triggered", systemImage: "exclamationmark.triangle")
+                    Spacer()
+                    Text("\(triggeredCount) of 10")
+                        .foregroundColor(triggeredCount > 0 ? .orange : .secondary)
+                }
+
+                // Show triggered gateways with their questionnaires
+                if triggeredCount > 0 {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(triggeredGateways, id: \.gatewayType) { gateway in
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: gateway.gatewayType.icon)
+                                        .font(.caption)
+                                        .foregroundColor(gateway.gatewayType.color)
+                                    Text(gateway.gatewayType.shortName)
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.primary)
+                                }
+                                Text("→ \(gateway.gatewayType.questionnaireAbbreviations)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .padding(.leading, 20)
+                            }
+                        }
+                    }
+                    .padding(.top, 4)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(8)
+                }
             }
         } header: {
             Label("Current Status", systemImage: "info.circle")
@@ -428,7 +459,7 @@ struct UnifiedDebugPanel: View {
                     .foregroundColor(.secondary)
             }
         } header: {
-            Label("Expansion Schedule (Days 6-15)", systemImage: "calendar.badge.clock")
+            Label("Expansion Schedule (Days 8-14)", systemImage: "calendar.badge.clock")
         }
     }
 
@@ -516,13 +547,13 @@ struct UnifiedDebugPanel: View {
                         ProgressView()
                             .scaleEffect(0.8)
                     } else {
-                        Text("→ Day \(min(questionnaireManager.currentDay + 1, 15))")
+                        Text("→ Day \(min(questionnaireManager.currentDay + 1, 14))")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
             }
-            .disabled(questionnaireManager.currentDay >= 15 || isAdvancingDay)
+            .disabled(questionnaireManager.currentDay >= 14 || isAdvancingDay)
 
             // Reset Progress
             Button {
@@ -554,8 +585,36 @@ struct UnifiedDebugPanel: View {
 
     // MARK: - Repair Tools Section
 
+    @State private var isVerifyingHealthKit = false
+    @State private var healthKitVerificationResult: String?
+
     private var repairToolsSection: some View {
         Section {
+            // Verify HealthKit Data
+            Button {
+                verifyHealthKitData()
+            } label: {
+                HStack {
+                    Label("Verify HealthKit Data", systemImage: "heart.text.square")
+                        .foregroundColor(.pink)
+                    Spacer()
+                    if isVerifyingHealthKit {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                }
+            }
+            .disabled(isVerifyingHealthKit)
+
+            // Show HealthKit verification result
+            if let result = healthKitVerificationResult {
+                Text(result)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             // Repair Sleep Insights
             Button {
                 repairSleepInsights()
@@ -591,9 +650,23 @@ struct UnifiedDebugPanel: View {
                 }
             }
         } header: {
-            Label("Repair Tools", systemImage: "wrench.adjustable")
+            Label("Repair & Diagnostics", systemImage: "wrench.adjustable")
         } footer: {
-            Text("Use these tools to fix data issues without regenerating everything.")
+            Text("Verify HealthKit to check wearable data connectivity. Repair tools fix data issues without regenerating.")
+        }
+    }
+
+    private func verifyHealthKitData() {
+        isVerifyingHealthKit = true
+        healthKitVerificationResult = nil
+
+        Task {
+            let healthKitManager = HealthKitManager()
+            let result = await healthKitManager.verifyHealthKitData()
+            await MainActor.run {
+                healthKitVerificationResult = result.summary
+                isVerifyingHealthKit = false
+            }
         }
     }
 
@@ -824,7 +897,7 @@ struct UnifiedDebugPanel: View {
     private func computeLocalSchedule(triggeredGateways: [String]) -> [(dayNumber: Int, modules: [String], questionCount: Int, estimatedMinutes: Int)] {
         let maxQuestionsPerDay = 18
         let expansionStartDay = 6
-        let expansionEndDay = 15
+        let expansionEndDay = 14
 
         var eligibleModules = ExpansionModule.allModules.filter { module in
             triggeredGateways.contains(module.requiredGateway.rawValue)
@@ -897,6 +970,7 @@ struct StatusBadge: View {
 
 // MARK: - Preview
 
+#if DEBUG
 struct UnifiedDebugPanel_Previews: PreviewProvider {
     static var previews: some View {
         UnifiedDebugPanel()
@@ -904,5 +978,4 @@ struct UnifiedDebugPanel_Previews: PreviewProvider {
             .environmentObject(QuestionnaireManager.shared)
     }
 }
-
 #endif

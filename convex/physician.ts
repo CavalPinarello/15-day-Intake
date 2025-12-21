@@ -919,9 +919,9 @@ export const getAllPatientsWithProgress = query({
           .withIndex("by_user", (q) => q.eq("user_id", user._id))
           .first();
 
-        // Calculate progress percentage (15 days total)
+        // Calculate progress percentage (14 days total)
         const progressPercentage = Math.min(
-          Math.round((user.current_day / 15) * 100),
+          Math.round((user.current_day / 14) * 100),
           100
         );
 
@@ -1853,10 +1853,18 @@ export const getQuestionnaireResponses = query({
     })
   ),
   handler: async (ctx, args) => {
-    // Hardcoded question texts for standardized questionnaires
-    // (These are defined in iOS QuestionnaireManager.swift but not synced to Convex)
+    // Hardcoded question texts for ALL standardized questionnaires
     const questionTexts: Record<string, string> = {
-      // PHQ-9 - Patient Health Questionnaire (Depression)
+      // ISI - Insomnia Severity Index (7 questions, 0-4 scale)
+      "ISI_1": "Difficulty falling asleep?",
+      "ISI_2": "Difficulty staying asleep?",
+      "ISI_3": "Problems waking up too early?",
+      "ISI_4": "How satisfied are you with your current sleep pattern?",
+      "ISI_5": "How noticeable to others is your sleep problem affecting your daily functioning?",
+      "ISI_6": "How worried are you about your current sleep problem?",
+      "ISI_7": "How much is your sleep problem interfering with your daily functioning?",
+
+      // PHQ-9 - Patient Health Questionnaire (9 questions, 0-3 scale)
       "PHQ9_1": "Over the last 2 weeks: Little interest or pleasure in doing things?",
       "PHQ9_2": "Over the last 2 weeks: Feeling down, depressed, or hopeless?",
       "PHQ9_3": "Over the last 2 weeks: Trouble falling or staying asleep, or sleeping too much?",
@@ -1867,7 +1875,7 @@ export const getQuestionnaireResponses = query({
       "PHQ9_8": "Over the last 2 weeks: Moving or speaking slowly, or being fidgety/restless?",
       "PHQ9_9": "Over the last 2 weeks: Thoughts that you would be better off dead or of hurting yourself?",
 
-      // GAD-7 - Generalized Anxiety Disorder
+      // GAD-7 - Generalized Anxiety Disorder (7 questions, 0-3 scale)
       "GAD7_1": "Over the last 2 weeks: Feeling nervous, anxious, or on edge?",
       "GAD7_2": "Over the last 2 weeks: Not being able to stop or control worrying?",
       "GAD7_3": "Over the last 2 weeks: Worrying too much about different things?",
@@ -1876,16 +1884,7 @@ export const getQuestionnaireResponses = query({
       "GAD7_6": "Over the last 2 weeks: Becoming easily annoyed or irritable?",
       "GAD7_7": "Over the last 2 weeks: Feeling afraid, as if something awful might happen?",
 
-      // ISI - Insomnia Severity Index
-      "ISI_1": "Difficulty falling asleep?",
-      "ISI_2": "Difficulty staying asleep?",
-      "ISI_3": "Problems waking up too early?",
-      "ISI_4": "How satisfied are you with your current sleep pattern?",
-      "ISI_5": "How noticeable to others is your sleep problem affecting your daily functioning?",
-      "ISI_6": "How worried are you about your current sleep problem?",
-      "ISI_7": "How much is your sleep problem interfering with your daily functioning?",
-
-      // ESS - Epworth Sleepiness Scale
+      // ESS - Epworth Sleepiness Scale (8 questions, 0-3 scale)
       "ESS_1": "Chance of dozing: Sitting and reading?",
       "ESS_2": "Chance of dozing: Watching TV?",
       "ESS_3": "Chance of dozing: Sitting inactive in a public place (theater/meeting)?",
@@ -1895,11 +1894,201 @@ export const getQuestionnaireResponses = query({
       "ESS_7": "Chance of dozing: Sitting quietly after lunch without alcohol?",
       "ESS_8": "Chance of dozing: In a car while stopped for a few minutes in traffic?",
 
-      // STOP-BANG - Sleep Apnea Screening (uses numeric IDs from gateway questions)
-      "19": "Do you snore loudly?",
-      "20": "Has anyone observed you stop breathing during sleep?",
-      "17": "Do you feel excessively tired or sleepy during the day?", // Q21 removed, use Q17 (5-point scale)
-      "27": "Do you have or are you being treated for high blood pressure?",
+      // STOP-BANG - Sleep Apnea Screening (8 yes/no questions)
+      "SB_1": "Do you snore loudly (loud enough to be heard through closed doors)?",
+      "SB_2": "Do you often feel tired, fatigued, or sleepy during the daytime?",
+      "SB_3": "Has anyone observed you stop breathing or choking/gasping during your sleep?",
+      "SB_4": "Do you have or are you being treated for high blood pressure?",
+      "SB_5": "Is your BMI more than 35 kg/m²?",
+      "SB_6": "Are you older than 50 years old?",
+      "SB_7": "Is your neck circumference greater than 40 cm (16 inches)?",
+      "SB_8": "Are you male?",
+
+      // PSQI - Pittsburgh Sleep Quality Index (19 questions)
+      "PSQI_1": "What time have you usually gone to bed?",
+      "PSQI_2": "How long (in minutes) has it taken you to fall asleep each night?",
+      "PSQI_3": "What time have you usually gotten up in the morning?",
+      "PSQI_4": "How many hours of actual sleep did you get at night?",
+      "PSQI_5a": "Cannot get to sleep within 30 minutes?",
+      "PSQI_5b": "Wake up in the middle of the night or early morning?",
+      "PSQI_5c": "Have to get up to use the bathroom?",
+      "PSQI_5d": "Cannot breathe comfortably?",
+      "PSQI_5e": "Cough or snore loudly?",
+      "PSQI_5f": "Feel too cold?",
+      "PSQI_5g": "Feel too hot?",
+      "PSQI_5h": "Have bad dreams?",
+      "PSQI_5i": "Have pain?",
+      "PSQI_5j": "Other reasons (describe)?",
+      "PSQI_6": "How would you rate your sleep quality overall?",
+      "PSQI_7": "How often have you taken medicine to help you sleep?",
+      "PSQI_8": "How often have you had trouble staying awake during activities?",
+      "PSQI_9": "How much of a problem has it been to keep up enthusiasm to get things done?",
+
+      // DBAS-16 - Dysfunctional Beliefs and Attitudes about Sleep (16 questions, 0-10 scale)
+      "DBAS_1": "I need 8 hours of sleep to feel refreshed and function well during the day.",
+      "DBAS_2": "When I don't get proper sleep, I need to catch up the next day by napping or sleeping longer.",
+      "DBAS_3": "I am concerned that chronic insomnia may have serious consequences on my physical health.",
+      "DBAS_4": "I am worried that I may lose control over my ability to sleep.",
+      "DBAS_5": "After a poor night's sleep, I know it will interfere with my daily activities.",
+      "DBAS_6": "To be alert during the day, I believe I would be better off taking sleeping pills.",
+      "DBAS_7": "When I feel irritable or depressed during the day, it is mostly because I did not sleep well.",
+      "DBAS_8": "When I sleep poorly one night, I know it will disturb my sleep schedule for the whole week.",
+      "DBAS_9": "Without adequate sleep, I can hardly function the next day.",
+      "DBAS_10": "I can't ever predict whether I'll have a good or poor night's sleep.",
+      "DBAS_11": "I have little ability to manage the negative consequences of disturbed sleep.",
+      "DBAS_12": "When I feel tired or lack energy during the day, it's generally because I didn't sleep well.",
+      "DBAS_13": "I believe insomnia is essentially the result of a chemical imbalance.",
+      "DBAS_14": "I feel insomnia is ruining my ability to enjoy life.",
+      "DBAS_15": "Medication is probably the only solution to sleeplessness.",
+      "DBAS_16": "I avoid scheduling important things in the morning after a poor night's sleep.",
+
+      // Berlin Questionnaire (10 questions)
+      "BERLIN_1": "Do you snore?",
+      "BERLIN_2": "Your snoring is: Slightly louder than breathing / As loud as talking / Louder than talking / Very loud",
+      "BERLIN_3": "How often do you snore?",
+      "BERLIN_4": "Has your snoring ever bothered other people?",
+      "BERLIN_5": "Has anyone noticed that you quit breathing during your sleep?",
+      "BERLIN_6": "How often do you feel tired after sleeping?",
+      "BERLIN_7": "During your waking time, do you feel tired, fatigued, or not up to par?",
+      "BERLIN_8": "Have you ever nodded off or fallen asleep while driving a vehicle?",
+      "BERLIN_9": "How often does this occur?",
+      "BERLIN_10": "Do you have high blood pressure?",
+
+      // FSS - Fatigue Severity Scale (9 questions, 1-7 scale)
+      "FSS_1": "My motivation is lower when I am fatigued.",
+      "FSS_2": "Exercise brings on my fatigue.",
+      "FSS_3": "I am easily fatigued.",
+      "FSS_4": "Fatigue interferes with my physical functioning.",
+      "FSS_5": "Fatigue causes frequent problems for me.",
+      "FSS_6": "My fatigue prevents sustained physical functioning.",
+      "FSS_7": "Fatigue interferes with carrying out certain duties and responsibilities.",
+      "FSS_8": "Fatigue is among my three most disabling symptoms.",
+      "FSS_9": "Fatigue interferes with my work, family, or social life.",
+
+      // FOSQ-10 - Functional Outcomes of Sleep (10 questions, 1-4 scale)
+      "FOSQ_1": "Difficulty concentrating on things you do?",
+      "FOSQ_2": "Difficulty remembering things?",
+      "FOSQ_3": "Difficulty finishing a meal?",
+      "FOSQ_4": "Difficulty working on a hobby?",
+      "FOSQ_5": "Difficulty doing work requiring manual dexterity?",
+      "FOSQ_6": "Difficulty visiting with family or friends in their home?",
+      "FOSQ_7": "Difficulty doing household chores?",
+      "FOSQ_8": "Difficulty operating a motor vehicle for short distances?",
+      "FOSQ_9": "Difficulty being as active as you want in the evening?",
+      "FOSQ_10": "Difficulty being as active as you want in the afternoon?",
+
+      // DASS-21 - Depression Anxiety Stress Scales (21 questions, 0-3 scale)
+      "DASS_1": "I found it hard to wind down.",
+      "DASS_2": "I was aware of dryness of my mouth.",
+      "DASS_3": "I couldn't seem to experience any positive feeling at all.",
+      "DASS_4": "I experienced breathing difficulty.",
+      "DASS_5": "I found it difficult to work up the initiative to do things.",
+      "DASS_6": "I tended to over-react to situations.",
+      "DASS_7": "I experienced trembling (e.g., in the hands).",
+      "DASS_8": "I felt that I was using a lot of nervous energy.",
+      "DASS_9": "I was worried about situations in which I might panic.",
+      "DASS_10": "I felt that I had nothing to look forward to.",
+      "DASS_11": "I found myself getting agitated.",
+      "DASS_12": "I found it difficult to relax.",
+      "DASS_13": "I felt down-hearted and blue.",
+      "DASS_14": "I was intolerant of anything that kept me from getting on with what I was doing.",
+      "DASS_15": "I felt I was close to panic.",
+      "DASS_16": "I was unable to become enthusiastic about anything.",
+      "DASS_17": "I felt I wasn't worth much as a person.",
+      "DASS_18": "I felt that I was rather touchy.",
+      "DASS_19": "I was aware of the action of my heart in the absence of physical exertion.",
+      "DASS_20": "I felt scared without any good reason.",
+      "DASS_21": "I felt that life was meaningless.",
+
+      // BPI - Brief Pain Inventory (11 questions, 0-10 scale)
+      "BPI_1": "Rate your pain at its worst in the last 24 hours.",
+      "BPI_2": "Rate your pain at its least in the last 24 hours.",
+      "BPI_3": "Rate your pain on average.",
+      "BPI_4": "Rate your pain right now.",
+      "BPI_5": "How much has pain interfered with your general activity?",
+      "BPI_6": "How much has pain interfered with your mood?",
+      "BPI_7": "How much has pain interfered with your walking ability?",
+      "BPI_8": "How much has pain interfered with your normal work?",
+      "BPI_9": "How much has pain interfered with your relations with other people?",
+      "BPI_10": "How much has pain interfered with your sleep?",
+      "BPI_11": "How much has pain interfered with your enjoyment of life?",
+
+      // MEDAS - Mediterranean Diet Adherence Screener (14 yes/no questions)
+      "MEDAS_1": "Do you use olive oil as the main culinary fat?",
+      "MEDAS_2": "How much olive oil do you consume in a given day? (≥4 tablespoons)",
+      "MEDAS_3": "How many vegetable servings do you consume per day? (≥2)",
+      "MEDAS_4": "How many fruit units do you consume per day? (≥3)",
+      "MEDAS_5": "How many servings of red meat do you consume per day? (<1)",
+      "MEDAS_6": "How many servings of butter/margarine do you consume per day? (<1)",
+      "MEDAS_7": "How many sweet/carbonated beverages do you drink per day? (<1)",
+      "MEDAS_8": "How much wine do you drink per week? (≥7 glasses)",
+      "MEDAS_9": "How many servings of legumes do you consume per week? (≥3)",
+      "MEDAS_10": "How many servings of fish/shellfish do you consume per week? (≥3)",
+      "MEDAS_11": "How many times per week do you consume pastries? (<3)",
+      "MEDAS_12": "How many servings of nuts do you consume per week? (≥3)",
+      "MEDAS_13": "Do you prefer chicken, turkey, or rabbit instead of beef, pork, or sausages?",
+      "MEDAS_14": "How many times per week do you eat vegetables, pasta, rice with sofrito sauce? (≥2)",
+
+      // MEQ - Morningness-Eveningness Questionnaire (19 questions, various scales)
+      "MEQ_1": "What time would you get up if you were entirely free to plan your day?",
+      "MEQ_2": "What time would you go to bed if you were entirely free to plan your evening?",
+      "MEQ_3": "How dependent are you on an alarm clock?",
+      "MEQ_4": "How easy do you find it to get up in the morning?",
+      "MEQ_5": "How alert do you feel during the first half hour after waking?",
+      "MEQ_6": "How hungry do you feel during the first half hour after waking?",
+      "MEQ_7": "How tired do you feel during the first half hour after waking?",
+      "MEQ_8": "When you have no commitments the next day, what time do you go to bed?",
+      "MEQ_9": "You have decided to do physical exercise. When would you choose?",
+      "MEQ_10": "At what time in the evening do you feel tired?",
+      "MEQ_11": "You have to do a two-hour mentally exhausting test. When would you schedule it?",
+      "MEQ_12": "If you went to bed at 11 PM, how tired would you be?",
+      "MEQ_13": "You have to wake up at 6 AM. How would you feel?",
+      "MEQ_14": "You have to stay awake from 4-6 AM. When would you sleep?",
+      "MEQ_15": "You have to do 2 hours of hard physical work. When would you schedule it?",
+      "MEQ_16": "You have decided to do physical exercise. When would you perform at best?",
+      "MEQ_17": "Suppose you can choose your working hours. What 5 hours would you pick?",
+      "MEQ_18": "At what time of day do you feel your best?",
+      "MEQ_19": "Do you think of yourself as a morning or evening person?",
+
+      // PROMIS Cognitive Function (6 questions, 1-5 scale)
+      "PROMIS_COG_1": "My thinking has been slow.",
+      "PROMIS_COG_2": "It has seemed like my brain was not working as well as usual.",
+      "PROMIS_COG_3": "I have had to work harder than usual to keep track of what I was doing.",
+      "PROMIS_COG_4": "I have had trouble shifting back and forth between different activities.",
+      "PROMIS_COG_5": "I have had trouble concentrating.",
+      "PROMIS_COG_6": "My thinking has been foggy.",
+
+      // Sleep Hygiene Index (10 questions, 1-5 scale)
+      "SH_1": "I go to bed at different times from day to day.",
+      "SH_2": "I use alcohol, tobacco, or caffeine within 4 hours of going to bed.",
+      "SH_3": "I do something that may wake me up before bedtime (e.g., exercise, video games).",
+      "SH_4": "I stay in bed although I am awake.",
+      "SH_5": "I use my bed for things other than sleeping or sex.",
+      "SH_6": "I sleep in an uncomfortable bedroom (e.g., too bright, too stuffy, too hot).",
+      "SH_7": "I do important work before bedtime.",
+      "SH_8": "I think, plan, or worry when I am in bed.",
+      "SH_9": "I have an irregular morning rising time.",
+      "SH_10": "I take daytime naps lasting 2 or more hours.",
+
+      // PSAS - Pre-Sleep Arousal Scale (16 questions, 1-5 scale)
+      // Cognitive subscale
+      "PSAS_C1": "Worry about falling asleep.",
+      "PSAS_C2": "Review or ponder events of the day.",
+      "PSAS_C3": "Depressing or anxious thoughts.",
+      "PSAS_C4": "Worry about problems other than sleep.",
+      "PSAS_C5": "Being mentally alert, active.",
+      "PSAS_C6": "Can't shut off your thoughts.",
+      "PSAS_C7": "Thoughts keep running through your head.",
+      "PSAS_C8": "Being distracted by sounds, etc. in the environment.",
+      // Somatic subscale
+      "PSAS_S1": "Heart racing, pounding, or beating irregularly.",
+      "PSAS_S2": "A jittery, nervous feeling in your body.",
+      "PSAS_S3": "Shortness of breath or labored breathing.",
+      "PSAS_S4": "A tight, tense feeling in your muscles.",
+      "PSAS_S5": "Cold feeling in your hands, feet, or body.",
+      "PSAS_S6": "Have stomach upset (knot in stomach, heartburn, nausea).",
+      "PSAS_S7": "Perspiration in palms of hands or other parts of body.",
+      "PSAS_S8": "Dry feeling in mouth or throat.",
     };
 
     // Map questionnaire names to specific question IDs
@@ -1920,10 +2109,65 @@ export const getQuestionnaireResponses = query({
       "ESS": ["ESS_1", "ESS_2", "ESS_3", "ESS_4", "ESS_5", "ESS_6", "ESS_7", "ESS_8"],
       "Epworth Sleepiness Scale": ["ESS_1", "ESS_2", "ESS_3", "ESS_4", "ESS_5", "ESS_6", "ESS_7", "ESS_8"],
 
-      // STOP-BANG - Sleep Apnea Screening (uses numeric question IDs)
-      // Note: Q21 removed from iOS, use Q17 instead (5-point tiredness scale)
-      "STOP-BANG": ["19", "20", "17", "27"],
-      "STOP-BANG Sleep Apnea Screening": ["19", "20", "17", "27"],
+      // STOP-BANG - Sleep Apnea Screening
+      "STOP-BANG": ["SB_1", "SB_2", "SB_3", "SB_4", "SB_5", "SB_6", "SB_7", "SB_8"],
+      "STOP-BANG Sleep Apnea Screening": ["SB_1", "SB_2", "SB_3", "SB_4", "SB_5", "SB_6", "SB_7", "SB_8"],
+
+      // PSQI - Pittsburgh Sleep Quality Index
+      "PSQI": ["PSQI_1", "PSQI_2", "PSQI_3", "PSQI_4", "PSQI_5a", "PSQI_5b", "PSQI_5c", "PSQI_5d", "PSQI_5e", "PSQI_5f", "PSQI_5g", "PSQI_5h", "PSQI_5i", "PSQI_5j", "PSQI_6", "PSQI_7", "PSQI_8", "PSQI_9"],
+      "Pittsburgh Sleep Quality Index": ["PSQI_1", "PSQI_2", "PSQI_3", "PSQI_4", "PSQI_5a", "PSQI_5b", "PSQI_5c", "PSQI_5d", "PSQI_5e", "PSQI_5f", "PSQI_5g", "PSQI_5h", "PSQI_5i", "PSQI_5j", "PSQI_6", "PSQI_7", "PSQI_8", "PSQI_9"],
+
+      // DBAS-16 - Dysfunctional Beliefs and Attitudes about Sleep
+      "DBAS-16": ["DBAS_1", "DBAS_2", "DBAS_3", "DBAS_4", "DBAS_5", "DBAS_6", "DBAS_7", "DBAS_8", "DBAS_9", "DBAS_10", "DBAS_11", "DBAS_12", "DBAS_13", "DBAS_14", "DBAS_15", "DBAS_16"],
+      "Dysfunctional Beliefs and Attitudes about Sleep": ["DBAS_1", "DBAS_2", "DBAS_3", "DBAS_4", "DBAS_5", "DBAS_6", "DBAS_7", "DBAS_8", "DBAS_9", "DBAS_10", "DBAS_11", "DBAS_12", "DBAS_13", "DBAS_14", "DBAS_15", "DBAS_16"],
+
+      // Berlin Questionnaire
+      "Berlin": ["BERLIN_1", "BERLIN_2", "BERLIN_3", "BERLIN_4", "BERLIN_5", "BERLIN_6", "BERLIN_7", "BERLIN_8", "BERLIN_9", "BERLIN_10"],
+      "Berlin Questionnaire": ["BERLIN_1", "BERLIN_2", "BERLIN_3", "BERLIN_4", "BERLIN_5", "BERLIN_6", "BERLIN_7", "BERLIN_8", "BERLIN_9", "BERLIN_10"],
+
+      // FSS - Fatigue Severity Scale
+      "FSS": ["FSS_1", "FSS_2", "FSS_3", "FSS_4", "FSS_5", "FSS_6", "FSS_7", "FSS_8", "FSS_9"],
+      "Fatigue Severity Scale": ["FSS_1", "FSS_2", "FSS_3", "FSS_4", "FSS_5", "FSS_6", "FSS_7", "FSS_8", "FSS_9"],
+
+      // FOSQ-10 - Functional Outcomes of Sleep Questionnaire
+      "FOSQ-10": ["FOSQ_1", "FOSQ_2", "FOSQ_3", "FOSQ_4", "FOSQ_5", "FOSQ_6", "FOSQ_7", "FOSQ_8", "FOSQ_9", "FOSQ_10"],
+      "Functional Outcomes of Sleep Questionnaire": ["FOSQ_1", "FOSQ_2", "FOSQ_3", "FOSQ_4", "FOSQ_5", "FOSQ_6", "FOSQ_7", "FOSQ_8", "FOSQ_9", "FOSQ_10"],
+
+      // DASS-21 subscales
+      "DASS-D": ["DASS_3", "DASS_5", "DASS_10", "DASS_13", "DASS_16", "DASS_17", "DASS_21"],
+      "DASS-21 Depression": ["DASS_3", "DASS_5", "DASS_10", "DASS_13", "DASS_16", "DASS_17", "DASS_21"],
+      "DASS-A": ["DASS_2", "DASS_4", "DASS_7", "DASS_9", "DASS_15", "DASS_19", "DASS_20"],
+      "DASS-21 Anxiety": ["DASS_2", "DASS_4", "DASS_7", "DASS_9", "DASS_15", "DASS_19", "DASS_20"],
+      "DASS-S": ["DASS_1", "DASS_6", "DASS_8", "DASS_11", "DASS_12", "DASS_14", "DASS_18"],
+      "DASS-21 Stress": ["DASS_1", "DASS_6", "DASS_8", "DASS_11", "DASS_12", "DASS_14", "DASS_18"],
+
+      // BPI - Brief Pain Inventory subscales
+      "BPI-S": ["BPI_1", "BPI_2", "BPI_3", "BPI_4"],
+      "Brief Pain Inventory - Severity": ["BPI_1", "BPI_2", "BPI_3", "BPI_4"],
+      "BPI-I": ["BPI_5", "BPI_6", "BPI_7", "BPI_8", "BPI_9", "BPI_10", "BPI_11"],
+      "Brief Pain Inventory - Interference": ["BPI_5", "BPI_6", "BPI_7", "BPI_8", "BPI_9", "BPI_10", "BPI_11"],
+
+      // MEDAS - Mediterranean Diet Adherence Screener
+      "MEDAS": ["MEDAS_1", "MEDAS_2", "MEDAS_3", "MEDAS_4", "MEDAS_5", "MEDAS_6", "MEDAS_7", "MEDAS_8", "MEDAS_9", "MEDAS_10", "MEDAS_11", "MEDAS_12", "MEDAS_13", "MEDAS_14"],
+      "Mediterranean Diet Adherence Screener": ["MEDAS_1", "MEDAS_2", "MEDAS_3", "MEDAS_4", "MEDAS_5", "MEDAS_6", "MEDAS_7", "MEDAS_8", "MEDAS_9", "MEDAS_10", "MEDAS_11", "MEDAS_12", "MEDAS_13", "MEDAS_14"],
+
+      // MEQ - Morningness-Eveningness Questionnaire
+      "MEQ": ["MEQ_1", "MEQ_2", "MEQ_3", "MEQ_4", "MEQ_5", "MEQ_6", "MEQ_7", "MEQ_8", "MEQ_9", "MEQ_10", "MEQ_11", "MEQ_12", "MEQ_13", "MEQ_14", "MEQ_15", "MEQ_16", "MEQ_17", "MEQ_18", "MEQ_19"],
+      "Morningness-Eveningness Questionnaire": ["MEQ_1", "MEQ_2", "MEQ_3", "MEQ_4", "MEQ_5", "MEQ_6", "MEQ_7", "MEQ_8", "MEQ_9", "MEQ_10", "MEQ_11", "MEQ_12", "MEQ_13", "MEQ_14", "MEQ_15", "MEQ_16", "MEQ_17", "MEQ_18", "MEQ_19"],
+
+      // PROMIS Cognitive Function
+      "PROMIS-Cog": ["PROMIS_COG_1", "PROMIS_COG_2", "PROMIS_COG_3", "PROMIS_COG_4", "PROMIS_COG_5", "PROMIS_COG_6"],
+      "PROMIS Cognitive Function": ["PROMIS_COG_1", "PROMIS_COG_2", "PROMIS_COG_3", "PROMIS_COG_4", "PROMIS_COG_5", "PROMIS_COG_6"],
+
+      // Sleep Hygiene Index
+      "SHI": ["SH_1", "SH_2", "SH_3", "SH_4", "SH_5", "SH_6", "SH_7", "SH_8", "SH_9", "SH_10"],
+      "Sleep Hygiene Index": ["SH_1", "SH_2", "SH_3", "SH_4", "SH_5", "SH_6", "SH_7", "SH_8", "SH_9", "SH_10"],
+
+      // PSAS - Pre-Sleep Arousal Scale subscales
+      "PSAS-C": ["PSAS_C1", "PSAS_C2", "PSAS_C3", "PSAS_C4", "PSAS_C5", "PSAS_C6", "PSAS_C7", "PSAS_C8"],
+      "Pre-Sleep Arousal - Cognitive": ["PSAS_C1", "PSAS_C2", "PSAS_C3", "PSAS_C4", "PSAS_C5", "PSAS_C6", "PSAS_C7", "PSAS_C8"],
+      "PSAS-S": ["PSAS_S1", "PSAS_S2", "PSAS_S3", "PSAS_S4", "PSAS_S5", "PSAS_S6", "PSAS_S7", "PSAS_S8"],
+      "Pre-Sleep Arousal - Somatic": ["PSAS_S1", "PSAS_S2", "PSAS_S3", "PSAS_S4", "PSAS_S5", "PSAS_S6", "PSAS_S7", "PSAS_S8"],
     };
 
     const questionIds = questionnaireToQuestionIds[args.questionnaireName];
@@ -2728,9 +2972,9 @@ export const setPatientDay = mutation({
     currentDay: v.number(),
   }),
   handler: async (ctx, args) => {
-    // Validate dayNumber is 1-15
-    if (args.dayNumber < 1 || args.dayNumber > 15) {
-      throw new Error("Day must be between 1 and 15");
+    // Validate dayNumber is 1-14
+    if (args.dayNumber < 1 || args.dayNumber > 14) {
+      throw new Error("Day must be between 1 and 14");
     }
 
     const user = await ctx.db.get(args.userId);

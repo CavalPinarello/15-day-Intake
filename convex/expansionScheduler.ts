@@ -7,7 +7,7 @@
  * Key principles:
  * 1. All gateway trigger questions are asked by Day 2
  * 2. Expansion schedule is computed when Day 2 completes
- * 3. Modules are distributed across Days 3-15 with target of 12-15 questions/day
+ * 3. Modules are distributed across Days 6-14 with target of 12-15 questions/day
  * 4. Clinical priority modules come first (ISI, PHQ-9, GAD-7)
  * 5. Related modules are grouped when possible
  */
@@ -210,7 +210,7 @@ interface DayAssignment {
  * Algorithm:
  * 1. Filter modules to only those triggered by user's gateways
  * 2. Sort by priority (clinical urgency first)
- * 3. Distribute across available days (3-15 = 13 days)
+ * 3. Distribute across available days (6-14 = 9 days)
  * 4. Target 12-15 questions per day, never exceed 18
  * 5. Keep total daily time under 15 minutes
  */
@@ -218,7 +218,7 @@ export function computeExpansionSchedule(triggeredGateways: string[]): DayAssign
   const TARGET_QUESTIONS_PER_DAY = 14;
   const MAX_QUESTIONS_PER_DAY = 18;
   const EXPANSION_START_DAY = 6;  // Start expansions on Day 6 (core days 1-5)
-  const TOTAL_DAYS = 15;
+  const TOTAL_DAYS = 14;
 
   // 1. Get modules triggered by user's gateways
   const triggeredModules = EXPANSION_MODULES.filter(module =>
@@ -238,7 +238,7 @@ export function computeExpansionSchedule(triggeredGateways: string[]): DayAssign
 
   // 3. Calculate total questions and ideal distribution
   const totalQuestions = sortedModules.reduce((sum, m) => sum + m.questionCount, 0);
-  const availableDays = TOTAL_DAYS - EXPANSION_START_DAY + 1; // Days 3-15 = 13 days
+  const availableDays = TOTAL_DAYS - EXPANSION_START_DAY + 1; // Days 6-14 = 9 days
   const idealQuestionsPerDay = Math.ceil(totalQuestions / availableDays);
 
   // 4. Distribute modules across days using bin-packing

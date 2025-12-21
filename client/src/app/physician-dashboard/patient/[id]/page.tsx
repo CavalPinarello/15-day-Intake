@@ -89,6 +89,7 @@ export default function PatientDetailPage() {
   const [targetDay, setTargetDay] = useState<number>(1);
   const [isTogglingDevMode, setIsTogglingDevMode] = useState(false);
   const [isChangingDay, setIsChangingDay] = useState(false);
+  const [showOnlyTriggered, setShowOnlyTriggered] = useState(false);
 
   // Queries
   const patient = useQuery(api.physician.getPatientDetails, { userId });
@@ -591,9 +592,27 @@ export default function PatientDetailPage() {
                 <h3 className="text-lg font-semibold">
                   Questionnaire Scores
                 </h3>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Zap className="w-4 h-4 text-teal-500" />
-                  <span>Real-time updates enabled</span>
+                <div className="flex items-center gap-4">
+                  {/* Filter Toggle */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-sm text-gray-600">Show only triggered</span>
+                    <button
+                      onClick={() => setShowOnlyTriggered(!showOnlyTriggered)}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                        showOnlyTriggered ? "bg-teal-600" : "bg-gray-300"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                          showOnlyTriggered ? "left-5" : "left-0.5"
+                        }`}
+                      />
+                    </button>
+                  </label>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Zap className="w-4 h-4 text-teal-500" />
+                    <span>Real-time</span>
+                  </div>
                 </div>
               </div>
 
@@ -603,9 +622,25 @@ export default function PatientDetailPage() {
                   <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
                     <Activity className="w-4 h-4" />
                     Live Calculated Scores
+                    {showOnlyTriggered && (
+                      <span className="text-xs text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">
+                        Filtered: {calculatedScores.scores.filter(s => s.score !== null || s.questionsAnswered > 0).length} with data
+                      </span>
+                    )}
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {calculatedScores.scores.map((score) => {
+                    {calculatedScores.scores
+                      .filter(score => {
+                        // Core questionnaires (Days 1-2) always show when filter is on
+                        const coreQuestionnaires = ["PSQI"];
+                        const isCore = coreQuestionnaires.includes(score.abbreviation);
+                        // Show if: filter off, OR is core, OR has data
+                        return !showOnlyTriggered || isCore || score.score !== null || score.questionsAnswered > 0;
+                      })
+                      .map((score) => {
+                      // Core questionnaires completed in Days 1-2 (not expansion)
+                      const coreQuestionnaires = ["PSQI"];
+                      const isCore = coreQuestionnaires.includes(score.abbreviation);
                       const severityColors: Record<string, string> = {
                         normal: "border-green-200 bg-green-50",
                         mild: "border-yellow-200 bg-yellow-50",
@@ -635,7 +670,14 @@ export default function PatientDetailPage() {
                           className={`border rounded-xl p-4 cursor-pointer hover:shadow-md transition-all ${severityColors[score.severity] || severityColors.unknown}`}
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold text-gray-500">{score.abbreviation}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-gray-500">{score.abbreviation}</span>
+                              {isCore && (
+                                <span className="text-[10px] font-medium text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
+                                  Core
+                                </span>
+                              )}
+                            </div>
                             {score.score !== null ? (
                               <span className={`text-2xl font-bold ${severityTextColors[score.severity]}`}>
                                 {score.score}

@@ -32,7 +32,7 @@ struct ContentView: View {
     private var phaseAwareContent: some View {
         switch journeyPhaseManager.currentPhase {
         case .intake:
-            // 15-day data collection journey
+            // 14-day data collection journey
             MainDashboardView()
 
         case .analysis:
@@ -373,13 +373,13 @@ struct MainDashboardView: View {
         VStack(spacing: Spacing.lg) {
             // Day indicator with percentage
             HStack {
-                // Day X of 15
+                // Day X of 14
                 HStack(spacing: Spacing.xs) {
                     Text("Day \(currentDay)")
                         .font(.system(size: Typography.title3, weight: .bold, design: .rounded))
                         .foregroundColor(theme.textOnCard)
 
-                    Text("of 15")
+                    Text("of 14")
                         .font(.system(size: Typography.title3, weight: .regular, design: .rounded))
                         .foregroundColor(theme.textOnCardSecondary)
                 }
@@ -395,7 +395,7 @@ struct MainDashboardView: View {
             // Interactive progress dots - tap completed days to view history
             InteractiveProgressDots(
                 current: currentDay,
-                total: 15,
+                total: 14,
                 completedDays: validatedCompletedDays
             ) { day in
                 sleepDiarySelectedDay = day
@@ -428,12 +428,12 @@ struct MainDashboardView: View {
         var daysCompleted = max(0, currentDay - 1)
 
         // If current day's sections are BOTH complete, count current day as completed too
-        // This fixes the 93% bug where Day 15 completion wasn't counted
+        // This fixes the 93% bug where Day 14 completion wasn't counted
         if isDayComplete {
             daysCompleted = currentDay
         }
 
-        return Int((Double(daysCompleted) / 15.0) * 100)
+        return Int((Double(daysCompleted) / 14.0) * 100)
     }
 
     private func progressMessage(completedCount: Int) -> String {
@@ -444,10 +444,12 @@ struct MainDashboardView: View {
             return "Building your sleep profile"
         case 5...9:
             return "Halfway there! Great progress"
-        case 10...13:
+        case 10...12:
             return "Almost done! Keep going"
-        case 14:
+        case 13:
             return "Final day tomorrow!"
+        case 14:
+            return "Journey complete! Analysis begins soon."
         default:
             return "Journey complete!"
         }
@@ -673,7 +675,7 @@ struct MainDashboardView: View {
     private var hasAssessmentToday: Bool {
         // Core days (1-7) always have assessment
         if currentDay <= 7 { return true }
-        // Expansion days (8-15) only have assessment if gateways are triggered
+        // Expansion days (8-14) only have assessment if gateways are triggered
         return !getTriggeredGatewaysForToday().isEmpty
     }
 
@@ -743,7 +745,7 @@ struct MainDashboardView: View {
             return config.estimatedMinutes
         }
 
-        // For expansion days (6-15), calculate based on triggered gateways for today
+        // For expansion days (6-14), calculate based on triggered gateways for today
         let todayGateways = getTriggeredGatewaysForToday()
         if todayGateways.isEmpty {
             return 0  // No expansion content if no gateways triggered
@@ -839,8 +841,8 @@ struct MainDashboardView: View {
 
     private var quickActionsCard: some View {
         VStack(spacing: 12) {
-            // Treatment Mode (visible after Day 15 or with active interventions)
-            if currentDay > 15 {
+            // Treatment Mode (visible after Day 14 or with active interventions)
+            if currentDay > 14 {
                 NavigationLink(destination: TreatmentView().environmentObject(themeManager)) {
                     QuickActionRow(
                         icon: "list.bullet.clipboard.fill",
@@ -911,7 +913,7 @@ struct MainDashboardView: View {
             return config.description
         }
 
-        // For expansion days (8-15), show what's being assessed
+        // For expansion days (8-14), show what's being assessed
         let todayGateways = getTriggeredGatewaysForToday()
         if todayGateways.isEmpty {
             return "No additional assessments today"
@@ -1503,10 +1505,11 @@ struct SleepDiaryHistoryView: View {
             Text("Select a Day")
                 .font(.headline)
                 .foregroundColor(circadianTextPrimary)
+                .padding(.leading, 4)  // Ensure text isn't clipped at edge
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(1...15, id: \.self) { day in
+                    ForEach(1...14, id: \.self) { day in
                         DayPillButton(
                             day: day,
                             isSelected: day == selectedDay,
@@ -1518,7 +1521,7 @@ struct SleepDiaryHistoryView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 8)  // Increased padding for better layout
             }
         }
     }
@@ -2467,7 +2470,7 @@ struct DayCompleteCelebrationView: View {
                 HStack {
                     Image(systemName: "trophy.fill")
                         .foregroundColor(theme.warning)  // Use theme warning (amber/gold) instead of .yellow
-                    Text("You've completed the 15-day sleep assessment!")
+                    Text("You've completed the 14-day sleep assessment!")
                         .font(.subheadline)
                         .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                 }

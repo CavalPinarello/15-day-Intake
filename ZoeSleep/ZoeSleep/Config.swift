@@ -62,7 +62,7 @@ struct Config {
     static let appBundleId = "com.sleep360.app"
 
     // Journey Configuration
-    static let totalJourneyDays = 15
+    static let totalJourneyDays = 14
     static let sessionExpirationDays = 30
 
     #if DEBUG

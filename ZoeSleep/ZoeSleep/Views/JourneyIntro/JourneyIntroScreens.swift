@@ -3,7 +3,7 @@
 //  Zoe Sleep - Sleep Better, Live Longer
 //
 //  Individual screen components for the Journey Introduction sequence
-//  Each screen explains a different aspect of the 15-day sleep assessment
+//  Each screen explains a different aspect of the 14-day sleep assessment
 //
 
 import SwiftUI
@@ -30,7 +30,7 @@ struct JourneyIntroScreen1: View {
                 .opacity(iconOpacity)
 
             // Title
-            Text("Your 15-Day Sleep Journey")
+            Text("Your 14-Day Sleep Journey")
                 .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
@@ -102,7 +102,7 @@ struct JourneyIntroScreen2: View {
             // Description
             VStack(spacing: isCompact ? 12 : 16) {
                 JourneyIntroParagraph(
-                    "Every morning, 10 questions from the Stanford Consensus Sleep Diary — repeated for all 15 days.",
+                    "Every morning, 10 questions from the Stanford Consensus Sleep Diary — repeated for all 14 days.",
                     isCompact: isCompact
                 )
                 JourneyIntroParagraph(
@@ -165,7 +165,7 @@ struct JourneyIntroScreen3: View {
             // Description
             VStack(spacing: isCompact ? 12 : 16) {
                 JourneyIntroParagraph(
-                    "Across all 15 days, we explore multiple facets of your sleep health.",
+                    "Across all 14 days, we explore multiple facets of your sleep health.",
                     isCompact: isCompact
                 )
                 JourneyIntroParagraph(
