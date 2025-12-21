@@ -80,6 +80,19 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Journey Introduction Sequence:** 6-screen Aurora-animated intro for new users (Dec 21, 2025)
+  - Full-screen modal on first MainDashboard visit with swipeable pages
+  - **Aurora borealis background:** Matches splash screen aesthetic with animated waves and stars
+  - **Content:** Explains 15-day journey, 10 Stanford Sleep Diary questions (repeated daily), personalized gateways, wearable integration, and expert review
+  - **Time framing:** "10-15 minutes daily investment" for better subjective calibration
+  - Skip button available; marks as seen via `OnboardingManager.hasSeenJourneyIntro`
+  - **Files:** `JourneyIntroView.swift`, `JourneyIntro/JourneyIntroScreens.swift`, `JourneyIntro/JourneyIntroIcons.swift`
+- **Build Fixes:** Resolved multiple compilation errors (Dec 21, 2025)
+  - `QuestionnaireManager.swift`: Fixed `SleepPillar` → `Pillar` type, `optionalContextQuestions` → `sleepContextQuestions`
+  - `ConvexService.swift`: Added Codable response types for journey phase APIs
+  - `JourneyPhaseManager.swift`: Updated to use struct property access instead of dictionary subscripts
+  - `ColorTheme`: Added `primaryText`, `secondaryText`, `backgroundGradient` aliases
+  - `ChallengesView.swift`: Fixed `AnyShapeStyle` type mismatch
 - **Dashboard Progress Indicator Fix:** Fixed 3 bugs in journey progress card (Dec 21, 2025)
   - **40% progress on Day 1:** Was using `completedDays.count` from corrupted backend data; now uses `currentDay - 1`
   - **Day 7 dot highlighted:** Was passing `completedDaysCount + 1` to dots; now uses `currentDay` directly
