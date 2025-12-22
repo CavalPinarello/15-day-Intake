@@ -435,7 +435,7 @@ export const updateSolidarityMoments = internalMutation({
     const monthStartMs = monthStart.getTime();
 
     const allStreaks = await ctx.db.query("user_streaks").collect();
-    const journeysCompleted = allStreaks.filter((s) => s.total_days_completed >= 15).length;
+    const journeysCompleted = allStreaks.filter((s) => s.total_days_completed >= 14).length;
 
     // Estimate improving count (those with 5+ day streaks)
     const improvingCount = allStreaks.filter((s) => s.current_streak >= 5).length;

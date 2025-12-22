@@ -104,7 +104,7 @@ export function useJourneyState() {
     journeyState,
     isLoading: userId !== null && journeyState === undefined,
     currentDay: journeyState?.currentDay ?? 1,
-    totalDays: journeyState?.totalDays ?? 15,
+    totalDays: journeyState?.totalDays ?? 14,
     sleepLogCompleted: journeyState?.sleepLogCompleted ?? false,
     assessmentCompleted: journeyState?.assessmentCompleted ?? false,
     onboardingCompleted: journeyState?.onboardingCompleted ?? false,

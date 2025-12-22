@@ -42,20 +42,35 @@ struct AnalysisPendingView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "chart.bar.doc.horizontal")
-                .font(.system(size: 48))
+        VStack(spacing: 12) {
+            Image(systemName: "stethoscope")
+                .font(.system(size: 52))
                 .foregroundColor(theme.accent)
+                .symbolEffect(.pulse, options: .repeating)
 
-            Text("Analyzing Your Sleep")
+            Text("Your Data is Being Reviewed")
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(theme.primaryText)
 
-            Text("Our team is reviewing your 15 days of data")
+            Text("Our sleep medicine team is analyzing your 14 days of responses to create your personalized treatment protocol.")
                 .font(.subheadline)
                 .foregroundColor(theme.secondaryText)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            // Stay tuned message
+            HStack(spacing: 8) {
+                Image(systemName: "bell.badge")
+                    .foregroundColor(theme.accent)
+                Text("We'll notify you when your plan is ready")
+                    .font(.caption)
+                    .foregroundColor(theme.secondaryText)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(theme.accent.opacity(0.1))
+            .cornerRadius(20)
         }
         .padding(.top, 20)
     }
@@ -221,26 +236,55 @@ struct AnalysisPendingView: View {
     // MARK: - Encouragement Card
 
     private var encouragementCard: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "heart.fill")
-                .font(.title2)
-                .foregroundColor(.pink)
+        VStack(spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.title2)
+                    .foregroundColor(.green)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Thank you for completing your journey!")
-                    .font(.subheadline)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("14-Day Assessment Complete!")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(theme.primaryText)
+
+                    Text("You've provided valuable insights about your sleep patterns, habits, and health factors.")
+                        .font(.caption)
+                        .foregroundColor(theme.secondaryText)
+                }
+            }
+
+            Divider()
+                .background(theme.secondaryText.opacity(0.2))
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("What happens next?")
+                    .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(theme.primaryText)
 
-                Text("Your detailed sleep data helps us create a truly personalized plan for you.")
-                    .font(.caption)
-                    .foregroundColor(theme.secondaryText)
+                VStack(alignment: .leading, spacing: 6) {
+                    nextStepRow(icon: "1.circle.fill", text: "Your physician reviews your complete profile")
+                    nextStepRow(icon: "2.circle.fill", text: "A personalized treatment protocol is designed")
+                    nextStepRow(icon: "3.circle.fill", text: "Your daily interventions appear here automatically")
+                }
             }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.cardBackground.opacity(0.5))
-        .cornerRadius(12)
+        .background(theme.cardBackground)
+        .cornerRadius(16)
+    }
+
+    private func nextStepRow(icon: String, text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundColor(theme.accent)
+            Text(text)
+                .font(.caption)
+                .foregroundColor(theme.secondaryText)
+        }
     }
 
     // MARK: - Helpers

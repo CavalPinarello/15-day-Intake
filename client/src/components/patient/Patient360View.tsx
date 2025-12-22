@@ -214,7 +214,7 @@ export function Patient360View({
         {/* Sleep Trend Chart - Wide */}
         <BentoCard
           title="Sleep Quality Trend"
-          subtitle="15-day overview"
+          subtitle="14-day overview"
           size="wide"
           icon={<Moon className="w-4 h-4" />}
           action={

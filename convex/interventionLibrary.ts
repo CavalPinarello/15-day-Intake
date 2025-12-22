@@ -966,7 +966,7 @@ export const getTasksByTimeWindow = query({
   returns: v.object({
     morning: v.array(
       v.object({
-        _id: v.id("user_daily_tasks"),
+        _id: v.union(v.id("user_daily_tasks"), v.id("user_interventions")),
         task_name: v.string(),
         task_instructions: v.string(),
         status: v.string(),
@@ -979,7 +979,7 @@ export const getTasksByTimeWindow = query({
     ),
     afternoon: v.array(
       v.object({
-        _id: v.id("user_daily_tasks"),
+        _id: v.union(v.id("user_daily_tasks"), v.id("user_interventions")),
         task_name: v.string(),
         task_instructions: v.string(),
         status: v.string(),
@@ -992,7 +992,7 @@ export const getTasksByTimeWindow = query({
     ),
     evening: v.array(
       v.object({
-        _id: v.id("user_daily_tasks"),
+        _id: v.union(v.id("user_daily_tasks"), v.id("user_interventions")),
         task_name: v.string(),
         task_instructions: v.string(),
         status: v.string(),
@@ -1005,7 +1005,7 @@ export const getTasksByTimeWindow = query({
     ),
     night: v.array(
       v.object({
-        _id: v.id("user_daily_tasks"),
+        _id: v.union(v.id("user_daily_tasks"), v.id("user_interventions")),
         task_name: v.string(),
         task_instructions: v.string(),
         status: v.string(),
@@ -1037,62 +1037,152 @@ export const getTasksByTimeWindow = query({
     else if (currentHour >= 5) currentWindow = "morning";
     else currentWindow = "night"; // Before 5 AM is still "night"
 
-    // Get today's tasks
-    const tasks = await ctx.db
-      .query("user_daily_tasks")
-      .withIndex("by_user_date", (q) =>
-        q.eq("user_id", args.userId).eq("task_date", today)
-      )
-      .collect();
-
     // Group tasks by time window
-    const grouped: Record<string, typeof enrichedTasks> = {
+    type TaskEntry = {
+      _id: any;
+      task_name: string;
+      task_instructions: string;
+      status: string;
+      scheduled_time?: string;
+      priority?: number;
+      intervention_id: string;
+      isLocked: boolean;
+      unlocksAt?: string;
+    };
+
+    const grouped: Record<string, TaskEntry[]> = {
       morning: [],
       afternoon: [],
       evening: [],
       night: [],
     };
 
-    const enrichedTasks = await Promise.all(
-      tasks.map(async (task) => {
-        const userIntervention = await ctx.db.get(task.user_intervention_id);
-        const intervention = await ctx.db.get(task.intervention_id);
+    // Always use user_interventions as source of truth
+    // The user_daily_tasks table may have stale data
+    // TODO: In future, generate user_daily_tasks properly from user_interventions
+    const USE_USER_INTERVENTIONS = true;
 
-        const window = task.time_window || "morning";
-        const isLocked = isWindowLocked(window, currentHour);
-        const unlocksAt = isLocked ? getWindowUnlockTime(window) : undefined;
+    // Check for user_daily_tasks (kept for future when daily task generation works)
+    const dailyTasks = USE_USER_INTERVENTIONS ? [] : await ctx.db
+      .query("user_daily_tasks")
+      .withIndex("by_user_date", (q) =>
+        q.eq("user_id", args.userId).eq("task_date", today)
+      )
+      .collect();
 
-        return {
-          _id: task._id,
-          task_name: task.task_name,
-          task_instructions: task.task_instructions,
-          status: task.status,
-          scheduled_time: task.scheduled_time,
-          priority: userIntervention?.priority,
-          intervention_id: intervention?.intervention_id || "",
-          time_window: window,
-          isLocked,
-          unlocksAt,
-        };
-      })
-    );
+    if (dailyTasks.length > 0) {
+      // Use daily tasks if available
+      const enrichedTasks = await Promise.all(
+        dailyTasks.map(async (task) => {
+          const userIntervention = await ctx.db.get(task.user_intervention_id);
+          const intervention = await ctx.db.get(task.intervention_id);
 
-    // Group tasks
-    for (const task of enrichedTasks) {
-      const window = task.time_window;
-      if (grouped[window]) {
-        grouped[window].push({
-          _id: task._id,
-          task_name: task.task_name,
-          task_instructions: task.task_instructions,
-          status: task.status,
-          scheduled_time: task.scheduled_time,
-          priority: task.priority,
-          intervention_id: task.intervention_id,
-          time_window: window,
-          isLocked: task.isLocked,
-          unlocksAt: task.unlocksAt,
-        });
+          const window = task.time_window || "morning";
+          const isLocked = isWindowLocked(window, currentHour);
+          const unlocksAt = isLocked ? getWindowUnlockTime(window) : undefined;
+
+          return {
+            _id: task._id,
+            task_name: task.task_name,
+            task_instructions: task.task_instructions,
+            status: task.status,
+            scheduled_time: task.scheduled_time,
+            priority: userIntervention?.priority,
+            intervention_id: intervention?.intervention_id || "",
+            time_window: window,
+            isLocked,
+            unlocksAt,
+          };
+        })
+      );
+
+      // Group tasks
+      for (const task of enrichedTasks) {
+        const window = task.time_window;
+        if (grouped[window]) {
+          grouped[window].push({
+            _id: task._id,
+            task_name: task.task_name,
+            task_instructions: task.task_instructions,
+            status: task.status,
+            scheduled_time: task.scheduled_time,
+            priority: task.priority,
+            intervention_id: task.intervention_id,
+            isLocked: task.isLocked,
+            unlocksAt: task.unlocksAt,
+          });
+        }
+      }
+    } else {
+      // Fallback: Query user_interventions directly (for when daily tasks aren't generated)
+      const userInterventions = await ctx.db
+        .query("user_interventions")
+        .withIndex("by_user_status", (q) =>
+          q.eq("user_id", args.userId).eq("status", "active")
+        )
+        .collect();
+
+      // Check today's compliance for each intervention
+      const enrichedFromInterventions = await Promise.all(
+        userInterventions.map(async (ui) => {
+          const intervention = await ctx.db.get(ui.intervention_id);
+
+          // Check if completed today
+          const todayCompliance = await ctx.db
+            .query("intervention_compliance")
+            .withIndex("by_intervention_date", (q) =>
+              q.eq("user_intervention_id", ui._id).eq("scheduled_date", today)
+            )
+            .first();
+
+          // Map timing to time window
+          const timingToWindow: Record<string, string> = {
+            "morning": "morning",
+            "Morning": "morning",
+            "afternoon": "afternoon",
+            "Afternoon": "afternoon",
+            "evening": "evening",
+            "Evening": "evening",
+            "pre_bed": "night",
+            "Before bed": "night",
+            "night": "night",
+            "With meals": "afternoon", // Default meals to afternoon
+          };
+          const window = timingToWindow[ui.timing || ""] || "morning";
+          const isLocked = isWindowLocked(window, currentHour);
+          const unlocksAt = isLocked ? getWindowUnlockTime(window) : undefined;
+
+          return {
+            _id: ui._id,
+            task_name: intervention?.name || "Task",
+            task_instructions: ui.custom_instructions || intervention?.instructions_text || "",
+            status: todayCompliance?.completed ? "completed" : "pending",
+            scheduled_time: undefined,
+            priority: ui.priority,
+            intervention_id: intervention?.intervention_id || "",
+            time_window: window,
+            isLocked,
+            unlocksAt,
+          };
+        })
+      );
+
+      // Group tasks from user_interventions
+      for (const task of enrichedFromInterventions) {
+        const window = task.time_window;
+        if (grouped[window]) {
+          grouped[window].push({
+            _id: task._id,
+            task_name: task.task_name,
+            task_instructions: task.task_instructions,
+            status: task.status,
+            scheduled_time: task.scheduled_time,
+            priority: task.priority,
+            intervention_id: task.intervention_id,
+            isLocked: task.isLocked,
+            unlocksAt: task.unlocksAt,
+          });
+        }
       }
     }
 

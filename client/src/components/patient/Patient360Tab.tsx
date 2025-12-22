@@ -426,7 +426,7 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
             </div>
             <div>
               <h3 className="text-sm font-medium text-white">Sleep Quality Trend</h3>
-              <p className="text-xs text-gray-500">15-day overview</p>
+              <p className="text-xs text-gray-500">14-day overview</p>
             </div>
           </div>
           {sleepTrendData.length > 0 ? (

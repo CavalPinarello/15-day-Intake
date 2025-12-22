@@ -556,9 +556,9 @@ struct DayCompletionView: View {
         }
     }
 
-    // Computed: Is this the final day of the 15-day journey?
+    // Computed: Is this the final day of the 14-day journey?
     private var isJourneyComplete: Bool {
-        dayNumber >= 15 && (isFullDayComplete || completedSection == .assessment)
+        dayNumber >= 14 && (isFullDayComplete || completedSection == .assessment)
     }
 
     // Computed: Is this a full day completion or section-only?
@@ -640,7 +640,7 @@ struct DayCompletionView: View {
                         .fontWeight(.bold)
                         .foregroundColor(primaryTextColor)
 
-                    Text("You've completed your 15-day comprehensive sleep assessment")
+                    Text("You've completed your 14-day comprehensive sleep assessment")
                         .font(.headline)
                         .foregroundColor(secondaryTextColor)
                         .multilineTextAlignment(.center)

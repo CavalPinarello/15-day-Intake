@@ -389,33 +389,65 @@ struct DataSourceCard: View {
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
-    var body: some View {
-        HStack(spacing: 12) {
-            // Device icon
-            ZStack {
-                Circle()
-                    .fill(sourceColor.opacity(0.2))
-                    .frame(width: 44, height: 44)
+    /// Determines what type of data is being shown
+    private var dataTypeLabel: String {
+        guard let source = source else {
+            return "Questionnaire data only"
+        }
+        let upper = source.uppercased()
+        if upper.contains("WATCH") || upper.contains("OURA") || upper.contains("FITBIT") || upper.contains("GARMIN") || upper.contains("WHOOP") {
+            return "Wearable + Questionnaire"
+        }
+        return "Questionnaire data"
+    }
 
-                Image(systemName: sourceIcon)
-                    .font(.title3)
-                    .foregroundColor(sourceColor)
+    /// Icon for no device state
+    private var noDeviceMessage: String {
+        "Sleep patterns derived from your daily sleep log questionnaire responses"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                // Device icon
+                ZStack {
+                    Circle()
+                        .fill(sourceColor.opacity(0.2))
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: sourceIcon)
+                        .font(.title3)
+                        .foregroundColor(sourceColor)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(source ?? "No Device")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(theme.textOnCard)
+
+                    Text("\(daysOfData) days of data")
+                        .font(.caption)
+                        .foregroundColor(theme.textOnCardSecondary)
+                }
+
+                Spacer()
+
+                DataQualityBadge(score: qualityScore)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(source ?? "No Device")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(theme.textOnCard)
+            // Data source explanation
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: source == nil ? "info.circle" : "checkmark.circle")
+                    .font(.caption)
+                    .foregroundColor(source == nil ? theme.warning : theme.success)
 
-                Text("\(daysOfData) days of data")
+                Text(source == nil ? noDeviceMessage : dataTypeLabel)
                     .font(.caption)
                     .foregroundColor(theme.textOnCardSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer()
-
-            DataQualityBadge(score: qualityScore)
+            .padding(.top, 4)
         }
         .padding()
         .background(GlassyCardBackground(opacity: 0.5))

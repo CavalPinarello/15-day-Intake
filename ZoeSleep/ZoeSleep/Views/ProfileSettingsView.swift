@@ -133,7 +133,7 @@ struct ProfileSettingsView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.caption2)
-                        Text("Day \(questionnaireManager.currentDay) of 15")
+                        Text("Day \(questionnaireManager.currentDay) of 14")
                             .font(.caption)
                     }
                     .foregroundColor(theme.primary)
@@ -341,71 +341,111 @@ struct ProfileSettingsView: View {
 
     private var accessibilitySection: some View {
         Section {
-            // Large Icons Mode
-            Toggle(isOn: $themeManager.largeIconsMode) {
+            // Enhanced Readability Mode - Main toggle for elderly users
+            Toggle(isOn: $themeManager.enhancedReadabilityMode) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Label("Large Icons Mode", systemImage: "textformat.size.larger")
+                    Label("Enhanced Readability", systemImage: "text.magnifyingglass")
                         .font(.headline)
-                    Text("Makes buttons & text 30% larger")
+                    Text("50% larger text, bigger buttons, high contrast")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            .tint(themeManager.accentColor)
+            .tint(.green)
             .accessibleTapTarget()
 
-            // High Contrast
-            Toggle(isOn: $themeManager.highContrast) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Label("High Contrast", systemImage: "circle.lefthalf.filled")
-                        .font(.headline)
-                    Text("Bolder colors, clearer borders")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .tint(themeManager.accentColor)
-            .accessibleTapTarget()
-
-            // Reduce Motion
-            Toggle(isOn: $themeManager.reduceMotion) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Label("Reduce Motion", systemImage: "figure.walk")
-                        .font(.headline)
-                    Text("Minimizes animations")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .tint(themeManager.accentColor)
-            .accessibleTapTarget()
-
-            // Text Size Slider
-            VStack(alignment: .leading, spacing: 8) {
-                Label("Text Size", systemImage: "textformat.size")
-                    .font(.headline)
-
+            // Divider row to separate enhanced mode from individual settings
+            if themeManager.enhancedReadabilityMode {
                 HStack {
-                    Text("A")
-                        .font(.system(size: 14))
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Enhanced mode is active")
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+            }
 
-                    Slider(value: $themeManager.textSizeMultiplier, in: 0.8...1.4, step: 0.1)
-                        .tint(themeManager.accentColor)
+            // Individual settings (shown but disabled when enhanced mode is on)
+            Group {
+                // Large Icons Mode
+                Toggle(isOn: $themeManager.largeIconsMode) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Large Icons Mode", systemImage: "textformat.size.larger")
+                            .font(.headline)
+                        Text("Makes buttons & text 30% larger")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .tint(themeManager.accentColor)
+                .accessibleTapTarget()
+                .disabled(themeManager.enhancedReadabilityMode)
+                .opacity(themeManager.enhancedReadabilityMode ? 0.6 : 1.0)
 
-                    Text("A")
-                        .font(.system(size: 22))
+                // High Contrast
+                Toggle(isOn: $themeManager.highContrast) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("High Contrast", systemImage: "circle.lefthalf.filled")
+                            .font(.headline)
+                        Text("Bolder colors, clearer borders")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .tint(themeManager.accentColor)
+                .accessibleTapTarget()
+                .disabled(themeManager.enhancedReadabilityMode)
+                .opacity(themeManager.enhancedReadabilityMode ? 0.6 : 1.0)
+
+                // Reduce Motion
+                Toggle(isOn: $themeManager.reduceMotion) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Reduce Motion", systemImage: "figure.walk")
+                            .font(.headline)
+                        Text("Minimizes animations")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .tint(themeManager.accentColor)
+                .accessibleTapTarget()
+                .disabled(themeManager.enhancedReadabilityMode)
+                .opacity(themeManager.enhancedReadabilityMode ? 0.6 : 1.0)
+
+                // Text Size Slider
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Text Size", systemImage: "textformat.size")
+                        .font(.headline)
+
+                    HStack {
+                        Text("A")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+
+                        Slider(value: $themeManager.textSizeMultiplier, in: 0.8...1.5, step: 0.1)
+                            .tint(themeManager.accentColor)
+
+                        Text("A")
+                            .font(.system(size: 22))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Text("Preview: \(Int(themeManager.textSizeMultiplier * 100))%")
+                        .font(.system(size: themeManager.scaledFontSize(14)))
                         .foregroundColor(.secondary)
                 }
-
-                Text("Preview: \(Int(themeManager.textSizeMultiplier * 100))%")
-                    .font(.system(size: themeManager.scaledFontSize(14)))
-                    .foregroundColor(.secondary)
+                .padding(.vertical, 4)
+                .disabled(themeManager.enhancedReadabilityMode)
+                .opacity(themeManager.enhancedReadabilityMode ? 0.6 : 1.0)
             }
-            .padding(.vertical, 4)
-
         } header: {
             Text("Accessibility")
+        } footer: {
+            if themeManager.enhancedReadabilityMode {
+                Text("Turn off Enhanced Readability to customize individual settings.")
+            }
         }
     }
 
@@ -413,8 +453,8 @@ struct ProfileSettingsView: View {
 
     private var developerSection: some View {
         Section {
-            #if DEBUG
             // Unified Debug Tools (combines all debug functionality)
+            // Available in all builds (including TestFlight) when Debug Mode is enabled
             NavigationLink {
                 UnifiedDebugPanel()
                     .environmentObject(themeManager)
@@ -430,7 +470,6 @@ struct ProfileSettingsView: View {
                 }
             }
             .accessibleTapTarget()
-            #endif
 
             // View Raw Data (quick access)
             NavigationLink {

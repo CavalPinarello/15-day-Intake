@@ -103,6 +103,10 @@ struct SplashScreenView: View {
                         .frame(height: 80)
                 }
             }
+
+            // Floating accessibility button (bottom-right)
+            // Light style for dark aurora background
+            EnhancedReadabilityButton(lightStyle: true, edgePadding: 24)
         }
         .onAppear {
             startAnimation()

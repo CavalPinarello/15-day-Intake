@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F879436DEDFFFC4ECA1D9ED5 /* AnalysisPendingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */; };
+		0B9EC77D84F102DE23410E2C /* QuestionnaireManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D6451B3D19E53A7CD71DB5 /* QuestionnaireManagerTests.swift */; };
+		0D97EC66CE10EC7ECD68B062 /* ConvexServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9414AB93A32DAEF40FEADC /* ConvexServiceTests.swift */; };
+		0F9D37F820E042F288907520 /* TestUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF6080214D734AC815952E0F /* TestUtilities.swift */; };
+		2FDED4D6DEAE901CF2B7629F /* AuthenticationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9A4D30D0DE946FFC67A8EC /* AuthenticationManagerTests.swift */; };
 		4197EE59ED24841599CCADD0 /* TreatmentDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD95B6C3C94BAEE41801991 /* TreatmentDashboardView.swift */; };
-
-				ECE7FEC824179DC25AD315F8 /* JourneyPhaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */; };
-
 		4A5E3B8A2C8E123456789A01 /* ZoeSleepApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B892C8E123456789A01 /* ZoeSleepApp.swift */; };
 		4A5E3B8C2C8E123456789A02 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B8B2C8E123456789A02 /* ContentView.swift */; };
 		4A5E3B8E2C8E123456789A03 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5E3B8D2C8E123456789A03 /* Assets.xcassets */; };
@@ -72,6 +72,7 @@
 		4A5E3C7C2C8E123456789M13 /* UnifiedDebugPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */; };
 		4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C812C8E123456789N02 /* ZoeLogo.swift */; };
 		4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */; };
+		51DEFD427E964E3F84CB8FBB /* IntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A44906CDAF9C850CBB23AF3 /* IntegrationTests.swift */; };
 		5A316CB42EF4B0E00098C762 /* SourceComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CB32EF4B0E00098C762 /* SourceComparisonView.swift */; };
 		5A316CB62EF4B0F10098C762 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CB52EF4B0F10098C762 /* NotificationManager.swift */; };
 		5A316CB82EF4B1020098C762 /* MorningCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CB72EF4B1020098C762 /* MorningCheckInView.swift */; };
@@ -92,14 +93,44 @@
 		5A316CE22EF4C0030098C762 /* JourneyIntroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CE12EF4C0020098C762 /* JourneyIntroView.swift */; };
 		5A316CE42EF4C0050098C762 /* JourneyIntroScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CE32EF4C0040098C762 /* JourneyIntroScreens.swift */; };
 		5A316CE62EF4C0070098C762 /* JourneyIntroIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CE52EF4C0060098C762 /* JourneyIntroIcons.swift */; };
+		5A316CF22EF4C00A0098C762 /* EnhancedReadabilityOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CF02EF4C0080098C762 /* EnhancedReadabilityOverlay.swift */; };
+		62171D23F889BC326D3EDF3D /* ZoeSleepUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F09ACB7AFA23F9931D14721 /* ZoeSleepUITests.swift */; };
+		63C2C3F07183666C689B192F /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B4C412A8BC055DC054F328E /* Foundation.framework */; };
+		6EEAA1CA39A46D841A2EBDC0 /* ClinicalScoringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34F7AEA7557E722E433F98D0 /* ClinicalScoringTests.swift */; };
+		703F5C9C034E07725D93854A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B4C412A8BC055DC054F328E /* Foundation.framework */; };
+		78819D6CD1E767284E8A2BD1 /* ProtocolCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3315DDF499A0993F301C5F8F /* ProtocolCardView.swift */; };
+		93D3EA4C6429DD6F6C27D6E1 /* ThemeManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B495D2EDDEAA550D2CC113D1 /* ThemeManagerTests.swift */; };
+		A2E61DC60CC9C77792E05AB7 /* MiddayCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025C43C0F7D4EA449A2B34ED /* MiddayCheckInView.swift */; };
+		AEB13F10E2D18979451DBF6E /* HealthKitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037F9206B99764D48FD1C894 /* HealthKitManagerTests.swift */; };
+		ECE7FEC824179DC25AD315F8 /* JourneyPhaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */; };
+		F879436DEDFFFC4ECA1D9ED5 /* AnalysisPendingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */; };
+		FCE5FE4CC8056C6D72F48841 /* CheckInManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C97DBCA01C582571D7064E4A /* CheckInManager.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		BB8FFEE76306D1DEF00AB0CE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4A5E3B7D2C8E123456789A14 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4A5E3B832C8E123456789A26;
+			remoteInfo = ZoeSleep;
+		};
+		D838A4A692A1462161E20763 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4A5E3B7D2C8E123456789A14 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4A5E3B832C8E123456789A26;
+			remoteInfo = ZoeSleep;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-		8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisPendingView.swift; sourceTree = "<group>"; };
-		7BD95B6C3C94BAEE41801991 /* TreatmentDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentDashboardView.swift; sourceTree = "<group>"; };
-
-		CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyPhaseManager.swift; sourceTree = "<group>"; };
-
+		025C43C0F7D4EA449A2B34ED /* MiddayCheckInView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MiddayCheckInView.swift; path = Views/CheckIn/MiddayCheckInView.swift; sourceTree = "<group>"; };
+		037F9206B99764D48FD1C894 /* HealthKitManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthKitManagerTests.swift; sourceTree = "<group>"; };
+		0693D7D01C2394F0DD9088A7 /* ZoeSleepUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZoeSleepUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3315DDF499A0993F301C5F8F /* ProtocolCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProtocolCardView.swift; path = Views/PostIntake/ProtocolCardView.swift; sourceTree = "<group>"; };
+		34F7AEA7557E722E433F98D0 /* ClinicalScoringTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClinicalScoringTests.swift; sourceTree = "<group>"; };
+		3F09ACB7AFA23F9931D14721 /* ZoeSleepUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZoeSleepUITests.swift; sourceTree = "<group>"; };
 		4A5E3B842C8E123456789A17 /* ZoeSleep.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZoeSleep.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A5E3B892C8E123456789A01 /* ZoeSleepApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoeSleepApp.swift; sourceTree = "<group>"; };
 		4A5E3B8B2C8E123456789A02 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -185,6 +216,19 @@
 		5A316CE12EF4C0020098C762 /* JourneyIntroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntroView.swift; sourceTree = "<group>"; };
 		5A316CE32EF4C0040098C762 /* JourneyIntroScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntroScreens.swift; sourceTree = "<group>"; };
 		5A316CE52EF4C0060098C762 /* JourneyIntroIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyIntroIcons.swift; sourceTree = "<group>"; };
+		5A316CF02EF4C0080098C762 /* EnhancedReadabilityOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedReadabilityOverlay.swift; sourceTree = "<group>"; };
+		5A44906CDAF9C850CBB23AF3 /* IntegrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
+		6B4C412A8BC055DC054F328E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		7500142D2CF2832A1F055E3D /* ZoeSleepTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZoeSleepTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A9A4D30D0DE946FFC67A8EC /* AuthenticationManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuthenticationManagerTests.swift; sourceTree = "<group>"; };
+		7BD95B6C3C94BAEE41801991 /* TreatmentDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentDashboardView.swift; sourceTree = "<group>"; };
+		8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisPendingView.swift; sourceTree = "<group>"; };
+		9A9414AB93A32DAEF40FEADC /* ConvexServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConvexServiceTests.swift; sourceTree = "<group>"; };
+		A6D6451B3D19E53A7CD71DB5 /* QuestionnaireManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuestionnaireManagerTests.swift; sourceTree = "<group>"; };
+		B495D2EDDEAA550D2CC113D1 /* ThemeManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThemeManagerTests.swift; sourceTree = "<group>"; };
+		C97DBCA01C582571D7064E4A /* CheckInManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CheckInManager.swift; path = Managers/CheckInManager.swift; sourceTree = "<group>"; };
+		CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyPhaseManager.swift; sourceTree = "<group>"; };
+		DF6080214D734AC815952E0F /* TestUtilities.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TestUtilities.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -202,9 +246,66 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		93DF8C818BF00EC3C839277E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				703F5C9C034E07725D93854A /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC628278EDA0C8DFFD5750A9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				63C2C3F07183666C689B192F /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		208DD4BA1FEE2424A3848A51 /* ZoeSleepUITests */ = {
+			isa = PBXGroup;
+			children = (
+				3F09ACB7AFA23F9931D14721 /* ZoeSleepUITests.swift */,
+			);
+			name = ZoeSleepUITests;
+			path = ZoeSleepUITests;
+			sourceTree = "<group>";
+		};
+		2FDE2F0E37BAC8834E3D695A /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				6B4C412A8BC055DC054F328E /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		378F35F40030ABD3764F7222 /* PostIntake */ = {
+			isa = PBXGroup;
+			children = (
+				3315DDF499A0993F301C5F8F /* ProtocolCardView.swift */,
+			);
+			name = PostIntake;
+			sourceTree = "<group>";
+		};
+		394CD5ABC319FB5340B186B3 /* ZoeSleepTests */ = {
+			isa = PBXGroup;
+			children = (
+				DF6080214D734AC815952E0F /* TestUtilities.swift */,
+				A6D6451B3D19E53A7CD71DB5 /* QuestionnaireManagerTests.swift */,
+				34F7AEA7557E722E433F98D0 /* ClinicalScoringTests.swift */,
+				7A9A4D30D0DE946FFC67A8EC /* AuthenticationManagerTests.swift */,
+				9A9414AB93A32DAEF40FEADC /* ConvexServiceTests.swift */,
+				037F9206B99764D48FD1C894 /* HealthKitManagerTests.swift */,
+				B495D2EDDEAA550D2CC113D1 /* ThemeManagerTests.swift */,
+				5A44906CDAF9C850CBB23AF3 /* IntegrationTests.swift */,
+			);
+			name = ZoeSleepTests;
+			path = ZoeSleepTests;
+			sourceTree = "<group>";
+		};
 		4101092100CACE818B6EE578 /* PostIntake */ = {
 			isa = PBXGroup;
 			children = (
@@ -214,7 +315,6 @@
 			path = PostIntake;
 			sourceTree = "<group>";
 		};
-
 		4A5E3B7C2C8E123456789A1E = {
 			isa = PBXGroup;
 			children = (
@@ -222,6 +322,9 @@
 				4A5E3B872C8E123456789A1F /* ZoeSleep */,
 				4A5E3BA62C8E123456789A20 /* ZoeSleep Watch App */,
 				4A5E3B852C8E123456789A21 /* Products */,
+				FB6614BC5725E76E4F7D3C5A /* Frameworks */,
+				394CD5ABC319FB5340B186B3 /* ZoeSleepTests */,
+				208DD4BA1FEE2424A3848A51 /* ZoeSleepUITests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -230,6 +333,8 @@
 			children = (
 				4A5E3B842C8E123456789A17 /* ZoeSleep.app */,
 				4A5E3BA52C8E123456789A0E /* ZoeSleep Watch App.app */,
+				7500142D2CF2832A1F055E3D /* ZoeSleepTests.xctest */,
+				0693D7D01C2394F0DD9088A7 /* ZoeSleepUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -251,6 +356,8 @@
 				4A5E3C782C8E123456789M09 /* DevTools */,
 				4A5E3B8D2C8E123456789A03 /* Assets.xcassets */,
 				4A5E3B8F2C8E123456789A25 /* Preview Content */,
+				B5186DDFDB55CE5B8B419D06 /* Managers */,
+				9567C2DA769FCAA69227D0D3 /* Views */,
 			);
 			path = ZoeSleep;
 			sourceTree = "<group>";
@@ -337,42 +444,9 @@
 				4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */,
 				5A316CE12EF4C0020098C762 /* JourneyIntroView.swift */,
 				5A316CE02EF4C0010098C762 /* JourneyIntro */,
+				5A316CF12EF4C0090098C762 /* Accessibility */,
 			);
 			path = Views;
-			sourceTree = "<group>";
-		};
-		5A316CCA2EF4B1250098C762 /* Gamification */ = {
-			isa = PBXGroup;
-			children = (
-				5A316CCD2EF4B1280098C762 /* AnticipationTeaser.swift */,
-				5A316CC82EF4B1240098C762 /* BadgeUnlockView.swift */,
-				5A316CCF2EF4B12A0098C762 /* ChallengesView.swift */,
-				5A316CCB2EF4B1260098C762 /* CohortComparisonView.swift */,
-				5A316CC22EF4B1210098C762 /* ConfettiView.swift */,
-				5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */,
-				5A316CDB2EF4B1360098C762 /* SleepFingerprintCard.swift */,
-				5A316CC62EF4B1230098C762 /* StreakBadgeView.swift */,
-				5A316CD12EF4B12C0098C762 /* StreakFreezeView.swift */,
-				5A316CC42EF4B1220098C762 /* XPDisplayView.swift */,
-			);
-			path = Gamification;
-			sourceTree = "<group>";
-		};
-		5A316CE02EF4C0010098C762 /* JourneyIntro */ = {
-			isa = PBXGroup;
-			children = (
-				5A316CE32EF4C0040098C762 /* JourneyIntroScreens.swift */,
-				5A316CE52EF4C0060098C762 /* JourneyIntroIcons.swift */,
-			);
-			path = JourneyIntro;
-			sourceTree = "<group>";
-		};
-		5A316CD52EF4B1300098C762 /* Utilities */ = {
-			isa = PBXGroup;
-			children = (
-				5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */,
-			);
-			path = Utilities;
 			sourceTree = "<group>";
 		};
 		4A5E3BCF2C8E123456789B0B /* Models */ = {
@@ -428,6 +502,81 @@
 			path = DevTools;
 			sourceTree = "<group>";
 		};
+		5A316CCA2EF4B1250098C762 /* Gamification */ = {
+			isa = PBXGroup;
+			children = (
+				5A316CCD2EF4B1280098C762 /* AnticipationTeaser.swift */,
+				5A316CC82EF4B1240098C762 /* BadgeUnlockView.swift */,
+				5A316CCF2EF4B12A0098C762 /* ChallengesView.swift */,
+				5A316CCB2EF4B1260098C762 /* CohortComparisonView.swift */,
+				5A316CC22EF4B1210098C762 /* ConfettiView.swift */,
+				5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */,
+				5A316CDB2EF4B1360098C762 /* SleepFingerprintCard.swift */,
+				5A316CC62EF4B1230098C762 /* StreakBadgeView.swift */,
+				5A316CD12EF4B12C0098C762 /* StreakFreezeView.swift */,
+				5A316CC42EF4B1220098C762 /* XPDisplayView.swift */,
+			);
+			path = Gamification;
+			sourceTree = "<group>";
+		};
+		5A316CD52EF4B1300098C762 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		5A316CE02EF4C0010098C762 /* JourneyIntro */ = {
+			isa = PBXGroup;
+			children = (
+				5A316CE32EF4C0040098C762 /* JourneyIntroScreens.swift */,
+				5A316CE52EF4C0060098C762 /* JourneyIntroIcons.swift */,
+			);
+			path = JourneyIntro;
+			sourceTree = "<group>";
+		};
+		5A316CF12EF4C0090098C762 /* Accessibility */ = {
+			isa = PBXGroup;
+			children = (
+				5A316CF02EF4C0080098C762 /* EnhancedReadabilityOverlay.swift */,
+			);
+			path = Accessibility;
+			sourceTree = "<group>";
+		};
+		9567C2DA769FCAA69227D0D3 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B5306611662E695BF094F9DC /* CheckIn */,
+				378F35F40030ABD3764F7222 /* PostIntake */,
+			);
+			name = Views;
+			sourceTree = "<group>";
+		};
+		B5186DDFDB55CE5B8B419D06 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				C97DBCA01C582571D7064E4A /* CheckInManager.swift */,
+			);
+			name = Managers;
+			sourceTree = "<group>";
+		};
+		B5306611662E695BF094F9DC /* CheckIn */ = {
+			isa = PBXGroup;
+			children = (
+				025C43C0F7D4EA449A2B34ED /* MiddayCheckInView.swift */,
+			);
+			name = CheckIn;
+			sourceTree = "<group>";
+		};
+		FB6614BC5725E76E4F7D3C5A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				2FDE2F0E37BAC8834E3D695A /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -465,6 +614,42 @@
 			productReference = 4A5E3BA52C8E123456789A0E /* ZoeSleep Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		77857C86700027E37958BC69 /* ZoeSleepTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 14F5FE45788674470263A138 /* Build configuration list for PBXNativeTarget "ZoeSleepTests" */;
+			buildPhases = (
+				9DEB3C60E63776919D0564CC /* Sources */,
+				EC628278EDA0C8DFFD5750A9 /* Frameworks */,
+				7B5112BAC53E087F9B5DD756 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6FA58E7299C6852A1BD35E87 /* PBXTargetDependency */,
+			);
+			name = ZoeSleepTests;
+			productName = ZoeSleepTests;
+			productReference = 7500142D2CF2832A1F055E3D /* ZoeSleepTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		990C3B66FABD6AB14200473A /* ZoeSleepUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 92C59F8715077C0C12B37EBC /* Build configuration list for PBXNativeTarget "ZoeSleepUITests" */;
+			buildPhases = (
+				B8E41CA1C9B516EE5FA0871F /* Sources */,
+				93DF8C818BF00EC3C839277E /* Frameworks */,
+				6F87B7953E938FEE49F9E3B1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				943DC3E7CF1092B34913CE14 /* PBXTargetDependency */,
+			);
+			name = ZoeSleepUITests;
+			productName = ZoeSleepUITests;
+			productReference = 0693D7D01C2394F0DD9088A7 /* ZoeSleepUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -492,14 +677,14 @@
 				Base,
 			);
 			mainGroup = 4A5E3B7C2C8E123456789A1E;
-			packageReferences = (
-			);
 			productRefGroup = 4A5E3B852C8E123456789A21 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				4A5E3B832C8E123456789A26 /* ZoeSleep */,
 				4A5E3BA42C8E123456789A15 /* ZoeSleep Watch App */,
+				77857C86700027E37958BC69 /* ZoeSleepTests */,
+				990C3B66FABD6AB14200473A /* ZoeSleepUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -519,6 +704,20 @@
 			buildActionMask = 2147483647;
 			files = (
 				4A5E3BAC2C8E123456789A0C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6F87B7953E938FEE49F9E3B1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7B5112BAC53E087F9B5DD756 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -596,6 +795,10 @@
 				5A316CE22EF4C0030098C762 /* JourneyIntroView.swift in Sources */,
 				5A316CE42EF4C0050098C762 /* JourneyIntroScreens.swift in Sources */,
 				5A316CE62EF4C0070098C762 /* JourneyIntroIcons.swift in Sources */,
+				5A316CF22EF4C00A0098C762 /* EnhancedReadabilityOverlay.swift in Sources */,
+				FCE5FE4CC8056C6D72F48841 /* CheckInManager.swift in Sources */,
+				A2E61DC60CC9C77792E05AB7 /* MiddayCheckInView.swift in Sources */,
+				78819D6CD1E767284E8A2BD1 /* ProtocolCardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -603,9 +806,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F879436DEDFFFC4ECA1D9ED5 /* AnalysisPendingView.swift in Sources */,
-				4197EE59ED24841599CCADD0 /* TreatmentDashboardView.swift in Sources */,
-				ECE7FEC824179DC25AD315F8 /* JourneyPhaseManager.swift in Sources */,
 				4A5E3BF62C8E123456789F03 /* SharedQuestionBank.swift in Sources */,
 				4A5E3BB52C8E123456789A0F /* HealthKitWatchManager.swift in Sources */,
 				4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */,
@@ -622,9 +822,82 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9DEB3C60E63776919D0564CC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0F9D37F820E042F288907520 /* TestUtilities.swift in Sources */,
+				0B9EC77D84F102DE23410E2C /* QuestionnaireManagerTests.swift in Sources */,
+				6EEAA1CA39A46D841A2EBDC0 /* ClinicalScoringTests.swift in Sources */,
+				2FDED4D6DEAE901CF2B7629F /* AuthenticationManagerTests.swift in Sources */,
+				0D97EC66CE10EC7ECD68B062 /* ConvexServiceTests.swift in Sources */,
+				AEB13F10E2D18979451DBF6E /* HealthKitManagerTests.swift in Sources */,
+				93D3EA4C6429DD6F6C27D6E1 /* ThemeManagerTests.swift in Sources */,
+				51DEFD427E964E3F84CB8FBB /* IntegrationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B8E41CA1C9B516EE5FA0871F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				62171D23F889BC326D3EDF3D /* ZoeSleepUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		6FA58E7299C6852A1BD35E87 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ZoeSleep;
+			target = 4A5E3B832C8E123456789A26 /* ZoeSleep */;
+			targetProxy = BB8FFEE76306D1DEF00AB0CE /* PBXContainerItemProxy */;
+		};
+		943DC3E7CF1092B34913CE14 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ZoeSleep;
+			target = 4A5E3B832C8E123456789A26 /* ZoeSleep */;
+			targetProxy = D838A4A692A1462161E20763 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		01A954888B7B8D27A94C0CEE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = HA7H8BB975;
+				INFOPLIST_FILE = ZoeSleepTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoesleep.app.tests;
+				PRODUCT_NAME = ZoeSleepTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ZoeSleep.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ZoeSleep";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		1D324987454F1FEA063B5FC0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = HA7H8BB975;
+				INFOPLIST_FILE = ZoeSleepTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoesleep.app.tests;
+				PRODUCT_NAME = ZoeSleepTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ZoeSleep.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ZoeSleep";
+			};
+			name = Debug;
+		};
 		4A5E3BBD2C8E123456789A2F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -886,9 +1159,51 @@
 			};
 			name = Release;
 		};
+		7E543CC63A34A1F211CD2BDD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = HA7H8BB975;
+				INFOPLIST_FILE = ZoeSleepUITests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoesleep.app.uitests;
+				PRODUCT_NAME = ZoeSleepUITests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = ZoeSleep;
+			};
+			name = Debug;
+		};
+		F27F2EAE85160BBEAF402D78 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = HA7H8BB975;
+				INFOPLIST_FILE = ZoeSleepUITests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoesleep.app.uitests;
+				PRODUCT_NAME = ZoeSleepUITests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = ZoeSleep;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		14F5FE45788674470263A138 /* Build configuration list for PBXNativeTarget "ZoeSleepTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				01A954888B7B8D27A94C0CEE /* Release */,
+				1D324987454F1FEA063B5FC0 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		4A5E3B802C8E123456789A2E /* Build configuration list for PBXProject "ZoeSleep" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -912,6 +1227,15 @@
 			buildConfigurations = (
 				4A5E3BC32C8E123456789A33 /* Debug */,
 				4A5E3BC42C8E123456789A34 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		92C59F8715077C0C12B37EBC /* Build configuration list for PBXNativeTarget "ZoeSleepUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F27F2EAE85160BBEAF402D78 /* Release */,
+				7E543CC63A34A1F211CD2BDD /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

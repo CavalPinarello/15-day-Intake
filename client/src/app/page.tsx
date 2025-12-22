@@ -50,7 +50,7 @@ export default async function Home() {
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
             The best sleep of your life and maximum daily energy while protecting your health.
-            Complete your comprehensive 15-day sleep journey with personalized assessments.
+            Complete your comprehensive 14-day sleep journey with personalized assessments.
           </p>
           <Link 
             href="/journey"
@@ -67,9 +67,9 @@ export default async function Home() {
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
               <Calendar className="w-6 h-6 text-blue-600" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">15-Day Journey</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">14-Day Journey</h3>
             <p className="text-gray-600">
-              Structured daily assessments spread over 15 days to capture your complete sleep profile without overwhelming you.
+              Structured daily assessments spread over 14 days to capture your complete sleep profile without overwhelming you.
             </p>
           </div>
 

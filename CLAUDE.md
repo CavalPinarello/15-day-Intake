@@ -80,6 +80,28 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Unified Debug Panel:** Consolidated all developer tools into single panel (Dec 22, 2025)
+  - **Replaced 3 scattered views:** DevPanelView, MockPlaybackView entry, ExpansionSchedulerTestView entry
+  - **4 generation modes:** Full Journey (Random), Max Load (All Gateways), Selective (Choose Gateways), Quick Test (Days 1-5)
+  - **Gateway selection:** Toggle individual gateways with icons, colors, and trigger descriptions
+  - **Schedule preview:** Shows expansion schedule for Days 6-14 with question counts per day
+  - **Journey controls:** Advance day, reset progress, refresh from server, repair tools
+  - **New file:** `DevTools/UnifiedDebugPanel.swift` (575 lines)
+  - **Simplified ProfileSettingsView:** Developer section now has just 3 items
+- **Fixed 93% Completion Bug:** Day 14 completion now shows 100% (Dec 22, 2025)
+  - **Root cause:** `progressPercentage` used `currentDay - 1` regardless of whether current day was complete
+  - **Fix:** Now checks `isDayComplete` and includes current day in count if both sections done
+  - **Impact:** When all 14 days complete, shows 100% instead of 93%
+- **Fixed Sleep Log Refresh Issue:** Today's Focus now updates immediately after Sleep Log completion (Dec 22, 2025)
+  - **Root cause:** 2-second throttle in `refreshFromConvex()` was blocking notification-triggered refreshes
+  - **Fix:** Added `force` parameter to bypass throttle for explicit completion notifications
+  - **Impact:** Completing Sleep Log manually now immediately shows as "Done" on Today's Focus
+- **GatewayType Extensions:** Added UI properties to QuestionModels.swift (Dec 22, 2025)
+  - `icon`: SF Symbol for each gateway (moon.zzz, cloud.rain, exclamationmark.triangle, etc.)
+  - `color`: SwiftUI Color for each gateway (purple, blue, red, etc.)
+  - `triggerDescription`: Human-readable trigger condition
+  - `triggeredQuestionnaires`: List of questionnaires triggered by each gateway
+  - `questionnaireAbbreviations`: Compact display format for questionnaire lists
 - **14-Day Journey Standardization:** Updated entire codebase from 15 to 14 days (Dec 21, 2025)
   - **Merged Day 14 & 15:** Final day now includes DASS-21, STOP-BANG, Berlin, BPI, MEDAS, MEQ
   - **Files updated:** Config.swift, QuestionnaireManager.swift, ContentView.swift, WatchHomeView.swift

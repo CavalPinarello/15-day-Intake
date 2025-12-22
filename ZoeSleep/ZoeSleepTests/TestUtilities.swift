@@ -80,234 +80,72 @@ class MockConvexService {
     }
 }
 
-// MARK: - Mock Question Data
+// MARK: - Mock Response Value (for test generation)
 
-struct MockQuestionData {
+enum MockResponseValue {
+    case string(String)
+    case number(Int)
+    case array([String])
+}
 
-    // Core assessment questions
-    static let coreQuestions: [Question] = [
-        Question(
-            id: "D1",
-            text: "What is your age?",
-            helpText: "Your age helps us personalize recommendations",
-            answerFormat: .numberInput,
-            formatConfig: NumberInputConfig(min: 18, max: 100, defaultValue: 30),
-            pillar: "Demographics",
-            tier: "Core"
-        ),
-        Question(
-            id: "D2",
-            text: "What is your biological sex?",
-            helpText: nil,
-            answerFormat: .singleSelectChips,
-            formatConfig: ChipsConfig(options: ["Male", "Female", "Other"]),
-            pillar: "Demographics",
-            tier: "Core"
-        ),
-        Question(
-            id: "1",
-            text: "How would you rate your overall sleep quality?",
-            helpText: "Consider the past month",
-            answerFormat: .sliderScale,
-            formatConfig: SliderConfig(min: 1, max: 10, defaultValue: 5, labels: ["Poor", "Excellent"]),
-            pillar: "Sleep Quality",
-            tier: "Core"
-        ),
-        Question(
-            id: "3",
-            text: "Do you have trouble falling asleep, staying asleep, or waking too early?",
-            helpText: nil,
-            answerFormat: .singleSelectChips,
-            formatConfig: ChipsConfig(options: ["Yes", "No"]),
-            pillar: "Sleep Quality",
-            tier: "Gateway"
-        ),
-        Question(
-            id: "15",
-            text: "In the past 2 weeks, have you felt down, depressed, or hopeless?",
-            helpText: nil,
-            answerFormat: .singleSelectChips,
-            formatConfig: ChipsConfig(options: ["Not at all", "Several days", "More than half", "Nearly every day"]),
-            pillar: "Mental Health",
-            tier: "Gateway"
-        ),
-        Question(
-            id: "16",
-            text: "In the past 2 weeks, have you felt nervous, anxious, or on edge?",
-            helpText: nil,
-            answerFormat: .singleSelectChips,
-            formatConfig: ChipsConfig(options: ["Not at all", "Several days", "More than half", "Nearly every day"]),
-            pillar: "Mental Health",
-            tier: "Gateway"
-        ),
-    ]
+// MARK: - Mock Response (for test generation - not to be confused with ZoeSleep.QuestionResponse)
 
-    // Sleep diary questions (CSD)
-    static let sleepDiaryQuestions: [Question] = [
-        Question(
-            id: "CSD_BEDTIME",
-            text: "What time did you get into bed last night?",
-            helpText: nil,
-            answerFormat: .timePicker,
-            formatConfig: TimePickerConfig(defaultHour: 22, defaultMinute: 30),
-            pillar: "Sleep Diary",
-            tier: "Daily"
-        ),
-        Question(
-            id: "CSD_LATENCY",
-            text: "How long did it take you to fall asleep?",
-            helpText: "In minutes",
-            answerFormat: .minutesScroll,
-            formatConfig: MinutesScrollConfig(min: 0, max: 180, defaultValue: 15, step: 5),
-            pillar: "Sleep Diary",
-            tier: "Daily"
-        ),
-        Question(
-            id: "CSD_AWAKENINGS",
-            text: "How many times did you wake up during the night?",
-            helpText: nil,
-            answerFormat: .numberScroll,
-            formatConfig: NumberScrollConfig(min: 0, max: 20, defaultValue: 1),
-            pillar: "Sleep Diary",
-            tier: "Daily"
-        ),
-        Question(
-            id: "CSD_WASO",
-            text: "How long were you awake during the night in total?",
-            helpText: "Total minutes awake after falling asleep",
-            answerFormat: .minutesScroll,
-            formatConfig: MinutesScrollConfig(min: 0, max: 300, defaultValue: 15, step: 5),
-            pillar: "Sleep Diary",
-            tier: "Daily"
-        ),
-        Question(
-            id: "CSD_OUT_BED",
-            text: "What time did you get out of bed this morning?",
-            helpText: nil,
-            answerFormat: .timePicker,
-            formatConfig: TimePickerConfig(defaultHour: 7, defaultMinute: 0),
-            pillar: "Sleep Diary",
-            tier: "Daily"
-        ),
-        Question(
-            id: "CSD_QUALITY",
-            text: "How would you rate your sleep quality last night?",
-            helpText: nil,
-            answerFormat: .sliderScale,
-            formatConfig: SliderConfig(min: 1, max: 5, defaultValue: 3, labels: ["Very Poor", "Very Good"]),
-            pillar: "Sleep Diary",
-            tier: "Daily"
-        ),
-    ]
-
-    // ISI questions
-    static let isiQuestions: [Question] = (1...7).map { i in
-        Question(
-            id: "ISI_\(i)",
-            text: "ISI Question \(i)",
-            helpText: nil,
-            answerFormat: .sliderScale,
-            formatConfig: SliderConfig(min: 0, max: 4, defaultValue: 0, labels: ["None", "Very Severe"]),
-            pillar: "Insomnia",
-            tier: "Expansion"
-        )
-    }
-
-    // PHQ-9 questions
-    static let phq9Questions: [Question] = (1...9).map { i in
-        Question(
-            id: "PHQ9_\(i)",
-            text: "PHQ-9 Question \(i)",
-            helpText: nil,
-            answerFormat: .singleSelectChips,
-            formatConfig: ChipsConfig(options: ["Not at all", "Several days", "More than half", "Nearly every day"]),
-            pillar: "Mental Health",
-            tier: "Expansion"
-        )
-    }
-
-    // GAD-7 questions
-    static let gad7Questions: [Question] = (1...7).map { i in
-        Question(
-            id: "GAD7_\(i)",
-            text: "GAD-7 Question \(i)",
-            helpText: nil,
-            answerFormat: .singleSelectChips,
-            formatConfig: ChipsConfig(options: ["Not at all", "Several days", "More than half", "Nearly every day"]),
-            pillar: "Mental Health",
-            tier: "Expansion"
-        )
-    }
-
-    // STOP-BANG questions
-    static let stopBangQuestions: [Question] = (1...8).map { i in
-        Question(
-            id: "SB_\(i)",
-            text: "STOP-BANG Question \(i)",
-            helpText: nil,
-            answerFormat: .singleSelectChips,
-            formatConfig: ChipsConfig(options: ["Yes", "No"]),
-            pillar: "Sleep Apnea",
-            tier: "Expansion"
-        )
-    }
-
-    static var allQuestions: [Question] {
-        return coreQuestions + sleepDiaryQuestions + isiQuestions + phq9Questions + gad7Questions + stopBangQuestions
-    }
+struct MockResponse {
+    let questionId: String
+    let value: MockResponseValue
 }
 
 // MARK: - Mock Response Generators
 
 struct MockResponseGenerator {
 
-    /// Generate responses that trigger specific gateways
-    static func responsesForGateways(_ gateways: [String]) -> [String: QuestionResponse] {
-        var responses: [String: QuestionResponse] = [:]
+    /// Generate mock responses that simulate specific gateways being triggered
+    static func mockResponsesForGateways(_ gateways: [String]) -> [String: MockResponse] {
+        var responses: [String: MockResponse] = [:]
 
         // Base responses
-        responses["1"] = QuestionResponse(questionId: "1", value: .number(5))
-        responses["D1"] = QuestionResponse(questionId: "D1", value: .number(35))
-        responses["D2"] = QuestionResponse(questionId: "D2", value: .string("Male"))
+        responses["1"] = MockResponse(questionId: "1", value: .number(5))
+        responses["D1"] = MockResponse(questionId: "D1", value: .number(35))
+        responses["D2"] = MockResponse(questionId: "D2", value: .string("Male"))
 
         // Gateway triggers
         if gateways.contains("insomnia") {
-            responses["3"] = QuestionResponse(questionId: "3", value: .string("Yes"))
+            responses["3"] = MockResponse(questionId: "3", value: .string("Yes"))
         } else {
-            responses["3"] = QuestionResponse(questionId: "3", value: .string("No"))
+            responses["3"] = MockResponse(questionId: "3", value: .string("No"))
         }
 
         if gateways.contains("depression") {
-            responses["15"] = QuestionResponse(questionId: "15", value: .number(2)) // More than half
+            responses["15"] = MockResponse(questionId: "15", value: .number(2)) // More than half
         } else {
-            responses["15"] = QuestionResponse(questionId: "15", value: .number(0))
+            responses["15"] = MockResponse(questionId: "15", value: .number(0))
         }
 
         if gateways.contains("anxiety") {
-            responses["16"] = QuestionResponse(questionId: "16", value: .number(2))
+            responses["16"] = MockResponse(questionId: "16", value: .number(2))
         } else {
-            responses["16"] = QuestionResponse(questionId: "16", value: .number(0))
+            responses["16"] = MockResponse(questionId: "16", value: .number(0))
         }
 
         if gateways.contains("osa") {
-            responses["19"] = QuestionResponse(questionId: "19", value: .string("Yes"))
-            responses["20"] = QuestionResponse(questionId: "20", value: .string("Yes"))
+            responses["19"] = MockResponse(questionId: "19", value: .string("Yes"))
+            responses["20"] = MockResponse(questionId: "20", value: .string("Yes"))
         } else {
-            responses["19"] = QuestionResponse(questionId: "19", value: .string("No"))
-            responses["20"] = QuestionResponse(questionId: "20", value: .string("No"))
+            responses["19"] = MockResponse(questionId: "19", value: .string("No"))
+            responses["20"] = MockResponse(questionId: "20", value: .string("No"))
         }
 
         if gateways.contains("pain") {
-            responses["22"] = QuestionResponse(questionId: "22", value: .string("Yes"))
-            responses["23"] = QuestionResponse(questionId: "23", value: .number(6))
+            responses["22"] = MockResponse(questionId: "22", value: .string("Yes"))
+            responses["23"] = MockResponse(questionId: "23", value: .number(6))
         }
 
         return responses
     }
 
     /// Generate ISI responses for a target score
-    static func isiResponses(targetScore: Int) -> [String: QuestionResponse] {
-        var responses: [String: QuestionResponse] = [:]
+    static func isiResponses(targetScore: Int) -> [String: MockResponse] {
+        var responses: [String: MockResponse] = [:]
         var remaining = min(28, max(0, targetScore))
 
         for i in 1...7 {
@@ -320,15 +158,15 @@ struct MockResponseGenerator {
                 value = Int.random(in: minForThis...max(minForThis, maxForThis))
                 remaining -= value
             }
-            responses["ISI_\(i)"] = QuestionResponse(questionId: "ISI_\(i)", value: .number(value))
+            responses["ISI_\(i)"] = MockResponse(questionId: "ISI_\(i)", value: .number(value))
         }
 
         return responses
     }
 
     /// Generate PHQ-9 responses for a target score
-    static func phq9Responses(targetScore: Int) -> [String: QuestionResponse] {
-        var responses: [String: QuestionResponse] = [:]
+    static func phq9Responses(targetScore: Int) -> [String: MockResponse] {
+        var responses: [String: MockResponse] = [:]
         var remaining = min(27, max(0, targetScore))
 
         for i in 1...9 {
@@ -341,7 +179,7 @@ struct MockResponseGenerator {
                 value = Int.random(in: minForThis...max(minForThis, maxForThis))
                 remaining -= value
             }
-            responses["PHQ9_\(i)"] = QuestionResponse(questionId: "PHQ9_\(i)", value: .number(value))
+            responses["PHQ9_\(i)"] = MockResponse(questionId: "PHQ9_\(i)", value: .number(value))
         }
 
         return responses
@@ -355,87 +193,16 @@ struct MockResponseGenerator {
         waso: Int = 15,
         wakeTime: String = "07:00",
         quality: Int = 3
-    ) -> [String: QuestionResponse] {
+    ) -> [String: MockResponse] {
         return [
-            "CSD_BEDTIME": QuestionResponse(questionId: "CSD_BEDTIME", value: .string(bedtime)),
-            "CSD_LATENCY": QuestionResponse(questionId: "CSD_LATENCY", value: .number(latency)),
-            "CSD_AWAKENINGS": QuestionResponse(questionId: "CSD_AWAKENINGS", value: .number(awakenings)),
-            "CSD_WASO": QuestionResponse(questionId: "CSD_WASO", value: .number(waso)),
-            "CSD_OUT_BED": QuestionResponse(questionId: "CSD_OUT_BED", value: .string(wakeTime)),
-            "CSD_QUALITY": QuestionResponse(questionId: "CSD_QUALITY", value: .number(quality)),
+            "CSD_BEDTIME": MockResponse(questionId: "CSD_BEDTIME", value: .string(bedtime)),
+            "CSD_LATENCY": MockResponse(questionId: "CSD_LATENCY", value: .number(latency)),
+            "CSD_AWAKENINGS": MockResponse(questionId: "CSD_AWAKENINGS", value: .number(awakenings)),
+            "CSD_WASO": MockResponse(questionId: "CSD_WASO", value: .number(waso)),
+            "CSD_OUT_BED": MockResponse(questionId: "CSD_OUT_BED", value: .string(wakeTime)),
+            "CSD_QUALITY": MockResponse(questionId: "CSD_QUALITY", value: .number(quality)),
         ]
     }
-}
-
-// MARK: - Placeholder Types (to be replaced by actual imports)
-
-// These are placeholder types - in real tests, import from ZoeSleep module
-
-struct Question {
-    let id: String
-    let text: String
-    let helpText: String?
-    let answerFormat: AnswerFormat
-    let formatConfig: Any
-    let pillar: String
-    let tier: String
-}
-
-enum AnswerFormat {
-    case timePicker
-    case minutesScroll
-    case numberScroll
-    case numberInput
-    case sliderScale
-    case singleSelectChips
-    case multiSelectChips
-    case datePicker
-}
-
-struct TimePickerConfig {
-    let defaultHour: Int
-    let defaultMinute: Int
-}
-
-struct MinutesScrollConfig {
-    let min: Int
-    let max: Int
-    let defaultValue: Int
-    let step: Int
-}
-
-struct NumberScrollConfig {
-    let min: Int
-    let max: Int
-    let defaultValue: Int
-}
-
-struct NumberInputConfig {
-    let min: Int
-    let max: Int
-    let defaultValue: Int
-}
-
-struct SliderConfig {
-    let min: Int
-    let max: Int
-    let defaultValue: Int
-    let labels: [String]
-}
-
-struct ChipsConfig {
-    let options: [String]
-}
-
-struct QuestionResponse {
-    let questionId: String
-    let value: ResponseValue
-}
-
-enum ResponseValue {
-    case string(String)
-    case number(Int)
-    case array([String])
 }
 
 // MARK: - XCTest Extensions
@@ -519,5 +286,22 @@ class TestDataFactory {
             "light_sleep_mins": Int(Double(totalSleep) * 0.5),
             "rem_sleep_mins": Int(Double(totalSleep) * 0.25),
         ]
+    }
+
+    /// Create a real QuestionResponse for use in tests
+    static func createQuestionResponse(
+        questionId: String,
+        dayNumber: Int = 1,
+        stringValue: String? = nil,
+        numberValue: Double? = nil,
+        arrayValue: [String]? = nil
+    ) -> QuestionResponse {
+        return QuestionResponse(
+            questionId: questionId,
+            dayNumber: dayNumber,
+            stringValue: stringValue,
+            numberValue: numberValue,
+            arrayValue: arrayValue
+        )
     }
 }

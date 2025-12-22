@@ -32,7 +32,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "A3E91560A42A76FE3322EA5A"
+               BlueprintIdentifier = "77857C86700027E37958BC69"
                BuildableName = "ZoeSleepTests.xctest"
                BlueprintName = "ZoeSleepTests"
                ReferencedContainer = "container:ZoeSleep.xcodeproj">
@@ -42,7 +42,27 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "58993131AE738BF7BEE9A534"
+               BlueprintIdentifier = "990C3B66FABD6AB14200473A"
+               BuildableName = "ZoeSleepUITests.xctest"
+               BlueprintName = "ZoeSleepUITests"
+               ReferencedContainer = "container:ZoeSleep.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "77857C86700027E37958BC69"
+               BuildableName = "ZoeSleepTests.xctest"
+               BlueprintName = "ZoeSleepTests"
+               ReferencedContainer = "container:ZoeSleep.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "990C3B66FABD6AB14200473A"
                BuildableName = "ZoeSleepUITests.xctest"
                BlueprintName = "ZoeSleepUITests"
                ReferencedContainer = "container:ZoeSleep.xcodeproj">

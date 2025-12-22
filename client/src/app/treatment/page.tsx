@@ -186,7 +186,7 @@ export default function TreatmentPage() {
               Complete Your Assessment First
             </h2>
             <p className="text-gray-600 mb-2">
-              You're on day {treatmentPhase.intakeDay} of your 15-day intake assessment.
+              You're on day {treatmentPhase.intakeDay} of your 14-day intake assessment.
             </p>
             <p className="text-gray-500 text-sm mb-6">
               Once you complete the assessment, your physician will create a personalized
@@ -232,7 +232,7 @@ export default function TreatmentPage() {
               Assessment Complete!
             </h2>
             <p className="text-gray-600 mb-4">
-              Great job completing your 15-day assessment. Your physician is now reviewing
+              Great job completing your 14-day assessment. Your physician is now reviewing
               your results and creating a personalized treatment plan.
             </p>
             <p className="text-gray-500 text-sm">

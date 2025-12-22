@@ -127,11 +127,32 @@ export default defineSchema({
   daily_checkins: defineTable({
     user_id: v.id("users"),
     checkin_date: v.string(), // ISO date string YYYY-MM-DD
-    checkin_type: v.union(v.literal("morning"), v.literal("evening")),
+    checkin_type: v.union(v.literal("morning"), v.literal("midday"), v.literal("evening")),
     completed: v.boolean(),
     completed_at: v.optional(v.number()),
-    data_json: v.optional(v.string()), // JSON string
+    data_json: v.optional(v.string()), // JSON string (legacy)
+
+    // Morning check-in data
+    sleep_quality: v.optional(v.number()),      // 1-5 rating
+    energy_level: v.optional(v.number()),       // 1-4 rating
+    mood: v.optional(v.number()),               // 1-5 rating
+
+    // Midday check-in data
+    midday_energy: v.optional(v.number()),      // 1-4 rating
+    caffeine_cups: v.optional(v.number()),      // 0-10 cups
+    caffeine_last_time: v.optional(v.string()), // HH:MM format
+    nap_taken: v.optional(v.boolean()),
+    nap_duration_mins: v.optional(v.number()),
+
+    // Evening check-in data
+    reflection_text: v.optional(v.string()),
+    overall_day_rating: v.optional(v.number()), // 1-5 rating
+    tasks_missed_reasons: v.optional(v.string()), // JSON array
+
+    // Metadata
+    device_type: v.optional(v.string()),        // "ios", "watch", "web"
     created_at: v.number(),
+    updated_at: v.optional(v.number()),
   })
     .index("by_user", ["user_id"])
     .index("by_user_date", ["user_id", "checkin_date"])
@@ -580,6 +601,169 @@ export default defineSchema({
     created_at: v.number(),
   })
     .index("by_intervention", ["user_intervention_id"]),
+
+  // ============================================
+  // Treatment Protocol System
+  // Morning/Evening Protocols with Grouped Tasks
+  // ============================================
+
+  // Protocol definitions (Morning Protocol, Evening Protocol)
+  treatment_protocols: defineTable({
+    protocol_id: v.string(),           // "morning_protocol", "evening_protocol"
+    name: v.string(),                  // "Morning Protocol"
+    description: v.string(),
+    time_window: v.string(),           // "morning" or "evening"
+    window_start_hour: v.number(),     // 5 for 5 AM
+    window_end_hour: v.number(),       // 12 for noon
+    icon: v.string(),                  // SF Symbol name
+    color: v.string(),                 // Hex color
+    order_index: v.number(),
+    is_active: v.boolean(),
+    created_at: v.number(),
+  })
+    .index("by_protocol_id", ["protocol_id"])
+    .index("by_time_window", ["time_window"]),
+
+  // User protocol assignments (physician assigns protocols to patients)
+  user_protocol_assignments: defineTable({
+    user_id: v.id("users"),
+    protocol_id: v.string(),           // References treatment_protocols.protocol_id
+    intervention_ids_json: v.string(), // JSON array of intervention_id strings
+    start_date: v.string(),            // YYYY-MM-DD
+    end_date: v.optional(v.string()),
+    status: v.string(),                // "active", "paused", "completed"
+    assigned_by_physician_id: v.optional(v.string()),
+    assigned_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_status", ["user_id", "status"])
+    .index("by_protocol", ["protocol_id"]),
+
+  // ============================================
+  // Adaptive Difficulty System
+  // Auto-adjusts task complexity based on compliance
+  // ============================================
+
+  intervention_difficulty_settings: defineTable({
+    user_intervention_id: v.id("user_interventions"),
+
+    // Current difficulty level
+    current_difficulty: v.number(),        // 1-5 (1=easiest, 5=hardest)
+    original_difficulty: v.number(),       // Starting difficulty (for reset)
+
+    // Adjustment tracking
+    last_adjustment_date: v.optional(v.string()),
+    adjustment_reason: v.optional(v.string()),
+    adjustment_direction: v.optional(v.string()), // "reduced", "increased", "reset"
+
+    // Rolling compliance metrics
+    rolling_7_day_compliance: v.number(),  // 0-100 percentage
+    consecutive_low_days: v.number(),      // Days below 50%
+    consecutive_high_days: v.number(),     // Days above 90%
+
+    // Physician override
+    difficulty_locked: v.boolean(),        // If true, no auto-adjustment
+    locked_by_physician_id: v.optional(v.string()),
+    locked_at: v.optional(v.number()),
+    lock_reason: v.optional(v.string()),
+
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_intervention", ["user_intervention_id"])
+    .index("by_compliance", ["rolling_7_day_compliance"]),
+
+  // Difficulty adjustment history (audit log)
+  difficulty_adjustment_log: defineTable({
+    user_intervention_id: v.id("user_interventions"),
+    user_id: v.id("users"),
+    previous_difficulty: v.number(),
+    new_difficulty: v.number(),
+    adjustment_type: v.string(),           // "auto_reduce", "auto_increase", "physician_override", "reset"
+    reason: v.string(),
+    rolling_compliance_at_adjustment: v.number(),
+    adjusted_at: v.number(),
+    adjusted_by: v.optional(v.string()),   // null for auto, physician_id for manual
+  })
+    .index("by_user", ["user_id"])
+    .index("by_intervention", ["user_intervention_id"])
+    .index("by_adjusted_at", ["adjusted_at"]),
+
+  // ============================================
+  // Compliance-Outcome Correlation
+  // Tracks relationship between compliance and sleep improvement
+  // ============================================
+
+  compliance_outcome_correlation: defineTable({
+    user_id: v.id("users"),
+    computation_date: v.string(),        // YYYY-MM-DD when computed
+    period_start: v.string(),            // Analysis period start
+    period_end: v.string(),              // Analysis period end
+
+    // Overall compliance metrics
+    overall_compliance_pct: v.number(),  // 0-100
+    protocol_compliance_json: v.optional(v.string()), // Per-protocol breakdown
+    intervention_compliance_json: v.optional(v.string()), // Per-intervention breakdown
+    checkin_compliance_pct: v.optional(v.number()),  // Check-in completion rate
+
+    // Questionnaire score changes (before/after)
+    isi_score_start: v.optional(v.number()),
+    isi_score_end: v.optional(v.number()),
+    isi_change: v.optional(v.number()),  // Negative = improvement
+
+    phq9_score_start: v.optional(v.number()),
+    phq9_score_end: v.optional(v.number()),
+    phq9_change: v.optional(v.number()),
+
+    gad7_score_start: v.optional(v.number()),
+    gad7_score_end: v.optional(v.number()),
+    gad7_change: v.optional(v.number()),
+
+    // Subjective sleep improvement
+    subjective_improvement: v.optional(v.number()), // -2 to +2 (much worse to much better)
+
+    // Objective sleep data (from HealthKit)
+    avg_sleep_efficiency_start: v.optional(v.number()),
+    avg_sleep_efficiency_end: v.optional(v.number()),
+    avg_sleep_duration_start: v.optional(v.number()),  // minutes
+    avg_sleep_duration_end: v.optional(v.number()),
+    avg_sleep_latency_start: v.optional(v.number()),   // minutes to fall asleep
+    avg_sleep_latency_end: v.optional(v.number()),
+
+    // Correlation analysis
+    compliance_improvement_correlation: v.optional(v.number()), // -1 to 1 (Pearson)
+    correlation_strength: v.optional(v.string()), // "strong", "moderate", "weak", "none"
+
+    created_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "computation_date"]),
+
+  // ============================================
+  // Watch Offline Queue
+  // Supports offline-first Watch sync
+  // ============================================
+
+  watch_offline_queue: defineTable({
+    user_id: v.id("users"),
+    device_id: v.string(),               // Watch device identifier
+
+    // Action details
+    action_type: v.string(),             // "checkin", "task_complete", "task_skip"
+    action_data_json: v.string(),        // Full action payload
+
+    // Sync status
+    queued_at: v.number(),
+    synced_at: v.optional(v.number()),
+    sync_status: v.string(),             // "pending", "synced", "failed"
+    retry_count: v.number(),
+    last_error: v.optional(v.string()),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_device", ["device_id"])
+    .index("by_status", ["sync_status"])
+    .index("by_user_status", ["user_id", "sync_status"]),
 
   // Metrics & Analytics
   user_metrics_summary: defineTable({

@@ -20,9 +20,13 @@ struct MorningCheckInView: View {
 
     @State private var sleepQuality: Int = 0
     @State private var energyLevel: Int = 0
+    @State private var mood: Int = 0
     @State private var todaysTasks: [TodayTask] = []
     @State private var isLoading = true
     @State private var hasSubmitted = false
+    @State private var isSubmitting = false
+    @State private var showingSuccess = false
+    @State private var errorMessage: String?
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
@@ -38,6 +42,9 @@ struct MorningCheckInView: View {
 
                     // Energy Level
                     energyLevelSection
+
+                    // Mood Section
+                    moodSection
 
                     // Today's Tasks Preview
                     taskPreviewSection
@@ -61,7 +68,50 @@ struct MorningCheckInView: View {
             .onAppear {
                 loadTodaysTasks()
             }
+            .alert("Error", isPresented: .init(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK") { errorMessage = nil }
+            } message: {
+                Text(errorMessage ?? "")
+            }
         }
+        .overlay {
+            if showingSuccess {
+                successOverlay
+            }
+        }
+    }
+
+    // MARK: - Success Overlay
+
+    private var successOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 64))
+                    .foregroundColor(.green)
+
+                Text("Check-in Complete!")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+
+                Text("Have a great day!")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(32)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color(.systemBackground).opacity(0.95))
+            )
+        }
+        .transition(.opacity)
     }
 
     // MARK: - Greeting Header
@@ -156,6 +206,53 @@ struct MorningCheckInView: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(
                                     energyLevel == option.rawValue ? option.color : Color.clear,
+                                    lineWidth: 2
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding()
+        .background(GlassyCardBackground(opacity: 0.5))
+        .cornerRadius(16)
+    }
+
+    // MARK: - Mood Section
+
+    private var moodSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("How's your mood?")
+                .font(.headline)
+                .foregroundColor(theme.textOnCard)
+
+            HStack(spacing: 12) {
+                ForEach(MoodOption.allCases) { option in
+                    Button {
+                        withAnimation(.spring(response: 0.3)) {
+                            mood = option.rawValue
+                        }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        VStack(spacing: 6) {
+                            Text(option.emoji)
+                                .font(.title)
+
+                            Text(option.label)
+                                .font(.caption)
+                                .foregroundColor(mood == option.rawValue ? theme.textOnCard : .secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(mood == option.rawValue ? option.color.opacity(0.2) : Color.gray.opacity(0.1))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(
+                                    mood == option.rawValue ? option.color : Color.clear,
                                     lineWidth: 2
                                 )
                         )
@@ -270,8 +367,13 @@ struct MorningCheckInView: View {
                 submitCheckIn()
             } label: {
                 HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Complete Check-in")
+                    if isSubmitting {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: theme.primary))
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Complete Check-in")
+                    }
                 }
                 .font(.headline)
                 .foregroundColor(theme.primary)
@@ -280,9 +382,20 @@ struct MorningCheckInView: View {
                 .background(theme.primary.opacity(0.15))
                 .cornerRadius(12)
             }
-            .disabled(sleepQuality == 0 || energyLevel == 0)
-            .opacity((sleepQuality == 0 || energyLevel == 0) ? 0.5 : 1)
+            .disabled(!canSubmit)
+            .opacity(canSubmit ? 1 : 0.5)
+
+            // Validation message
+            if !canSubmit && !isSubmitting {
+                Text("Please rate your sleep, energy, and mood")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
+    }
+
+    private var canSubmit: Bool {
+        sleepQuality > 0 && energyLevel > 0 && mood > 0 && !isSubmitting
     }
 
     // MARK: - Helpers
@@ -326,32 +439,85 @@ struct MorningCheckInView: View {
     }
 
     private func submitCheckIn() {
-        // Save check-in data
-        let checkInData: [String: Any] = [
-            "date": Date().ISO8601Format(),
-            "sleepQuality": sleepQuality,
-            "energyLevel": energyLevel,
-            "type": "morning"
-        ]
+        isSubmitting = true
 
-        print("[MorningCheckIn] Submitted: \(checkInData)")
+        Task {
+            do {
+                try await ConvexService.shared.submitMorningCheckIn(
+                    sleepQuality: sleepQuality,
+                    energyLevel: energyLevel,
+                    mood: mood
+                )
 
-        // TODO: Save to Convex when endpoint is ready
-        // For now, just dismiss
-        hasSubmitted = true
+                await MainActor.run {
+                    isSubmitting = false
+                    hasSubmitted = true
 
-        // Haptic feedback
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+                    // Haptic success
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
 
-        // Dismiss after brief delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            dismiss()
+                    // Show success overlay
+                    withAnimation {
+                        showingSuccess = true
+                    }
+
+                    // Dismiss after delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        dismiss()
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isSubmitting = false
+                    errorMessage = "Failed to save check-in. Please try again."
+                    print("[MorningCheckIn] Error: \(error)")
+                }
+            }
         }
     }
 }
 
 // MARK: - Supporting Types
+
+enum MoodOption: Int, CaseIterable, Identifiable {
+    case veryLow = 1
+    case low = 2
+    case neutral = 3
+    case good = 4
+    case great = 5
+
+    var id: Int { rawValue }
+
+    var emoji: String {
+        switch self {
+        case .veryLow: return "😢"
+        case .low: return "😔"
+        case .neutral: return "😐"
+        case .good: return "🙂"
+        case .great: return "😄"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .veryLow: return "Bad"
+        case .low: return "Low"
+        case .neutral: return "Okay"
+        case .good: return "Good"
+        case .great: return "Great"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .veryLow: return .red
+        case .low: return .orange
+        case .neutral: return .yellow
+        case .good: return .green
+        case .great: return .mint
+        }
+    }
+}
 
 enum EnergyOption: Int, CaseIterable, Identifiable {
     case exhausted = 1

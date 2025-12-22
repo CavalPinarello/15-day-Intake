@@ -65,6 +65,13 @@ struct OnboardingView: View {
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: onboardingManager.currentStep)
                 }
+
+                // Floating accessibility button (bottom-right)
+                // Uses palette colors to blend with circadian background
+                EnhancedReadabilityButton(
+                    lightStyle: CircadianPalette.current.isDark,
+                    edgePadding: 24
+                )
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -1040,7 +1047,7 @@ struct ReadyStepView: View {
                         .foregroundColor(palette.accent)
                 }
 
-                Text("Your 15-day sleep journey begins now")
+                Text("Your 14-day sleep journey begins now")
                     .font(.caption)
                     .foregroundColor(palette.textSecondary)
                     .multilineTextAlignment(.center)

@@ -1484,8 +1484,10 @@ struct SleepDiaryHistoryView: View {
 
                     Spacer(minLength: 40)
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.vertical)
             }
+            .scrollContentBackground(.hidden)  // Ensure background doesn't interfere
         }
         .navigationTitle("Sleep Diary")
         .navigationBarTitleDisplayMode(.large)
@@ -1505,8 +1507,8 @@ struct SleepDiaryHistoryView: View {
             Text("Select a Day")
                 .font(.headline)
                 .foregroundColor(circadianTextPrimary)
-                .padding(.leading, 4)  // Ensure text isn't clipped at edge
 
+            // Use negative margin to extend ScrollView edge-to-edge, then add content padding
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(1...14, id: \.self) { day in
@@ -1521,8 +1523,9 @@ struct SleepDiaryHistoryView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 8)  // Increased padding for better layout
+                .padding(.horizontal, 16)  // Content padding to match parent VStack padding
             }
+            .padding(.horizontal, -16)  // Extend ScrollView to screen edges for smooth scrolling
         }
     }
 

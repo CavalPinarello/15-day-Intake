@@ -48,7 +48,7 @@ struct AnalysisStage: Identifiable, Equatable {
     var isCurrent: Bool
 
     static let stages: [AnalysisStage] = [
-        AnalysisStage(id: 1, title: "Data collected", description: "Your 15 days of sleep data are ready for analysis", icon: "checkmark.circle.fill", isComplete: false, isCurrent: false),
+        AnalysisStage(id: 1, title: "Data collected", description: "Your 14 days of sleep data are ready for analysis", icon: "checkmark.circle.fill", isComplete: false, isCurrent: false),
         AnalysisStage(id: 2, title: "Patterns identified", description: "Our sleep specialists are reviewing your patterns", icon: "magnifyingglass", isComplete: false, isCurrent: false),
         AnalysisStage(id: 3, title: "Recommendations preparing", description: "Your personalized treatment plan is being created", icon: "doc.text.fill", isComplete: false, isCurrent: false),
         AnalysisStage(id: 4, title: "Treatment plan ready!", description: "Tap to view your personalized sleep improvement plan", icon: "star.fill", isComplete: false, isCurrent: false),

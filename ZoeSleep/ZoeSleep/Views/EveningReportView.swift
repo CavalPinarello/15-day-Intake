@@ -20,11 +20,15 @@ struct EveningReportView: View {
     @EnvironmentObject var themeManager: ThemeManager
 
     @State private var reflectionText: String = ""
+    @State private var dayRating: Int = 0
     @State private var todaysTasks: [TodayTask] = []
     @State private var tomorrowTasks: [TodayTask] = []
     @State private var isLoading = true
     @State private var hasSubmitted = false
     @State private var showTomorrowPreview = false
+    @State private var isSubmitting = false
+    @State private var showingSuccess = false
+    @State private var errorMessage: String?
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
@@ -55,6 +59,9 @@ struct EveningReportView: View {
                     if completedCount < totalCount {
                         missedTasksSection
                     }
+
+                    // Day Rating
+                    dayRatingSection
 
                     // Reflection
                     reflectionSection
@@ -105,7 +112,50 @@ struct EveningReportView: View {
             .onAppear {
                 loadData()
             }
+            .alert("Error", isPresented: .init(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK") { errorMessage = nil }
+            } message: {
+                Text(errorMessage ?? "")
+            }
         }
+        .overlay {
+            if showingSuccess {
+                successOverlay
+            }
+        }
+    }
+
+    // MARK: - Success Overlay
+
+    private var successOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 64))
+                    .foregroundColor(.indigo)
+
+                Text("Evening Report Complete!")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+
+                Text("Sleep well tonight")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(32)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color(.systemBackground).opacity(0.95))
+            )
+        }
+        .transition(.opacity)
     }
 
     // MARK: - Evening Header
@@ -202,6 +252,57 @@ struct EveningReportView: View {
             return "Some tasks completed. Tomorrow is a new day!"
         default:
             return "Remember, consistency is key. Let's try again tomorrow!"
+        }
+    }
+
+    // MARK: - Day Rating Section
+
+    private var dayRatingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "star.fill")
+                    .foregroundColor(.yellow)
+                Text("Rate your day")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+
+            HStack(spacing: 16) {
+                ForEach(1...5, id: \.self) { rating in
+                    Button {
+                        withAnimation(.spring(response: 0.3)) {
+                            dayRating = rating
+                        }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: rating <= dayRating ? "star.fill" : "star")
+                                .font(.title2)
+                                .foregroundColor(rating <= dayRating ? .yellow : .white.opacity(0.3))
+
+                            Text(dayRatingLabel(for: rating))
+                                .font(.caption2)
+                                .foregroundColor(rating == dayRating ? .white : .white.opacity(0.5))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding()
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(16)
+    }
+
+    private func dayRatingLabel(for rating: Int) -> String {
+        switch rating {
+        case 1: return "Rough"
+        case 2: return "Hard"
+        case 3: return "Okay"
+        case 4: return "Good"
+        case 5: return "Great"
+        default: return ""
         }
     }
 
@@ -359,25 +460,41 @@ struct EveningReportView: View {
     // MARK: - Submit Button
 
     private var submitButton: some View {
-        Button {
-            submitReport()
-        } label: {
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                Text("Complete Evening Report")
-            }
-            .font(.headline)
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(
-                LinearGradient(
-                    colors: [.indigo, .purple],
-                    startPoint: .leading,
-                    endPoint: .trailing
+        VStack(spacing: 12) {
+            Button {
+                submitReport()
+            } label: {
+                HStack {
+                    if isSubmitting {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Complete Evening Report")
+                    }
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(
+                    LinearGradient(
+                        colors: [.indigo, .purple],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
                 )
-            )
-            .cornerRadius(12)
+                .cornerRadius(12)
+            }
+            .disabled(dayRating == 0 || isSubmitting)
+            .opacity(dayRating == 0 ? 0.5 : 1)
+
+            // Validation message
+            if dayRating == 0 && !isSubmitting {
+                Text("Please rate your day to continue")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.6))
+            }
         }
         .padding(.top, 8)
     }
@@ -435,28 +552,56 @@ struct EveningReportView: View {
     }
 
     private func submitReport() {
-        // Save evening report data
-        let reportData: [String: Any] = [
-            "date": Date().ISO8601Format(),
-            "completedTasks": completedCount,
-            "totalTasks": totalCount,
-            "completionPercentage": completionPercentage,
-            "reflection": reflectionText,
-            "type": "evening"
-        ]
+        isSubmitting = true
 
-        print("[EveningReport] Submitted: \(reportData)")
+        // Collect missed task reasons as JSON string if any tasks were missed
+        let missedTasksJson: String? = {
+            let missedTasks = todaysTasks.filter { !$0.isCompleted }
+            guard !missedTasks.isEmpty else { return nil }
 
-        // TODO: Save to Convex when endpoint is ready
-        hasSubmitted = true
+            let tasksData = missedTasks.map { task in
+                ["taskId": task.id, "taskName": task.name]
+            }
 
-        // Haptic feedback
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+            if let data = try? JSONSerialization.data(withJSONObject: tasksData),
+               let jsonString = String(data: data, encoding: .utf8) {
+                return jsonString
+            }
+            return nil
+        }()
 
-        // Dismiss after brief delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            dismiss()
+        Task {
+            do {
+                try await ConvexService.shared.submitEveningCheckIn(
+                    overallDayRating: dayRating,
+                    reflectionText: reflectionText.isEmpty ? nil : reflectionText,
+                    tasksMissedReasons: missedTasksJson
+                )
+
+                await MainActor.run {
+                    isSubmitting = false
+                    hasSubmitted = true
+
+                    // Haptic success
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+
+                    // Show success overlay
+                    withAnimation {
+                        showingSuccess = true
+                    }
+
+                    // Dismiss after delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        dismiss()
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isSubmitting = false
+                    errorMessage = "Failed to save report. Please try again."
+                    print("[EveningReport] Error: \(error)")
+                }
+            }
         }
     }
 }

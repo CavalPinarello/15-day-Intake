@@ -8,12 +8,14 @@
  * @module
  */
 
+import type * as adaptiveDifficulty from "../adaptiveDifficulty.js";
 import type * as anticipationEngine from "../anticipationEngine.js";
 import type * as assessment from "../assessment.js";
 import type * as assessmentMutations from "../assessmentMutations.js";
 import type * as assessmentQueries from "../assessmentQueries.js";
 import type * as auth from "../auth.js";
 import type * as challenges from "../challenges.js";
+import type * as checkIn from "../checkIn.js";
 import type * as clinicalScenarios from "../clinicalScenarios.js";
 import type * as cohortCompute from "../cohortCompute.js";
 import type * as cohortStats from "../cohortStats.js";
@@ -32,11 +34,14 @@ import type * as ios from "../ios.js";
 import type * as journey from "../journey.js";
 import type * as llm from "../llm.js";
 import type * as microCohorts from "../microCohorts.js";
+import type * as outcomeCorrelation from "../outcomeCorrelation.js";
 import type * as physician from "../physician.js";
 import type * as physicianAuth from "../physicianAuth.js";
+import type * as protocols from "../protocols.js";
 import type * as questions from "../questions.js";
 import type * as responses from "../responses.js";
 import type * as seedBadges from "../seedBadges.js";
+import type * as seedClinicalData from "../seedClinicalData.js";
 import type * as seedInsightTeasers from "../seedInsightTeasers.js";
 import type * as seedInterventionLibrary from "../seedInterventionLibrary.js";
 import type * as seedModules from "../seedModules.js";
@@ -57,12 +62,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  adaptiveDifficulty: typeof adaptiveDifficulty;
   anticipationEngine: typeof anticipationEngine;
   assessment: typeof assessment;
   assessmentMutations: typeof assessmentMutations;
   assessmentQueries: typeof assessmentQueries;
   auth: typeof auth;
   challenges: typeof challenges;
+  checkIn: typeof checkIn;
   clinicalScenarios: typeof clinicalScenarios;
   cohortCompute: typeof cohortCompute;
   cohortStats: typeof cohortStats;
@@ -81,11 +88,14 @@ declare const fullApi: ApiFromModules<{
   journey: typeof journey;
   llm: typeof llm;
   microCohorts: typeof microCohorts;
+  outcomeCorrelation: typeof outcomeCorrelation;
   physician: typeof physician;
   physicianAuth: typeof physicianAuth;
+  protocols: typeof protocols;
   questions: typeof questions;
   responses: typeof responses;
   seedBadges: typeof seedBadges;
+  seedClinicalData: typeof seedClinicalData;
   seedInsightTeasers: typeof seedInsightTeasers;
   seedInterventionLibrary: typeof seedInterventionLibrary;
   seedModules: typeof seedModules;

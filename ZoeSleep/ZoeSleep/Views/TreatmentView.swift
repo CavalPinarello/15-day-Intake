@@ -230,7 +230,7 @@ struct TreatmentView: View {
             Text("No treatment tasks yet")
                 .font(.headline)
 
-            Text("Complete your 15-day intake to receive personalized treatment recommendations.")
+            Text("Complete your 14-day intake to receive personalized treatment recommendations.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

@@ -1864,6 +1864,117 @@ extension ConvexService {
     }
 }
 
+// MARK: - Check-In Types
+
+struct CheckInStatusResponse: Codable {
+    let morning: CheckInStatus
+    let midday: CheckInStatus
+    let evening: CheckInStatus
+
+    struct CheckInStatus: Codable {
+        let completed: Bool
+        let completedAt: Double?
+    }
+}
+
+struct CheckInSubmitResponse: Codable {
+    let success: Bool
+    let checkInId: String
+}
+
+// MARK: - Check-In APIs
+
+extension ConvexService {
+    /// Submit morning check-in data
+    func submitMorningCheckIn(
+        sleepQuality: Int,
+        energyLevel: Int,
+        mood: Int,
+        deviceType: String = "ios"
+    ) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let _: CheckInSubmitResponse = try await client.mutation("checkIn:submitMorningCheckIn", args: [
+            "userId": userId,
+            "sleepQuality": sleepQuality,
+            "energyLevel": energyLevel,
+            "mood": mood,
+            "deviceType": deviceType
+        ])
+    }
+
+    /// Submit midday check-in data (energy, caffeine, naps)
+    func submitMiddayCheckIn(
+        energyLevel: Int,
+        caffeineCups: Int,
+        caffeineLastTime: String?,
+        napTaken: Bool,
+        napDurationMins: Int?,
+        deviceType: String = "ios"
+    ) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        var args: [String: Any] = [
+            "userId": userId,
+            "energyLevel": energyLevel,
+            "caffeineCups": caffeineCups,
+            "napTaken": napTaken,
+            "deviceType": deviceType
+        ]
+
+        if let caffeineTime = caffeineLastTime {
+            args["caffeineLastTime"] = caffeineTime
+        }
+        if let napDuration = napDurationMins {
+            args["napDurationMins"] = napDuration
+        }
+
+        let _: CheckInSubmitResponse = try await client.mutation("checkIn:submitMiddayCheckIn", args: args)
+    }
+
+    /// Submit evening check-in data
+    func submitEveningCheckIn(
+        overallDayRating: Int,
+        reflectionText: String?,
+        tasksMissedReasons: String?,
+        deviceType: String = "ios"
+    ) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        var args: [String: Any] = [
+            "userId": userId,
+            "overallDayRating": overallDayRating,
+            "deviceType": deviceType
+        ]
+
+        if let reflection = reflectionText {
+            args["reflectionText"] = reflection
+        }
+        if let missedReasons = tasksMissedReasons {
+            args["tasksMissedReasons"] = missedReasons
+        }
+
+        let _: CheckInSubmitResponse = try await client.mutation("checkIn:submitEveningCheckIn", args: args)
+    }
+
+    /// Get today's check-in completion status
+    func getTodayCheckInStatus() async throws -> CheckInStatusResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("checkIn:getTodayCheckInStatus", args: [
+            "userId": userId
+        ])
+    }
+}
+
 // MARK: - Keychain Helper
 
 class KeychainHelper {

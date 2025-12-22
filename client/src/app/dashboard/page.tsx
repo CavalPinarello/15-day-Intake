@@ -86,7 +86,7 @@ export default function DashboardPage() {
   const [journeyProgress, setJourneyProgress] = useState<JourneyProgress>({
     currentDay: 1,
     completedDays: [],
-    totalDays: 15,
+    totalDays: 14,
     phase: 'core',
     triggeredGateways: [],
   });
@@ -204,7 +204,7 @@ export default function DashboardPage() {
         {/* Journey Progress Card */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">15-Day Sleep Journey</h2>
+            <h2 className="text-lg font-semibold text-gray-900">14-Day Sleep Journey</h2>
             <span className="text-sm text-gray-500">
               Day {journeyProgress.currentDay} of {journeyProgress.totalDays}
             </span>
@@ -430,7 +430,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold">View Full Journey</h3>
-              <p className="text-sm text-white/80">See all 15 days and your progress</p>
+              <p className="text-sm text-white/80">See all 14 days and your progress</p>
             </div>
             <ChevronRight className="w-6 h-6" />
           </div>

@@ -503,7 +503,7 @@ export const getLifecycleMessage = query({
       };
     }
 
-    // Day 15+: Treatment phase
+    // Day 14+: Treatment phase
     if (phase === "treatment_active") {
       return {
         phase: "treatment",

@@ -5,8 +5,8 @@
 //  Orchestrates mock data generation day-by-day, question-by-question
 //  Uses real ConvexService for data persistence
 //
-
-#if DEBUG
+//  NOTE: Available in all builds (including TestFlight) when Debug Mode is enabled
+//
 
 import Foundation
 import Combine
@@ -348,5 +348,3 @@ class MockPlaybackController: ObservableObject {
         return formatter.string(from: date)
     }
 }
-
-#endif

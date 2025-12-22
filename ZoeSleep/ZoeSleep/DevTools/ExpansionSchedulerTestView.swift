@@ -841,7 +841,7 @@ class ExpansionSchedulerTestController: ObservableObject {
         let targetQuestionsPerDay = 14
         let maxQuestionsPerDay = 18
         let expansionStartDay = 6
-        let expansionEndDay = 15
+        let expansionEndDay = 14
 
         // Get modules for triggered gateways
         var eligibleModules = ExpansionModule.allModules.filter { module in

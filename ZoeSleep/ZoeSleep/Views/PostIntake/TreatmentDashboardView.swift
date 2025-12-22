@@ -12,8 +12,12 @@ struct TreatmentDashboardView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var authManager: AuthenticationManager
     @ObservedObject var journeyManager = JourneyPhaseManager.shared
+    @ObservedObject var checkInManager = CheckInManager.shared
 
     @State private var expandedWindows: Set<String> = []
+    @State private var showingMorningCheckIn = false
+    @State private var showingMiddayCheckIn = false
+    @State private var showingEveningReport = false
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
@@ -22,6 +26,9 @@ struct TreatmentDashboardView: View {
             VStack(spacing: 20) {
                 // Header with greeting
                 headerSection
+
+                // Check-in Status Card
+                checkInStatusCard
 
                 // Daily Progress Summary
                 dailyProgressCard
@@ -52,12 +59,79 @@ struct TreatmentDashboardView: View {
         .background(theme.backgroundGradient)
         .onAppear {
             loadTasks()
+            loadCheckInStatus()
             // Auto-expand current window
             expandedWindows.insert(TimeWindow.current().id)
         }
         .refreshable {
             loadTasks()
+            loadCheckInStatus()
         }
+        .sheet(isPresented: $showingMorningCheckIn) {
+            MorningCheckInView()
+                .environmentObject(themeManager)
+        }
+        .sheet(isPresented: $showingMiddayCheckIn) {
+            MiddayCheckInView()
+                .environmentObject(themeManager)
+        }
+        .sheet(isPresented: $showingEveningReport) {
+            EveningReportView()
+                .environmentObject(themeManager)
+        }
+    }
+
+    // MARK: - Check-In Status Card
+
+    private var checkInStatusCard: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "list.bullet.clipboard")
+                    .foregroundColor(theme.accent)
+                Text("Daily Check-ins")
+                    .font(.headline)
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                Text("\(checkInManager.completedCount)/3")
+                    .font(.subheadline)
+                    .foregroundColor(theme.secondaryText)
+            }
+
+            // Check-in status pills
+            HStack(spacing: 12) {
+                CheckInPill(
+                    title: "Morning",
+                    icon: "sun.max.fill",
+                    color: .orange,
+                    isCompleted: checkInManager.morningCompleted,
+                    isActive: checkInManager.shouldShowCheckInPrompt(for: .morning),
+                    action: { showingMorningCheckIn = true }
+                )
+
+                CheckInPill(
+                    title: "Midday",
+                    icon: "clock.fill",
+                    color: .blue,
+                    isCompleted: checkInManager.middayCompleted,
+                    isActive: checkInManager.shouldShowCheckInPrompt(for: .midday),
+                    action: { showingMiddayCheckIn = true }
+                )
+
+                CheckInPill(
+                    title: "Evening",
+                    icon: "moon.stars.fill",
+                    color: .indigo,
+                    isCompleted: checkInManager.eveningCompleted,
+                    isActive: checkInManager.shouldShowCheckInPrompt(for: .evening),
+                    action: { showingEveningReport = true }
+                )
+            }
+        }
+        .padding()
+        .background(theme.cardBackground)
+        .cornerRadius(16)
     }
 
     // MARK: - Header
@@ -195,6 +269,12 @@ struct TreatmentDashboardView: View {
         guard let userId = authManager.user?.id else { return }
         Task {
             await journeyManager.loadWindowedTasks(userId: userId)
+        }
+    }
+
+    private func loadCheckInStatus() {
+        Task {
+            await checkInManager.loadTodayStatus()
         }
     }
 
@@ -504,6 +584,54 @@ struct TaskDetailSheet: View {
                 Text("Are you sure you want to skip this task? You can provide an optional reason.")
             }
         }
+    }
+}
+
+// MARK: - Check-In Pill
+
+struct CheckInPill: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let isCompleted: Bool
+    let isActive: Bool
+    let action: () -> Void
+
+    @EnvironmentObject var themeManager: ThemeManager
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    var body: some View {
+        Button(action: {
+            if !isCompleted {
+                action()
+            }
+        }) {
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .fill(isCompleted ? Color.green.opacity(0.2) : (isActive ? color.opacity(0.2) : theme.secondaryText.opacity(0.1)))
+                        .frame(width: 40, height: 40)
+
+                    if isCompleted {
+                        Image(systemName: "checkmark")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
+                    } else {
+                        Image(systemName: icon)
+                            .font(.subheadline)
+                            .foregroundColor(isActive ? color : theme.secondaryText)
+                    }
+                }
+
+                Text(title)
+                    .font(.caption2)
+                    .foregroundColor(isCompleted ? .green : (isActive ? color : theme.secondaryText))
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+        .disabled(isCompleted)
     }
 }
 

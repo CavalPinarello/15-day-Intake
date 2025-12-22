@@ -971,13 +971,181 @@ class HealthKitManager: ObservableObject {
             "heartRateData": heartRateData,
             "activityData": activityData
         ]
-        
+
         Task {
             do {
                 let result = try await apiService.syncHealthData(payload, token: token)
                 completion(.success(result))
             } catch {
                 completion(.failure(error))
+            }
+        }
+    }
+
+    // MARK: - Data Verification (for debugging)
+
+    /// Verification result containing diagnostic information about HealthKit data
+    struct HealthKitVerificationResult {
+        let isHealthKitAvailable: Bool
+        let isAuthorized: Bool
+        let sleepDataDays: Int
+        let sleepDataSources: [String]
+        let hasSleepStages: Bool
+        let hasHeartRateData: Bool
+        let hasActivityData: Bool
+        let lastSleepDate: String?
+        let sampleSleepEntry: [String: Any]?
+        let errorMessage: String?
+
+        var summary: String {
+            var lines: [String] = []
+            lines.append("═══════════════════════════════════════")
+            lines.append("HEALTHKIT VERIFICATION REPORT")
+            lines.append("═══════════════════════════════════════")
+            lines.append("HealthKit Available: \(isHealthKitAvailable ? "✓" : "✗")")
+            lines.append("Authorization: \(isAuthorized ? "✓ Granted" : "✗ Not Granted")")
+            lines.append("───────────────────────────────────────")
+            lines.append("SLEEP DATA:")
+            lines.append("  Days of data: \(sleepDataDays)")
+            lines.append("  Sources: \(sleepDataSources.isEmpty ? "None" : sleepDataSources.joined(separator: ", "))")
+            lines.append("  Has sleep stages: \(hasSleepStages ? "✓" : "✗")")
+            lines.append("  Last sleep date: \(lastSleepDate ?? "N/A")")
+            lines.append("───────────────────────────────────────")
+            lines.append("OTHER DATA:")
+            lines.append("  Heart rate: \(hasHeartRateData ? "✓" : "✗")")
+            lines.append("  Activity: \(hasActivityData ? "✓" : "✗")")
+            if let error = errorMessage {
+                lines.append("───────────────────────────────────────")
+                lines.append("ERROR: \(error)")
+            }
+            if let sample = sampleSleepEntry {
+                lines.append("───────────────────────────────────────")
+                lines.append("SAMPLE ENTRY:")
+                for (key, value) in sample.sorted(by: { $0.key < $1.key }) {
+                    lines.append("  \(key): \(value)")
+                }
+            }
+            lines.append("═══════════════════════════════════════")
+            return lines.joined(separator: "\n")
+        }
+    }
+
+    /// Performs a comprehensive verification of HealthKit data availability
+    /// Call this from debug tools to diagnose data issues
+    func verifyHealthKitData() async -> HealthKitVerificationResult {
+        print("[HealthKit] Starting data verification...")
+
+        let isAvailable = isHealthKitAvailable
+        let isAuth = isAuthorized
+
+        // Early return if not available or not authorized
+        guard isAvailable else {
+            let result = HealthKitVerificationResult(
+                isHealthKitAvailable: false,
+                isAuthorized: false,
+                sleepDataDays: 0,
+                sleepDataSources: [],
+                hasSleepStages: false,
+                hasHeartRateData: false,
+                hasActivityData: false,
+                lastSleepDate: nil,
+                sampleSleepEntry: nil,
+                errorMessage: "HealthKit is not available on this device"
+            )
+            print(result.summary)
+            return result
+        }
+
+        guard isAuth else {
+            let result = HealthKitVerificationResult(
+                isHealthKitAvailable: true,
+                isAuthorized: false,
+                sleepDataDays: 0,
+                sleepDataSources: [],
+                hasSleepStages: false,
+                hasHeartRateData: false,
+                hasActivityData: false,
+                lastSleepDate: nil,
+                sampleSleepEntry: nil,
+                errorMessage: "HealthKit authorization not granted. Go to Settings > Privacy > Health > Zoe Sleep to enable."
+            )
+            print(result.summary)
+            return result
+        }
+
+        // Fetch sleep data for verification
+        return await withCheckedContinuation { continuation in
+            fetchSleepData(daysBack: 30) { sleepResult in
+                var sleepData: [[String: Any]] = []
+                var sleepError: String? = nil
+
+                switch sleepResult {
+                case .success(let data):
+                    sleepData = data
+                    print("[HealthKit] Fetched \(data.count) days of sleep data")
+                case .failure(let error):
+                    sleepError = error.localizedDescription
+                    print("[HealthKit] Sleep data error: \(error.localizedDescription)")
+                }
+
+                // Extract sources from sleep data
+                var allSources = Set<String>()
+                var hasSleepStages = false
+                var lastSleepDate: String? = nil
+                var sampleEntry: [String: Any]? = nil
+
+                for entry in sleepData {
+                    if let sources = entry["all_sources"] as? [String] {
+                        allSources.formUnion(sources)
+                    }
+                    if let primary = entry["primary_source"] as? String, primary != "Unknown" {
+                        allSources.insert(primary)
+                    }
+                    // Check for sleep stages (deep/REM indicates wearable data)
+                    if let deepMins = entry["deep_sleep_mins"] as? Int, deepMins > 0 {
+                        hasSleepStages = true
+                    }
+                    if let remMins = entry["rem_sleep_mins"] as? Int, remMins > 0 {
+                        hasSleepStages = true
+                    }
+                    // Track last sleep date
+                    if let date = entry["date"] as? String {
+                        if lastSleepDate == nil || date > lastSleepDate! {
+                            lastSleepDate = date
+                            sampleEntry = entry
+                        }
+                    }
+                }
+
+                // Log detailed info about sources
+                print("[HealthKit] Unique sources found: \(allSources)")
+                print("[HealthKit] Has sleep stages (Deep/REM): \(hasSleepStages)")
+                print("[HealthKit] Most recent sleep date: \(lastSleepDate ?? "None")")
+
+                // Check for heart rate and activity data
+                self.fetchHeartRateData(daysBack: 7) { hrResult in
+                    let hasHR = (try? hrResult.get())?.isEmpty == false
+
+                    self.fetchActivityData(daysBack: 7) { activityResult in
+                        let hasActivity = (try? activityResult.get())?.isEmpty == false
+
+                        let result = HealthKitVerificationResult(
+                            isHealthKitAvailable: true,
+                            isAuthorized: true,
+                            sleepDataDays: sleepData.count,
+                            sleepDataSources: Array(allSources).sorted(),
+                            hasSleepStages: hasSleepStages,
+                            hasHeartRateData: hasHR,
+                            hasActivityData: hasActivity,
+                            lastSleepDate: lastSleepDate,
+                            sampleSleepEntry: sampleEntry,
+                            errorMessage: sleepError
+                        )
+
+                        print(result.summary)
+                        continuation.resume(returning: result)
+                    }
+                }
             }
         }
     }

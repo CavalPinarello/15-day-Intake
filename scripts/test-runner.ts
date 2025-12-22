@@ -133,7 +133,7 @@ async function validateGateways(): Promise<boolean> {
 
     let passed = true;
 
-    for (const r of result.results) {
+    for (const r of result.results ?? []) {
       switch (r.status) {
         case "pass":
           log.success(`${r.gatewayId}: ${r.message}`);
@@ -166,7 +166,7 @@ async function validateQuestionnaireStructure(): Promise<boolean> {
 
     let passed = true;
 
-    for (const r of result.results) {
+    for (const r of result.results ?? []) {
       const countStr = r.count !== undefined ? ` (${r.count})` : "";
       switch (r.status) {
         case "pass":
@@ -201,7 +201,7 @@ async function validateAnswerFormats(): Promise<boolean> {
 
     if (result.invalidCount > 0) {
       log.subheader("\nInvalid Formats:");
-      for (const r of result.results) {
+      for (const r of result.results ?? []) {
         log.error(`${r.questionId} (${r.format}): ${r.message}`);
       }
       return false;
@@ -226,7 +226,7 @@ async function validateDataConsistency(): Promise<boolean> {
 
     let passed = true;
 
-    for (const r of result.results) {
+    for (const r of result.results ?? []) {
       const countStr = r.count !== undefined ? ` (${r.count})` : "";
       switch (r.status) {
         case "pass":
@@ -262,7 +262,7 @@ async function testUserScoring(userId: string): Promise<boolean> {
 
     let passed = true;
 
-    for (const r of result.results) {
+    for (const r of result.results ?? []) {
       const scoreStr = r.score !== undefined ? ` [${r.score}/${r.maxScore}]` : "";
       switch (r.status) {
         case "pass":
@@ -300,7 +300,7 @@ async function testGatewayTriggering(userId: string, dryRun: boolean = true): Pr
     log.info(`Triggered count: ${result.triggeredCount}`);
     log.info(`Mismatches: ${result.mismatchCount}`);
 
-    for (const r of result.results) {
+    for (const r of result.results ?? []) {
       const triggerIcon = r.shouldTrigger ? "🔴" : "⚪";
       const stateIcon = r.triggered ? "✓" : "✗";
       const match = r.shouldTrigger === r.triggered;
@@ -343,7 +343,7 @@ async function testExpansionSchedule(userId: string): Promise<boolean> {
 
     if (result.results) {
       let passed = true;
-      for (const r of result.results) {
+      for (const r of result.results ?? []) {
         switch (r.status) {
           case "pass":
             log.success(`${r.check}: ${r.message}`);

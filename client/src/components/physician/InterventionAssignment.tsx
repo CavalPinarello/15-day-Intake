@@ -1,27 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
   X,
-  Calendar,
-  Clock,
-  Repeat,
   Edit2,
   Trash2,
-  Check,
   Play,
-  AlertCircle,
   ChevronUp,
   ChevronDown,
-  GripVertical,
   Pill,
   FileText,
   Sparkles,
-  Save,
-  Send,
   Sun,
   SunMedium,
   Sunset,
@@ -42,7 +34,7 @@ interface DraftIntervention {
   name: string;
   category: string;
   startDate: string;
-  endDate?: string;
+  duration: string; // Duration key instead of endDate
   frequency: string;
   timing?: string;
   timeWindow?: TimeWindowId;
@@ -50,6 +42,28 @@ interface DraftIntervention {
   dosage?: string;
   customInstructions?: string;
   priority: number;
+}
+
+// Duration options with calculated weeks
+const durationOptions = [
+  { value: "1_week", label: "1 Week", days: 7 },
+  { value: "2_weeks", label: "2 Weeks", days: 14 },
+  { value: "4_weeks", label: "4 Weeks", days: 28 },
+  { value: "6_weeks", label: "6 Weeks", days: 42 },
+  { value: "8_weeks", label: "8 Weeks", days: 56 },
+  { value: "12_weeks", label: "12 Weeks", days: 84 },
+  { value: "ongoing", label: "Ongoing", days: null },
+];
+
+// Helper to calculate end date from start date and duration
+function calculateEndDate(startDate: string, duration: string): string | undefined {
+  const durationOption = durationOptions.find((d) => d.value === duration);
+  if (!durationOption || durationOption.days === null) {
+    return undefined; // Ongoing has no end date
+  }
+  const start = new Date(startDate);
+  start.setDate(start.getDate() + durationOption.days);
+  return start.toISOString().split("T")[0];
 }
 
 const frequencyOptions = [
@@ -77,7 +91,6 @@ export function InterventionAssignment({
   const [draftInterventions, setDraftInterventions] = useState<DraftIntervention[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Queries
   const existingInterventions = useQuery(api.physician.getPatientInterventions, { userId });
@@ -115,6 +128,7 @@ export function InterventionAssignment({
       name: "Loading...",
       category: "",
       startDate: today,
+      duration: "4_weeks", // Default to 4 weeks
       frequency: "daily",
       priority: 3,
     };
@@ -147,19 +161,20 @@ export function InterventionAssignment({
     });
   };
 
-  // Submit all drafts
+  // Submit all drafts and auto-activate
   const handleSubmit = async () => {
     if (draftInterventions.length === 0) return;
     setIsSubmitting(true);
 
     try {
-      // Create all interventions
+      // Create all interventions with calculated end dates
       for (const draft of draftInterventions) {
+        const endDate = calculateEndDate(draft.startDate, draft.duration);
         await assignIntervention({
           userId,
           interventionId: draft.intervention_id,
           startDate: draft.startDate,
-          endDate: draft.endDate,
+          endDate,
           frequency: draft.frequency,
           timing: draft.timing,
           timeWindow: draft.timeWindow,
@@ -170,27 +185,16 @@ export function InterventionAssignment({
         });
       }
 
-      setShowConfirmation(true);
-    } catch (error) {
-      console.error("Failed to assign interventions:", error);
-      alert("Failed to assign interventions. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Activate interventions and start treatment
-  const handleActivate = async () => {
-    setIsSubmitting(true);
-    try {
+      // Auto-activate interventions immediately
       const result = await activateInterventions({ userId });
+
       alert(
-        `Treatment activated! ${result.activated} interventions activated, ${result.tasksGenerated} daily tasks generated.`
+        `Treatment started! ${result.activated} intervention(s) activated, ${result.tasksGenerated} daily tasks generated. Patient will see their treatment plan in the app.`
       );
       onClose?.();
     } catch (error) {
-      console.error("Failed to activate interventions:", error);
-      alert("Failed to activate interventions. Please try again.");
+      console.error("Failed to assign and activate interventions:", error);
+      alert("Failed to start treatment. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -323,52 +327,18 @@ export function InterventionAssignment({
                 </div>
               )}
 
-              {/* Submit Button */}
-              {draftInterventions.length > 0 && !showConfirmation && (
+              {/* Submit Button - Auto-activates interventions */}
+              {draftInterventions.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <button
                     onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        Save Draft Interventions
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* Confirmation & Activate */}
-              {showConfirmation && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-center gap-2 text-green-700">
-                      <Check className="w-5 h-5" />
-                      <span className="font-medium">Interventions saved as draft</span>
-                    </div>
-                    <p className="text-sm text-green-600 mt-1">
-                      Click &quot;Start Treatment&quot; to activate these interventions and
-                      generate daily tasks for the patient.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleActivate}
                     disabled={isSubmitting}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-teal-600 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                   >
                     {isSubmitting ? (
                       <>
                         <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                        Activating...
+                        Starting Treatment...
                       </>
                     ) : (
                       <>
@@ -377,6 +347,9 @@ export function InterventionAssignment({
                       </>
                     )}
                   </button>
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    Interventions will be immediately active and visible to the patient
+                  </p>
                 </div>
               )}
             </div>
@@ -492,7 +465,9 @@ function DraftInterventionCard({
               </>
             )}
             <span>•</span>
-            <span>Starts {draft.startDate}</span>
+            <span>{durationOptions.find(d => d.value === draft.duration)?.label || draft.duration}</span>
+            <span>•</span>
+            <span>From {draft.startDate}</span>
           </div>
         </div>
 
@@ -533,17 +508,22 @@ function DraftInterventionCard({
               />
             </div>
 
-            {/* End Date */}
+            {/* Duration */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                End Date (optional)
+                Duration
               </label>
-              <input
-                type="date"
-                value={draft.endDate || ""}
-                onChange={(e) => onUpdate({ endDate: e.target.value || undefined })}
+              <select
+                value={draft.duration}
+                onChange={(e) => onUpdate({ duration: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
+              >
+                {durationOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Frequency */}

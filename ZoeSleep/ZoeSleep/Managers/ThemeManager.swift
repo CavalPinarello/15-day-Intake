@@ -155,6 +155,19 @@ class ThemeManager: ObservableObject {
         }
     }
 
+    /// Enhanced Readability Mode - single toggle that activates all accessibility presets
+    /// Designed for users in their 70s who need larger, clearer text
+    @Published var enhancedReadabilityMode: Bool = false {
+        didSet {
+            UserDefaults.standard.set(enhancedReadabilityMode, forKey: "enhancedReadabilityMode")
+            if enhancedReadabilityMode {
+                applyEnhancedReadabilityPreset()
+            } else {
+                resetToDefaultAccessibility()
+            }
+        }
+    }
+
     @Published var debugMode: Bool = false {
         didSet {
             UserDefaults.standard.set(debugMode, forKey: "debugMode")
@@ -232,6 +245,48 @@ class ThemeManager: ObservableObject {
 
         // Load unlock time override
         self.unlockTimeOverride = UserDefaults.standard.bool(forKey: "unlockTimeOverride")
+
+        // Load enhanced readability mode (load last so it can override other settings)
+        self.enhancedReadabilityMode = UserDefaults.standard.bool(forKey: "enhancedReadabilityMode")
+        if self.enhancedReadabilityMode {
+            applyEnhancedReadabilityPreset()
+        }
+    }
+
+    // MARK: - Enhanced Readability Mode
+
+    /// Applies the enhanced readability preset for elderly users
+    /// - 1.5x text size for crystal clear reading
+    /// - Large icons mode for easier tapping
+    /// - High contrast for visibility
+    /// - Reduced motion to minimize distraction
+    private func applyEnhancedReadabilityPreset() {
+        // Set all accessibility settings to optimal values for 70+ users
+        // Use direct assignment to avoid triggering didSet recursively
+        self.textSizeMultiplier = 1.5
+        self.largeIconsMode = true
+        self.highContrast = true
+        self.reduceMotion = true
+
+        // Persist the individual settings
+        UserDefaults.standard.set(textSizeMultiplier, forKey: "textSizeMultiplier")
+        UserDefaults.standard.set(largeIconsMode, forKey: "largeIconsMode")
+        UserDefaults.standard.set(highContrast, forKey: "highContrast")
+        UserDefaults.standard.set(reduceMotion, forKey: "reduceMotion")
+    }
+
+    /// Resets accessibility settings to defaults when enhanced mode is disabled
+    private func resetToDefaultAccessibility() {
+        self.textSizeMultiplier = 1.0
+        self.largeIconsMode = false
+        self.highContrast = false
+        self.reduceMotion = false
+
+        // Persist the individual settings
+        UserDefaults.standard.set(textSizeMultiplier, forKey: "textSizeMultiplier")
+        UserDefaults.standard.set(largeIconsMode, forKey: "largeIconsMode")
+        UserDefaults.standard.set(highContrast, forKey: "highContrast")
+        UserDefaults.standard.set(reduceMotion, forKey: "reduceMotion")
     }
 
     // MARK: - Computed Properties

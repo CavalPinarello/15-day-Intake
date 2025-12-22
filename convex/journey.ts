@@ -5,7 +5,7 @@ import { query, mutation } from "./_generated/server";
  * Patient Journey Phase Management
  *
  * Tracks the patient's progression through:
- * 1. Intake (Days 1-15)
+ * 1. Intake (Days 1-14)
  * 2. Analysis (4 stages while physician reviews)
  * 3. Treatment Active (interventions assigned and active)
  */
@@ -15,7 +15,7 @@ const ANALYSIS_STAGES = [
   {
     stage: 1,
     title: "Data collected",
-    description: "Your 15 days of sleep data are ready for analysis",
+    description: "Your 14 days of sleep data are ready for analysis",
     icon: "checkmark.circle.fill",
   },
   {
@@ -142,7 +142,7 @@ export const getAnalysisProgress = query({
 
 /**
  * Transition patient from intake to analysis phase
- * Called automatically when Day 15 is completed
+ * Called automatically when Day 14 is completed
  */
 export const transitionToAnalysis = mutation({
   args: { userId: v.id("users") },
@@ -389,7 +389,7 @@ export const shouldTransitionToAnalysis = query({
 
     const currentDay = user.current_day ?? 1;
 
-    // Check if all 15 days are complete
+    // Check if all 14 days are complete
     // This checks user_progress for completed days
     const completedDays = await ctx.db
       .query("user_progress")
@@ -397,7 +397,7 @@ export const shouldTransitionToAnalysis = query({
       .filter((q) => q.eq(q.field("completed"), true))
       .collect();
 
-    const intakeComplete = completedDays.length >= 15;
+    const intakeComplete = completedDays.length >= 14;
 
     // Check current journey phase
     const journeyStatus = await ctx.db

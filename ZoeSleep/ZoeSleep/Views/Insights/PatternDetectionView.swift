@@ -60,6 +60,17 @@ struct PatternDetectionView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(theme.textOnCard)
+
+                Spacer()
+
+                // Data source indicator
+                HStack(spacing: 4) {
+                    Image(systemName: "note.text")
+                        .font(.caption2)
+                    Text("Sleep Log")
+                        .font(.caption2)
+                }
+                .foregroundColor(theme.textOnCardMuted)
             }
 
             HStack(spacing: 12) {
@@ -181,6 +192,17 @@ struct PatternDetectionView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(theme.textOnCard)
+
+                Spacer()
+
+                // Data source indicator - stages REQUIRE wearable data
+                HStack(spacing: 4) {
+                    Image(systemName: "applewatch")
+                        .font(.caption2)
+                    Text("Wearable")
+                        .font(.caption2)
+                }
+                .foregroundColor(theme.success)
             }
 
             HStack(spacing: 8) {

@@ -132,7 +132,7 @@ struct TomorrowTeaserView: View {
 
 struct UnlockProgressTeaser: View {
     let currentDay: Int
-    let totalDays: Int = 15
+    let totalDays: Int = 14
 
     @EnvironmentObject var themeManager: ThemeManager
 
@@ -143,7 +143,7 @@ struct UnlockProgressTeaser: View {
     private var daysUntilNextMilestone: Int {
         if currentDay < 5 { return 5 - currentDay }
         if currentDay < 7 { return 7 - currentDay }
-        if currentDay < 15 { return 15 - currentDay }
+        if currentDay < 14 { return 14 - currentDay }
         return 0
     }
 

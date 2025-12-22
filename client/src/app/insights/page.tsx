@@ -207,7 +207,7 @@ export default function InsightsPage() {
           type: 'neutral',
           category: 'Journey Progress',
           title: `${Math.round(completionRate)}% Complete`,
-          description: `You've completed ${progress.completedDays.length} of 15 days. ${progress.phase === 'expansion' ? 'You\'re now in the personalized assessment phase!' : 'Keep going!'}`,
+          description: `You've completed ${progress.completedDays.length} of 14 days. ${progress.phase === 'expansion' ? 'You\'re now in the personalized assessment phase!' : 'Keep going!'}`,
           metric: `Day ${progress.currentDay}`,
           icon: Target,
           color: 'blue'
