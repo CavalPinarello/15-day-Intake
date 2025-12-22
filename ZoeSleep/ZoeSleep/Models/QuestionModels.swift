@@ -3,59 +3,344 @@
 //  Zoe Sleep for Longevity System
 //
 //  Data models for the 15-day adaptive questionnaire system
+//  CIRCADIAN DESIGN: Colors transition smoothly throughout the day
 //
 
 import Foundation
 import SwiftUI
 
-// MARK: - Time Period Enum
+// MARK: - Circadian Phase System (8 phases with smooth interpolation)
 
-enum TimePeriod: Equatable {
-    case morning    // After dawn until noon: Bright, energetic
-    case afternoon  // Noon until dusk start: Transitioning warmth
-    case evening    // Dusk start until night: Full sunset warmth (NO blue light!)
-    case night      // Night until dawn: Deep, calming (NO blue light!)
+/// The 8 phases of the circadian day, designed for continuous color transitions
+/// CRITICAL: No blue light after dusk (disrupts melatonin production)
+enum CircadianPhase: Int, CaseIterable, Equatable {
+    case preDown = 0    // 4:00-5:30 AM: Deep warm transitioning from night
+    case dawn = 1       // 5:30-7:30 AM: Golden sunrise, awakening
+    case morning = 2    // 7:30-11:00 AM: Bright energetic (blue OK)
+    case midday = 3     // 11:00-14:00: Peak brightness
+    case afternoon = 4  // 14:00-17:00: Warming golden
+    case dusk = 5       // 17:00-19:00: Orange sunset (NO blue starts here!)
+    case evening = 6    // 19:00-22:00: Deep amber warmth
+    case night = 7      // 22:00-4:00 AM: Full night mode, darkest warm
 
-    /// Returns current time period using SEASONAL sunrise/sunset calculation
-    /// MUST match CircadianPalette.current logic for consistency!
-    static var current: TimePeriod {
-        let now = Date()
-        let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: now)
-        let minute = calendar.component(.minute, from: now)
-        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 180
+    /// Whether this phase allows blue light (safe for melatonin)
+    var allowsBlueLight: Bool {
+        switch self {
+        case .preDown, .dawn, .morning, .midday, .afternoon:
+            return true
+        case .dusk, .evening, .night:
+            return false  // NO BLUE LIGHT after dusk!
+        }
+    }
 
-        // Seasonal sunrise/sunset calculation (SAME as CircadianPalette!)
-        let seasonalOffset = sin(Double(dayOfYear - 80) / 365.0 * .pi * 2)
-        let sunriseHour = 6.5 - seasonalOffset * 1.0   // 5:30 to 7:30 AM depending on season
-        let sunsetHour = 18.5 + seasonalOffset * 2.0   // 4:30 to 8:30 PM depending on season
-
-        let currentHour = Double(hour) + Double(minute) / 60.0
-
-        // Time boundaries (SAME as CircadianPalette!)
-        let dawnStart = sunriseHour - 0.5
-        let dawnEnd = sunriseHour + 1.5
-        let duskStart = sunsetHour - 1.5  // Evening starts 1.5 hours before sunset
-
-        // Determine period
-        if currentHour >= duskStart || currentHour < dawnStart {
-            // After dusk or before dawn = evening/night (warm colors only!)
-            if currentHour >= duskStart && currentHour < sunsetHour + 2 {
-                return .evening
-            } else {
-                return .night
-            }
-        } else if currentHour >= dawnStart && currentHour < dawnEnd {
-            return .morning  // Dawn transition
-        } else if currentHour >= dawnEnd && currentHour < 12 {
-            return .morning
-        } else {
-            return .afternoon  // Noon until dusk start
+    /// Human-readable name
+    var displayName: String {
+        switch self {
+        case .preDown: return "Pre-Dawn"
+        case .dawn: return "Dawn"
+        case .morning: return "Morning"
+        case .midday: return "Midday"
+        case .afternoon: return "Afternoon"
+        case .dusk: return "Dusk"
+        case .evening: return "Evening"
+        case .night: return "Night"
         }
     }
 }
 
-// MARK: - Color Theme
+// MARK: - Circadian Palette (Smooth Color Interpolation System)
+
+/// Centralized circadian color system with minute-level precision
+/// All colors smoothly interpolate between phases for gradual transitions
+struct CircadianPalette {
+
+    // MARK: - Current State
+
+    /// Progress through the current day (0.0 = midnight, 1.0 = next midnight)
+    let dayProgress: Double
+
+    /// Current circadian phase
+    let phase: CircadianPhase
+
+    /// Progress within the current phase (0.0 = phase start, 1.0 = phase end)
+    let phaseProgress: Double
+
+    // MARK: - Initialization
+
+    /// Create palette for the current moment
+    static var current: CircadianPalette {
+        CircadianPalette(date: Date())
+    }
+
+    /// Create palette for a specific date/time
+    init(date: Date = Date()) {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 180
+
+        let currentTime = Double(hour) + Double(minute) / 60.0
+        self.dayProgress = currentTime / 24.0
+
+        // Seasonal adjustment for sunrise/sunset
+        let seasonalOffset = sin(Double(dayOfYear - 80) / 365.0 * .pi * 2)
+        let sunriseBase = 6.5 - seasonalOffset * 1.0   // 5:30-7:30 AM
+        let sunsetBase = 18.5 + seasonalOffset * 2.0   // 16:30-20:30 PM
+
+        // Phase boundaries (hours) - seasonally adjusted
+        let phaseHours: [(CircadianPhase, Double, Double)] = [
+            (.night, 0.0, 4.0),
+            (.preDown, 4.0, sunriseBase - 1.0),
+            (.dawn, sunriseBase - 1.0, sunriseBase + 1.5),
+            (.morning, sunriseBase + 1.5, 11.0),
+            (.midday, 11.0, 14.0),
+            (.afternoon, 14.0, sunsetBase - 1.5),
+            (.dusk, sunsetBase - 1.5, sunsetBase + 1.0),
+            (.evening, sunsetBase + 1.0, 22.0),
+            (.night, 22.0, 24.0)
+        ]
+
+        // Find current phase and calculate progress within it
+        var foundPhase: CircadianPhase = .night
+        var foundProgress: Double = 0.0
+
+        for (phase, start, end) in phaseHours {
+            if currentTime >= start && currentTime < end {
+                foundPhase = phase
+                foundProgress = (currentTime - start) / (end - start)
+                break
+            }
+        }
+
+        self.phase = foundPhase
+        self.phaseProgress = foundProgress
+    }
+
+    // MARK: - Color Interpolation
+
+    /// Interpolate between two colors based on progress (0.0-1.0)
+    static func interpolate(_ from: Color, to: Color, progress: Double) -> Color {
+        let p = min(1.0, max(0.0, progress))
+
+        // Extract RGB components using UIColor
+        var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
+        var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
+
+        UIColor(from).getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+        UIColor(to).getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+
+        // Use smooth ease-in-out interpolation for more natural transitions
+        let smoothProgress = smoothStep(p)
+
+        return Color(
+            red: r1 + (r2 - r1) * smoothProgress,
+            green: g1 + (g2 - g1) * smoothProgress,
+            blue: b1 + (b2 - b1) * smoothProgress,
+            opacity: a1 + (a2 - a1) * smoothProgress
+        )
+    }
+
+    /// Smooth step function for natural color transitions
+    private static func smoothStep(_ t: Double) -> Double {
+        // Hermite interpolation: 3t² - 2t³
+        return t * t * (3.0 - 2.0 * t)
+    }
+
+    // MARK: - Phase-Specific Colors
+
+    /// Get color for a specific phase (static values before interpolation)
+    static func phaseColor(for phase: CircadianPhase, type: ColorType) -> Color {
+        switch type {
+        case .primary:
+            switch phase {
+            case .preDown: return Color(hex: "#D97706")!   // Deep amber
+            case .dawn: return Color(hex: "#F59E0B")!      // Golden amber
+            case .morning: return Color(hex: "#0EA5E9")!   // Sky blue
+            case .midday: return Color(hex: "#06B6D4")!    // Cyan
+            case .afternoon: return Color(hex: "#F59E0B")! // Amber
+            case .dusk: return Color(hex: "#EA580C")!      // Orange (NO blue!)
+            case .evening: return Color(hex: "#F28C40")!   // Warm amber
+            case .night: return Color(hex: "#F28C40")!     // Warm amber
+            }
+
+        case .secondary:
+            switch phase {
+            case .preDown: return Color(hex: "#B45309")!
+            case .dawn: return Color(hex: "#FBBF24")!
+            case .morning: return Color(hex: "#38BDF8")!
+            case .midday: return Color(hex: "#22D3EE")!
+            case .afternoon: return Color(hex: "#FBBF24")!
+            case .dusk: return Color(hex: "#D97706")!
+            case .evening: return Color(hex: "#D97706")!
+            case .night: return Color(hex: "#D97706")!
+            }
+
+        case .background:
+            switch phase {
+            case .preDown: return Color(hex: "#1A0F0A")!    // Very dark warm
+            case .dawn: return Color(hex: "#FEF3C7")!       // Warm cream
+            case .morning: return Color(hex: "#F0F9FF")!    // Light sky
+            case .midday: return Color(hex: "#ECFEFF")!     // Bright cyan tint
+            case .afternoon: return Color(hex: "#FFFBEB")!  // Warm cream
+            case .dusk: return Color(hex: "#451A03")!       // Dark orange-brown
+            case .evening: return Color(hex: "#2D1810")!    // Dark warm brown
+            case .night: return Color(hex: "#1A0F0A")!      // Very dark warm
+            }
+
+        case .backgroundEnd:
+            switch phase {
+            case .preDown: return Color(hex: "#0F0805")!
+            case .dawn: return Color(hex: "#FDE68A")!
+            case .morning: return Color(hex: "#E0F2FE")!
+            case .midday: return Color(hex: "#CFFAFE")!
+            case .afternoon: return Color(hex: "#FEF3C7")!
+            case .dusk: return Color(hex: "#2D1810")!
+            case .evening: return Color(hex: "#1A0F0A")!
+            case .night: return Color(hex: "#0F0805")!
+            }
+
+        case .cardBackground:
+            switch phase {
+            case .preDown: return Color(red: 0.18, green: 0.11, blue: 0.08)
+            case .dawn: return Color(red: 1.0, green: 0.99, blue: 0.95)
+            case .morning: return Color.white.opacity(0.92)
+            case .midday: return Color.white.opacity(0.95)
+            case .afternoon: return Color(red: 1.0, green: 0.99, blue: 0.95)
+            case .dusk: return Color(red: 0.25, green: 0.16, blue: 0.12)
+            case .evening: return Color(red: 0.22, green: 0.14, blue: 0.10)
+            case .night: return Color(red: 0.18, green: 0.11, blue: 0.08)
+            }
+
+        case .textPrimary:
+            switch phase {
+            case .preDown, .dusk, .evening, .night:
+                // Bright warm cream for dark backgrounds - HIGH CONTRAST
+                return Color(red: 0.996, green: 0.953, blue: 0.780)
+            case .dawn, .morning, .midday, .afternoon:
+                // Dark for light backgrounds
+                return Color(red: 0.12, green: 0.08, blue: 0.06)
+            }
+
+        case .textSecondary:
+            switch phase {
+            case .preDown, .dusk, .evening, .night:
+                // Golden amber for dark backgrounds
+                return Color(red: 0.988, green: 0.827, blue: 0.302)
+            case .dawn, .morning, .midday, .afternoon:
+                // Medium brown for light backgrounds
+                return Color(red: 0.35, green: 0.28, blue: 0.22)
+            }
+
+        case .accent:
+            switch phase {
+            case .preDown: return Color(hex: "#F59E0B")!
+            case .dawn: return Color(hex: "#EA580C")!
+            case .morning: return Color(hex: "#0EA5E9")!
+            case .midday: return Color(hex: "#06B6D4")!
+            case .afternoon: return Color(hex: "#F59E0B")!
+            case .dusk: return Color(hex: "#F97316")!      // Orange
+            case .evening: return Color(hex: "#F28C40")!   // Coral amber
+            case .night: return Color(hex: "#F28C40")!     // Coral amber
+            }
+        }
+    }
+
+    enum ColorType {
+        case primary
+        case secondary
+        case background
+        case backgroundEnd
+        case cardBackground
+        case textPrimary
+        case textSecondary
+        case accent
+    }
+
+    // MARK: - Interpolated Colors (The Magic!)
+
+    /// Get smoothly interpolated color for current time
+    func interpolatedColor(_ type: ColorType) -> Color {
+        let currentColor = CircadianPalette.phaseColor(for: phase, type: type)
+        let nextPhase = CircadianPhase(rawValue: (phase.rawValue + 1) % 8) ?? .night
+        let nextColor = CircadianPalette.phaseColor(for: nextPhase, type: type)
+
+        return CircadianPalette.interpolate(currentColor, to: nextColor, progress: phaseProgress)
+    }
+
+    /// Primary accent color (interpolated)
+    var primary: Color { interpolatedColor(.primary) }
+
+    /// Secondary accent color (interpolated)
+    var secondary: Color { interpolatedColor(.secondary) }
+
+    /// Background start color (interpolated)
+    var backgroundStart: Color { interpolatedColor(.background) }
+
+    /// Background end color (interpolated)
+    var backgroundEnd: Color { interpolatedColor(.backgroundEnd) }
+
+    /// Card background color (interpolated)
+    var cardBackground: Color { interpolatedColor(.cardBackground) }
+
+    /// Primary text color (interpolated)
+    var textPrimary: Color { interpolatedColor(.textPrimary) }
+
+    /// Secondary text color (interpolated)
+    var textSecondary: Color { interpolatedColor(.textSecondary) }
+
+    /// Accent color (interpolated)
+    var accent: Color { interpolatedColor(.accent) }
+
+    /// Whether we're in a dark phase (dusk, evening, night, pre-dawn)
+    /// Use this to adjust toolbar color schemes and other UI elements
+    var isDark: Bool {
+        !phase.allowsBlueLight
+    }
+
+    /// Background gradient using interpolated colors
+    var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [backgroundStart, backgroundEnd],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+// MARK: - Legacy Time Period Enum (Maps to CircadianPhase)
+
+enum TimePeriod: Equatable {
+    case morning    // Maps to: dawn, morning, midday
+    case afternoon  // Maps to: afternoon
+    case evening    // Maps to: dusk, evening
+    case night      // Maps to: night, preDown
+
+    /// Returns current time period using CircadianPhase
+    static var current: TimePeriod {
+        switch CircadianPalette.current.phase {
+        case .preDown, .night:
+            return .night
+        case .dawn, .morning, .midday:
+            return .morning
+        case .afternoon:
+            return .afternoon
+        case .dusk, .evening:
+            return .evening
+        }
+    }
+
+    /// Get the underlying CircadianPhase for more granular control
+    var circadianPhase: CircadianPhase {
+        switch self {
+        case .morning: return .morning
+        case .afternoon: return .afternoon
+        case .evening: return .evening
+        case .night: return .night
+        }
+    }
+}
+
+// MARK: - Color Theme (Uses CircadianPalette for Smooth Interpolation)
 
 struct ColorTheme {
 
@@ -67,6 +352,16 @@ struct ColorTheme {
 
     let period: TimePeriod?
     let accentColorOption: ThemeManager.AccentColorOption?
+
+    /// The underlying circadian palette for smooth color interpolation
+    private var palette: CircadianPalette {
+        CircadianPalette.current
+    }
+
+    /// Whether circadian mode is active (no custom accent selected)
+    var isCircadianMode: Bool {
+        accentColorOption == nil
+    }
 
     /// Initialize with time-based circadian colors
     init(period: TimePeriod = .current) {
@@ -80,43 +375,24 @@ struct ColorTheme {
         self.accentColorOption = accentColor
     }
 
-    // MARK: - Primary Colors (Sleep-Optimized)
+    // MARK: - Primary Colors (Sleep-Optimized, INTERPOLATED)
     // CRITICAL: NO blue/teal/purple at night - only warm amber/orange for sleep health
+    // Colors now smoothly interpolate between phases!
 
-    /// Main accent color - changes with time of day (circadian) or user selection
+    /// Main accent color - smoothly interpolated throughout the day
     var primary: Color {
         if let accent = accentColorOption {
             return accent.color
         }
-        guard let period = period else { return ThemeManager.AccentColorOption.teal.color }
-        switch period {
-        case .morning:
-            return Color(hex: "#0EA5E9")!  // Sky blue - energetic morning (OK)
-        case .afternoon:
-            return Color(hex: "#F59E0B")!  // Amber - warm afternoon
-        case .evening:
-            return Color(hex: "#F28C40")!  // Bright amber/orange - NO BLUE
-        case .night:
-            return Color(hex: "#F28C40")!  // Warm amber - NO PURPLE/BLUE (sleep-safe)
-        }
+        return palette.primary  // Smoothly interpolated!
     }
 
-    /// Secondary accent for subtle elements
+    /// Secondary accent for subtle elements - smoothly interpolated
     var secondary: Color {
         if let accent = accentColorOption {
             return accent.color.opacity(0.7)
         }
-        guard let period = period else { return ThemeManager.AccentColorOption.teal.color.opacity(0.7) }
-        switch period {
-        case .morning:
-            return Color(hex: "#38BDF8")!  // Light sky blue (OK for morning)
-        case .afternoon:
-            return Color(hex: "#FBBF24")!  // Golden amber
-        case .evening:
-            return Color(hex: "#D97706")!  // Deep amber - NO BLUE
-        case .night:
-            return Color(hex: "#D97706")!  // Deep amber - NO LAVENDER (sleep-safe)
-        }
+        return palette.secondary  // Smoothly interpolated!
     }
 
     /// Tertiary color for accents and highlights
@@ -124,60 +400,27 @@ struct ColorTheme {
         if let accent = accentColorOption {
             return accent.color.opacity(0.5)
         }
-        guard let period = period else { return ThemeManager.AccentColorOption.teal.color.opacity(0.5) }
-        switch period {
-        case .morning:
-            return Color(hex: "#06B6D4")!  // Cyan (OK for morning)
-        case .afternoon:
-            return Color(hex: "#D97706")!  // Deep amber
-        case .evening:
-            return Color(hex: "#B45309")!  // Burnt orange - NO RED with blue
-        case .night:
-            return Color(hex: "#B45309")!  // Burnt orange - NO VIOLET (sleep-safe)
-        }
+        // Interpolate between primary and secondary
+        return CircadianPalette.interpolate(palette.primary, to: palette.secondary, progress: 0.5)
     }
 
-    // MARK: - Background Colors (Sleep-Optimized)
+    // MARK: - Background Colors (Sleep-Optimized, INTERPOLATED)
 
-    /// Subtle background tint
+    /// Subtle background tint - smoothly interpolated
     var backgroundTint: Color {
         if let accent = accentColorOption {
             return accent.color.opacity(0.08)
         }
-        guard let period = period else { return ThemeManager.AccentColorOption.teal.color.opacity(0.08) }
-        switch period {
-        case .morning:
-            return Color(hex: "#0EA5E9")!.opacity(0.08)  // Light blue tint (OK for morning)
-        case .afternoon:
-            return Color(hex: "#F59E0B")!.opacity(0.08)  // Amber tint
-        case .evening:
-            return Color(hex: "#F28C40")!.opacity(0.12)  // Warm amber tint - NO BLUE
-        case .night:
-            return Color(hex: "#F28C40")!.opacity(0.12)  // Warm amber tint - NO PURPLE (sleep-safe)
-        }
+        return palette.primary.opacity(0.08)
     }
 
-    /// Card background with time-based warmth
-    /// CIRCADIAN: Cards should blend with background, not be stark white
+    /// Card background with smoothly interpolated time-based warmth
+    /// CIRCADIAN: Cards smoothly transition throughout the day
     var cardBackground: Color {
         if accentColorOption != nil {
             return Color(.secondarySystemBackground)
         }
-        guard let period = period else { return Color(.secondarySystemBackground) }
-        switch period {
-        case .morning:
-            // Soft translucent white-blue that blends with morning sky background
-            return Color.white.opacity(0.75)
-        case .afternoon:
-            // Warm translucent cream
-            return Color(red: 1.0, green: 0.99, blue: 0.95).opacity(0.80)
-        case .evening:
-            // Warm dark card - blends with brown background
-            return Color(red: 0.22, green: 0.14, blue: 0.10).opacity(0.85)
-        case .night:
-            // Deep warm card - very dark but warm
-            return Color(red: 0.18, green: 0.11, blue: 0.08).opacity(0.90)
-        }
+        return palette.cardBackground  // Smoothly interpolated!
     }
 
     // MARK: - Status Colors (Consistent across time periods)
@@ -220,91 +463,82 @@ struct ColorTheme {
         Color(hex: "#9CA3AF")!.opacity(0.4)  // Gray
     }
 
-    // MARK: - Text Colors (Sleep-Optimized for dark evening backgrounds)
+    // MARK: - Text Colors (Sleep-Optimized, INTERPOLATED for dark evening backgrounds)
     // CRITICAL: Must be HIGH CONTRAST on dark brown backgrounds in evening/night!
-    // ALWAYS use current time period for text colors - even with custom accent colors!
+    // Colors now smoothly interpolate between phases!
 
     /// Get current period - uses stored period or falls back to current time
     private var effectivePeriod: TimePeriod {
         period ?? TimePeriod.current
     }
 
+    /// Current circadian phase for more granular control
+    var currentPhase: CircadianPhase {
+        palette.phase
+    }
+
+    /// Whether we're in a dark phase (after dusk)
+    var isDarkPhase: Bool {
+        !palette.phase.allowsBlueLight
+    }
+
     var textPrimary: Color {
-        switch effectivePeriod {
-        case .morning, .afternoon:
-            return Color.primary  // System default
-        case .evening, .night:
-            // Bright warm cream - HIGH CONTRAST on dark brown (#FEF3C7)
-            return Color(red: 0.996, green: 0.953, blue: 0.780)
+        if accentColorOption != nil {
+            // Non-circadian mode: use system colors
+            return Color.primary
         }
+        return palette.textPrimary  // Smoothly interpolated!
     }
 
     var textSecondary: Color {
-        switch effectivePeriod {
-        case .morning, .afternoon:
-            return Color.secondary  // System default
-        case .evening, .night:
-            // Golden yellow - VISIBLE on dark brown (#FCD34D)
-            return Color(red: 0.988, green: 0.827, blue: 0.302)
+        if accentColorOption != nil {
+            return Color.secondary
         }
+        return palette.textSecondary  // Smoothly interpolated!
     }
 
     /// Muted text for hints, timestamps, etc.
     var textMuted: Color {
-        switch effectivePeriod {
-        case .morning, .afternoon:
+        if accentColorOption != nil {
             return Color.secondary.opacity(0.7)
-        case .evening, .night:
-            // Amber - still visible on dark brown (#F59E0B)
-            return Color(red: 0.961, green: 0.620, blue: 0.043)
         }
+        // Interpolate between secondary and a more muted version
+        return palette.textSecondary.opacity(0.7)
     }
 
     var textOnPrimary: Color {
-        switch effectivePeriod {
-        case .morning, .afternoon:
-            return .white
-        case .evening, .night:
+        // On amber/orange buttons in evening, use dark text for contrast
+        if isDarkPhase && isCircadianMode {
             return Color(red: 0.15, green: 0.10, blue: 0.08)  // Dark brown on amber buttons
         }
+        return .white
     }
 
-    // MARK: - Card Text Colors (CIRCADIAN-AWARE for high contrast)
-    // Morning/Afternoon: Dark text on light cards
-    // Evening/Night: Warm cream/amber text on dark cards
-    // ALWAYS uses effectivePeriod to ensure time-aware colors even with custom accents!
+    // MARK: - Card Text Colors (CIRCADIAN-AWARE, INTERPOLATED for high contrast)
+    // Colors smoothly interpolate for gradual transitions!
 
     /// Primary text ON cards - circadian-aware for contrast
     var textOnCard: Color {
-        switch effectivePeriod {
-        case .morning, .afternoon:
-            return Color(red: 0.15, green: 0.10, blue: 0.08)  // Dark brown on light cards
-        case .evening, .night:
-            // Bright warm cream - high contrast on dark cards
-            return Color(red: 0.996, green: 0.953, blue: 0.780)  // #FEF3C7
+        if accentColorOption != nil {
+            return Color(red: 0.15, green: 0.10, blue: 0.08)
         }
+        return palette.textPrimary  // Same as textPrimary for cards
     }
 
     /// Secondary text ON cards - circadian-aware
     var textOnCardSecondary: Color {
-        switch effectivePeriod {
-        case .morning, .afternoon:
-            return Color(red: 0.35, green: 0.25, blue: 0.20)  // Medium brown on light cards
-        case .evening, .night:
-            // Golden amber - visible on dark cards
-            return Color(red: 0.988, green: 0.827, blue: 0.302)  // #FCD34D
+        if accentColorOption != nil {
+            return Color(red: 0.35, green: 0.25, blue: 0.20)
         }
+        return palette.textSecondary  // Same as textSecondary for cards
     }
 
     /// Muted text ON cards - circadian-aware
     var textOnCardMuted: Color {
-        switch effectivePeriod {
-        case .morning, .afternoon:
-            return Color(red: 0.50, green: 0.40, blue: 0.35)  // Light brown on light cards
-        case .evening, .night:
-            // Warm amber - still visible on dark cards
-            return Color(red: 0.961, green: 0.620, blue: 0.043)  // #F59E0B
+        if accentColorOption != nil {
+            return Color(red: 0.50, green: 0.40, blue: 0.35)
         }
+        return palette.textSecondary.opacity(0.7)
     }
 
     // MARK: - Component-Specific Colors
@@ -506,34 +740,24 @@ struct ColorTheme {
         textSecondary
     }
 
-    /// Background gradient for full-screen views - circadian-aware
+    /// Background gradient for full-screen views - SMOOTHLY INTERPOLATED
+    /// Colors transition gradually throughout the day for natural feel
     var backgroundGradient: LinearGradient {
-        switch effectivePeriod {
-        case .morning:
+        if accentColorOption != nil {
+            // Non-circadian mode: use subtle system background
             return LinearGradient(
-                colors: [Color(hex: "#F0F9FF")!, Color(hex: "#E0F2FE")!],  // Light sky blue tints
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .afternoon:
-            return LinearGradient(
-                colors: [Color(hex: "#FFFBEB")!, Color(hex: "#FEF3C7")!],  // Warm cream
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .evening:
-            return LinearGradient(
-                colors: [Color(hex: "#2D1810")!, Color(hex: "#1A0F0A")!],  // Dark warm brown
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .night:
-            return LinearGradient(
-                colors: [Color(hex: "#1A0F0A")!, Color(hex: "#0F0805")!],  // Very dark warm
+                colors: [Color(.systemBackground), Color(.secondarySystemBackground)],
                 startPoint: .top,
                 endPoint: .bottom
             )
         }
+        // Use palette's interpolated gradient
+        return palette.backgroundGradient
+    }
+
+    /// Direct access to current circadian palette for advanced use cases
+    var circadianPalette: CircadianPalette {
+        palette
     }
 }
 

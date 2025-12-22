@@ -21,11 +21,43 @@ npx convex dev && ./setup-convex.sh # Convex cloud mode
 - **Xcode Project:** `/ZoeSleep/ZoeSleep.xcodeproj`
 - **Bundle IDs:** iOS: `com.zoesleep.app`, Watch: `com.zoesleep.app.watchkitapp`
 
-## 🌙 Sleep App Design Principle
+## 🌙 Circadian Design System (CRITICAL)
 
-**CRITICAL:** NO blue light after dusk (disrupts melatonin)
-- **Day:** Blues/teals OK (alertness)
-- **Night:** ONLY warm colors (amber/orange/brown)
+**EVERY new component MUST follow circadian design principles.**
+
+### The 8-Phase Day (Smooth Color Interpolation)
+Colors interpolate smoothly between phases - NO discrete jumps!
+
+| Phase | Time | Background | Accent | Blue Light |
+|-------|------|------------|--------|------------|
+| Pre-Dawn | 4-5:30 AM | Very dark warm | Deep amber | ✅ OK |
+| Dawn | 5:30-7:30 AM | Warm cream | Golden amber | ✅ OK |
+| Morning | 7:30-11 AM | Light sky blue | Sky blue | ✅ OK |
+| Midday | 11 AM-2 PM | Bright cyan tint | Cyan | ✅ OK |
+| Afternoon | 2-5 PM | Warm cream | Amber | ✅ OK |
+| Dusk | 5-7 PM | Dark orange-brown | Orange | ❌ NO BLUE |
+| Evening | 7-10 PM | Dark warm brown | Warm amber | ❌ NO BLUE |
+| Night | 10 PM-4 AM | Very dark warm | Warm amber | ❌ NO BLUE |
+
+### Key Implementation Files
+- **CircadianPalette:** `QuestionModels.swift` - 8-phase color interpolation
+- **ColorTheme:** `QuestionModels.swift` - Uses palette for all colors
+- **ThemeManager:** `ThemeManager.swift` - Updates every 60 seconds
+
+### Color Usage Rules
+1. **Always use `theme.primaryText`** for text on backgrounds (interpolates automatically)
+2. **Always use `theme.cardBackground`** for cards (dark in evening, light in morning)
+3. **Always use `theme.textOnPrimary`** for text on accent-colored buttons
+4. **Use `theme.accent`** for interactive elements (adapts to time)
+5. **Use `theme.backgroundGradient`** for full-screen backgrounds
+
+### Developer Checklist for New Components
+- [ ] Uses `theme.primaryText` / `theme.secondaryText` for all text
+- [ ] Uses `theme.cardBackground` for card backgrounds
+- [ ] Uses `theme.accent` for interactive elements
+- [ ] Uses `theme.textOnPrimary` for button labels
+- [ ] NO hardcoded blue/purple colors after dusk (check `isDarkPhase`)
+- [ ] Tested at evening time (after 5 PM) for legibility
 
 ## 🏗️ Platform Architecture
 
@@ -80,6 +112,19 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Sleep Diary Layout Fix:** Fixed content cropping on left edge (Dec 22, 2025)
+  - **Root cause:** Horizontal ScrollView for day selector conflicted with parent padding
+  - **Fix:** Added negative margin on ScrollView with compensating content padding
+  - **Implementation:** `.padding(.horizontal, -16)` on ScrollView, `.padding(.horizontal, 16)` on content
+  - **Files changed:** `ContentView.swift` (SleepDiaryHistoryView)
+- **8-Phase Circadian Color System:** Complete redesign for smooth day-to-night transitions (Dec 22, 2025)
+  - **CircadianPalette:** New struct with 8 phases (pre-dawn → dawn → morning → midday → afternoon → dusk → evening → night)
+  - **Smooth interpolation:** Colors blend gradually using Hermite interpolation (no discrete jumps)
+  - **Seasonal awareness:** Sunrise/sunset times adjust based on day of year
+  - **Auto-updates:** ThemeManager refreshes every 60 seconds for smooth transitions
+  - **High contrast:** Evening/night text uses bright warm cream on dark brown backgrounds
+  - **Files changed:** `QuestionModels.swift` (+300 lines), `ThemeManager.swift`, `AnalysisPendingView.swift`
+  - **Usage:** All views now use `theme.primaryText`, `theme.cardBackground`, `theme.accent` which auto-interpolate
 - **Unified Debug Panel:** Consolidated all developer tools into single panel (Dec 22, 2025)
   - **Replaced 3 scattered views:** DevPanelView, MockPlaybackView entry, ExpansionSchedulerTestView entry
   - **4 generation modes:** Full Journey (Random), Max Load (All Gateways), Selective (Choose Gateways), Quick Test (Days 1-5)

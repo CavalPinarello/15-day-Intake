@@ -851,7 +851,7 @@ class QuestionnaireManager: ObservableObject {
             Question(id: "BERLIN_10", text: "Do you have high blood pressure?", pillar: .physical, tier: .expansion, questionType: .yesNo)
         ],
 
-        // BPI - Brief Pain Inventory (Day 15)
+        // BPI - Brief Pain Inventory (Day 14 - Final)
         "expansion_bpi": [
             Question(id: "BPI_1", text: "Rate your pain at its WORST in the last 24 hours.", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "No pain", scaleMaxLabel: "Pain as bad as you can imagine"),
             Question(id: "BPI_2", text: "Rate your pain at its LEAST in the last 24 hours.", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "No pain", scaleMaxLabel: "Pain as bad as you can imagine"),
@@ -866,7 +866,7 @@ class QuestionnaireManager: ObservableObject {
             Question(id: "BPI_11", text: "Pain interference with: Enjoyment of life", pillar: .physical, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 10, scaleMinLabel: "Does not interfere", scaleMaxLabel: "Completely interferes")
         ],
 
-        // MEDAS - Mediterranean Diet Adherence Screener (Day 15)
+        // MEDAS - Mediterranean Diet Adherence Screener (Day 14 - Final)
         "expansion_medas": [
             Question(id: "MEDAS_1", text: "Do you use olive oil as the main source of fat for cooking?", pillar: .nutritional, tier: .expansion, questionType: .yesNo),
             Question(id: "MEDAS_2", text: "How many tablespoons of olive oil do you consume per day (including frying, salads, meals, etc.)?", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 1", "1-2", "3-4", "4 or more"]),
@@ -884,7 +884,7 @@ class QuestionnaireManager: ObservableObject {
             Question(id: "MEDAS_14", text: "How many times per week do you consume cooked vegetables, pasta, rice, or other dishes with a sauce of tomato, garlic, onion, or leeks sautéed in olive oil?", pillar: .nutritional, tier: .expansion, questionType: .singleSelect, options: ["Less than 2", "2 or more"])
         ],
 
-        // MEQ - Morningness-Eveningness Questionnaire (Day 15)
+        // MEQ - Morningness-Eveningness Questionnaire (Day 14 - Final)
         "expansion_meq": [
             Question(id: "MEQ_1", text: "What time would you get up if you were entirely free to plan your day?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["5:00-6:30 AM", "6:30-7:45 AM", "7:45-9:45 AM", "9:45-11:00 AM", "11:00 AM-12:00 PM"]),
             Question(id: "MEQ_2", text: "What time would you go to bed if you were entirely free to plan your evening?", pillar: .sleepQuality, tier: .expansion, questionType: .singleSelect, options: ["8:00-9:00 PM", "9:00-10:15 PM", "10:15 PM-12:30 AM", "12:30-1:45 AM", "1:45-3:00 AM"]),

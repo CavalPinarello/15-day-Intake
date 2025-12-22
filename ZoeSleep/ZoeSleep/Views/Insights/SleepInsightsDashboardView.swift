@@ -18,8 +18,9 @@ struct SleepInsightsDashboardView: View {
     private var theme: ColorTheme { themeManager.currentTheme }
 
     // MARK: - Circadian-Aware Colors (for text on circadian background)
+    /// Uses the new 8-phase interpolated CircadianPalette
     private var palette: CircadianPalette {
-        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+        themeManager.circadianPalette
     }
 
     private var circadianTextPrimary: Color {

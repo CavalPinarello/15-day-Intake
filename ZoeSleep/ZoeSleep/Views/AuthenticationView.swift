@@ -11,9 +11,9 @@ import AuthenticationServices
 struct AuthenticationView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var email = ""
+    @State private var identifier = ""  // For sign-in: email
     @State private var password = ""
-    @State private var username = ""
+    @State private var signUpEmail = ""     // For sign-up only
     @State private var isSignUp = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -68,24 +68,15 @@ struct AuthenticationView: View {
 
                 // Authentication Form
                 VStack(spacing: 16) {
-                    // Username/Email field
-                    TextField(isSignUp ? "Username" : "Username or Email", text: $email)
+                    // Email field (used for both sign-in and sign-up)
+                    TextField("Email", text: isSignUp ? $signUpEmail : $identifier)
                         .padding()
                         .background(Color.white.opacity(0.9))
                         .cornerRadius(10)
+                        .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-
-                    if isSignUp {
-                        // Email for sign up
-                        TextField("Email", text: $username)
-                            .padding()
-                            .background(Color.white.opacity(0.9))
-                            .cornerRadius(10)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
-                    }
+                        .textContentType(.emailAddress)
 
                     // Password
                     SecureField("Password", text: $password)
@@ -98,12 +89,11 @@ struct AuthenticationView: View {
                         Task {
                             if isSignUp {
                                 await authManager.signUp(
-                                    email: username,
-                                    password: password,
-                                    username: email
+                                    email: signUpEmail,
+                                    password: password
                                 )
                             } else {
-                                await authManager.signIn(email: email, password: password)
+                                await authManager.signIn(email: identifier, password: password)
                             }
 
                             if let errorMessage = authManager.errorMessage {
@@ -127,7 +117,9 @@ struct AuthenticationView: View {
                         .foregroundColor(.white)
                         .cornerRadius(10)
                     }
-                    .disabled(email.isEmpty || password.isEmpty || authManager.isLoading)
+                    .disabled(isSignUp
+                        ? (signUpEmail.isEmpty || password.isEmpty || authManager.isLoading)
+                        : (identifier.isEmpty || password.isEmpty || authManager.isLoading))
 
                     // Divider
                     HStack {
@@ -173,13 +165,17 @@ struct AuthenticationView: View {
                     Button(action: {
                         isSignUp.toggle()
                         // Clear fields when switching
-                        username = ""
+                        identifier = ""
+                        signUpEmail = ""
+                        password = ""
                         authManager.errorMessage = nil
                     }) {
                         Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
-                            .font(.footnote)
-                            .foregroundColor(brandTeal)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
                     }
+                    .padding(.top, 8)
                 }
                 .padding(.horizontal, 32)
 
@@ -187,10 +183,6 @@ struct AuthenticationView: View {
 
                 // App Info
                 VStack(spacing: 4) {
-                    Text("Secure authentication powered by Clerk")
-                        .font(.caption2)
-                        .foregroundColor(.white.opacity(0.5))
-
                     Text("Your health data is protected and encrypted")
                         .font(.caption2)
                         .foregroundColor(.white.opacity(0.5))

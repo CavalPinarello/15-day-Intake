@@ -183,6 +183,14 @@ class ThemeManager: ObservableObject {
 
     // Circadian time period - triggers UI refresh when time period changes
     @Published private(set) var currentTimePeriod: TimePeriod = TimePeriod.current
+
+    // MARK: - Circadian Phase (8-phase granular system)
+    /// More granular than TimePeriod - updates every minute for smooth transitions
+    @Published private(set) var currentCircadianPhase: CircadianPhase = CircadianPalette.current.phase
+
+    /// Current circadian palette with interpolated colors
+    @Published private(set) var circadianPalette: CircadianPalette = CircadianPalette.current
+
     private var circadianTimer: Timer?
 
     // MARK: - Initialization
@@ -192,10 +200,12 @@ class ThemeManager: ObservableObject {
         startCircadianTimer()
     }
 
-    /// Starts a timer that checks for time period changes every 30 seconds
+    /// Starts a timer that checks for circadian changes every 60 seconds
+    /// Updates both the coarse TimePeriod and fine-grained CircadianPhase
     private func startCircadianTimer() {
-        circadianTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            self?.checkTimePeriodChange()
+        // Update every 60 seconds for smooth color interpolation
+        circadianTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.checkCircadianChange()
         }
         // Also listen for significant time changes (timezone, manual time change)
         NotificationCenter.default.addObserver(
@@ -206,17 +216,35 @@ class ThemeManager: ObservableObject {
         )
     }
 
-    private func checkTimePeriodChange() {
+    /// Check for changes in both TimePeriod and CircadianPhase
+    private func checkCircadianChange() {
+        let newPalette = CircadianPalette.current
+        let newPhase = newPalette.phase
         let newPeriod = TimePeriod.current
-        if newPeriod != currentTimePeriod {
-            DispatchQueue.main.async {
+
+        DispatchQueue.main.async {
+            // Always update palette for smooth interpolation
+            self.circadianPalette = newPalette
+
+            // Update phase if changed
+            if newPhase != self.currentCircadianPhase {
+                self.currentCircadianPhase = newPhase
+            }
+
+            // Update period if changed (for legacy compatibility)
+            if newPeriod != self.currentTimePeriod {
                 self.currentTimePeriod = newPeriod
             }
         }
     }
 
+    /// Legacy method for backwards compatibility
+    private func checkTimePeriodChange() {
+        checkCircadianChange()
+    }
+
     @objc private func handleSignificantTimeChange() {
-        checkTimePeriodChange()
+        checkCircadianChange()
     }
 
     private func loadFromUserDefaults() {

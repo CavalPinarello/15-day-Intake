@@ -692,7 +692,7 @@ struct MainDashboardView: View {
     }
 
     private func advanceToNextDay() {
-        guard currentDay < 15 else { return }
+        guard currentDay < Config.totalJourneyDays else { return }
         Task {
             do {
                 // Pass debugMode or unlockTimeOverride - bypasses time check, NOT completion check
@@ -1435,9 +1435,9 @@ struct SleepDiaryHistoryView: View {
         questionnaireManager.journeyProgress?.completedDays ?? []
     }
 
-    // MARK: - Circadian-Aware Colors (for text on circadian background)
+    // MARK: - Circadian-Aware Colors (8-phase interpolated palette)
     private var palette: CircadianPalette {
-        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+        themeManager.circadianPalette
     }
 
     private var circadianTextPrimary: Color {
@@ -2386,7 +2386,7 @@ struct DayCompleteCelebrationView: View {
                     Text("Day \(currentDay) Complete!")
                         .font(.headline)
                         .foregroundColor(theme.success)
-                    Text(currentDay < 15 ? "Great progress on your sleep journey" : "Congratulations! Journey complete!")
+                    Text(currentDay < Config.totalJourneyDays ? "Great progress on your sleep journey" : "Congratulations! Journey complete!")
                         .font(.subheadline)
                         .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
                 }
@@ -2395,7 +2395,7 @@ struct DayCompleteCelebrationView: View {
             }
 
             // Next day info
-            if currentDay < 15 {
+            if currentDay < Config.totalJourneyDays {
                 Divider()
                     .background(theme.textOnCardMuted.opacity(0.3))  // Circadian-aware divider
 
@@ -2467,15 +2467,68 @@ struct DayCompleteCelebrationView: View {
                     .padding(.vertical, 8)
                 }
             } else {
-                // Journey complete message
+                // Journey complete - show transition to analysis phase
                 Divider()
-                    .background(theme.textOnCardMuted.opacity(0.3))  // Circadian-aware divider
-                HStack {
-                    Image(systemName: "trophy.fill")
-                        .foregroundColor(theme.warning)  // Use theme warning (amber/gold) instead of .yellow
-                    Text("You've completed the 14-day sleep assessment!")
-                        .font(.subheadline)
-                        .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
+                    .background(theme.textOnCardMuted.opacity(0.3))
+
+                VStack(spacing: 16) {
+                    // Celebration header
+                    HStack(spacing: 12) {
+                        Image(systemName: "trophy.fill")
+                            .font(.title2)
+                            .foregroundColor(theme.warning)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Journey Complete!")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(theme.textOnCard)
+                            Text("You've completed the \(Config.totalJourneyDays)-day sleep assessment")
+                                .font(.caption)
+                                .foregroundColor(theme.textOnCardSecondary)
+                        }
+                        Spacer()
+                    }
+
+                    // What happens next info
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "stethoscope")
+                                .font(.caption)
+                                .foregroundColor(theme.accent)
+                            Text("Our sleep medicine team is now reviewing your data")
+                                .font(.caption)
+                                .foregroundColor(theme.textOnCardSecondary)
+                        }
+                        HStack(spacing: 8) {
+                            Image(systemName: "bell.badge")
+                                .font(.caption)
+                                .foregroundColor(theme.accent)
+                            Text("You'll receive your personalized sleep protocol soon")
+                                .font(.caption)
+                                .foregroundColor(theme.textOnCardSecondary)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+
+                    // Continue button
+                    Button(action: {
+                        Task {
+                            await JourneyPhaseManager.shared.transitionToAnalysis()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .font(.subheadline)
+                            Text("View Analysis Status")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .foregroundColor(theme.textOnPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(theme.accent)
+                        .cornerRadius(10)
+                    }
                 }
             }
         }

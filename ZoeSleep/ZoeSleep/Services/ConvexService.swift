@@ -31,7 +31,7 @@ struct ConvexUser: Codable {
     let role: String?
     let onboardingCompleted: Bool?
     let appleHealthConnected: Bool?
-    // Profile data from server
+    // Profile data from server (may be missing for new users)
     let fullName: String?
     let measurementSystem: String?
     let heightCm: Double?
@@ -48,6 +48,28 @@ struct ConvexUser: Codable {
     var birthYearInt: Int? {
         guard let year = birthYear else { return nil }
         return Int(year)
+    }
+
+    // Custom decoder to handle missing optional keys
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        username = try container.decode(String.self, forKey: .username)
+        email = try container.decodeIfPresent(String.self, forKey: .email)
+        currentDay = try container.decode(Double.self, forKey: .currentDay)
+        role = try container.decodeIfPresent(String.self, forKey: .role)
+        onboardingCompleted = try container.decodeIfPresent(Bool.self, forKey: .onboardingCompleted)
+        appleHealthConnected = try container.decodeIfPresent(Bool.self, forKey: .appleHealthConnected)
+        fullName = try container.decodeIfPresent(String.self, forKey: .fullName)
+        measurementSystem = try container.decodeIfPresent(String.self, forKey: .measurementSystem)
+        heightCm = try container.decodeIfPresent(Double.self, forKey: .heightCm)
+        weightKg = try container.decodeIfPresent(Double.self, forKey: .weightKg)
+        gender = try container.decodeIfPresent(String.self, forKey: .gender)
+        birthYear = try container.decodeIfPresent(Double.self, forKey: .birthYear)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case username, email, currentDay, role, onboardingCompleted, appleHealthConnected
+        case fullName, measurementSystem, heightCm, weightKg, gender, birthYear
     }
 }
 
@@ -241,7 +263,20 @@ private class ConvexHTTPClient {
         }
 
         // Convex wraps response in { "value": ... } or { "status": "success", "value": ... }
+        // Check for error responses first (Convex returns 200 even for errors)
         if let wrapper = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            // Check if this is an error response
+            if let status = wrapper["status"] as? String, status == "error" {
+                if let errorMessage = wrapper["errorMessage"] as? String {
+                    // Extract the actual error message (remove request ID and stack trace)
+                    let cleanError = errorMessage
+                        .components(separatedBy: "Uncaught Error: ").last?
+                        .components(separatedBy: "\n").first ?? errorMessage
+                    throw ConvexError.serverError(cleanError)
+                }
+                throw ConvexError.serverError("Unknown server error")
+            }
+
             if let value = wrapper["value"] {
                 // Handle null values
                 if value is NSNull {
@@ -253,7 +288,29 @@ private class ConvexHTTPClient {
                 // Check if value is JSON-serializable before re-encoding
                 if JSONSerialization.isValidJSONObject(value) {
                     let valueData = try JSONSerialization.data(withJSONObject: value)
-                    return try decoder.decode(T.self, from: valueData)
+                    do {
+                        return try decoder.decode(T.self, from: valueData)
+                    } catch let decodingError as DecodingError {
+                        print("❌ Decoding error: \(decodingError)")
+                        if let jsonString = String(data: valueData, encoding: .utf8) {
+                            print("📦 Raw JSON: \(jsonString)")
+                        }
+                        // Extract specific missing key info
+                        switch decodingError {
+                        case .keyNotFound(let key, let context):
+                            print("🔑 Missing key: \(key.stringValue) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                        case .typeMismatch(let type, let context):
+                            print("🔄 Type mismatch: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                        case .valueNotFound(let type, let context):
+                            print("❓ Value not found: \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                        default:
+                            break
+                        }
+                        throw decodingError
+                    } catch {
+                        print("❌ Unknown decoding error: \(error)")
+                        throw error
+                    }
                 } else if let stringValue = value as? String {
                     // Handle primitive string values
                     let quotedString = "\"\(stringValue)\""
@@ -406,14 +463,12 @@ class ConvexService {
 
     func register(
         email: String,
-        username: String,
         passwordHash: String,
         deviceId: String,
         deviceInfo: DeviceInfo? = nil
     ) async throws -> RegisterResponse {
         var args: [String: Any] = [
             "email": email,
-            "username": username,
             "passwordHash": passwordHash,
             "deviceId": deviceId
         ]

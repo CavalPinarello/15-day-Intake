@@ -166,7 +166,7 @@ class AuthenticationManager: ObservableObject {
 
     // MARK: - Email/Password Sign Up
 
-    func signUp(email: String, password: String, username: String) async {
+    func signUp(email: String, password: String) async {
         isLoading = true
         errorMessage = nil
 
@@ -176,7 +176,6 @@ class AuthenticationManager: ObservableObject {
 
             let response = try await convexService.register(
                 email: email,
-                username: username,
                 passwordHash: passwordHash,
                 deviceId: deviceId,
                 deviceInfo: DeviceInfo.current
@@ -192,7 +191,7 @@ class AuthenticationManager: ObservableObject {
             )
 
             self.isAuthenticated = true
-            print("✅ Registration successful for user: \(response.user.username)")
+            print("✅ Registration successful for user: \(response.user.email ?? "unknown")")
 
             // New user always needs onboarding - pass empty profile
             await OnboardingManager.shared.checkUserOnboardingState(
@@ -201,8 +200,8 @@ class AuthenticationManager: ObservableObject {
                 serverProfile: nil // New user has no profile yet
             )
 
-            // Pre-fill onboarding data from registration info
-            OnboardingManager.shared.prefillFromAuth(name: username, email: email)
+            // Pre-fill onboarding data from registration info (name will be collected during onboarding)
+            OnboardingManager.shared.prefillFromAuth(name: nil, email: email)
 
             // New user starts at Day 1 - load journey progress
             await QuestionnaireManager.shared.loadJourneyProgress()
@@ -215,9 +214,27 @@ class AuthenticationManager: ObservableObject {
             default:
                 self.errorMessage = "Registration failed. Please try again."
             }
+        } catch let decodingError as DecodingError {
+            print("Sign up decoding error: \(decodingError)")
+            #if DEBUG
+            switch decodingError {
+            case .keyNotFound(let key, _):
+                self.errorMessage = "Missing field: \(key.stringValue)"
+            case .typeMismatch(let type, let context):
+                self.errorMessage = "Type error: \(context.codingPath.last?.stringValue ?? "unknown") expected \(type)"
+            default:
+                self.errorMessage = "Decoding error: \(decodingError.localizedDescription)"
+            }
+            #else
+            self.errorMessage = "Could not connect to the server. Please try again."
+            #endif
         } catch {
             print("Sign up error: \(error)")
+            #if DEBUG
+            self.errorMessage = "Error: \(error.localizedDescription)"
+            #else
             self.errorMessage = "Could not connect to the server. Please try again."
+            #endif
         }
 
         isLoading = false

@@ -1524,3 +1524,24 @@ export const upsertBundle = mutation({
     }
   },
 });
+
+/**
+ * Simple query to get all active interventions (for ProtocolAssignment component)
+ */
+export const getInterventions = query({
+  args: {},
+  handler: async (ctx) => {
+    const interventions = await ctx.db
+      .query("interventions")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+
+    return interventions.map((i) => ({
+      _id: i._id,
+      name: i.name,
+      category: i.category,
+      difficulty_level: i.difficulty_level,
+      description: i.instructions_text,
+    }));
+  },
+});

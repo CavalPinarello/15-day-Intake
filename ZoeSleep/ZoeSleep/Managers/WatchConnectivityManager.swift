@@ -333,8 +333,8 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
         // For now, return sample tasks if user has completed intake
         let currentDay = questionnaireManager.currentDay
 
-        // Only show tasks after completing the 15-day intake
-        if currentDay <= 15 {
+        // Only show tasks after completing the intake journey
+        if currentDay <= Config.totalJourneyDays {
             replyHandler?(["tasks": []])
             return
         }

@@ -173,13 +173,13 @@ final class ThemeManagerTests: XCTestCase {
         XCTAssertNotNil(theme.primary)
     }
 
-    // MARK: - CircadianPalette Tests
+    // MARK: - WaveCircadianPalette Tests (Wave background specific)
 
-    func testCircadianPaletteForPeriods() {
+    func testWaveCircadianPaletteForPeriods() {
         let periods: [TimePeriod] = [.morning, .afternoon, .evening, .night]
 
         for period in periods {
-            let palette = CircadianPalette.forPeriod(period)
+            let palette = WaveCircadianPalette.forPeriod(period)
             XCTAssertNotNil(palette.accent)
             XCTAssertNotNil(palette.wave)
             XCTAssertNotNil(palette.textPrimary)
@@ -188,20 +188,38 @@ final class ThemeManagerTests: XCTestCase {
         }
     }
 
-    func testCircadianPaletteIsDark() {
+    func testWaveCircadianPaletteIsDark() {
         // Night and evening should be dark
-        let nightPalette = CircadianPalette.forPeriod(.night)
+        let nightPalette = WaveCircadianPalette.forPeriod(.night)
         XCTAssertTrue(nightPalette.isDark)
 
-        let eveningPalette = CircadianPalette.forPeriod(.evening)
+        let eveningPalette = WaveCircadianPalette.forPeriod(.evening)
         XCTAssertTrue(eveningPalette.isDark)
 
         // Morning and afternoon should not be dark
-        let morningPalette = CircadianPalette.forPeriod(.morning)
+        let morningPalette = WaveCircadianPalette.forPeriod(.morning)
         XCTAssertFalse(morningPalette.isDark)
 
-        let afternoonPalette = CircadianPalette.forPeriod(.afternoon)
+        let afternoonPalette = WaveCircadianPalette.forPeriod(.afternoon)
         XCTAssertFalse(afternoonPalette.isDark)
+    }
+
+    // MARK: - CircadianPalette Tests (8-phase interpolated)
+
+    func testCircadianPaletteCurrent() {
+        let palette = CircadianPalette.current
+        XCTAssertNotNil(palette.primary)
+        XCTAssertNotNil(palette.secondary)
+        XCTAssertNotNil(palette.textPrimary)
+        XCTAssertNotNil(palette.textSecondary)
+        XCTAssertNotNil(palette.cardBackground)
+    }
+
+    func testCircadianPalettePhases() {
+        // Test that all 8 phases are valid
+        for phase in CircadianPhase.allCases {
+            XCTAssertNotNil(phase.displayName)
+        }
     }
 
     // MARK: - Typography Tests

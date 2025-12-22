@@ -374,7 +374,7 @@ export default function PatientDetailPage() {
                     onChange={(e) => setTargetDay(Number(e.target.value))}
                     className="px-3 py-1.5 rounded-lg border border-purple-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-purple-50"
                   >
-                    {Array.from({ length: 15 }, (_, i) => i + 1).map((day) => (
+                    {Array.from({ length: 14 }, (_, i) => i + 1).map((day) => (
                       <option key={day} value={day}>
                         Day {day}
                       </option>
@@ -401,7 +401,7 @@ export default function PatientDetailPage() {
               </div>
               <p className="text-2xl font-bold text-gray-900">
                 {patient.user.current_day}
-                <span className="text-lg text-gray-400">/15</span>
+                <span className="text-lg text-gray-400">/14</span>
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-xl">
@@ -456,7 +456,7 @@ export default function PatientDetailPage() {
         <div className={`rounded-2xl border ${activeTab === "overview" ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"} p-6`}>
           {/* Overview Tab - Patient 360° View */}
           {activeTab === "overview" && (
-            <Patient360Tab userId={userId} patient={patient} />
+            <Patient360Tab userId={userId} patientId={id} patient={patient} />
           )}
 
           {/* Responses Tab */}
@@ -466,7 +466,7 @@ export default function PatientDetailPage() {
               <div className="md:col-span-1">
                 <h3 className="text-lg font-semibold mb-4">Days</h3>
                 <div className="space-y-2">
-                  {Array.from({ length: 15 }, (_, i) => i + 1).map((day) => {
+                  {Array.from({ length: 14 }, (_, i) => i + 1).map((day) => {
                     const dayInfo = responsesByDay?.days.find(
                       (d) => d.dayNumber === day
                     );

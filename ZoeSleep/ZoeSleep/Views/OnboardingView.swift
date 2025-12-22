@@ -69,7 +69,7 @@ struct OnboardingView: View {
                 // Floating accessibility button (bottom-right)
                 // Uses palette colors to blend with circadian background
                 EnhancedReadabilityButton(
-                    lightStyle: CircadianPalette.current.isDark,
+                    lightStyle: WaveCircadianPalette.current.isDark,
                     edgePadding: 24
                 )
             }
@@ -82,7 +82,7 @@ struct OnboardingView: View {
 
 struct OnboardingCircadianBackground: View {
     var body: some View {
-        let palette = CircadianPalette.current
+        let palette = WaveCircadianPalette.current
 
         ZStack {
             // Base gradient
@@ -131,7 +131,7 @@ struct OnboardingProgressBar: View {
     let totalSteps: Int
 
     var body: some View {
-        let palette = CircadianPalette.current
+        let palette = WaveCircadianPalette.current
 
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
@@ -166,7 +166,7 @@ struct NameStepView: View {
     @FocusState private var isNameFocused: Bool
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 16 : 24) {
@@ -234,7 +234,7 @@ struct MeasurementSystemStepView: View {
     let screenHeight: CGFloat
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 16 : 24) {
@@ -298,7 +298,7 @@ struct MeasurementSystemCard: View {
     let isCompact: Bool
     let onTap: () -> Void
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         Button(action: onTap) {
@@ -341,7 +341,7 @@ struct HeightWeightStepView: View {
     let screenHeight: CGFloat
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     private var isMetric: Bool {
         onboardingManager.profile.measurementSystem == MeasurementSystem.metric.rawValue
@@ -496,7 +496,7 @@ struct MetricInputRow<Content: View>: View {
     let isCompact: Bool
     @ViewBuilder let content: Content
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -524,7 +524,7 @@ struct GenderAgeStepView: View {
     let screenHeight: CGFloat
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     private var currentYear: Int {
         Calendar.current.component(.year, from: Date())
@@ -613,7 +613,7 @@ struct GenderCard: View {
     let isCompact: Bool
     let onTap: () -> Void
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         Button(action: onTap) {
@@ -647,7 +647,7 @@ struct WearablesStepView: View {
     let screenHeight: CGFloat
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 12 : 16) {
@@ -711,7 +711,7 @@ struct WearableCard: View {
     let isCompact: Bool
     let onTap: () -> Void
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         Button(action: onTap) {
@@ -751,7 +751,7 @@ struct HealthConnectStepView: View {
     let screenHeight: CGFloat
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 12 : 16) {
@@ -872,7 +872,7 @@ struct HealthBenefitRow: View {
     let text: String
     var isCompact: Bool = false
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -895,7 +895,7 @@ struct SleepPhilosophyStepView: View {
     let screenHeight: CGFloat
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 10 : 14) {
@@ -966,7 +966,7 @@ struct PhilosophyCard: View {
     let color: Color
     var isCompact: Bool = false
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -1005,7 +1005,7 @@ struct ReadyStepView: View {
     let screenHeight: CGFloat
 
     private var isCompact: Bool { screenHeight < 700 }
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         VStack(spacing: isCompact ? 16 : 24) {
@@ -1108,7 +1108,7 @@ struct SummaryRow: View {
     var valueColor: Color? = nil
     var isCompact: Bool = false
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         HStack {
@@ -1130,7 +1130,7 @@ struct OnboardingNavigationButtons: View {
     var showBack: Bool = false
     var nextLabel: String = FriendlyCopy.continueButton  // "Let's go" by default
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         VStack(spacing: Spacing.sm) {

@@ -123,21 +123,21 @@ struct ProgressiveInsightsView: View {
                 category: .advanced
             ),
 
-            // Day 15: Complete profile
+            // Day 14 (Final): Complete profile
             InsightUnlockStatus(
                 title: "Full Sleep Profile",
                 description: "Your complete personalized sleep analysis",
                 icon: "doc.richtext.fill",
-                unlockDay: 15,
-                isUnlocked: currentDay >= 15,
+                unlockDay: Config.totalJourneyDays,
+                isUnlocked: currentDay >= Config.totalJourneyDays,
                 category: .advanced
             ),
             InsightUnlockStatus(
                 title: "Intervention Recommendations",
                 description: "Personalized suggestions for better sleep",
                 icon: "lightbulb.fill",
-                unlockDay: 15,
-                isUnlocked: currentDay >= 15,
+                unlockDay: Config.totalJourneyDays,
+                isUnlocked: currentDay >= Config.totalJourneyDays,
                 category: .recommendation
             ),
         ]

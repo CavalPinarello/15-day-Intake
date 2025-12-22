@@ -11,6 +11,11 @@ import { PillarDetailModal } from "./PillarDetailModal";
 import { AIInsightsCard, generateSampleInsights } from "./AIInsightsCard";
 import { PatientEngagementCard } from "./PatientEngagementCard";
 import { PatientJourneyStatus } from "./PatientJourneyStatus";
+import { PatientAnalysisWorkflow } from "./PatientAnalysisWorkflow";
+import { CheckInHistoryCard } from "./CheckInHistoryCard";
+import { AdaptiveDifficultyPanel } from "./AdaptiveDifficultyPanel";
+import { ComplianceCorrelationChart } from "@/components/charts/ComplianceCorrelationChart";
+import { ProtocolAssignment } from "@/components/physician/ProtocolAssignment";
 import { SleepTrendChart } from "@/components/charts/SleepTrendChart";
 import { ScoreGauge, SCORE_CONFIG } from "@/components/charts/ScoreProgressionChart";
 import { SleepBreakdown } from "@/components/charts/SleepArchitectureChart";
@@ -38,6 +43,7 @@ import {
 
 interface Patient360TabProps {
   userId: Id<"users">;
+  patientId?: string; // For navigation links in workflow component
   patient: {
     name?: string;
     user: {
@@ -56,7 +62,7 @@ interface Patient360TabProps {
   };
 }
 
-export function Patient360Tab({ userId, patient }: Patient360TabProps) {
+export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Fetch HealthKit data
@@ -390,7 +396,7 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
           icon={<Calendar className="w-5 h-5" />}
           label="Journey Progress"
           value={`Day ${patient.user.current_day}`}
-          subValue="of 15"
+          subValue="of 14"
           color="blue"
         />
         <StatCard
@@ -493,6 +499,17 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
 
         {/* Journey Status - Shows current phase and analysis progress */}
         <PatientJourneyStatus userId={userId} />
+
+        {/* Analysis Workflow - Detailed workflow for physicians during analysis phase */}
+        {patientId && (
+          <div className="lg:col-span-2">
+            <PatientAnalysisWorkflow
+              userId={userId}
+              patientId={patientId}
+              onAiAnalysisRun={handleAnalyze}
+            />
+          </div>
+        )}
 
         {/* Sleep Architecture (if available) */}
         {sleepArchitecture && sleepArchitecture.length > 0 && (
@@ -649,6 +666,26 @@ export function Patient360Tab({ userId, patient }: Patient360TabProps) {
           />
         </div>
         <ComplianceChart data={complianceData} height={150} />
+      </div>
+
+      {/* Treatment Protocol Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Check-in History */}
+        <CheckInHistoryCard userId={userId} days={14} />
+
+        {/* Compliance vs Outcomes Correlation */}
+        <ComplianceCorrelationChart userId={userId} height={200} />
+      </div>
+
+      {/* Adaptive Difficulty and Protocol Assignment */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Adaptive Difficulty Panel */}
+        <AdaptiveDifficultyPanel userId={userId} physicianId={patientId} />
+
+        {/* Protocol Assignment (if physician context available) */}
+        {patientId && (
+          <ProtocolAssignment userId={userId} physicianId={patientId} />
+        )}
       </div>
 
       {/* AI Analysis Results (if available) */}

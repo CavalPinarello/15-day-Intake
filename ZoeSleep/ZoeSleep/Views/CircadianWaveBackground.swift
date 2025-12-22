@@ -63,7 +63,7 @@ struct GlassyWaveShape: Shape {
 struct GlassyWaveLayer: View {
     let index: Int
     let colorScheme: ColorScheme
-    var palette: CircadianPalette = CircadianPalette.current  // Pass from parent
+    var palette: WaveCircadianPalette = WaveCircadianPalette.current  // Pass from parent
     @State private var phase: CGFloat = 0
 
     // Wave configurations for each layer
@@ -126,7 +126,7 @@ struct GlassyWaveLayer: View {
 struct GlowingLineWave: View {
     let index: Int
     let colorScheme: ColorScheme
-    var palette: CircadianPalette = CircadianPalette.current  // Pass from parent
+    var palette: WaveCircadianPalette = WaveCircadianPalette.current  // Pass from parent
     @State private var phase: CGFloat = 0
 
     private var config: (amplitude: CGFloat, frequency: CGFloat, speed: Double, yOffset: CGFloat, lineWidth: CGFloat, opacity: Double) {
@@ -244,8 +244,8 @@ struct CircadianWaveBackground: View {
     var intensity: Double = 1.0
 
     /// Get current palette based on ThemeManager's time period (single source of truth)
-    private var currentPalette: CircadianPalette {
-        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    private var currentPalette: WaveCircadianPalette {
+        WaveCircadianPalette.forPeriod(themeManager.currentTimePeriod)
     }
 
     var body: some View {
@@ -465,7 +465,7 @@ struct QuestionnaireWaveBackground: View {
     @State private var phase2: CGFloat = 0
 
     var body: some View {
-        let palette = CircadianPalette.current
+        let palette = WaveCircadianPalette.current
 
         GeometryReader { geometry in
             ZStack {
@@ -525,12 +525,13 @@ struct QuestionnaireWaveBackground: View {
     }
 }
 
-// MARK: - Circadian Palette (Sleep-optimized color system)
+// MARK: - Wave Circadian Palette (Sleep-optimized colors for wave backgrounds)
 
-/// Centralized circadian color palette optimized for sleep health
+/// Circadian color palette specifically for wave background animations
 /// EVENING/NIGHT: Only warm colors (amber, orange, red, brown) - NO blue/teal/green
 /// MORNING/DAY: Can use energizing blues, teals, greens
-struct CircadianPalette {
+/// NOTE: For app-wide colors, use CircadianPalette from QuestionModels.swift
+struct WaveCircadianPalette {
     let background: [Color]
     let wave: Color
     let accent: Color
@@ -538,11 +539,11 @@ struct CircadianPalette {
     let textPrimary: Color
     let textSecondary: Color
 
-    /// Get palette for a specific time period (used by ThemeManager)
-    static func forPeriod(_ period: TimePeriod) -> CircadianPalette {
+    /// Get palette for a specific time period (used by wave backgrounds)
+    static func forPeriod(_ period: TimePeriod) -> WaveCircadianPalette {
         switch period {
         case .evening, .night:
-            return CircadianPalette(
+            return WaveCircadianPalette(
                 background: [
                     Color(red: 0.14, green: 0.08, blue: 0.06),
                     Color(red: 0.16, green: 0.09, blue: 0.07),
@@ -555,7 +556,7 @@ struct CircadianPalette {
                 textSecondary: Color(red: 0.988, green: 0.827, blue: 0.302)
             )
         case .morning:
-            return CircadianPalette(
+            return WaveCircadianPalette(
                 background: [
                     Color(red: 0.92, green: 0.97, blue: 0.98),
                     Color(red: 0.88, green: 0.95, blue: 0.97),
@@ -568,7 +569,7 @@ struct CircadianPalette {
                 textSecondary: Color(red: 0.35, green: 0.45, blue: 0.50)
             )
         case .afternoon:
-            return CircadianPalette(
+            return WaveCircadianPalette(
                 background: [
                     Color(red: 0.94, green: 0.96, blue: 0.99),
                     Color(red: 0.90, green: 0.94, blue: 0.98),
@@ -583,8 +584,8 @@ struct CircadianPalette {
         }
     }
 
-    /// Get the current circadian palette based on time of day
-    static var current: CircadianPalette {
+    /// Get the current wave palette based on time of day
+    static var current: WaveCircadianPalette {
         let now = Date()
         let calendar = Calendar.current
         let hour = calendar.component(.hour, from: now)
@@ -610,7 +611,7 @@ struct CircadianPalette {
         // ========================================
         if currentHour >= duskStart || currentHour < dawnStart {
             // Deep warm amber/brown background - zero blue
-            return CircadianPalette(
+            return WaveCircadianPalette(
                 background: [
                     Color(red: 0.14, green: 0.08, blue: 0.06),  // Deep warm brown
                     Color(red: 0.16, green: 0.09, blue: 0.07),
@@ -627,7 +628,7 @@ struct CircadianPalette {
         // DAWN - Warm coral/peach transition
         // ========================================
         else if currentHour >= dawnStart && currentHour < dawnEnd {
-            return CircadianPalette(
+            return WaveCircadianPalette(
                 background: [
                     Color(red: 0.99, green: 0.94, blue: 0.90),  // Warm cream
                     Color(red: 0.98, green: 0.91, blue: 0.86),
@@ -644,7 +645,7 @@ struct CircadianPalette {
         // MORNING - Bright, energizing (blues/teals OK)
         // ========================================
         else if currentHour >= dawnEnd && currentHour < 12 {
-            return CircadianPalette(
+            return WaveCircadianPalette(
                 background: [
                     Color(red: 0.92, green: 0.97, blue: 0.98),
                     Color(red: 0.88, green: 0.95, blue: 0.97),
@@ -661,7 +662,7 @@ struct CircadianPalette {
         // AFTERNOON - Soft blue (still OK for alertness)
         // ========================================
         else {
-            return CircadianPalette(
+            return WaveCircadianPalette(
                 background: [
                     Color(red: 0.94, green: 0.96, blue: 0.99),
                     Color(red: 0.90, green: 0.94, blue: 0.98),
@@ -688,8 +689,8 @@ struct DashboardWaveBackground: View {
     @State private var phase3: CGFloat = 0
 
     /// Get palette from ThemeManager so it updates when time changes
-    private var palette: CircadianPalette {
-        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    private var palette: WaveCircadianPalette {
+        WaveCircadianPalette.forPeriod(themeManager.currentTimePeriod)
     }
 
     var body: some View {
@@ -846,8 +847,8 @@ struct GlassyCardBackground: View {
     var blur: CGFloat = 0  // Kept for API compatibility
 
     /// Get palette from ThemeManager so it updates when time changes
-    private var palette: CircadianPalette {
-        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+    private var palette: WaveCircadianPalette {
+        WaveCircadianPalette.forPeriod(themeManager.currentTimePeriod)
     }
 
     var body: some View {

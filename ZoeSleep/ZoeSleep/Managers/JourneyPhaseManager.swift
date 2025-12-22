@@ -390,13 +390,40 @@ class JourneyPhaseManager: ObservableObject {
     // MARK: - Phase Transitions
 
     func checkAndTransitionToAnalysis(userId: String, currentDay: Int) async {
-        guard currentDay > 15 && currentPhase == .intake else { return }
+        guard currentDay >= Config.totalJourneyDays && currentPhase == .intake else { return }
 
         do {
             _ = try await ConvexService.shared.transitionToAnalysis(userId: userId)
             await loadJourneyStatus(userId: userId)
         } catch {
             print("[JourneyPhase] Error transitioning to analysis: \(error)")
+        }
+    }
+
+    /// Manually transition to analysis phase when journey is complete
+    func transitionToAnalysis() async {
+        guard currentPhase == .intake else { return }
+
+        if let userId = ConvexService.shared.userId {
+            do {
+                _ = try await ConvexService.shared.transitionToAnalysis(userId: userId)
+                await loadJourneyStatus(userId: userId)
+            } catch {
+                print("[JourneyPhase] Error transitioning to analysis: \(error)")
+                // Fallback to local transition
+                await MainActor.run {
+                    self.currentPhase = .analysis
+                    self.analysisStage = 1
+                    updateAnalysisStages(currentStage: 1)
+                }
+            }
+        } else {
+            // Local-only transition if no user ID
+            await MainActor.run {
+                self.currentPhase = .analysis
+                self.analysisStage = 1
+                updateAnalysisStages(currentStage: 1)
+            }
         }
     }
 

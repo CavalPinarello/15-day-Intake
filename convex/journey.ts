@@ -367,7 +367,7 @@ export const initializeJourneyStatus = mutation({
 
 /**
  * Check if patient should transition to analysis
- * Returns true if current day > 15 and all assessments complete
+ * Returns true if current day > 14 and all assessments complete
  */
 export const shouldTransitionToAnalysis = query({
   args: { userId: v.id("users") },
@@ -414,6 +414,403 @@ export const shouldTransitionToAnalysis = query({
       shouldTransition,
       currentDay,
       intakeComplete,
+    };
+  },
+});
+
+// ============================================
+// Analysis Workflow Management
+// For physician dashboard - tracks detailed findings and prerequisites
+// ============================================
+
+/**
+ * Get the analysis workflow state for a patient
+ */
+export const getAnalysisWorkflow = query({
+  args: { userId: v.id("users") },
+  returns: v.object({
+    exists: v.boolean(),
+    physicianId: v.optional(v.string()),
+    // Stage 2: Patterns
+    patternsIdentified: v.array(v.string()),
+    primarySleepIssues: v.array(v.string()),
+    triggeredGateways: v.array(v.string()),
+    riskFactors: v.array(v.string()),
+    reviewedSleepData: v.boolean(),
+    reviewedQuestionnaireScores: v.boolean(),
+    reviewedGatewayTriggers: v.boolean(),
+    ranAiAnalysis: v.boolean(),
+    patternsNotes: v.optional(v.string()),
+    patternsCompletedAt: v.optional(v.number()),
+    // Stage 3: Recommendations
+    recommendedInterventions: v.array(v.string()),
+    treatmentApproach: v.optional(v.string()),
+    estimatedDurationWeeks: v.optional(v.number()),
+    recommendationsNotes: v.optional(v.string()),
+    recommendationsCompletedAt: v.optional(v.number()),
+    // Stage 4: Ready
+    planSummary: v.optional(v.string()),
+    specialConsiderations: v.optional(v.string()),
+    readyForPatient: v.boolean(),
+    finalReviewNotes: v.optional(v.string()),
+    treatmentReadyAt: v.optional(v.number()),
+    // Meta
+    updatedAt: v.optional(v.number()),
+  }),
+  handler: async (ctx, args) => {
+    const workflow = await ctx.db
+      .query("patient_analysis_workflow")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!workflow) {
+      return {
+        exists: false,
+        physicianId: undefined,
+        patternsIdentified: [],
+        primarySleepIssues: [],
+        triggeredGateways: [],
+        riskFactors: [],
+        reviewedSleepData: false,
+        reviewedQuestionnaireScores: false,
+        reviewedGatewayTriggers: false,
+        ranAiAnalysis: false,
+        patternsNotes: undefined,
+        patternsCompletedAt: undefined,
+        recommendedInterventions: [],
+        treatmentApproach: undefined,
+        estimatedDurationWeeks: undefined,
+        recommendationsNotes: undefined,
+        recommendationsCompletedAt: undefined,
+        planSummary: undefined,
+        specialConsiderations: undefined,
+        readyForPatient: false,
+        finalReviewNotes: undefined,
+        treatmentReadyAt: undefined,
+        updatedAt: undefined,
+      };
+    }
+
+    // Parse JSON fields
+    const parseJson = (json: string | undefined): string[] => {
+      if (!json) return [];
+      try {
+        return JSON.parse(json);
+      } catch {
+        return [];
+      }
+    };
+
+    return {
+      exists: true,
+      physicianId: workflow.physician_id,
+      patternsIdentified: parseJson(workflow.patterns_identified_json),
+      primarySleepIssues: parseJson(workflow.primary_sleep_issues_json),
+      triggeredGateways: parseJson(workflow.triggered_gateways_json),
+      riskFactors: parseJson(workflow.risk_factors_json),
+      reviewedSleepData: workflow.reviewed_sleep_data ?? false,
+      reviewedQuestionnaireScores: workflow.reviewed_questionnaire_scores ?? false,
+      reviewedGatewayTriggers: workflow.reviewed_gateway_triggers ?? false,
+      ranAiAnalysis: workflow.ran_ai_analysis ?? false,
+      patternsNotes: workflow.patterns_notes,
+      patternsCompletedAt: workflow.patterns_completed_at,
+      recommendedInterventions: parseJson(workflow.recommended_interventions_json),
+      treatmentApproach: workflow.treatment_approach,
+      estimatedDurationWeeks: workflow.estimated_duration_weeks,
+      recommendationsNotes: workflow.recommendations_notes,
+      recommendationsCompletedAt: workflow.recommendations_completed_at,
+      planSummary: workflow.plan_summary,
+      specialConsiderations: workflow.special_considerations,
+      readyForPatient: workflow.ready_for_patient ?? false,
+      finalReviewNotes: workflow.final_review_notes,
+      treatmentReadyAt: workflow.treatment_ready_at,
+      updatedAt: workflow.updated_at,
+    };
+  },
+});
+
+/**
+ * Update workflow checklist items (Stage 2 prerequisites)
+ */
+export const updateWorkflowChecklist = mutation({
+  args: {
+    userId: v.id("users"),
+    reviewedSleepData: v.optional(v.boolean()),
+    reviewedQuestionnaireScores: v.optional(v.boolean()),
+    reviewedGatewayTriggers: v.optional(v.boolean()),
+    ranAiAnalysis: v.optional(v.boolean()),
+  },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const workflow = await ctx.db
+      .query("patient_analysis_workflow")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    const updates: Record<string, boolean | number> = { updated_at: now };
+    if (args.reviewedSleepData !== undefined) updates.reviewed_sleep_data = args.reviewedSleepData;
+    if (args.reviewedQuestionnaireScores !== undefined) updates.reviewed_questionnaire_scores = args.reviewedQuestionnaireScores;
+    if (args.reviewedGatewayTriggers !== undefined) updates.reviewed_gateway_triggers = args.reviewedGatewayTriggers;
+    if (args.ranAiAnalysis !== undefined) updates.ran_ai_analysis = args.ranAiAnalysis;
+
+    if (workflow) {
+      await ctx.db.patch(workflow._id, updates);
+    } else {
+      await ctx.db.insert("patient_analysis_workflow", {
+        user_id: args.userId,
+        reviewed_sleep_data: args.reviewedSleepData ?? false,
+        reviewed_questionnaire_scores: args.reviewedQuestionnaireScores ?? false,
+        reviewed_gateway_triggers: args.reviewedGatewayTriggers ?? false,
+        ran_ai_analysis: args.ranAiAnalysis ?? false,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+/**
+ * Save Stage 2 findings - Patterns Identified
+ */
+export const savePatternFindings = mutation({
+  args: {
+    userId: v.id("users"),
+    patternsIdentified: v.array(v.string()),
+    primarySleepIssues: v.array(v.string()),
+    triggeredGateways: v.array(v.string()),
+    riskFactors: v.array(v.string()),
+    notes: v.optional(v.string()),
+    markComplete: v.boolean(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    canAdvance: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const workflow = await ctx.db
+      .query("patient_analysis_workflow")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    const updateData = {
+      patterns_identified_json: JSON.stringify(args.patternsIdentified),
+      primary_sleep_issues_json: JSON.stringify(args.primarySleepIssues),
+      triggered_gateways_json: JSON.stringify(args.triggeredGateways),
+      risk_factors_json: JSON.stringify(args.riskFactors),
+      patterns_notes: args.notes,
+      patterns_completed_at: args.markComplete ? now : undefined,
+      updated_at: now,
+    };
+
+    if (workflow) {
+      await ctx.db.patch(workflow._id, updateData);
+    } else {
+      await ctx.db.insert("patient_analysis_workflow", {
+        user_id: args.userId,
+        ...updateData,
+        created_at: now,
+      });
+    }
+
+    // Check if prerequisites are met to advance to stage 2
+    const updatedWorkflow = await ctx.db
+      .query("patient_analysis_workflow")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    const canAdvance = args.markComplete &&
+      (args.patternsIdentified.length > 0 || args.primarySleepIssues.length > 0);
+
+    return {
+      success: true,
+      canAdvance,
+      message: canAdvance ? "Pattern analysis complete. Ready to advance to Stage 2." : "Findings saved.",
+    };
+  },
+});
+
+/**
+ * Save Stage 3 findings - Recommendations Preparing
+ */
+export const saveRecommendations = mutation({
+  args: {
+    userId: v.id("users"),
+    recommendedInterventions: v.array(v.string()),
+    treatmentApproach: v.string(),
+    estimatedDurationWeeks: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    markComplete: v.boolean(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    canAdvance: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const workflow = await ctx.db
+      .query("patient_analysis_workflow")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    const updateData = {
+      recommended_interventions_json: JSON.stringify(args.recommendedInterventions),
+      treatment_approach: args.treatmentApproach,
+      estimated_duration_weeks: args.estimatedDurationWeeks,
+      recommendations_notes: args.notes,
+      recommendations_completed_at: args.markComplete ? now : undefined,
+      updated_at: now,
+    };
+
+    if (workflow) {
+      await ctx.db.patch(workflow._id, updateData);
+    } else {
+      await ctx.db.insert("patient_analysis_workflow", {
+        user_id: args.userId,
+        ...updateData,
+        created_at: now,
+      });
+    }
+
+    const canAdvance = args.markComplete && args.recommendedInterventions.length > 0;
+
+    return {
+      success: true,
+      canAdvance,
+      message: canAdvance ? "Recommendations complete. Ready to advance to Stage 3." : "Recommendations saved.",
+    };
+  },
+});
+
+/**
+ * Finalize Stage 4 - Treatment Plan Ready
+ */
+export const finalizeTreatmentPlan = mutation({
+  args: {
+    userId: v.id("users"),
+    planSummary: v.string(),
+    specialConsiderations: v.optional(v.string()),
+    finalReviewNotes: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const workflow = await ctx.db
+      .query("patient_analysis_workflow")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    const updateData = {
+      plan_summary: args.planSummary,
+      special_considerations: args.specialConsiderations,
+      final_review_notes: args.finalReviewNotes,
+      ready_for_patient: true,
+      treatment_ready_at: now,
+      updated_at: now,
+    };
+
+    if (workflow) {
+      await ctx.db.patch(workflow._id, updateData);
+    } else {
+      await ctx.db.insert("patient_analysis_workflow", {
+        user_id: args.userId,
+        ...updateData,
+        created_at: now,
+      });
+    }
+
+    return {
+      success: true,
+      message: "Treatment plan finalized and ready for patient.",
+    };
+  },
+});
+
+/**
+ * Get workflow readiness for each stage
+ * Used by the dashboard to show what's required to advance
+ */
+export const getWorkflowReadiness = query({
+  args: { userId: v.id("users") },
+  returns: v.object({
+    stage2Ready: v.boolean(),
+    stage2Requirements: v.array(v.object({
+      id: v.string(),
+      label: v.string(),
+      complete: v.boolean(),
+      required: v.boolean(),
+    })),
+    stage3Ready: v.boolean(),
+    stage3Requirements: v.array(v.object({
+      id: v.string(),
+      label: v.string(),
+      complete: v.boolean(),
+      required: v.boolean(),
+    })),
+    stage4Ready: v.boolean(),
+    stage4Requirements: v.array(v.object({
+      id: v.string(),
+      label: v.string(),
+      complete: v.boolean(),
+      required: v.boolean(),
+    })),
+  }),
+  handler: async (ctx, args) => {
+    const workflow = await ctx.db
+      .query("patient_analysis_workflow")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    // Check interventions assigned
+    const interventions = await ctx.db
+      .query("user_interventions")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    const hasInterventions = interventions.length > 0;
+
+    // Stage 2 requirements
+    const stage2Requirements = [
+      { id: "sleep_data", label: "Review sleep data", complete: workflow?.reviewed_sleep_data ?? false, required: true },
+      { id: "scores", label: "Review questionnaire scores", complete: workflow?.reviewed_questionnaire_scores ?? false, required: true },
+      { id: "gateways", label: "Review gateway triggers", complete: workflow?.reviewed_gateway_triggers ?? false, required: true },
+      { id: "ai_analysis", label: "Run AI analysis", complete: workflow?.ran_ai_analysis ?? false, required: false },
+      { id: "patterns", label: "Document findings", complete: workflow?.patterns_completed_at !== undefined, required: true },
+    ];
+    const stage2Ready = stage2Requirements.filter(r => r.required).every(r => r.complete);
+
+    // Stage 3 requirements
+    const stage3Requirements = [
+      { id: "interventions", label: "Assign interventions", complete: hasInterventions, required: true },
+      { id: "approach", label: "Define treatment approach", complete: workflow?.treatment_approach !== undefined, required: true },
+      { id: "duration", label: "Set estimated duration", complete: workflow?.estimated_duration_weeks !== undefined, required: false },
+      { id: "recommendations", label: "Document recommendations", complete: workflow?.recommendations_completed_at !== undefined, required: true },
+    ];
+    const stage3Ready = stage3Requirements.filter(r => r.required).every(r => r.complete);
+
+    // Stage 4 requirements
+    const stage4Requirements = [
+      { id: "summary", label: "Write patient summary", complete: workflow?.plan_summary !== undefined, required: true },
+      { id: "considerations", label: "Add special considerations", complete: workflow?.special_considerations !== undefined, required: false },
+      { id: "ready", label: "Mark ready for patient", complete: workflow?.ready_for_patient ?? false, required: true },
+    ];
+    const stage4Ready = stage4Requirements.filter(r => r.required).every(r => r.complete);
+
+    return {
+      stage2Ready,
+      stage2Requirements,
+      stage3Ready,
+      stage3Requirements,
+      stage4Ready,
+      stage4Requirements,
     };
   },
 });

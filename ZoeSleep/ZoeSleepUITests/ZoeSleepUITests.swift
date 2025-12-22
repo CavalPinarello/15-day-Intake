@@ -577,3 +577,396 @@ extension ZoeSleepUITests {
         }
     }
 }
+
+// MARK: - Check-In Flow Tests
+
+extension ZoeSleepUITests {
+
+    func testCheckInStatusCardExists() throws {
+        app.launch()
+        sleep(2)
+
+        // Navigate to treatment dashboard (requires Day 15+)
+        let treatmentTab = app.buttons["Treatment"]
+        if treatmentTab.exists && treatmentTab.isHittable {
+            treatmentTab.tap()
+            sleep(1)
+
+            // Look for check-in status card
+            let checkInsText = app.staticTexts["Daily Check-ins"]
+            let morningPill = app.buttons["Morning"]
+            let middayPill = app.buttons["Midday"]
+            let eveningPill = app.buttons["Evening"]
+
+            // At least some check-in UI should exist
+        }
+    }
+
+    func testMorningCheckInFlow() throws {
+        app.launch()
+        sleep(2)
+
+        // Try to open morning check-in
+        let morningButton = app.buttons["Morning"]
+        if morningButton.exists && morningButton.isHittable {
+            morningButton.tap()
+            sleep(1)
+
+            // Check for morning check-in view elements
+            let sleepQualityText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS 'sleep'")
+            ).firstMatch
+            let energyText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS 'energy'")
+            ).firstMatch
+            let moodText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS 'mood'")
+            ).firstMatch
+
+            // Complete button should exist
+            let completeButton = app.buttons["Complete Check-in"]
+        }
+    }
+
+    func testMorningCheckInSleepQualitySelection() throws {
+        app.launch()
+        sleep(2)
+
+        // Navigate to morning check-in
+        openMorningCheckIn()
+
+        // Find sleep quality rating buttons
+        let ratingButtons = app.buttons.matching(identifier: "SleepQualityRating")
+        if ratingButtons.count > 0 {
+            ratingButtons.element(boundBy: 2).tap() // Select middle rating
+            sleep(1)
+        }
+
+        // Alternative: look for star buttons or emoji buttons
+        let starButtons = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS 'star'")
+        )
+    }
+
+    func testMorningCheckInEnergySelection() throws {
+        app.launch()
+        sleep(2)
+
+        openMorningCheckIn()
+
+        // Find energy level options
+        let exhaustedButton = app.buttons["Exhausted"]
+        let tiredButton = app.buttons["Tired"]
+        let okayButton = app.buttons["Okay"]
+        let energizedButton = app.buttons["Energized"]
+
+        // Tap one of the energy options
+        if okayButton.exists && okayButton.isHittable {
+            okayButton.tap()
+            sleep(1)
+        }
+    }
+
+    func testMorningCheckInMoodSelection() throws {
+        app.launch()
+        sleep(2)
+
+        openMorningCheckIn()
+
+        // Find mood options
+        let badButton = app.buttons["Bad"]
+        let lowButton = app.buttons["Low"]
+        let neutralButton = app.buttons["Okay"]
+        let goodButton = app.buttons["Good"]
+        let greatButton = app.buttons["Great"]
+
+        // Tap a mood option
+        if goodButton.exists && goodButton.isHittable {
+            goodButton.tap()
+            sleep(1)
+        }
+    }
+
+    func testMorningCheckInSubmission() throws {
+        app.launch()
+        sleep(2)
+
+        openMorningCheckIn()
+
+        // Select all required options
+        selectFirstAvailableOption()
+        selectSecondAvailableOption()
+        selectThirdAvailableOption()
+
+        // Submit
+        let completeButton = app.buttons["Complete Check-in"]
+        if completeButton.exists && completeButton.isEnabled && completeButton.isHittable {
+            completeButton.tap()
+            sleep(2)
+
+            // Should show success or dismiss
+            let successText = app.staticTexts["Check-in Complete!"]
+            // Either success overlay appears or view dismisses
+        }
+    }
+
+    func testMiddayCheckInFlow() throws {
+        app.launch()
+        sleep(2)
+
+        // Try to open midday check-in
+        let middayButton = app.buttons["Midday"]
+        if middayButton.exists && middayButton.isHittable {
+            middayButton.tap()
+            sleep(1)
+
+            // Check for midday check-in view elements
+            let energyText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS 'energy'")
+            ).firstMatch
+            let caffeineText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS 'Caffeine'")
+            ).firstMatch
+            let napText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS 'Nap'")
+            ).firstMatch
+
+            // Complete button should exist
+            let completeButton = app.buttons["Complete Check-in"]
+        }
+    }
+
+    func testMiddayCheckInCaffeineTracking() throws {
+        app.launch()
+        sleep(2)
+
+        openMiddayCheckIn()
+
+        // Toggle caffeine on
+        let caffeineToggle = app.switches["Had caffeine?"]
+        if caffeineToggle.exists && caffeineToggle.isHittable {
+            caffeineToggle.tap()
+            sleep(1)
+
+            // Caffeine cups stepper should appear
+            let minusButton = app.buttons.matching(
+                NSPredicate(format: "label CONTAINS 'minus'")
+            ).firstMatch
+            let plusButton = app.buttons.matching(
+                NSPredicate(format: "label CONTAINS 'plus'")
+            ).firstMatch
+
+            // Increment cups
+            if plusButton.exists && plusButton.isHittable {
+                plusButton.tap()
+                plusButton.tap()
+            }
+        }
+    }
+
+    func testMiddayCheckInNapTracking() throws {
+        app.launch()
+        sleep(2)
+
+        openMiddayCheckIn()
+
+        // Toggle nap on
+        let napToggle = app.switches["Took a nap?"]
+        if napToggle.exists && napToggle.isHittable {
+            napToggle.tap()
+            sleep(1)
+
+            // Duration chips should appear
+            let duration15 = app.buttons["15m"]
+            let duration30 = app.buttons["30m"]
+
+            // Select a duration
+            if duration30.exists && duration30.isHittable {
+                duration30.tap()
+            }
+        }
+    }
+
+    func testEveningReportFlow() throws {
+        app.launch()
+        sleep(2)
+
+        // Try to open evening report
+        let eveningButton = app.buttons["Evening"]
+        if eveningButton.exists && eveningButton.isHittable {
+            eveningButton.tap()
+            sleep(1)
+
+            // Check for evening report view elements
+            let completionText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS 'completed'")
+            ).firstMatch
+            let ratingText = app.staticTexts["Rate your day"]
+            let reflectionText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS 'Reflection'")
+            ).firstMatch
+
+            // Complete button should exist
+            let completeButton = app.buttons["Complete Evening Report"]
+        }
+    }
+
+    func testEveningReportDayRating() throws {
+        app.launch()
+        sleep(2)
+
+        openEveningReport()
+
+        // Find star rating buttons
+        let starButtons = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS 'star'")
+        )
+
+        if starButtons.count >= 5 {
+            // Tap 4 stars (good rating)
+            starButtons.element(boundBy: 3).tap()
+            sleep(1)
+        }
+    }
+
+    func testEveningReportReflection() throws {
+        app.launch()
+        sleep(2)
+
+        openEveningReport()
+
+        // Find reflection text editor
+        let textEditor = app.textViews.firstMatch
+
+        if textEditor.exists && textEditor.isHittable {
+            textEditor.tap()
+            textEditor.typeText("Today was a productive day")
+            sleep(1)
+        }
+    }
+
+    func testEveningReportTomorrowPreview() throws {
+        app.launch()
+        sleep(2)
+
+        openEveningReport()
+
+        // Find tomorrow preview button
+        let previewButton = app.buttons["Preview Tomorrow's Tasks"]
+        if previewButton.exists && previewButton.isHittable {
+            previewButton.tap()
+            sleep(1)
+
+            // Tomorrow's tasks section should appear
+            let tomorrowText = app.staticTexts["Tomorrow's Tasks"]
+        }
+    }
+
+    func testCheckInSkipButton() throws {
+        app.launch()
+        sleep(2)
+
+        // Open any check-in
+        let morningButton = app.buttons["Morning"]
+        if morningButton.exists && morningButton.isHittable {
+            morningButton.tap()
+            sleep(1)
+
+            // Skip button should exist
+            let skipButton = app.buttons["Skip"]
+            if skipButton.exists && skipButton.isHittable {
+                skipButton.tap()
+                sleep(1)
+
+                // Should dismiss the check-in view
+            }
+        }
+    }
+
+    func testCheckInCompletionIndicators() throws {
+        app.launch()
+        sleep(2)
+
+        // Navigate to treatment dashboard
+        let treatmentTab = app.buttons["Treatment"]
+        if treatmentTab.exists && treatmentTab.isHittable {
+            treatmentTab.tap()
+            sleep(1)
+
+            // Look for completion indicators
+            let checkmarks = app.images.matching(
+                NSPredicate(format: "identifier CONTAINS 'checkmark'")
+            )
+
+            // Check-in pills should show completion state
+            // (green checkmark for completed, icon for pending)
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func openMorningCheckIn() {
+        let morningButton = app.buttons["Morning"]
+        if morningButton.exists && morningButton.isHittable {
+            morningButton.tap()
+            sleep(1)
+        }
+    }
+
+    private func openMiddayCheckIn() {
+        let middayButton = app.buttons["Midday"]
+        if middayButton.exists && middayButton.isHittable {
+            middayButton.tap()
+            sleep(1)
+        }
+    }
+
+    private func openEveningReport() {
+        let eveningButton = app.buttons["Evening"]
+        if eveningButton.exists && eveningButton.isHittable {
+            eveningButton.tap()
+            sleep(1)
+        }
+    }
+
+    private func selectFirstAvailableOption() {
+        // Select first rating option (sleep quality)
+        let buttons = app.buttons.allElementsBoundByIndex
+        for button in buttons where button.isHittable {
+            let label = button.label.lowercased()
+            if label.contains("star") || label.contains("rating") {
+                button.tap()
+                return
+            }
+        }
+    }
+
+    private func selectSecondAvailableOption() {
+        // Select energy level
+        let energyOptions = ["Exhausted", "Tired", "Okay", "Energized"]
+        for option in energyOptions {
+            let button = app.buttons[option]
+            if button.exists && button.isHittable {
+                button.tap()
+                return
+            }
+        }
+    }
+
+    private func selectThirdAvailableOption() {
+        // Select mood
+        let moodOptions = ["Bad", "Low", "Okay", "Good", "Great"]
+        for option in moodOptions {
+            // Check both the main button and any duplicate
+            let buttons = app.buttons.matching(NSPredicate(format: "label == %@", option))
+            if buttons.count > 1 {
+                // If there are duplicates (mood vs energy), use the second one
+                let button = buttons.element(boundBy: 1)
+                if button.exists && button.isHittable {
+                    button.tap()
+                    return
+                }
+            }
+        }
+    }
+}

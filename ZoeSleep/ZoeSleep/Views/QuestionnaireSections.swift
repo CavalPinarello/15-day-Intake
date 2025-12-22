@@ -600,7 +600,7 @@ struct DayCompletionView: View {
         }
     }
 
-    // MARK: - Journey Complete View (Day 15 Final)
+    // MARK: - Journey Complete View (Day 14 Final)
 
     private var journeyCompleteView: some View {
         ZStack {

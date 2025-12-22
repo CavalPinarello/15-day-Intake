@@ -267,7 +267,6 @@ export const signInWithApple = mutation({
 export const register = mutation({
   args: {
     email: v.string(),
-    username: v.string(),
     passwordHash: v.string(),
     deviceId: v.string(),
     deviceInfo: v.optional(v.object({
@@ -278,16 +277,6 @@ export const register = mutation({
     })),
   },
   handler: async (ctx, args) => {
-    // Check if username exists
-    const existingUsername = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
-      .first();
-
-    if (existingUsername) {
-      throw new Error("Username already exists");
-    }
-
     // Check if email exists
     const existingEmail = await ctx.db
       .query("users")
@@ -295,14 +284,29 @@ export const register = mutation({
       .first();
 
     if (existingEmail) {
-      throw new Error("Email already exists");
+      throw new Error("An account with this email already exists");
+    }
+
+    // Auto-generate username from email (part before @)
+    const baseUsername = args.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    let username = baseUsername;
+
+    // Ensure username is unique by adding random suffix if needed
+    let existingUsername = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", username))
+      .first();
+
+    if (existingUsername) {
+      // Add random 4-digit suffix
+      username = `${baseUsername}${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
     const now = Date.now();
 
     // Create user
     const userId = await ctx.db.insert("users", {
-      username: args.username,
+      username: username,
       password_hash: args.passwordHash,
       email: args.email,
       current_day: 1,
@@ -347,7 +351,7 @@ export const register = mutation({
       sessionToken,
       expiresAt,
       user: {
-        username: args.username,
+        username: username,
         email: args.email,
         currentDay: 1,
         role: "patient",

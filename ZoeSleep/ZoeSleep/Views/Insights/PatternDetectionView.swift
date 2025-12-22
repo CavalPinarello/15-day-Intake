@@ -16,9 +16,9 @@ struct PatternDetectionView: View {
     @EnvironmentObject var themeManager: ThemeManager
     private var theme: ColorTheme { themeManager.currentTheme }
 
-    // MARK: - Circadian-Aware Colors
+    // MARK: - Circadian-Aware Colors (8-phase interpolated)
     private var palette: CircadianPalette {
-        CircadianPalette.forPeriod(themeManager.currentTimePeriod)
+        themeManager.circadianPalette
     }
 
     private var circadianTextPrimary: Color {

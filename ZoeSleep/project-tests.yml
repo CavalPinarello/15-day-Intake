@@ -1,0 +1,41 @@
+name: ZoeSleep
+options:
+  bundleIdPrefix: com.zoesleep
+  deploymentTarget:
+    iOS: "17.0"
+
+targets:
+  ZoeSleepTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ZoeSleepTests
+        excludes:
+          - "*.plist"
+    dependencies:
+      - target: ZoeSleep
+    settings:
+      base:
+        INFOPLIST_FILE: ZoeSleepTests/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.zoesleep.app.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/ZoeSleep.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ZoeSleep"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        DEVELOPMENT_TEAM: HA7H8BB975
+
+  ZoeSleepUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ZoeSleepUITests
+        excludes:
+          - "*.plist"
+    dependencies:
+      - target: ZoeSleep
+    settings:
+      base:
+        INFOPLIST_FILE: ZoeSleepUITests/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.zoesleep.app.uitests
+        TEST_TARGET_NAME: ZoeSleep
+        DEVELOPMENT_TEAM: HA7H8BB975

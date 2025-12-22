@@ -14,7 +14,7 @@ struct JourneyIntroMoonIcon: View {
     @State private var rotation: Double = 0
     @State private var starPulse: CGFloat = 1.0
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         ZStack {
@@ -78,7 +78,7 @@ struct JourneyIntroClipboardIcon: View {
     @State private var checkmarkProgress: CGFloat = 0
     @State private var glowOpacity: Double = 0.3
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         ZStack {
@@ -137,7 +137,7 @@ struct JourneyIntroBrainIcon: View {
     @State private var gearRotation1: Double = 0
     @State private var gearRotation2: Double = 0
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         ZStack {
@@ -202,7 +202,7 @@ struct JourneyIntroPathIcon: View {
     @State private var pathOpacity3: Double = 0.2
     @State private var glowOpacity: Double = 0.3
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         ZStack {
@@ -281,7 +281,7 @@ struct JourneyIntroWatchIcon: View {
     @State private var pulseOpacity: Double = 0.5
     @State private var heartScale: CGFloat = 1.0
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         ZStack {
@@ -336,7 +336,7 @@ struct JourneyIntroClinicianIcon: View {
     @State private var checkmarkScale: CGFloat = 0
     @State private var glowOpacity: Double = 0.3
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
         ZStack {

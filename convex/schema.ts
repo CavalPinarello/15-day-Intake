@@ -1603,6 +1603,41 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_phase", ["phase"]),
 
+  // Tracks physician's analysis workflow per patient (findings, notes, prerequisites)
+  patient_analysis_workflow: defineTable({
+    user_id: v.id("users"),
+    physician_id: v.optional(v.string()), // Who is reviewing
+    // Stage 2: Patterns Identified - What was found
+    patterns_identified_json: v.optional(v.string()), // JSON array of identified patterns
+    primary_sleep_issues_json: v.optional(v.string()), // JSON array of main issues
+    triggered_gateways_json: v.optional(v.string()), // JSON array of gateways triggered
+    risk_factors_json: v.optional(v.string()), // JSON array of risk factors
+    // Stage 2 checklist - what physician reviewed
+    reviewed_sleep_data: v.optional(v.boolean()),
+    reviewed_questionnaire_scores: v.optional(v.boolean()),
+    reviewed_gateway_triggers: v.optional(v.boolean()),
+    ran_ai_analysis: v.optional(v.boolean()),
+    patterns_notes: v.optional(v.string()), // Free-form notes for stage 2
+    patterns_completed_at: v.optional(v.number()),
+    // Stage 3: Recommendations Preparing
+    recommended_interventions_json: v.optional(v.string()), // JSON array of intervention IDs
+    treatment_approach: v.optional(v.string()), // e.g., "CBT-I focused", "CPAP + behavioral"
+    estimated_duration_weeks: v.optional(v.number()),
+    recommendations_notes: v.optional(v.string()), // Free-form notes for stage 3
+    recommendations_completed_at: v.optional(v.number()),
+    // Stage 4: Treatment Plan Ready
+    plan_summary: v.optional(v.string()), // High-level summary for patient
+    special_considerations: v.optional(v.string()), // Any special notes
+    ready_for_patient: v.optional(v.boolean()),
+    final_review_notes: v.optional(v.string()),
+    treatment_ready_at: v.optional(v.number()),
+    // Timestamps
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_physician", ["physician_id"]),
+
   // Progressive insight teaser definitions
   insight_teasers: defineTable({
     teaser_id: v.string(), // e.g., "sleep_efficiency_trend", "wake_pattern"

@@ -132,7 +132,7 @@ struct TomorrowTeaserView: View {
 
 struct UnlockProgressTeaser: View {
     let currentDay: Int
-    let totalDays: Int = 14
+    let totalDays: Int = Config.totalJourneyDays
 
     @EnvironmentObject var themeManager: ThemeManager
 
@@ -143,14 +143,14 @@ struct UnlockProgressTeaser: View {
     private var daysUntilNextMilestone: Int {
         if currentDay < 5 { return 5 - currentDay }
         if currentDay < 7 { return 7 - currentDay }
-        if currentDay < 14 { return 14 - currentDay }
+        if currentDay < Config.totalJourneyDays { return Config.totalJourneyDays - currentDay }
         return 0
     }
 
     private var nextMilestone: String {
         if currentDay < 5 { return "first insights" }
         if currentDay < 7 { return "Week 1 Complete badge" }
-        if currentDay < 15 { return "your full sleep profile" }
+        if currentDay <= Config.totalJourneyDays { return "your full sleep profile" }
         return "completion"
     }
 

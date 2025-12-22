@@ -4,6 +4,7 @@
 //
 //  Shows analysis progress stages while physician reviews data
 //  Displays 4-stage timeline: Data collected → Patterns identified → Preparing → Ready
+//  CIRCADIAN: Uses interpolated colors for smooth day/night transitions
 //
 
 import SwiftUI
@@ -12,31 +13,52 @@ struct AnalysisPendingView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @ObservedObject var journeyManager = JourneyPhaseManager.shared
 
+    @State private var showingSettings = false
+
     private var theme: ColorTheme { themeManager.currentTheme }
 
+    /// Direct access to circadian palette for advanced color needs
+    private var palette: CircadianPalette { themeManager.circadianPalette }
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 32) {
-                // Header
-                headerSection
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 32) {
+                    // Header
+                    headerSection
 
-                // Progress Animation
-                progressAnimation
+                    // Progress Animation
+                    progressAnimation
 
-                // Stage Timeline
-                stageTimeline
+                    // Stage Timeline
+                    stageTimeline
 
-                // Current Stage Detail
-                currentStageCard
+                    // Current Stage Detail
+                    currentStageCard
 
-                // Encouragement Message
-                encouragementCard
+                    // Encouragement Message
+                    encouragementCard
 
-                Spacer(minLength: 40)
+                    Spacer(minLength: 40)
+                }
+                .padding()
             }
-            .padding()
+            .background(theme.backgroundGradient)
+            .toolbarColorScheme(palette.isDark ? .dark : .light, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { showingSettings = true }) {
+                        Image(systemName: "person.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(theme.primaryText)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSettings) {
+                ProfileSettingsView()
+                    .environmentObject(themeManager)
+            }
         }
-        .background(theme.backgroundGradient)
     }
 
     // MARK: - Header
@@ -147,7 +169,7 @@ struct AnalysisPendingView: View {
                                 Text("Current")
                                     .font(.caption2)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(theme.textOnPrimary)  // Circadian-aware
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 2)
                                     .background(theme.accent)
@@ -219,7 +241,7 @@ struct AnalysisPendingView: View {
                             Text("View Your Treatment Plan")
                         }
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(theme.textOnPrimary)  // Circadian-aware button text
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(theme.accent)
