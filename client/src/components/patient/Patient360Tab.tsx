@@ -10,7 +10,6 @@ import { PillarSummaryCard, PillarKey, PILLARS } from "./PillarSummaryCard";
 import { PillarDetailModal } from "./PillarDetailModal";
 import { AIInsightsCard, generateSampleInsights } from "./AIInsightsCard";
 import { PatientEngagementCard } from "./PatientEngagementCard";
-import { PatientJourneyStatus } from "./PatientJourneyStatus";
 import { PatientAnalysisWorkflow } from "./PatientAnalysisWorkflow";
 import { CheckInHistoryCard } from "./CheckInHistoryCard";
 import { AdaptiveDifficultyPanel } from "./AdaptiveDifficultyPanel";
@@ -497,10 +496,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         {/* Patient Engagement - Shows streak, XP, badges, and engagement insights */}
         <PatientEngagementCard userId={userId} />
 
-        {/* Journey Status - Shows current phase and analysis progress */}
-        <PatientJourneyStatus userId={userId} />
-
-        {/* Analysis Workflow - Detailed workflow for physicians during analysis phase */}
+        {/* Analysis Workflow - Comprehensive workflow for physicians during analysis phase */}
         {patientId && (
           <div className="lg:col-span-2">
             <PatientAnalysisWorkflow

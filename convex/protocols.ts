@@ -453,6 +453,36 @@ export const resumeProtocol = mutation({
 });
 
 /**
+ * Update protocol status (pause/resume)
+ */
+export const updateProtocolStatus = mutation({
+  args: {
+    userId: v.id("users"),
+    protocolId: v.string(),
+    status: v.union(v.literal("active"), v.literal("paused")),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    const assignment = await ctx.db
+      .query("user_protocol_assignments")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .filter((q) => q.eq(q.field("protocol_id"), args.protocolId))
+      .first();
+
+    if (!assignment) return false;
+
+    await ctx.db.patch(assignment._id, {
+      status: args.status,
+      updated_at: now,
+    });
+
+    return true;
+  },
+});
+
+/**
  * Get protocol compliance summary
  */
 export const getProtocolCompliance = query({

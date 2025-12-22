@@ -17,6 +17,7 @@ npx convex dev && ./setup-convex.sh # Convex cloud mode
 ## 🔑 Critical Info
 
 - **Test Users:** user1-user10, password: "1"
+- **New User Registration:** Email + password only (username auto-generated from email)
 - **Database Mode:** Set `USE_CONVEX=true` in `/server/.env` for cloud mode
 - **Xcode Project:** `/ZoeSleep/ZoeSleep.xcodeproj`
 - **Bundle IDs:** iOS: `com.zoesleep.app`, Watch: `com.zoesleep.app.watchkitapp`
@@ -112,6 +113,20 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Email-Only Registration:** Simplified sign-up to email + password only (Dec 22, 2025)
+  - **Removed username field:** Users no longer need to choose a username
+  - **Auto-generated username:** Created from email prefix (e.g., "john" from "john@example.com")
+  - **Better error handling:** Convex error responses now properly detected and displayed
+  - **Custom JSON decoder:** ConvexUser now handles missing optional fields gracefully
+  - **Files changed:** AuthenticationView.swift, AuthenticationManager.swift, ConvexService.swift, ios.ts
+- **CRITICAL: Circadian Text Contrast Fix:** Permanent fix for dark text on dark background issue (Dec 22, 2025)
+  - **Root cause:** `ColorTheme` text colors checked `accentColorOption` but backgrounds (DashboardWaveBackground, GlassyCardBackground) ALWAYS use circadian colors
+  - **Problem:** In non-circadian mode (default), text was dark system color but background was dark brown → invisible text
+  - **Fix:** All text color properties now check `CircadianPalette.current.isDark` FIRST, regardless of appearance mode
+  - **Fixed properties:** `textPrimary`, `textSecondary`, `textMuted`, `textOnCard`, `textOnCardSecondary`, `textOnCardMuted`
+  - **Key change:** When `isDark == true`, text uses bright warm cream/amber from CircadianPalette, not system colors
+  - **Files changed:** `QuestionModels.swift` (ColorTheme struct)
+  - **Permanent:** Fix applies regardless of ThemeManager.appearanceMode setting
 - **Sleep Diary Layout Fix:** Fixed content cropping on left edge (Dec 22, 2025)
   - **Root cause:** Horizontal ScrollView for day selector conflicted with parent padding
   - **Fix:** Added negative margin on ScrollView with compensating content padding

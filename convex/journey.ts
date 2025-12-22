@@ -284,19 +284,56 @@ export const advanceAnalysisStage = mutation({
   },
 });
 
+// Helper to get time window hours
+function getTimeWindowHours(
+  window?: string
+): { start: number; end: number } | null {
+  const windows: Record<string, { start: number; end: number }> = {
+    morning: { start: 5, end: 12 },
+    afternoon: { start: 12, end: 17 },
+    evening: { start: 17, end: 21 },
+    night: { start: 21, end: 24 },
+  };
+  return window ? windows[window] ?? null : null;
+}
+
+// Helper to check if task should be created for a date based on frequency
+function shouldCreateTaskForDate(
+  intervention: { frequency?: string },
+  date: Date
+): boolean {
+  const dayOfWeek = date.getDay();
+  switch (intervention.frequency) {
+    case "daily":
+      return true;
+    case "weekdays":
+      return dayOfWeek >= 1 && dayOfWeek <= 5;
+    case "weekends":
+      return dayOfWeek === 0 || dayOfWeek === 6;
+    case "twice_weekly":
+      return dayOfWeek === 1 || dayOfWeek === 4; // Mon and Thu
+    default:
+      return true;
+  }
+}
+
 /**
  * Transition to treatment active phase
  * Called when interventions are activated
+ * ALSO activates all draft interventions and generates daily tasks
  */
 export const transitionToTreatment = mutation({
   args: { userId: v.id("users") },
   returns: v.object({
     success: v.boolean(),
     phase: v.string(),
+    interventionsActivated: v.number(),
+    tasksGenerated: v.number(),
   }),
   handler: async (ctx, args) => {
     const now = Date.now();
 
+    // 1. Update journey status to treatment_active
     const journeyStatus = await ctx.db
       .query("patient_journey_status")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
@@ -320,9 +357,70 @@ export const transitionToTreatment = mutation({
       });
     }
 
+    // 2. Activate all draft interventions and generate daily tasks
+    const draftInterventions = await ctx.db
+      .query("user_interventions")
+      .withIndex("by_user_status", (q) =>
+        q.eq("user_id", args.userId).eq("status", "draft")
+      )
+      .collect();
+
+    let tasksGenerated = 0;
+
+    for (const intervention of draftInterventions) {
+      // Activate the intervention
+      await ctx.db.patch(intervention._id, {
+        status: "active",
+        activated_at: now,
+      });
+
+      // Get intervention details for task creation
+      const interventionData = await ctx.db.get(intervention.intervention_id);
+      if (!interventionData) continue;
+
+      // Get time window hours
+      const timeWindowHours = getTimeWindowHours(intervention.time_window);
+
+      // Generate tasks for the next 7 days
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const taskDate = new Date();
+        taskDate.setDate(taskDate.getDate() + dayOffset);
+        const dateStr = taskDate.toISOString().split("T")[0];
+
+        // Check if we should create a task based on frequency
+        if (
+          intervention.frequency === "daily" ||
+          shouldCreateTaskForDate(intervention, taskDate)
+        ) {
+          await ctx.db.insert("user_daily_tasks", {
+            user_id: args.userId,
+            user_intervention_id: intervention._id,
+            intervention_id: intervention.intervention_id,
+            task_date: dateStr,
+            task_name:
+              interventionData.short_name || interventionData.name,
+            task_instructions:
+              intervention.patient_instructions ||
+              interventionData.instructions_text,
+            timing: intervention.timing,
+            scheduled_time: intervention.specific_time,
+            time_window: intervention.time_window,
+            window_start_hour: timeWindowHours?.start,
+            window_end_hour: timeWindowHours?.end,
+            status: "pending",
+            created_at: now,
+            updated_at: now,
+          });
+          tasksGenerated++;
+        }
+      }
+    }
+
     return {
       success: true,
       phase: "treatment_active",
+      interventionsActivated: draftInterventions.length,
+      tasksGenerated,
     };
   },
 });

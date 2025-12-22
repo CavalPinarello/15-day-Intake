@@ -6,14 +6,22 @@
 //  Displays 4-stage timeline: Data collected → Patterns identified → Preparing → Ready
 //  CIRCADIAN: Uses interpolated colors for smooth day/night transitions
 //
+//  Auto-refresh: Polls Convex every 10 seconds for phase updates
+//  Transition: When phase becomes treatment_active, parent view handles navigation
+//
 
 import SwiftUI
+import Combine
 
 struct AnalysisPendingView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @ObservedObject var journeyManager = JourneyPhaseManager.shared
 
     @State private var showingSettings = false
+    @State private var showingMyData = false
+    @State private var lastRefreshTime: Date = Date()
+    @State private var isRefreshing = false
+    @State private var refreshTimer: AnyCancellable?
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
@@ -46,6 +54,17 @@ struct AnalysisPendingView: View {
             .background(theme.backgroundGradient)
             .toolbarColorScheme(palette.isDark ? .dark : .light, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: { showingMyData = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.body.weight(.semibold))
+                            Text("My Data")
+                                .font(.body)
+                        }
+                        .foregroundColor(theme.accent)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { showingSettings = true }) {
                         Image(systemName: "person.circle.fill")
@@ -57,6 +76,56 @@ struct AnalysisPendingView: View {
             .sheet(isPresented: $showingSettings) {
                 ProfileSettingsView()
                     .environmentObject(themeManager)
+            }
+            .sheet(isPresented: $showingMyData) {
+                MyDataView()
+                    .environmentObject(themeManager)
+            }
+            .refreshable {
+                await refreshJourneyStatus()
+            }
+            .onAppear {
+                startAutoRefresh()
+            }
+            .onDisappear {
+                stopAutoRefresh()
+            }
+        }
+    }
+
+    // MARK: - Refresh Logic
+
+    private func startAutoRefresh() {
+        // Initial refresh
+        Task {
+            await refreshJourneyStatus()
+        }
+
+        // Set up timer for every 10 seconds
+        refreshTimer = Timer.publish(every: 10, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                Task {
+                    await refreshJourneyStatus()
+                }
+            }
+    }
+
+    private func stopAutoRefresh() {
+        refreshTimer?.cancel()
+        refreshTimer = nil
+    }
+
+    private func refreshJourneyStatus() async {
+        guard !isRefreshing else { return }
+
+        isRefreshing = true
+        defer { isRefreshing = false }
+
+        if let userId = ConvexService.shared.userId {
+            await journeyManager.loadJourneyStatus(userId: userId)
+            await MainActor.run {
+                lastRefreshTime = Date()
             }
         }
     }
@@ -81,11 +150,17 @@ struct AnalysisPendingView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            // Stay tuned message
+            // Stay tuned message with refresh indicator
             HStack(spacing: 8) {
-                Image(systemName: "bell.badge")
-                    .foregroundColor(theme.accent)
-                Text("We'll notify you when your plan is ready")
+                if isRefreshing {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .tint(theme.accent)
+                } else {
+                    Image(systemName: "bell.badge")
+                        .foregroundColor(theme.accent)
+                }
+                Text(isRefreshing ? "Checking for updates..." : "We'll notify you when your plan is ready")
                     .font(.caption)
                     .foregroundColor(theme.secondaryText)
             }
@@ -93,8 +168,19 @@ struct AnalysisPendingView: View {
             .padding(.vertical, 8)
             .background(theme.accent.opacity(0.1))
             .cornerRadius(20)
+
+            // Last updated indicator
+            Text("Last checked: \(lastRefreshTime, formatter: timeFormatter)")
+                .font(.caption2)
+                .foregroundColor(theme.secondaryText.opacity(0.6))
         }
         .padding(.top, 20)
+    }
+
+    private var timeFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
     }
 
     // MARK: - Progress Animation

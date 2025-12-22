@@ -52,11 +52,15 @@ export function ProtocolAssignment({ userId, physicianId }: ProtocolAssignmentPr
   // Current protocol data
   const currentProtocol = useMemo(() => {
     if (!userProtocols) return null;
-    return userProtocols.find((p: { protocolId: string; interventionIds?: string[]; status: string }) =>
-      activeTab === "morning"
-        ? p.protocolId === "morning_protocol"
-        : p.protocolId === "evening_protocol"
-    );
+    const protocol = activeTab === "morning"
+      ? userProtocols.morningProtocol
+      : userProtocols.eveningProtocol;
+    if (!protocol) return null;
+    return {
+      protocolId: protocol.protocolId,
+      interventionIds: [] as string[], // Will be populated from tasks
+      status: "active" as const,
+    };
   }, [userProtocols, activeTab]);
 
   // Filter interventions based on search and category
@@ -101,9 +105,17 @@ export function ProtocolAssignment({ userId, physicianId }: ProtocolAssignmentPr
 
   // Get currently assigned intervention IDs for the active protocol
   const assignedInterventionIds = useMemo(() => {
-    if (!currentProtocol?.interventionIds) return new Set<string>();
-    return new Set(currentProtocol.interventionIds);
-  }, [currentProtocol]);
+    if (!userProtocols) return new Set<string>();
+    const protocol = activeTab === "morning"
+      ? userProtocols.morningProtocol
+      : userProtocols.eveningProtocol;
+    if (!protocol?.tasks) return new Set<string>();
+    // Extract intervention IDs from tasks
+    const ids = protocol.tasks
+      .map((t: { interventionId?: string }) => t.interventionId)
+      .filter((id): id is string => !!id);
+    return new Set(ids);
+  }, [userProtocols, activeTab]);
 
   const handleAddIntervention = async (interventionId: string) => {
     const newIds = [...Array.from(assignedInterventionIds), interventionId];

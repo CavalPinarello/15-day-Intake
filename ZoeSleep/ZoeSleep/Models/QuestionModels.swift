@@ -483,14 +483,25 @@ struct ColorTheme {
     }
 
     var textPrimary: Color {
+        // CRITICAL: Even in non-circadian mode, backgrounds use circadian colors
+        // So we MUST use bright text in dark phases for readability
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            return currentPalette.textPrimary  // Bright cream for dark backgrounds
+        }
         if accentColorOption != nil {
-            // Non-circadian mode: use system colors
+            // Non-circadian mode during day: use system colors
             return Color.primary
         }
         return palette.textPrimary  // Smoothly interpolated!
     }
 
     var textSecondary: Color {
+        // CRITICAL: Match dark phase check for consistency
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            return currentPalette.textSecondary  // Golden amber for dark backgrounds
+        }
         if accentColorOption != nil {
             return Color.secondary
         }
@@ -499,6 +510,11 @@ struct ColorTheme {
 
     /// Muted text for hints, timestamps, etc.
     var textMuted: Color {
+        // CRITICAL: Match dark phase check for consistency
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            return currentPalette.textSecondary.opacity(0.7)  // Warm amber muted
+        }
         if accentColorOption != nil {
             return Color.secondary.opacity(0.7)
         }
@@ -518,15 +534,27 @@ struct ColorTheme {
     // Colors smoothly interpolate for gradual transitions!
 
     /// Primary text ON cards - circadian-aware for contrast
+    /// CRITICAL: Cards use circadian backgrounds (GlassyCardBackground), so text must match
     var textOnCard: Color {
+        // CRITICAL: Card backgrounds ALWAYS use circadian colors (GlassyCardBackground)
+        // So we MUST use bright text in dark phases regardless of appearance mode
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            return currentPalette.textPrimary  // Bright warm cream on dark cards
+        }
         if accentColorOption != nil {
-            return Color(red: 0.15, green: 0.10, blue: 0.08)
+            return Color(red: 0.15, green: 0.10, blue: 0.08)  // Dark on light cards
         }
         return palette.textPrimary  // Same as textPrimary for cards
     }
 
     /// Secondary text ON cards - circadian-aware
     var textOnCardSecondary: Color {
+        // CRITICAL: Match dark phase check for card text consistency
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            return currentPalette.textSecondary  // Golden amber on dark cards
+        }
         if accentColorOption != nil {
             return Color(red: 0.35, green: 0.25, blue: 0.20)
         }
@@ -535,6 +563,11 @@ struct ColorTheme {
 
     /// Muted text ON cards - circadian-aware
     var textOnCardMuted: Color {
+        // CRITICAL: Match dark phase check for card text consistency
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            return currentPalette.textSecondary.opacity(0.7)  // Warm amber muted on dark cards
+        }
         if accentColorOption != nil {
             return Color(red: 0.50, green: 0.40, blue: 0.35)
         }

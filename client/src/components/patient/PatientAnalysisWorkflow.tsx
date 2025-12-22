@@ -24,6 +24,9 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import Link from "next/link";
+import { SleepDataReview } from "./review/SleepDataReview";
+import { QuestionnaireScoresReview } from "./review/QuestionnaireScoresReview";
+import { GatewayTriggersReview } from "./review/GatewayTriggersReview";
 
 interface PatientAnalysisWorkflowProps {
   userId: Id<"users">;
@@ -86,6 +89,10 @@ export function PatientAnalysisWorkflow({
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [activationResult, setActivationResult] = useState<{
+    interventionsActivated: number;
+    tasksGenerated: number;
+  } | null>(null);
 
   // Form states for Stage 2
   const [patternsIdentified, setPatternsIdentified] = useState<string[]>([]);
@@ -142,10 +149,15 @@ export function PatientAnalysisWorkflow({
   const { phase, analysisStage } = journeyStatus;
   const currentStage = analysisStage ?? 1;
 
-  // Don't show if not in analysis phase
-  if (phase !== "analysis") {
+  // Show for both analysis and treatment_active phases
+  if (phase !== "analysis" && phase !== "treatment_active") {
     return null;
   }
+
+  // Intervention counts
+  const interventionCount = interventions?.length ?? 0;
+  const draftInterventions = interventions?.filter((i) => i.status === "draft") || [];
+  const activeInterventions = interventions?.filter((i) => i.status === "active") || [];
 
   const handleChecklistUpdate = async (item: string, checked: boolean) => {
     const updates: Record<string, boolean> = {};
@@ -220,7 +232,11 @@ export function PatientAnalysisWorkflow({
   const handleActivateTreatment = async () => {
     setIsActivating(true);
     try {
-      await transitionToTreatment({ userId });
+      const result = await transitionToTreatment({ userId });
+      setActivationResult({
+        interventionsActivated: result.interventionsActivated,
+        tasksGenerated: result.tasksGenerated,
+      });
     } finally {
       setIsActivating(false);
     }
@@ -245,10 +261,38 @@ export function PatientAnalysisWorkflow({
             <p className="text-sm text-gray-400">Track your progress reviewing this patient</p>
           </div>
         </div>
-        <div className="px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30">
-          <span className="text-sm font-medium text-amber-400">
-            Stage {currentStage} of 4
-          </span>
+        <div className="flex items-center gap-2">
+          {/* Intervention Count Badge */}
+          {interventionCount > 0 && (
+            <div className={`px-3 py-1.5 rounded-full border ${
+              activeInterventions.length > 0
+                ? "bg-emerald-500/20 border-emerald-500/30"
+                : "bg-purple-500/20 border-purple-500/30"
+            }`}>
+              <span className={`text-sm font-medium ${
+                activeInterventions.length > 0 ? "text-emerald-400" : "text-purple-400"
+              }`}>
+                {activeInterventions.length > 0
+                  ? `${activeInterventions.length} Active`
+                  : `${draftInterventions.length} Draft`}
+              </span>
+            </div>
+          )}
+          {interventionCount === 0 && phase === "analysis" && (
+            <Link
+              href={`/physician-dashboard/patient/${patientId}/prescription`}
+              className="px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+            >
+              <span className="text-sm font-medium text-red-400">
+                No Interventions
+              </span>
+            </Link>
+          )}
+          <div className="px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30">
+            <span className="text-sm font-medium text-amber-400">
+              Stage {currentStage} of 4
+            </span>
+          </div>
         </div>
       </div>
 
@@ -373,49 +417,78 @@ export function PatientAnalysisWorkflow({
                   {/* Stage 2: Pattern Identification */}
                   {stage.stage === 2 && (
                     <div className="space-y-6">
-                      {/* Review Checklist */}
+                      {/* Review Checklist - Expandable Sections */}
                       <div>
                         <h4 className="text-sm font-medium text-white flex items-center gap-2 mb-3">
                           <ListChecks className="w-4 h-4 text-amber-400" />
                           Review Checklist
                         </h4>
                         <div className="space-y-2">
-                          {requirements.map((req) => (
-                            <label
-                              key={req.id}
-                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800/50 cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={req.complete}
-                                onChange={(e) =>
-                                  handleChecklistUpdate(req.id, e.target.checked)
-                                }
-                                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-amber-500 focus:ring-amber-500"
-                              />
-                              <span
-                                className={`text-sm ${
-                                  req.complete ? "text-gray-400 line-through" : "text-gray-300"
+                          {/* Sleep Data Review */}
+                          <SleepDataReview
+                            userId={userId}
+                            isReviewed={requirements.find((r: { id: string; complete: boolean }) => r.id === "sleep_data")?.complete || false}
+                            onReviewedChange={(checked) => handleChecklistUpdate("sleep_data", checked)}
+                          />
+
+                          {/* Questionnaire Scores Review */}
+                          <QuestionnaireScoresReview
+                            userId={userId}
+                            isReviewed={requirements.find((r: { id: string; complete: boolean }) => r.id === "scores")?.complete || false}
+                            onReviewedChange={(checked) => handleChecklistUpdate("scores", checked)}
+                          />
+
+                          {/* Gateway Triggers Review */}
+                          <GatewayTriggersReview
+                            userId={userId}
+                            isReviewed={requirements.find((r: { id: string; complete: boolean }) => r.id === "gateways")?.complete || false}
+                            onReviewedChange={(checked) => handleChecklistUpdate("gateways", checked)}
+                          />
+
+                          {/* AI Analysis - Keep as simple checkbox with button */}
+                          {requirements
+                            .filter((req: { id: string }) => req.id === "ai_analysis")
+                            .map((req: { id: string; label: string; complete: boolean; required: boolean }) => (
+                              <div
+                                key={req.id}
+                                className={`flex items-center gap-3 p-3 rounded-xl border ${
+                                  req.complete
+                                    ? "bg-green-500/5 border-green-500/30"
+                                    : "bg-gray-800/30 border-gray-700/50 hover:border-gray-600/50"
                                 }`}
                               >
-                                {req.label}
-                              </span>
-                              {req.required && !req.complete && (
-                                <span className="text-xs text-red-400">Required</span>
-                              )}
-                              {req.id === "ai_analysis" && !req.complete && (
-                                <button
-                                  onClick={() => {
-                                    handleChecklistUpdate("ai_analysis", true);
-                                  }}
-                                  className="ml-auto flex items-center gap-1 px-2 py-1 text-xs bg-purple-500/20 text-purple-400 rounded hover:bg-purple-500/30"
-                                >
-                                  <Brain className="w-3 h-3" />
-                                  Run Analysis
-                                </button>
-                              )}
-                            </label>
-                          ))}
+                                <input
+                                  type="checkbox"
+                                  checked={req.complete}
+                                  onChange={(e) => handleChecklistUpdate(req.id, e.target.checked)}
+                                  className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-green-500 focus:ring-green-500"
+                                />
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/20">
+                                  <Brain className="w-4 h-4 text-purple-400" />
+                                </div>
+                                <div className="flex-1">
+                                  <span
+                                    className={`text-sm font-medium ${
+                                      req.complete ? "text-gray-400 line-through" : "text-white"
+                                    }`}
+                                  >
+                                    {req.label}
+                                  </span>
+                                  <p className="text-xs text-gray-500">
+                                    {req.complete ? "Analysis complete" : "Optional AI-assisted insights"}
+                                  </p>
+                                </div>
+                                {!req.complete && (
+                                  <button
+                                    onClick={() => handleChecklistUpdate("ai_analysis", true)}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-xs bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30"
+                                  >
+                                    <Sparkles className="w-3 h-3" />
+                                    Run Analysis
+                                  </button>
+                                )}
+                              </div>
+                            ))}
                         </div>
                       </div>
 
@@ -780,16 +853,23 @@ export function PatientAnalysisWorkflow({
       </div>
 
       {/* Completion Badge */}
-      {phase === "treatment_active" && (
+      {(phase === "treatment_active" || activationResult) && (
         <div className="mt-6 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
           <div className="flex items-center gap-3">
             <Sparkles className="w-6 h-6 text-emerald-400" />
-            <div>
+            <div className="flex-1">
               <p className="text-emerald-400 font-medium">Treatment Plan Active</p>
               <p className="text-sm text-gray-400">
                 The patient can now see their personalized treatment plan
               </p>
+              {activationResult && (
+                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                  <span>{activationResult.interventionsActivated} interventions activated</span>
+                  <span>{activationResult.tasksGenerated} daily tasks generated</span>
+                </div>
+              )}
             </div>
+            <CheckCircle2 className="w-6 h-6 text-emerald-400" />
           </div>
         </div>
       )}

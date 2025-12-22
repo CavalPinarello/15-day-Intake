@@ -19,7 +19,6 @@ export {
 } from "./AIInsightsCard";
 export { Patient360View } from "./Patient360View";
 export { Patient360Tab } from "./Patient360Tab";
-export { PatientJourneyStatus } from "./PatientJourneyStatus";
 export { PatientAnalysisWorkflow } from "./PatientAnalysisWorkflow";
 export { PatientEngagementCard } from "./PatientEngagementCard";
 export {

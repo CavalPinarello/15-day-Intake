@@ -130,6 +130,13 @@ export default function PhysicianSettingsPage() {
                 Questions
               </Link>
               <Link
+                href="/physician-dashboard/admin"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              >
+                <Shield className="w-5 h-5" />
+                Admin
+              </Link>
+              <Link
                 href="/physician-dashboard/settings"
                 className="flex items-center gap-2 text-teal-600 font-medium"
               >

@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
   List,
   Code,
+  Shield,
 } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
 
@@ -150,6 +151,13 @@ export default function PhysicianDashboard() {
               >
                 <ClipboardList className="w-5 h-5" />
                 Questions
+              </Link>
+              <Link
+                href="/physician-dashboard/admin"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              >
+                <Shield className="w-5 h-5" />
+                Admin
               </Link>
               <Link
                 href="/physician-dashboard/settings"
