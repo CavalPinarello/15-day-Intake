@@ -113,6 +113,14 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Admin Tools Dashboard:** Comprehensive admin toolkit for physician dashboard (Dec 22, 2025)
+  - **New page:** `/physician-dashboard/admin` - Full user management interface
+  - **User operations:** Delete users, reset passwords, reset progress, change roles, toggle dev mode
+  - **Bulk actions:** Select multiple users, bulk delete, purge by pattern
+  - **Three purge options:** `user1-10` only, `test_*` only, or ALL test users combined
+  - **System stats:** Total users, active users (7 days), role distribution, response counts
+  - **Backend functions:** `convex/admin.ts` with deleteUser, resetUserPassword, purgeTestUsers, purgeGeneratedTestUsers, purgeAllTestUsers
+  - **Files changed:** `convex/admin.ts`, `client/src/app/physician-dashboard/admin/page.tsx`, all physician dashboard pages (nav link)
 - **Email-Only Registration:** Simplified sign-up to email + password only (Dec 22, 2025)
   - **Removed username field:** Users no longer need to choose a username
   - **Auto-generated username:** Created from email prefix (e.g., "john" from "john@example.com")

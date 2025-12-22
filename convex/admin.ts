@@ -64,7 +64,7 @@ export const getAllUsersAdmin = query({
           responseCount: responses.length,
           phase: journeyStatus?.phase || "intake",
           interventionCount: interventions.length,
-          isTestUser: /^user\d+$/.test(user.username),
+          isTestUser: /^user\d+$/.test(user.username) || /^test_/.test(user.username),
         };
       })
     );
@@ -614,6 +614,141 @@ export const purgeTestUsers = mutation({
 
     for (const user of testUsers) {
       // Simplified deletion - just delete the key tables
+      const tables = [
+        ctx.db.query("user_assessment_responses").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("responses").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_progress").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("daily_checkins").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_sleep_data").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_interventions").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("physician_notes").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("patient_review_status").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("questionnaire_scores").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_gateway_states").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_expansion_schedules").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("questionnaire_session").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("sleep_insights").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("patient_journey_status").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_streaks").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_badges").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_xp").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_daily_tasks").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("ios_devices").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("ios_sessions").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("refresh_tokens").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+      ];
+
+      let deleted = 0;
+      for (const query of tables) {
+        const records = await query.collect();
+        for (const record of records) {
+          await ctx.db.delete(record._id);
+          deleted++;
+        }
+      }
+
+      await ctx.db.delete(user._id);
+      deleted++;
+      totalDeleted += deleted;
+
+      results.push({
+        username: user.username,
+        deleted,
+      });
+    }
+
+    return {
+      success: true,
+      purgedCount: testUsers.length,
+      totalRecordsDeleted: totalDeleted,
+      users: results,
+    };
+  },
+});
+
+/**
+ * Purge generated test users (test_* pattern like test_short_sleeper_mild_022)
+ */
+export const purgeGeneratedTestUsers = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    // Match usernames starting with "test_" (generated mock users)
+    const testUsers = users.filter((u) => /^test_/.test(u.username));
+
+    const results = [];
+    let totalDeleted = 0;
+
+    for (const user of testUsers) {
+      // Simplified deletion - just delete the key tables
+      const tables = [
+        ctx.db.query("user_assessment_responses").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("responses").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_progress").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("daily_checkins").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_sleep_data").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_interventions").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("physician_notes").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("patient_review_status").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("questionnaire_scores").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_gateway_states").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_expansion_schedules").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("questionnaire_session").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("sleep_insights").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("patient_journey_status").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_streaks").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_badges").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_xp").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("user_daily_tasks").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("ios_devices").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("ios_sessions").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+        ctx.db.query("refresh_tokens").withIndex("by_user", (q) => q.eq("user_id", user._id)),
+      ];
+
+      let deleted = 0;
+      for (const query of tables) {
+        const records = await query.collect();
+        for (const record of records) {
+          await ctx.db.delete(record._id);
+          deleted++;
+        }
+      }
+
+      await ctx.db.delete(user._id);
+      deleted++;
+      totalDeleted += deleted;
+
+      results.push({
+        username: user.username,
+        deleted,
+      });
+    }
+
+    return {
+      success: true,
+      purgedCount: testUsers.length,
+      totalRecordsDeleted: totalDeleted,
+      users: results,
+    };
+  },
+});
+
+/**
+ * Purge ALL test users (both user1-10 and test_* patterns)
+ */
+export const purgeAllTestUsers = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    // Match both patterns: user1-user10 AND test_* (generated mock users)
+    const testUsers = users.filter((u) =>
+      /^user\d+$/.test(u.username) || /^test_/.test(u.username)
+    );
+
+    const results = [];
+    let totalDeleted = 0;
+
+    for (const user of testUsers) {
       const tables = [
         ctx.db.query("user_assessment_responses").withIndex("by_user", (q) => q.eq("user_id", user._id)),
         ctx.db.query("responses").withIndex("by_user", (q) => q.eq("user_id", user._id)),

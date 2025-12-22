@@ -63,6 +63,8 @@ export default function AdminToolsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showPurgeTestConfirm, setShowPurgeTestConfirm] = useState(false);
+  const [showPurgeGeneratedConfirm, setShowPurgeGeneratedConfirm] = useState(false);
+  const [showPurgeAllConfirm, setShowPurgeAllConfirm] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState<string | null>(null);
   const [showResetProgressConfirm, setShowResetProgressConfirm] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -81,6 +83,8 @@ export default function AdminToolsPage() {
   const deleteUser = useMutation(api.admin.deleteUser);
   const deleteMultipleUsers = useMutation(api.admin.deleteMultipleUsers);
   const purgeTestUsers = useMutation(api.admin.purgeTestUsers);
+  const purgeGeneratedTestUsers = useMutation(api.admin.purgeGeneratedTestUsers);
+  const purgeAllTestUsers = useMutation(api.admin.purgeAllTestUsers);
   const resetUserPassword = useMutation(api.admin.resetUserPassword);
   const resetUserProgress = useMutation(api.admin.resetUserProgress);
   const updateUserField = useMutation(api.admin.updateUserField);
@@ -167,6 +171,40 @@ export default function AdminToolsPage() {
     }
     setIsLoading(false);
     setShowPurgeTestConfirm(false);
+  };
+
+  const handlePurgeGeneratedTestUsers = async () => {
+    setIsLoading(true);
+    try {
+      const result = await purgeGeneratedTestUsers();
+      if (result.success) {
+        setOperationResult({
+          type: "success",
+          message: `Purged ${result.purgedCount} generated test users (test_*) and ${result.totalRecordsDeleted} total records`,
+        });
+      }
+    } catch (error) {
+      setOperationResult({ type: "error", message: String(error) });
+    }
+    setIsLoading(false);
+    setShowPurgeGeneratedConfirm(false);
+  };
+
+  const handlePurgeAllTestUsers = async () => {
+    setIsLoading(true);
+    try {
+      const result = await purgeAllTestUsers();
+      if (result.success) {
+        setOperationResult({
+          type: "success",
+          message: `Purged ${result.purgedCount} test users (user1-10 + test_*) and ${result.totalRecordsDeleted} total records`,
+        });
+      }
+    } catch (error) {
+      setOperationResult({ type: "error", message: String(error) });
+    }
+    setIsLoading(false);
+    setShowPurgeAllConfirm(false);
   };
 
   const handleResetPassword = async (userId: Id<"users">) => {
@@ -387,10 +425,26 @@ export default function AdminToolsPage() {
           <div className="flex flex-wrap gap-4">
             <button
               onClick={() => setShowPurgeTestConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+            >
+              <UserX className="w-4 h-4" />
+              Purge user1-user10
+            </button>
+
+            <button
+              onClick={() => setShowPurgeGeneratedConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              <UserX className="w-4 h-4" />
+              Purge test_* Users
+            </button>
+
+            <button
+              onClick={() => setShowPurgeAllConfirm(true)}
               className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
             >
               <UserX className="w-4 h-4" />
-              Purge All Test Users (user1-user10)
+              Purge ALL Test Users
             </button>
 
             {selectedUsers.size > 0 && (
@@ -712,13 +766,13 @@ export default function AdminToolsPage() {
         </div>
       )}
 
-      {/* Purge Test Users Confirmation Modal */}
+      {/* Purge Test Users (user1-10) Confirmation Modal */}
       {showPurgeTestConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center gap-3 text-red-600 mb-4">
+            <div className="flex items-center gap-3 text-orange-600 mb-4">
               <UserX className="w-6 h-6" />
-              <h3 className="text-lg font-semibold">Purge All Test Users</h3>
+              <h3 className="text-lg font-semibold">Purge user1-user10</h3>
             </div>
             <p className="text-gray-600 mb-2">
               This will permanently delete all users matching the pattern <code className="bg-gray-100 px-1 rounded">user1</code> through <code className="bg-gray-100 px-1 rounded">user10</code> (and similar variations like <code className="bg-gray-100 px-1 rounded">user123</code>).
@@ -736,11 +790,85 @@ export default function AdminToolsPage() {
               </button>
               <button
                 onClick={handlePurgeTestUsers}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+                Purge user1-10
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Purge Generated Test Users (test_*) Confirmation Modal */}
+      {showPurgeGeneratedConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 text-purple-600 mb-4">
+              <UserX className="w-6 h-6" />
+              <h3 className="text-lg font-semibold">Purge Generated Test Users</h3>
+            </div>
+            <p className="text-gray-600 mb-2">
+              This will permanently delete all users with usernames starting with <code className="bg-gray-100 px-1 rounded">test_</code> (e.g., <code className="bg-gray-100 px-1 rounded">test_short_sleeper_mild_022</code>).
+            </p>
+            <p className="text-gray-600 mb-6">
+              All associated data will be permanently removed. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPurgeGeneratedConfirm(false)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePurgeGeneratedTestUsers}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+                Purge test_* Users
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Purge ALL Test Users Confirmation Modal */}
+      {showPurgeAllConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 text-red-600 mb-4">
+              <UserX className="w-6 h-6" />
+              <h3 className="text-lg font-semibold">Purge ALL Test Users</h3>
+            </div>
+            <p className="text-gray-600 mb-2">
+              This will permanently delete ALL test users including:
+            </p>
+            <ul className="text-gray-600 mb-4 list-disc list-inside">
+              <li><code className="bg-gray-100 px-1 rounded">user1</code> through <code className="bg-gray-100 px-1 rounded">user10</code> (and variations)</li>
+              <li>All <code className="bg-gray-100 px-1 rounded">test_*</code> generated mock users</li>
+            </ul>
+            <p className="text-gray-600 mb-6 font-medium text-red-600">
+              This action cannot be undone!
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPurgeAllConfirm(false)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePurgeAllTestUsers}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
                 disabled={isLoading}
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-                Purge Test Users
+                Purge ALL Test Users
               </button>
             </div>
           </div>

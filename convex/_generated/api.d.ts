@@ -9,6 +9,7 @@
  */
 
 import type * as adaptiveDifficulty from "../adaptiveDifficulty.js";
+import type * as admin from "../admin.js";
 import type * as anticipationEngine from "../anticipationEngine.js";
 import type * as assessment from "../assessment.js";
 import type * as assessmentMutations from "../assessmentMutations.js";
@@ -63,6 +64,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   adaptiveDifficulty: typeof adaptiveDifficulty;
+  admin: typeof admin;
   anticipationEngine: typeof anticipationEngine;
   assessment: typeof assessment;
   assessmentMutations: typeof assessmentMutations;
