@@ -48,16 +48,16 @@ class MockConvexService {
         mockUser = ConvexUser(
             username: TestConfig.testUsername,
             email: TestConfig.testEmail,
-            currentDay: 1,
+            currentDay: 1.0,
             role: "patient",
             onboardingCompleted: true,
             appleHealthConnected: false,
             fullName: "Test User",
             measurementSystem: "Metric",
-            heightCm: 175,
-            weightKg: 70,
+            heightCm: 175.0,
+            weightKg: 70.0,
             gender: "male",
-            birthYear: 1990
+            birthYear: 1990.0
         )
     }
 
@@ -264,10 +264,10 @@ class TestDataFactory {
             appleHealthConnected: false,
             fullName: "Test User",
             measurementSystem: "Metric",
-            heightCm: 175,
-            weightKg: 70,
+            heightCm: 175.0,
+            weightKg: 70.0,
             gender: "male",
-            birthYear: 1990
+            birthYear: 1990.0
         )
     }
 

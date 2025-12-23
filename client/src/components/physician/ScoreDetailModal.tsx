@@ -16,8 +16,9 @@ import {
   Loader2,
   FileText,
   BarChart3,
-  Clock,
   Link2,
+  User,
+  Heart,
 } from "lucide-react";
 
 interface QuestionResponse {
@@ -27,6 +28,7 @@ interface QuestionResponse {
   responseNumber?: number;
   isDerived?: boolean;
   derivedFromQuestionId?: string;
+  responseSource?: string; // "user" (default), "profile", "derived", "healthkit"
 }
 
 interface ScoreDetailModalProps {
@@ -431,7 +433,7 @@ export function ScoreDetailModal({
                 <h3 className="text-sm font-medium text-gray-400">Score History</h3>
               </div>
               <div className="space-y-2">
-                {historicalScores.slice(0, 5).map((s, i) => (
+                {historicalScores.slice(0, 5).map((s) => (
                   <div key={s._id} className="flex items-center justify-between text-sm">
                     <span className="text-gray-400">
                       {new Date(s.calculated_at).toLocaleDateString()}
@@ -458,12 +460,20 @@ export function ScoreDetailModal({
                   Individual Responses {displayResponses.length > 0 && `(${displayResponses.length} questions)`}
                 </h3>
               </div>
-              {displayResponses.some(q => q.isDerived) && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 text-amber-400 text-xs rounded-full border border-amber-500/20">
-                  <Link2 className="w-3 h-3" />
-                  {displayResponses.filter(q => q.isDerived).length} derived from equivalent questions
-                </span>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {displayResponses.some(q => q.responseSource === "profile") && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-full border border-blue-500/20">
+                    <User className="w-3 h-3" />
+                    {displayResponses.filter(q => q.responseSource === "profile").length} from onboarding
+                  </span>
+                )}
+                {displayResponses.some(q => q.isDerived || q.responseSource === "derived") && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 text-amber-400 text-xs rounded-full border border-amber-500/20">
+                    <Link2 className="w-3 h-3" />
+                    {displayResponses.filter(q => q.isDerived || q.responseSource === "derived").length} derived
+                  </span>
+                )}
+              </div>
             </div>
             {questionResponses.length === 0 && fetchedResponses === undefined ? (
               <div className="flex items-center justify-center py-6">
@@ -479,8 +489,20 @@ export function ScoreDetailModal({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-500 font-mono">{q.questionId}</span>
-                        {q.isDerived && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded border border-amber-500/30" title={`Derived from ${q.derivedFromQuestionId}`}>
+                        {q.responseSource === "profile" && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded border border-blue-500/30" title="Auto-filled from onboarding profile">
+                            <User className="w-3 h-3" />
+                            From Onboarding
+                          </span>
+                        )}
+                        {q.responseSource === "healthkit" && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs rounded border border-green-500/30" title="Auto-filled from Apple Health">
+                            <Heart className="w-3 h-3" />
+                            From HealthKit
+                          </span>
+                        )}
+                        {(q.isDerived || q.responseSource === "derived") && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded border border-amber-500/30" title={`Derived from ${q.derivedFromQuestionId || "profile data"}`}>
                             <Link2 className="w-3 h-3" />
                             Derived
                           </span>
@@ -490,6 +512,11 @@ export function ScoreDetailModal({
                       {q.isDerived && q.derivedFromQuestionId && (
                         <p className="text-xs text-amber-400/70 mt-0.5">
                           Inferred from response to {q.derivedFromQuestionId}
+                        </p>
+                      )}
+                      {q.responseSource === "profile" && (
+                        <p className="text-xs text-blue-400/70 mt-0.5">
+                          Auto-filled from user profile during onboarding
                         </p>
                       )}
                     </div>

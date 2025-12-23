@@ -1,8 +1,13 @@
 "use node";
 
+// Node.js process type declaration
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
 import { action, ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { internal, api } from "./_generated/api";
+import { api } from "./_generated/api";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -250,14 +255,14 @@ async function buildAnalysisPrompt(
 ): Promise<PatientAnalysisPrompt> {
   // Get patient details
   const patientDetails = await ctx.runQuery(
-    internal.physician.getPatientDetails,
+    api.physician.getPatientDetails,
     { userId: userId as any }
   );
 
   // Get actual response values
   const allResponses: Array<{ questionId: string; value: string }> = [];
   for (let day = 1; day <= 14; day++) {
-    const dayData = await ctx.runQuery(internal.physician.getPatientDayData, {
+    const dayData = await ctx.runQuery(api.physician.getPatientDayData, {
       userId: userId as any,
       dayNumber: day,
     });
@@ -273,18 +278,19 @@ async function buildAnalysisPrompt(
   }
 
   // Get questionnaire scores
-  const scores = await ctx.runQuery(internal.physician.getQuestionnaireScores, {
+  const scores = await ctx.runQuery(api.physician.getQuestionnaireScores, {
     userId: userId as any,
   });
 
-  // Get gateway states
-  const gatewayStates = await ctx.runQuery(internal.physician.getUserGatewayStates, {
+  // Get gateway states from assessment module (returns an object keyed by gateway_id)
+  const gatewayStates = await ctx.runQuery(api.assessment.getUserGatewayStates, {
     userId: userId as any,
   });
 
-  const triggeredGateways = gatewayStates
-    .filter((g: any) => g.triggered)
-    .map((g: any) => g.gateway_id);
+  // gatewayStates is a Record<gateway_id, {triggered, triggeredAt, evaluationData}>
+  const triggeredGateways = Object.entries(gatewayStates || {})
+    .filter(([_, state]: [string, any]) => state.triggered)
+    .map(([gatewayId]: [string, any]) => gatewayId);
 
   const systemPrompt = `You are a board-certified sleep medicine specialist analyzing a patient's comprehensive 14-day sleep assessment.
 
@@ -434,7 +440,7 @@ export const calculateStandardizedScore = action({
     // Get all patient responses
     const allResponses: Record<string, string> = {};
     for (let day = 1; day <= 15; day++) {
-      const dayData = await ctx.runQuery(internal.physician.getPatientDayData, {
+      const dayData = await ctx.runQuery(api.physician.getPatientDayData, {
         userId: args.userId,
         dayNumber: day,
       });
@@ -474,7 +480,7 @@ export const calculateStandardizedScore = action({
     }
 
     // Save the score
-    await ctx.runMutation(internal.physician.saveQuestionnaireScore, {
+    await ctx.runMutation(api.physician.saveQuestionnaireScore, {
       userId: args.userId,
       questionnaireName: args.questionnaireName,
       score: result.score,
@@ -506,12 +512,12 @@ export const generateInterventionRecommendations = action({
   handler: async (ctx, args) => {
     // Get patient details and responses
     const patientDetails = await ctx.runQuery(
-      internal.physician.getPatientDetails,
+      api.physician.getPatientDetails,
       { userId: args.userId }
     );
 
     // Get questionnaire scores if available
-    const scores = await ctx.runQuery(internal.physician.getQuestionnaireScores, {
+    const scores = await ctx.runQuery(api.physician.getQuestionnaireScores, {
       userId: args.userId,
     });
 
@@ -740,7 +746,7 @@ export const interpretQuestionnaireScore = action({
   handler: async (ctx, args) => {
     // Get patient details for context
     const patientDetails = await ctx.runQuery(
-      internal.physician.getPatientDetails,
+      api.physician.getPatientDetails,
       { userId: args.userId }
     );
 
@@ -750,7 +756,7 @@ export const interpretQuestionnaireScore = action({
       .join("\n");
 
     // Get historical scores if available
-    const scores = await ctx.runQuery(internal.physician.getQuestionnaireScores, {
+    const scores = await ctx.runQuery(api.physician.getQuestionnaireScores, {
       userId: args.userId,
     });
     const historicalScores = scores

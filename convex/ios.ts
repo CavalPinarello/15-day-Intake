@@ -635,6 +635,28 @@ export const updateUserProfile = mutation({
 
     await ctx.db.patch(args.userId, updateData);
 
+    // Check if demographic fields changed - if so, re-inject demographic responses
+    const demographicFieldsChanged =
+      args.updates.heightCm !== undefined ||
+      args.updates.weightKg !== undefined ||
+      args.updates.gender !== undefined ||
+      args.updates.birthYear !== undefined ||
+      args.updates.onboardingCompleted === true;
+
+    if (demographicFieldsChanged) {
+      // Inject/update demographic responses to ensure scoring calculations have correct data
+      try {
+        await ctx.runMutation(api.profileResponses.injectDemographicResponses, {
+          userId: args.userId,
+          dayNumber: 1,
+        });
+        console.log(`[ios:updateUserProfile] Injected demographic responses for user ${args.userId}`);
+      } catch (error) {
+        // Log but don't fail the profile update
+        console.error(`[ios:updateUserProfile] Failed to inject demographic responses:`, error);
+      }
+    }
+
     return { success: true };
   },
 });

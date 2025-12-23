@@ -50,6 +50,35 @@ struct ConvexUser: Codable {
         return Int(year)
     }
 
+    // Memberwise initializer for testing
+    init(
+        username: String,
+        email: String? = nil,
+        currentDay: Double,
+        role: String? = nil,
+        onboardingCompleted: Bool? = nil,
+        appleHealthConnected: Bool? = nil,
+        fullName: String? = nil,
+        measurementSystem: String? = nil,
+        heightCm: Double? = nil,
+        weightKg: Double? = nil,
+        gender: String? = nil,
+        birthYear: Double? = nil
+    ) {
+        self.username = username
+        self.email = email
+        self.currentDay = currentDay
+        self.role = role
+        self.onboardingCompleted = onboardingCompleted
+        self.appleHealthConnected = appleHealthConnected
+        self.fullName = fullName
+        self.measurementSystem = measurementSystem
+        self.heightCm = heightCm
+        self.weightKg = weightKg
+        self.gender = gender
+        self.birthYear = birthYear
+    }
+
     // Custom decoder to handle missing optional keys
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -677,6 +706,36 @@ class ConvexService {
             "section": section,
             "source": "ios"
         ])
+    }
+
+    /// Response from injectProfileResponses mutation
+    struct InjectProfileResponsesResult: Codable {
+        let injectedCount: Int
+        let skippedCount: Int
+        let details: [InjectDetail]
+
+        struct InjectDetail: Codable {
+            let questionId: String
+            let action: String
+            let reason: String?
+        }
+    }
+
+    /// Inject demographic responses from user profile into the database.
+    /// Called when starting Day 1 assessment to ensure clinical scoring has the data it needs.
+    /// This prevents asking redundant questions (D2, D4, D5, D6) that were answered during onboarding.
+    func injectProfileResponses(dayNumber: Int = 1) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let _: InjectProfileResponsesResult = try await client.mutation(
+            "profileResponses:injectDemographicResponses",
+            args: [
+                "userId": userId,
+                "dayNumber": dayNumber
+            ]
+        )
     }
 
     func submitQuestionnaireResponse(

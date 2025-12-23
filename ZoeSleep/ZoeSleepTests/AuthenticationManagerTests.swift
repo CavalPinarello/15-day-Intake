@@ -166,7 +166,8 @@ final class AuthenticationManagerTests: XCTestCase {
 
     func testSignUpWithInvalidEmail() async {
         // Sign up with invalid email format should fail
-        await sut.signUp(email: "not-an-email", password: "password123", username: "testuser")
+        // Note: Username is auto-generated from email prefix
+        await sut.signUp(email: "not-an-email", password: "password123")
 
         XCTAssertFalse(sut.isAuthenticated)
     }
@@ -187,7 +188,8 @@ extension AuthenticationManagerTests {
     }
 
     func testSignUpSetsLoadingState() async {
-        await sut.signUp(email: "newuser@test.com", password: "test123", username: "newuser")
+        // Note: Username is auto-generated from email prefix
+        await sut.signUp(email: "newuser@test.com", password: "test123")
 
         // After completion, loading should be false
         XCTAssertFalse(sut.isLoading)

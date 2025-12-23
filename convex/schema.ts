@@ -952,6 +952,8 @@ export default defineSchema({
     is_derived: v.optional(v.boolean()),
     // Source question ID when is_derived is true (for audit trail)
     derived_from_question_id: v.optional(v.string()),
+    // Response source tracking: "user" (default), "profile" (from onboarding), "derived" (calculated), "healthkit"
+    response_source: v.optional(v.string()),
     created_at: v.number(),
     updated_at: v.number(),
   })

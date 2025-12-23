@@ -671,12 +671,30 @@ struct QuestionnaireView: View {
         // Use async task to fetch questions from Convex (THE SINGLE SOURCE OF TRUTH)
         Task {
             do {
+                // Inject demographic responses from profile on Day 1 (before loading questions)
+                // This ensures scoring calculations have the data they need
+                if currentDay == 1 {
+                    do {
+                        try await ConvexService.shared.injectProfileResponses(dayNumber: 1)
+                        print("[iOS] Injected demographic responses from profile for Day 1")
+                    } catch {
+                        print("[iOS] Warning: Failed to inject demographic responses: \(error.localizedDescription)")
+                        // Continue anyway - profile update will retry
+                    }
+                }
+
                 print("[iOS] Fetching questions from Convex for Day \(currentDay)...")
                 let questionsResponse = try await ConvexService.shared.getQuestionsForUserDay(dayNumber: currentDay, section: "all")
 
                 // Convert Convex questions to iOS Question type
                 let convertedSleepLog = questionsResponse.sleepLog.map { convertConvexQuestion($0, isSleepLog: true) }
-                let convertedAssessment = questionsResponse.assessment.map { convertConvexQuestion($0, isSleepLog: false) }
+
+                // Filter out demographic questions (D2, D4, D5, D6) if profile has the data
+                // The data is auto-injected as responses, so scoring still works
+                let filteredAssessment = questionsResponse.assessment
+                    .filter { !shouldSkipDemographicQuestion($0.id) }
+                    .map { convertConvexQuestion($0, isSleepLog: false) }
+                let convertedAssessment = filteredAssessment
 
                 await MainActor.run {
                     sleepLogQuestions = convertedSleepLog
@@ -1038,6 +1056,38 @@ struct QuestionnaireView: View {
                     advanceToNextQuestion()
                 }
             }
+        }
+    }
+
+    /// Check if a demographic question should be skipped because profile already has this data.
+    /// Skips D2 (DOB), D4 (Sex), D5 (Height), D6 (Weight) if valid profile data exists.
+    /// The data is auto-injected as responses via the backend to ensure scoring works.
+    private func shouldSkipDemographicQuestion(_ questionId: String) -> Bool {
+        let profile = OnboardingManager.shared.profile
+        let currentYear = Calendar.current.component(.year, from: Date())
+
+        switch questionId {
+        case "D2": // Date of Birth
+            // Skip if birthYear is valid (between 1900 and current year)
+            return profile.birthYear > 1900 && profile.birthYear < currentYear
+        case "D4": // Sex
+            // Skip if gender is set and not "prefer not to say"
+            let gender = profile.gender.lowercased()
+            return !gender.isEmpty && gender != "prefer not to say"
+        case "D5": // Height
+            // Skip if height is valid (100-250 cm reasonable range)
+            if let height = profile.heightCm {
+                return height >= 100 && height <= 250
+            }
+            return false
+        case "D6": // Weight
+            // Skip if weight is valid (30-300 kg reasonable range)
+            if let weight = profile.weightKg {
+                return weight >= 30 && weight <= 300
+            }
+            return false
+        default:
+            return false
         }
     }
 

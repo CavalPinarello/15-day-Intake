@@ -38,6 +38,7 @@ import type * as microCohorts from "../microCohorts.js";
 import type * as outcomeCorrelation from "../outcomeCorrelation.js";
 import type * as physician from "../physician.js";
 import type * as physicianAuth from "../physicianAuth.js";
+import type * as profileResponses from "../profileResponses.js";
 import type * as protocols from "../protocols.js";
 import type * as questions from "../questions.js";
 import type * as responses from "../responses.js";
@@ -94,6 +95,7 @@ declare const fullApi: ApiFromModules<{
   outcomeCorrelation: typeof outcomeCorrelation;
   physician: typeof physician;
   physicianAuth: typeof physicianAuth;
+  profileResponses: typeof profileResponses;
   protocols: typeof protocols;
   questions: typeof questions;
   responses: typeof responses;

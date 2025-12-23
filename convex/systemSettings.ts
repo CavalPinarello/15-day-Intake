@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query, action } from "./_generated/server";
-import { api } from "./_generated/api";
 
 /**
  * System Settings Management
@@ -22,11 +21,18 @@ export const LLM_SETTINGS = {
 
 export const MODEL_OPTIONS = {
   ANTHROPIC: [
+    { id: "claude-opus-4-5-20251101", name: "Claude Opus 4.5 (Most Capable)", provider: "anthropic" },
+    { id: "claude-sonnet-4-5-20250929", name: "Claude Sonnet 4.5 (Latest)", provider: "anthropic" },
+    { id: "claude-opus-4-20250514", name: "Claude Opus 4", provider: "anthropic" },
     { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", provider: "anthropic" },
     { id: "claude-3-5-sonnet-20241022", name: "Claude Sonnet 3.5", provider: "anthropic" },
-    { id: "claude-opus-4-20250514", name: "Claude Opus 4", provider: "anthropic" },
   ],
   OPENAI: [
+    { id: "gpt-5.2", name: "GPT-5.2 Thinking (Latest)", provider: "openai" },
+    { id: "gpt-5.2-chat-latest", name: "GPT-5.2 Instant", provider: "openai" },
+    { id: "gpt-5.2-pro", name: "GPT-5.2 Pro", provider: "openai" },
+    { id: "gpt-5.1", name: "GPT-5.1 Thinking", provider: "openai" },
+    { id: "gpt-5.1-chat-latest", name: "GPT-5.1 Instant", provider: "openai" },
     { id: "gpt-4o", name: "GPT-4o", provider: "openai" },
     { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
   ],
@@ -167,6 +173,40 @@ export const setSetting = mutation({
   },
 });
 
+// Helper function to set a setting (used internally by mutations)
+async function setSettingInternal(
+  ctx: { db: any },
+  key: string,
+  value: string,
+  category: string,
+  description?: string,
+  isSecret?: boolean
+) {
+  const existing = await ctx.db
+    .query("system_settings")
+    .withIndex("by_key", (q: any) => q.eq("key", key))
+    .first();
+
+  const now = Date.now();
+
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      value,
+      updated_at: now,
+    });
+    return existing._id;
+  } else {
+    return await ctx.db.insert("system_settings", {
+      key,
+      value,
+      category,
+      description,
+      is_secret: isSecret ?? false,
+      updated_at: now,
+    });
+  }
+}
+
 /**
  * Set the primary LLM model
  */
@@ -175,12 +215,13 @@ export const setPrimaryModel = mutation({
     modelId: v.string(),
   },
   handler: async (ctx, { modelId }) => {
-    return await ctx.runMutation(api.systemSettings.setSetting, {
-      key: LLM_SETTINGS.PRIMARY_MODEL,
-      value: modelId,
-      category: "llm",
-      description: "Primary LLM model for AI analysis",
-    });
+    return await setSettingInternal(
+      ctx,
+      LLM_SETTINGS.PRIMARY_MODEL,
+      modelId,
+      "llm",
+      "Primary LLM model for AI analysis"
+    );
   },
 });
 
@@ -192,12 +233,13 @@ export const setFallbackModel = mutation({
     modelId: v.string(),
   },
   handler: async (ctx, { modelId }) => {
-    return await ctx.runMutation(api.systemSettings.setSetting, {
-      key: LLM_SETTINGS.FALLBACK_MODEL,
-      value: modelId,
-      category: "llm",
-      description: "Fallback LLM model when primary fails",
-    });
+    return await setSettingInternal(
+      ctx,
+      LLM_SETTINGS.FALLBACK_MODEL,
+      modelId,
+      "llm",
+      "Fallback LLM model when primary fails"
+    );
   },
 });
 
@@ -209,13 +251,14 @@ export const setAnthropicKey = mutation({
     apiKey: v.string(),
   },
   handler: async (ctx, { apiKey }) => {
-    return await ctx.runMutation(api.systemSettings.setSetting, {
-      key: LLM_SETTINGS.ANTHROPIC_KEY,
-      value: apiKey,
-      category: "llm",
-      description: "Anthropic API key for Claude models",
-      isSecret: true,
-    });
+    return await setSettingInternal(
+      ctx,
+      LLM_SETTINGS.ANTHROPIC_KEY,
+      apiKey,
+      "llm",
+      "Anthropic API key for Claude models",
+      true
+    );
   },
 });
 
@@ -227,13 +270,14 @@ export const setOpenAIKey = mutation({
     apiKey: v.string(),
   },
   handler: async (ctx, { apiKey }) => {
-    return await ctx.runMutation(api.systemSettings.setSetting, {
-      key: LLM_SETTINGS.OPENAI_KEY,
-      value: apiKey,
-      category: "llm",
-      description: "OpenAI API key for GPT models",
-      isSecret: true,
-    });
+    return await setSettingInternal(
+      ctx,
+      LLM_SETTINGS.OPENAI_KEY,
+      apiKey,
+      "llm",
+      "OpenAI API key for GPT models",
+      true
+    );
   },
 });
 
@@ -245,12 +289,13 @@ export const toggleFallback = mutation({
     enabled: v.boolean(),
   },
   handler: async (ctx, { enabled }) => {
-    return await ctx.runMutation(api.systemSettings.setSetting, {
-      key: LLM_SETTINGS.ENABLE_FALLBACK,
-      value: enabled ? "true" : "false",
-      category: "llm",
-      description: "Enable fallback to secondary model on failure",
-    });
+    return await setSettingInternal(
+      ctx,
+      LLM_SETTINGS.ENABLE_FALLBACK,
+      enabled ? "true" : "false",
+      "llm",
+      "Enable fallback to secondary model on failure"
+    );
   },
 });
 

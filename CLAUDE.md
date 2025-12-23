@@ -113,6 +113,17 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **AI Analysis Configuration System:** Complete LLM settings management for physician dashboard (Dec 23, 2025)
+  - **System Settings Table:** New `system_settings` table in schema for storing API keys and model preferences
+  - **Model Selection:** Primary + fallback model configuration with latest models:
+    - Anthropic: Claude Opus 4.5, Sonnet 4.5, Opus 4, Sonnet 4, Sonnet 3.5
+    - OpenAI: GPT-5.2 (Thinking/Instant/Pro), GPT-5.1, GPT-4o, GPT-4o Mini
+  - **API Key Management:** Secure storage with masked display (shows only last 4 chars)
+  - **Test Connection:** Validate API keys before saving
+  - **Preview Analysis Prompt:** Button to see full system/user prompt before running analysis
+  - **Token/Cost Estimates:** Shows estimated tokens and cost in preview modal
+  - **Backend files:** `convex/systemSettings.ts` (new), `convex/llm.ts` (updated)
+  - **UI location:** `/physician-dashboard/settings` - AI Configuration section
 - **HealthKit Authorization Fix:** Fixed misleading "Connected" status in onboarding (Dec 23, 2025)
   - **Root cause:** iOS `requestAuthorization()` returns `success=true` when dialog is SHOWN, not when user GRANTS permission
   - **Fix:** Added `verifyDataAccess()` that attempts actual data read to verify true access

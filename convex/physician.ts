@@ -1850,6 +1850,8 @@ export const getQuestionnaireResponses = query({
       // Derived answer indicator - true if auto-populated from equivalent question
       isDerived: v.optional(v.boolean()),
       derivedFromQuestionId: v.optional(v.string()),
+      // Response source: "user" (default), "profile" (from onboarding), "derived" (calculated), "healthkit"
+      responseSource: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -2190,6 +2192,7 @@ export const getQuestionnaireResponses = query({
       responseNumber?: number;
       isDerived?: boolean;
       derivedFromQuestionId?: string;
+      responseSource?: string;
     }> = [];
 
     for (const qId of questionIds) {
@@ -2202,6 +2205,7 @@ export const getQuestionnaireResponses = query({
           responseNumber: response.response_number,
           isDerived: response.is_derived ?? false,
           derivedFromQuestionId: response.derived_from_question_id,
+          responseSource: response.response_source,
         });
       }
     }
