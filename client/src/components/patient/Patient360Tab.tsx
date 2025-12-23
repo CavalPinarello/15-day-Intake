@@ -4,9 +4,8 @@ import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useState, useMemo } from "react";
-import { BentoCard, BentoGrid } from "./BentoCard";
 import { SubjectiveVsObjectiveCard } from "./SubjectiveVsObjectiveCard";
-import { PillarSummaryCard, PillarKey, PILLARS } from "./PillarSummaryCard";
+import { PillarSummaryCard, PillarKey } from "./PillarSummaryCard";
 import { PillarDetailModal } from "./PillarDetailModal";
 import { AIInsightsCard, generateSampleInsights } from "./AIInsightsCard";
 import { PatientEngagementCard } from "./PatientEngagementCard";
@@ -16,11 +15,10 @@ import { AdaptiveDifficultyPanel } from "./AdaptiveDifficultyPanel";
 import { ComplianceCorrelationChart } from "@/components/charts/ComplianceCorrelationChart";
 import { ProtocolAssignment } from "@/components/physician/ProtocolAssignment";
 import { SleepTrendChart } from "@/components/charts/SleepTrendChart";
-import { ScoreGauge, SCORE_CONFIG } from "@/components/charts/ScoreProgressionChart";
+import { ScoreGauge } from "@/components/charts/ScoreProgressionChart";
 import { SleepBreakdown } from "@/components/charts/SleepArchitectureChart";
 import {
   ComplianceChart,
-  StreakIndicator,
   ComplianceSummary,
 } from "@/components/charts/ComplianceChart";
 import {
@@ -67,6 +65,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
   // Fetch HealthKit data
   const healthSummary = useQuery(api.healthkit.getPatientHealthSummary, { userId });
   const sleepArchitecture = useQuery(api.healthkit.getSleepArchitecture, { userId, limit: 15 });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const perceptionGaps = useQuery(api.healthkit.getPerceptionGaps, { userId, limit: 15 });
 
   // Fetch sleep pattern insights from Convex
@@ -83,6 +82,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
   const pillarStats = useQuery(api.physician.getPillarStats, { userId });
 
   // Fetch responses for pillar analysis
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const responsesByDay = useQuery(api.physician.getPatientResponsesByDay, { userId });
 
   // Fetch accurate compliance data for streak calculation
