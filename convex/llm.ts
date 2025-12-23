@@ -1,43 +1,202 @@
 "use node";
 
-import { action } from "./_generated/server";
+import { action, ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
-// Lazy-initialize LLM clients to avoid deploy-time errors
-let openai: OpenAI | null = null;
-let anthropic: Anthropic | null = null;
+// ============================================
+// LLM Configuration Types
+// ============================================
 
-function getOpenAI(): OpenAI {
-  if (!openai) {
-    openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
-  return openai;
+interface LLMConfig {
+  primaryModel: string;
+  fallbackModel: string;
+  anthropicKey: string | null;
+  openaiKey: string | null;
+  enableFallback: boolean;
 }
 
-function getAnthropic(): Anthropic {
-  if (!anthropic) {
-    anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+// Model provider detection
+function getProvider(modelId: string): "anthropic" | "openai" {
+  if (modelId.startsWith("claude") || modelId.startsWith("anthropic")) {
+    return "anthropic";
   }
-  return anthropic;
+  return "openai";
 }
 
-// Dual-provider LLM call with Claude primary, OpenAI fallback
+// ============================================
+// LLM Client Management
+// ============================================
+
+// Create OpenAI client with specific API key
+function createOpenAI(apiKey: string): OpenAI {
+  return new OpenAI({ apiKey });
+}
+
+// Create Anthropic client with specific API key
+function createAnthropic(apiKey: string): Anthropic {
+  return new Anthropic({ apiKey });
+}
+
+// Get API key - prefer system settings, fall back to env
+async function getApiKey(
+  ctx: ActionCtx,
+  provider: "anthropic" | "openai"
+): Promise<string | null> {
+  try {
+    // Try to get from system settings first
+    const config = await ctx.runQuery(api.systemSettings.getLLMConfig, {});
+    if (provider === "anthropic" && config.anthropicKey) {
+      return config.anthropicKey;
+    }
+    if (provider === "openai" && config.openaiKey) {
+      return config.openaiKey;
+    }
+  } catch {
+    // System settings not available, fall back to env
+  }
+
+  // Fall back to environment variables
+  if (provider === "anthropic") {
+    return process.env.ANTHROPIC_API_KEY || null;
+  }
+  return process.env.OPENAI_API_KEY || null;
+}
+
+// Get full LLM config
+async function getLLMConfigFromSettings(ctx: ActionCtx): Promise<LLMConfig> {
+  try {
+    const config = await ctx.runQuery(api.systemSettings.getLLMConfig, {});
+    return {
+      primaryModel: config.primaryModel || "claude-sonnet-4-20250514",
+      fallbackModel: config.fallbackModel || "gpt-4o",
+      anthropicKey: config.anthropicKey || process.env.ANTHROPIC_API_KEY || null,
+      openaiKey: config.openaiKey || process.env.OPENAI_API_KEY || null,
+      enableFallback: config.enableFallback ?? true,
+    };
+  } catch {
+    // Fall back to env-only config
+    return {
+      primaryModel: "claude-sonnet-4-20250514",
+      fallbackModel: "gpt-4o",
+      anthropicKey: process.env.ANTHROPIC_API_KEY || null,
+      openaiKey: process.env.OPENAI_API_KEY || null,
+      enableFallback: true,
+    };
+  }
+}
+
+// ============================================
+// Core LLM Call Function
+// ============================================
+
+/**
+ * Dual-provider LLM call with configurable primary/fallback
+ * Reads config from system settings, falls back to env vars
+ */
+async function callLLMWithConfig(
+  ctx: ActionCtx,
+  systemPrompt: string,
+  userPrompt: string,
+  jsonMode: boolean = true
+): Promise<string> {
+  const config = await getLLMConfigFromSettings(ctx);
+  const primaryProvider = getProvider(config.primaryModel);
+
+  // Try primary provider first
+  const primaryKey = primaryProvider === "anthropic" ? config.anthropicKey : config.openaiKey;
+
+  if (primaryKey) {
+    try {
+      if (primaryProvider === "anthropic") {
+        const client = createAnthropic(primaryKey);
+        const message = await client.messages.create({
+          model: config.primaryModel,
+          max_tokens: 4096,
+          system: systemPrompt + (jsonMode ? " Respond only with valid JSON." : ""),
+          messages: [{ role: "user", content: userPrompt }],
+        });
+
+        const content = message.content[0];
+        if (content.type === "text") {
+          return content.text;
+        }
+      } else {
+        const client = createOpenAI(primaryKey);
+        const completion = await client.chat.completions.create({
+          model: config.primaryModel,
+          messages: [
+            { role: "system", content: systemPrompt + (jsonMode ? " Respond only with valid JSON." : "") },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.7,
+          ...(jsonMode && { response_format: { type: "json_object" as const } }),
+        });
+        return completion.choices[0].message.content || "{}";
+      }
+    } catch (error) {
+      console.error(`${primaryProvider} API error:`, error);
+      if (!config.enableFallback) {
+        throw new Error(`${primaryProvider} API failed and fallback is disabled`);
+      }
+    }
+  }
+
+  // Fallback to secondary provider
+  if (config.enableFallback) {
+    const fallbackProvider = getProvider(config.fallbackModel);
+    const fallbackKey = fallbackProvider === "anthropic" ? config.anthropicKey : config.openaiKey;
+
+    if (fallbackKey) {
+      try {
+        if (fallbackProvider === "anthropic") {
+          const client = createAnthropic(fallbackKey);
+          const message = await client.messages.create({
+            model: config.fallbackModel,
+            max_tokens: 4096,
+            system: systemPrompt + (jsonMode ? " Respond only with valid JSON." : ""),
+            messages: [{ role: "user", content: userPrompt }],
+          });
+
+          const content = message.content[0];
+          if (content.type === "text") {
+            return content.text;
+          }
+        } else {
+          const client = createOpenAI(fallbackKey);
+          const completion = await client.chat.completions.create({
+            model: config.fallbackModel,
+            messages: [
+              { role: "system", content: systemPrompt + (jsonMode ? " Respond only with valid JSON." : "") },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.7,
+            ...(jsonMode && { response_format: { type: "json_object" as const } }),
+          });
+          return completion.choices[0].message.content || "{}";
+        }
+      } catch (error) {
+        console.error(`${fallbackProvider} API error:`, error);
+      }
+    }
+  }
+
+  throw new Error("All LLM providers failed or no API keys configured");
+}
+
+// Legacy wrapper for existing code (uses env vars directly if no ctx available)
 async function callLLM(
   systemPrompt: string,
   userPrompt: string,
   jsonMode: boolean = true
 ): Promise<string> {
-  // Try Claude first (primary)
+  // Try Claude first (primary) using env vars
   if (process.env.ANTHROPIC_API_KEY) {
     try {
-      const message = await getAnthropic().messages.create({
+      const client = createAnthropic(process.env.ANTHROPIC_API_KEY);
+      const message = await client.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 4096,
         system: systemPrompt + (jsonMode ? " Respond only with valid JSON." : ""),
@@ -54,25 +213,169 @@ async function callLLM(
   }
 
   // Fallback to OpenAI
-  try {
-    const completion = await getOpenAI().chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt + (jsonMode ? " Respond only with valid JSON." : "") },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7,
-      ...(jsonMode && { response_format: { type: "json_object" as const } }),
-    });
-    return completion.choices[0].message.content || "{}";
-  } catch (error) {
-    console.error("OpenAI API error:", error);
-    throw new Error("Both Claude and OpenAI APIs failed");
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const client = createOpenAI(process.env.OPENAI_API_KEY);
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt + (jsonMode ? " Respond only with valid JSON." : "") },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        ...(jsonMode && { response_format: { type: "json_object" as const } }),
+      });
+      return completion.choices[0].message.content || "{}";
+    } catch (error) {
+      console.error("OpenAI API error:", error);
+    }
   }
+
+  throw new Error("Both Claude and OpenAI APIs failed or no API keys configured");
+}
+
+// ============================================
+// Prompt Builder Helper
+// ============================================
+
+interface PatientAnalysisPrompt {
+  systemPrompt: string;
+  userPrompt: string;
+  estimatedTokens: number;
+}
+
+async function buildAnalysisPrompt(
+  ctx: ActionCtx,
+  userId: string
+): Promise<PatientAnalysisPrompt> {
+  // Get patient details
+  const patientDetails = await ctx.runQuery(
+    internal.physician.getPatientDetails,
+    { userId: userId as any }
+  );
+
+  // Get actual response values
+  const allResponses: Array<{ questionId: string; value: string }> = [];
+  for (let day = 1; day <= 14; day++) {
+    const dayData = await ctx.runQuery(internal.physician.getPatientDayData, {
+      userId: userId as any,
+      dayNumber: day,
+    });
+
+    for (const response of dayData.responses) {
+      if (response.response_value) {
+        allResponses.push({
+          questionId: response.question_id,
+          value: response.response_value,
+        });
+      }
+    }
+  }
+
+  // Get questionnaire scores
+  const scores = await ctx.runQuery(internal.physician.getQuestionnaireScores, {
+    userId: userId as any,
+  });
+
+  // Get gateway states
+  const gatewayStates = await ctx.runQuery(internal.physician.getUserGatewayStates, {
+    userId: userId as any,
+  });
+
+  const triggeredGateways = gatewayStates
+    .filter((g: any) => g.triggered)
+    .map((g: any) => g.gateway_id);
+
+  const systemPrompt = `You are a board-certified sleep medicine specialist analyzing a patient's comprehensive 14-day sleep assessment.
+
+Your analysis should be:
+- Evidence-based and clinically actionable
+- Specific to the patient's profile and responses
+- Prioritized by clinical significance
+
+Provide your analysis in JSON format with these exact keys:
+{
+  "summary": "2-3 sentence clinical summary",
+  "riskFactors": ["array of 3-5 key risk factors"],
+  "recommendations": ["array of 3-5 evidence-based interventions"]
+}`;
+
+  const userPrompt = `## Patient Profile
+- Name: ${patientDetails.name || "Patient"}
+- Age: ${patientDetails.demographics.dateOfBirth ? `Born ${patientDetails.demographics.dateOfBirth}` : "Unknown"}
+- Sex: ${patientDetails.demographics.sex || "Unknown"}
+- Total Responses: ${allResponses.length}
+- Days Completed: ${patientDetails.completedDays}/14
+
+## Triggered Gateways
+${triggeredGateways.length > 0 ? triggeredGateways.map((g: string) => `- ${g}`).join("\n") : "None triggered"}
+
+## Standardized Questionnaire Scores
+${scores.length > 0 ? scores.map((s: any) => `- ${s.questionnaire_name}: ${s.score}/${s.max_score || "?"} (${s.category || s.interpretation || "no interpretation"})`).join("\n") : "No scores calculated yet"}
+
+## Key Response Highlights
+${allResponses.slice(0, 50).map(r => `- ${r.questionId}: ${r.value}`).join("\n")}
+${allResponses.length > 50 ? `\n... and ${allResponses.length - 50} more responses` : ""}
+
+Please analyze this patient's data and provide your clinical assessment.`;
+
+  // Rough token estimation (4 chars per token average)
+  const estimatedTokens = Math.ceil((systemPrompt.length + userPrompt.length) / 4);
+
+  return {
+    systemPrompt,
+    userPrompt,
+    estimatedTokens,
+  };
 }
 
 /**
+ * Preview the analysis prompt without running the LLM
+ * Shows exactly what data will be sent for analysis
+ */
+export const previewAnalysisPrompt = action({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.object({
+    systemPrompt: v.string(),
+    userPrompt: v.string(),
+    estimatedTokens: v.number(),
+    estimatedCost: v.string(),
+    selectedModel: v.string(),
+    modelProvider: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const prompt = await buildAnalysisPrompt(ctx, args.userId);
+    const config = await getLLMConfigFromSettings(ctx);
+
+    // Estimate cost based on model
+    const provider = getProvider(config.primaryModel);
+    let costPerMToken = 0;
+    if (provider === "anthropic") {
+      // Claude Sonnet 4 pricing: $3/MTok input, $15/MTok output
+      costPerMToken = 3; // Input cost
+    } else {
+      // GPT-4o pricing: $5/MTok input, $15/MTok output
+      costPerMToken = 5;
+    }
+
+    const estimatedCost = (prompt.estimatedTokens / 1000000) * costPerMToken;
+
+    return {
+      systemPrompt: prompt.systemPrompt,
+      userPrompt: prompt.userPrompt,
+      estimatedTokens: prompt.estimatedTokens,
+      estimatedCost: `~$${estimatedCost.toFixed(4)} (input only)`,
+      selectedModel: config.primaryModel,
+      modelProvider: provider,
+    };
+  },
+});
+
+/**
  * Analyze patient responses using LLM
+ * Now uses configurable model from system settings
  */
 export const analyzePatientResponses = action({
   args: {
@@ -84,74 +387,18 @@ export const analyzePatientResponses = action({
     recommendations: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get all patient responses
-    const responses = await ctx.runQuery(
-      internal.physician.getPatientResponsesByDay,
-      { userId: args.userId }
-    );
-
-    // Get patient details
-    const patientDetails = await ctx.runQuery(
-      internal.physician.getPatientDetails,
-      { userId: args.userId }
-    );
-
-    // Get actual response values
-    const allResponses: Array<{ questionId: string; value: string }> = [];
-    for (let day = 1; day <= 15; day++) {
-      const dayData = await ctx.runQuery(internal.physician.getPatientDayData, {
-        userId: args.userId,
-        dayNumber: day,
-      });
-
-      for (const response of dayData.responses) {
-        if (response.response_value) {
-          allResponses.push({
-            questionId: response.question_id,
-            value: response.response_value,
-          });
-        }
-      }
-    }
-
-    // Prepare prompt for LLM
-    const prompt = `You are a sleep medicine expert analyzing a patient's 15-day sleep assessment data.
-
-Patient Information:
-- Name: ${patientDetails.name || "Unknown"}
-- Age: ${patientDetails.demographics.dateOfBirth || "Unknown"}
-- Sex: ${patientDetails.demographics.sex || "Unknown"}
-
-Total Responses: ${allResponses.length}
-
-Please analyze this patient's sleep data and provide:
-1. A brief summary of their sleep patterns and issues (2-3 sentences)
-2. Key risk factors identified (list 3-5 most important)
-3. Recommended interventions (list 3-5 specific, evidence-based interventions)
-
-Format your response as JSON with keys: summary, riskFactors (array), recommendations (array).`;
+    const prompt = await buildAnalysisPrompt(ctx, args.userId);
 
     try {
-      const completion = await getOpenAI().chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a sleep medicine expert. Respond only with valid JSON.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-      });
-
-      const result = JSON.parse(
-        completion.choices[0].message.content || "{}"
+      // Use configurable LLM instead of hardcoded OpenAI
+      const response = await callLLMWithConfig(
+        ctx,
+        prompt.systemPrompt,
+        prompt.userPrompt,
+        true // JSON mode
       );
+
+      const result = JSON.parse(response);
 
       return {
         summary: result.summary || "No summary available",
@@ -161,7 +408,7 @@ Format your response as JSON with keys: summary, riskFactors (array), recommenda
     } catch (error) {
       console.error("Error analyzing patient responses:", error);
       return {
-        summary: "Error analyzing patient data",
+        summary: "Error analyzing patient data. Please check API key configuration in Settings.",
         riskFactors: [],
         recommendations: [],
       };
@@ -243,6 +490,7 @@ export const calculateStandardizedScore = action({
 
 /**
  * Generate intervention recommendations based on patient data
+ * Now uses configurable model from system settings
  */
 export const generateInterventionRecommendations = action({
   args: {
@@ -267,45 +515,35 @@ export const generateInterventionRecommendations = action({
       userId: args.userId,
     });
 
-    // Prepare prompt
-    const prompt = `You are a sleep medicine expert. Based on a patient's sleep assessment data, recommend specific interventions.
+    const systemPrompt = "You are a sleep medicine expert. Respond only with valid JSON.";
+
+    const userPrompt = `Based on a patient's sleep assessment data, recommend specific interventions.
 
 Patient Information:
 - Name: ${patientDetails.name || "Unknown"}
 - Total Responses: ${patientDetails.totalResponses}
-- Completed Days: ${patientDetails.completedDays}/15
+- Completed Days: ${patientDetails.completedDays}/14
 
 Questionnaire Scores:
-${scores.map((s) => `- ${s.questionnaire_name}: ${s.score}/${s.max_score} (${s.category})`).join("\n")}
+${scores.map((s: any) => `- ${s.questionnaire_name}: ${s.score}/${s.max_score} (${s.category})`).join("\n")}
 
 Recommend 3-5 evidence-based sleep interventions with:
 1. Intervention name (specific, actionable)
 2. Rationale (why this intervention is recommended for this patient)
 3. Priority (high, medium, or low)
 
-Format as JSON array with objects containing: interventionName, rationale, priority.`;
+Format as JSON object with key "recommendations" containing array of objects with: interventionName, rationale, priority.`;
 
     try {
-      const completion = await getOpenAI().chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a sleep medicine expert. Respond only with valid JSON.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-      });
-
-      const result = JSON.parse(
-        completion.choices[0].message.content || '{"recommendations": []}'
+      // Use configurable LLM instead of hardcoded OpenAI
+      const response = await callLLMWithConfig(
+        ctx,
+        systemPrompt,
+        userPrompt,
+        true // JSON mode
       );
+
+      const result = JSON.parse(response);
 
       return result.recommendations || [];
     } catch (error) {

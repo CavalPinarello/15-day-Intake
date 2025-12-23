@@ -1172,6 +1172,112 @@ export const getJourneyProgress = query({
   },
 });
 
+/**
+ * Get detailed daily completion status for catch-up feature
+ * Returns completion status for each day including sleep log and assessment
+ */
+export const getDailyCompletionStatus = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // Get all responses for this user
+    const responses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Sleep log question ID prefixes
+    const sleepLogPrefixes = ["CSD_", "SL_", "SD_"];
+
+    // Group responses by day
+    const dayData: Record<
+      number,
+      {
+        sleepLogQuestions: Set<string>;
+        assessmentQuestions: Set<string>;
+      }
+    > = {};
+
+    for (const response of responses) {
+      const day = response.day_number ?? 1;
+      if (!dayData[day]) {
+        dayData[day] = {
+          sleepLogQuestions: new Set(),
+          assessmentQuestions: new Set(),
+        };
+      }
+
+      const isSleepLog = sleepLogPrefixes.some((prefix) =>
+        response.question_id.startsWith(prefix)
+      );
+      if (isSleepLog) {
+        dayData[day].sleepLogQuestions.add(response.question_id);
+      } else {
+        dayData[day].assessmentQuestions.add(response.question_id);
+      }
+    }
+
+    // Build result for each day up to current_day
+    const dailyStatus: {
+      dayNumber: number;
+      sleepLogCompleted: boolean;
+      assessmentCompleted: boolean;
+      sleepLogCount: number;
+      assessmentCount: number;
+    }[] = [];
+
+    // Track missed days (days before current day with incomplete tasks)
+    const missedDays: {
+      dayNumber: number;
+      missingSleepLog: boolean;
+      missingAssessment: boolean;
+    }[] = [];
+
+    for (let day = 1; day <= user.current_day; day++) {
+      const data = dayData[day];
+      // Sleep log is complete if at least 3 sleep-related questions answered
+      const sleepLogCompleted = data ? data.sleepLogQuestions.size >= 3 : false;
+      // Assessment is complete if at least 1 non-sleep-log question answered
+      // For day 1, assessment requires more questions (core assessment)
+      const assessmentCompleted = data ? data.assessmentQuestions.size > 0 : false;
+
+      dailyStatus.push({
+        dayNumber: day,
+        sleepLogCompleted,
+        assessmentCompleted,
+        sleepLogCount: data?.sleepLogQuestions.size ?? 0,
+        assessmentCount: data?.assessmentQuestions.size ?? 0,
+      });
+
+      // Track missed days (exclude current day - user can still complete it)
+      if (day < user.current_day) {
+        const missingSleepLog = !sleepLogCompleted;
+        const missingAssessment = !assessmentCompleted;
+        if (missingSleepLog || missingAssessment) {
+          missedDays.push({
+            dayNumber: day,
+            missingSleepLog,
+            missingAssessment,
+          });
+        }
+      }
+    }
+
+    return {
+      currentDay: user.current_day,
+      dailyStatus,
+      missedDays,
+      hasMissedTasks: missedDays.length > 0,
+      totalMissedSleepLogs: missedDays.filter(d => d.missingSleepLog).length,
+      totalMissedAssessments: missedDays.filter(d => d.missingAssessment).length,
+    };
+  },
+});
+
 // ============================================
 // iOS App Events/Analytics
 // ============================================

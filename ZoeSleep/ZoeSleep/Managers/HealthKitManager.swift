@@ -88,55 +88,55 @@ class HealthKitManager: ObservableObject {
             completion(false, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "HealthKit is not available on this device"]))
             return
         }
-        
+
         // Define data types to read
         var readTypes: Set<HKObjectType> = []
-        
+
         // Sleep Analysis
         if let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
             readTypes.insert(sleepType)
         }
-        
+
         // Heart Rate
         if let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate) {
             readTypes.insert(heartRateType)
         }
-        
+
         // Heart Rate Variability
         if let hrvType = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) {
             readTypes.insert(hrvType)
         }
-        
+
         // Resting Heart Rate
         if let restingHRType = HKObjectType.quantityType(forIdentifier: .restingHeartRate) {
             readTypes.insert(restingHRType)
         }
-        
+
         // Steps
         if let stepsType = HKObjectType.quantityType(forIdentifier: .stepCount) {
             readTypes.insert(stepsType)
         }
-        
+
         // Active Energy
         if let activeEnergyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) {
             readTypes.insert(activeEnergyType)
         }
-        
+
         // Exercise Time
         if let exerciseTimeType = HKObjectType.quantityType(forIdentifier: .appleExerciseTime) {
             readTypes.insert(exerciseTimeType)
         }
-        
+
         // Respiratory Rate
         if let respiratoryRateType = HKObjectType.quantityType(forIdentifier: .respiratoryRate) {
             readTypes.insert(respiratoryRateType)
         }
-        
+
         // Oxygen Saturation
         if let oxygenSaturationType = HKObjectType.quantityType(forIdentifier: .oxygenSaturation) {
             readTypes.insert(oxygenSaturationType)
         }
-        
+
         // Workouts
         readTypes.insert(HKObjectType.workoutType())
 
@@ -165,14 +165,86 @@ class HealthKitManager: ObservableObject {
         // Request authorization
         healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, error in
             DispatchQueue.main.async {
-                self.isAuthorized = success
+                // NOTE: iOS returns success=true even if user DENIES permission
+                // success only means the dialog was shown successfully
+                // We need to verify actual data access separately
                 if success {
                     // Automatically fetch demographics after authorization
                     self.fetchDemographics()
+
+                    // Verify we can actually read data by checking authorization status
+                    self.verifyDataAccess { hasAccess in
+                        self.isAuthorized = hasAccess
+                        completion(hasAccess, error)
+                    }
+                } else {
+                    self.isAuthorized = false
+                    completion(false, error)
                 }
-                completion(success, error)
             }
         }
+    }
+
+    /// Verifies that we actually have access to HealthKit data
+    /// This is necessary because requestAuthorization returns success even when user denies
+    func verifyDataAccess(completion: @escaping (Bool) -> Void) {
+        // Check authorization status for sleep data (our primary data type)
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            completion(false)
+            return
+        }
+
+        let status = healthStore.authorizationStatus(for: sleepType)
+
+        // For read-only types, .sharingAuthorized means we have read access
+        // .notDetermined means user hasn't been asked yet
+        // .sharingDenied means user denied (but note: Apple returns this even when denied for privacy)
+
+        // The most reliable check is to actually attempt to read data
+        // If we get any data back (even empty results), we have access
+        let predicate = HKQuery.predicateForSamples(
+            withStart: Calendar.current.date(byAdding: .day, value: -7, to: Date()),
+            end: Date(),
+            options: .strictStartDate
+        )
+
+        let query = HKSampleQuery(
+            sampleType: sleepType,
+            predicate: predicate,
+            limit: 1,
+            sortDescriptors: nil
+        ) { _, samples, error in
+            DispatchQueue.main.async {
+                // If we got here without an error, we have read access
+                // (Even if samples is empty, that just means no data, not no access)
+                if error == nil {
+                    print("[HealthKit] ✅ Verified data access - authorization granted")
+                    completion(true)
+                } else {
+                    // Check specific error codes
+                    let nsError = error as? NSError
+                    if nsError?.code == 5 { // HKErrorAuthorizationDenied
+                        print("[HealthKit] ⚠️ Data access denied by user")
+                        completion(false)
+                    } else {
+                        // Other errors might be transient - assume access is granted
+                        print("[HealthKit] ⚠️ Query error but may have access: \(error?.localizedDescription ?? "unknown")")
+                        completion(true)
+                    }
+                }
+            }
+        }
+
+        healthStore.execute(query)
+    }
+
+    /// Check current authorization status (for UI display)
+    /// Returns a status that can be used to show appropriate UI
+    func checkAuthorizationStatus() -> HKAuthorizationStatus {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            return .notDetermined
+        }
+        return healthStore.authorizationStatus(for: sleepType)
     }
     
     // MARK: - Demographics Data (for auto-filling questionnaire)

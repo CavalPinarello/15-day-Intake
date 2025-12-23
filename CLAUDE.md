@@ -113,6 +113,13 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **HealthKit Authorization Fix:** Fixed misleading "Connected" status in onboarding (Dec 23, 2025)
+  - **Root cause:** iOS `requestAuthorization()` returns `success=true` when dialog is SHOWN, not when user GRANTS permission
+  - **Fix:** Added `verifyDataAccess()` that attempts actual data read to verify true access
+  - **New status states:** `notConnected`, `connecting`, `connected`, `denied`, `unavailable`
+  - **UI improvements:** Orange warning when denied, "Open Settings" link, option to continue without data
+  - **Files changed:** `HealthKitManager.swift` (+70 lines), `OnboardingView.swift` (redesigned HealthConnectStepView), `HealthKitIntegrationView.swift`
+  - **Impact:** Users now see accurate connection status instead of false "Connected" message
 - **Admin Tools Dashboard:** Comprehensive admin toolkit for physician dashboard (Dec 22, 2025)
   - **New page:** `/physician-dashboard/admin` - Full user management interface
   - **User operations:** Delete users, reset passwords, reset progress, change roles, toggle dev mode

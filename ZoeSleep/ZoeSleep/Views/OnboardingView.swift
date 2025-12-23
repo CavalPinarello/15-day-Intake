@@ -742,10 +742,19 @@ struct WearableCard: View {
 
 // MARK: - Health Connect Step (Compact)
 
+/// Connection status for HealthKit
+enum HealthKitConnectionStatus {
+    case notConnected
+    case connecting
+    case connected
+    case denied  // User denied permission
+    case unavailable  // HealthKit not available on device
+}
+
 struct HealthConnectStepView: View {
     @ObservedObject var onboardingManager: OnboardingManager
     @EnvironmentObject var healthKitManager: HealthKitManager
-    @State private var isConnecting = false
+    @State private var connectionStatus: HealthKitConnectionStatus = .notConnected
     @State private var showingError = false
     @State private var errorMessage = ""
     let screenHeight: CGFloat
@@ -757,15 +766,15 @@ struct HealthConnectStepView: View {
         VStack(spacing: isCompact ? 12 : 16) {
             Spacer(minLength: isCompact ? 20 : 35)
 
-            // Icon
+            // Icon - changes based on status
             ZStack {
                 Circle()
-                    .fill(Color.red.opacity(0.15))
+                    .fill(iconBackgroundColor.opacity(0.15))
                     .frame(width: isCompact ? 60 : 70, height: isCompact ? 60 : 70)
 
-                Image(systemName: "heart.fill")
+                Image(systemName: iconName)
                     .font(.system(size: isCompact ? 28 : 34))
-                    .foregroundColor(.red)
+                    .foregroundColor(iconColor)
             }
 
             // Title
@@ -774,7 +783,7 @@ struct HealthConnectStepView: View {
                     .font(isCompact ? .title3.bold() : .title2.bold())
                     .foregroundColor(palette.textPrimary)
 
-                Text("Import sleep data for personalized insights")
+                Text(subtitleText)
                     .font(.caption)
                     .foregroundColor(palette.textSecondary)
                     .multilineTextAlignment(.center)
@@ -794,41 +803,27 @@ struct HealthConnectStepView: View {
 
             Spacer()
 
-            // Connect button or status
-            if onboardingManager.profile.hasConnectedHealthKit {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Connected")
-                        .foregroundColor(.green)
-                        .font(.subheadline.weight(.medium))
-                }
-            } else {
-                Button(action: connectHealthKit) {
-                    HStack(spacing: 6) {
-                        if isConnecting {
-                            ProgressView()
-                                .tint(.white)
-                                .scaleEffect(0.9)
-                        } else {
-                            Image(systemName: "heart.fill")
-                            Text("Connect Apple Health")
-                        }
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.red)
-                    .cornerRadius(12)
-                }
-                .disabled(isConnecting)
-                .padding(.horizontal, 20)
+            // Status-specific UI
+            switch connectionStatus {
+            case .notConnected:
+                connectButton
+
+            case .connecting:
+                connectingIndicator
+
+            case .connected:
+                connectedStatus
+
+            case .denied:
+                deniedStatus
+
+            case .unavailable:
+                unavailableStatus
             }
 
-            // Skip/Continue
+            // Skip/Continue button
             Button(action: { onboardingManager.nextStep() }) {
-                Text(onboardingManager.profile.hasConnectedHealthKit ? "Continue" : "Skip for now")
+                Text(continueButtonText)
                     .font(.caption)
                     .foregroundColor(palette.textSecondary)
             }
@@ -844,25 +839,181 @@ struct HealthConnectStepView: View {
             }
             .padding(.bottom, isCompact ? 24 : 32)
         }
-        .alert("Connection Error", isPresented: $showingError) {
-            Button("OK", role: .cancel) {}
+        .onAppear {
+            // Check initial status
+            if !healthKitManager.isHealthKitAvailable {
+                connectionStatus = .unavailable
+            } else if onboardingManager.profile.hasConnectedHealthKit && healthKitManager.isAuthorized {
+                connectionStatus = .connected
+            }
+        }
+        .alert("Connection Issue", isPresented: $showingError) {
+            Button("Open Settings", role: .none) {
+                if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(settingsURL)
+                }
+            }
+            Button("Skip for now", role: .cancel) {}
         } message: {
             Text(errorMessage)
         }
     }
 
+    // MARK: - Dynamic UI Properties
+
+    private var iconName: String {
+        switch connectionStatus {
+        case .notConnected, .connecting: return "heart.fill"
+        case .connected: return "checkmark.circle.fill"
+        case .denied: return "exclamationmark.triangle.fill"
+        case .unavailable: return "xmark.circle.fill"
+        }
+    }
+
+    private var iconColor: Color {
+        switch connectionStatus {
+        case .notConnected, .connecting: return .red
+        case .connected: return .green
+        case .denied: return .orange
+        case .unavailable: return .gray
+        }
+    }
+
+    private var iconBackgroundColor: Color {
+        switch connectionStatus {
+        case .notConnected, .connecting: return .red
+        case .connected: return .green
+        case .denied: return .orange
+        case .unavailable: return .gray
+        }
+    }
+
+    private var subtitleText: String {
+        switch connectionStatus {
+        case .notConnected:
+            return "Import sleep data for personalized insights"
+        case .connecting:
+            return "Requesting access..."
+        case .connected:
+            return "Your health data will be imported"
+        case .denied:
+            return "Enable access in Settings to import your sleep data"
+        case .unavailable:
+            return "Apple Health is not available on this device"
+        }
+    }
+
+    private var continueButtonText: String {
+        switch connectionStatus {
+        case .connected: return "Continue"
+        case .denied: return "Continue without Health data"
+        default: return "Skip for now"
+        }
+    }
+
+    // MARK: - Subviews
+
+    private var connectButton: some View {
+        Button(action: connectHealthKit) {
+            HStack(spacing: 6) {
+                Image(systemName: "heart.fill")
+                Text("Connect Apple Health")
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.red)
+            .cornerRadius(12)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private var connectingIndicator: some View {
+        HStack(spacing: 6) {
+            ProgressView()
+                .tint(palette.accent)
+                .scaleEffect(0.9)
+            Text("Connecting...")
+                .foregroundColor(palette.textSecondary)
+                .font(.subheadline.weight(.medium))
+        }
+    }
+
+    private var connectedStatus: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+            Text("Connected")
+                .foregroundColor(.green)
+                .font(.subheadline.weight(.medium))
+        }
+    }
+
+    private var deniedStatus: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("Access Not Granted")
+                    .foregroundColor(.orange)
+                    .font(.subheadline.weight(.medium))
+            }
+
+            Button(action: openHealthSettings) {
+                HStack(spacing: 4) {
+                    Image(systemName: "gear")
+                    Text("Open Settings")
+                }
+                .font(.caption.weight(.medium))
+                .foregroundColor(palette.accent)
+            }
+        }
+    }
+
+    private var unavailableStatus: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "xmark.circle.fill")
+                .foregroundColor(.gray)
+            Text("Not Available")
+                .foregroundColor(.gray)
+                .font(.subheadline.weight(.medium))
+        }
+    }
+
+    // MARK: - Actions
+
     private func connectHealthKit() {
-        isConnecting = true
+        connectionStatus = .connecting
+
         healthKitManager.requestAuthorization { success, error in
-            isConnecting = false
             if success {
+                connectionStatus = .connected
                 onboardingManager.markHealthKitConnected()
                 onboardingManager.populateFromHealthKit(demographics: healthKitManager.demographics)
-                onboardingManager.nextStep()
-            } else if let error = error {
-                errorMessage = error.localizedDescription
+
+                // Auto-advance after brief delay to show success state
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    onboardingManager.nextStep()
+                }
+            } else {
+                // Authorization was denied or failed
+                connectionStatus = .denied
+                if let error = error {
+                    print("[HealthKit] Authorization denied: \(error.localizedDescription)")
+                } else {
+                    print("[HealthKit] Authorization denied by user")
+                }
+                // Show helpful message
+                errorMessage = "To import your sleep data, please enable Apple Health access in Settings > Privacy & Security > Health > Zoe Sleep."
                 showingError = true
             }
+        }
+    }
+
+    private func openHealthSettings() {
+        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(settingsURL)
         }
     }
 }

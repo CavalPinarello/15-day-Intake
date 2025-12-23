@@ -499,36 +499,42 @@ export const getPatientHealthSummary = query({
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 15);
 
-    // Calculate averages
+    // CRITICAL: Filter to REAL wearable data BEFORE calculating averages
+    // Questionnaire-derived data (primary_source: "Questionnaire") should not be included
+    const wearableOnlySleep = recentSleep.filter(
+      (s) => s.primary_source && s.primary_source !== "Questionnaire"
+    );
+
+    // Calculate averages from WEARABLE data only
     const avgSleepMins =
-      recentSleep.filter((s) => s.total_sleep_mins).length > 0
+      wearableOnlySleep.filter((s) => s.total_sleep_mins).length > 0
         ? Math.round(
-            recentSleep.reduce((acc, s) => acc + (s.total_sleep_mins || 0), 0) /
-              recentSleep.filter((s) => s.total_sleep_mins).length
+            wearableOnlySleep.reduce((acc, s) => acc + (s.total_sleep_mins || 0), 0) /
+              wearableOnlySleep.filter((s) => s.total_sleep_mins).length
           )
         : null;
 
     const avgEfficiency =
-      recentSleep.filter((s) => s.sleep_efficiency).length > 0
+      wearableOnlySleep.filter((s) => s.sleep_efficiency).length > 0
         ? Math.round(
-            recentSleep.reduce((acc, s) => acc + (s.sleep_efficiency || 0), 0) /
-              recentSleep.filter((s) => s.sleep_efficiency).length
+            wearableOnlySleep.reduce((acc, s) => acc + (s.sleep_efficiency || 0), 0) /
+              wearableOnlySleep.filter((s) => s.sleep_efficiency).length
           )
         : null;
 
     const avgDeepSleep =
-      recentSleep.filter((s) => s.deep_sleep_mins).length > 0
+      wearableOnlySleep.filter((s) => s.deep_sleep_mins).length > 0
         ? Math.round(
-            recentSleep.reduce((acc, s) => acc + (s.deep_sleep_mins || 0), 0) /
-              recentSleep.filter((s) => s.deep_sleep_mins).length
+            wearableOnlySleep.reduce((acc, s) => acc + (s.deep_sleep_mins || 0), 0) /
+              wearableOnlySleep.filter((s) => s.deep_sleep_mins).length
           )
         : null;
 
     const avgRemSleep =
-      recentSleep.filter((s) => s.rem_sleep_mins).length > 0
+      wearableOnlySleep.filter((s) => s.rem_sleep_mins).length > 0
         ? Math.round(
-            recentSleep.reduce((acc, s) => acc + (s.rem_sleep_mins || 0), 0) /
-              recentSleep.filter((s) => s.rem_sleep_mins).length
+            wearableOnlySleep.reduce((acc, s) => acc + (s.rem_sleep_mins || 0), 0) /
+              wearableOnlySleep.filter((s) => s.rem_sleep_mins).length
           )
         : null;
 
@@ -543,11 +549,20 @@ export const getPatientHealthSummary = query({
       (g) => g.gap_direction === "accurate"
     ).length;
 
+    // CRITICAL: Only report wearable data as available if:
+    // 1. User has actually connected Apple Health AND
+    // 2. The data is from a real wearable (not questionnaire-derived)
+    const hasRealWearableConnection = user.apple_health_connected === true;
+    const hasRealWearableData = hasRealWearableConnection && wearableOnlySleep.length > 0;
+
     return {
-      hasHealthKitData: recentSleep.length > 0,
-      dataPoints: recentSleep.length,
-      lastSyncDate: recentSleep[0]?.date || null,
-      summary: {
+      hasHealthKitData: hasRealWearableData,
+      hasWearableConnected: hasRealWearableConnection,
+      dataPoints: hasRealWearableData ? wearableOnlySleep.length : 0,
+      lastSyncDate: hasRealWearableData ? (wearableOnlySleep[0]?.date || null) : null,
+      // Only return wearable-derived metrics if user has REAL wearable data
+      // Sleep stages, HR, HRV CANNOT be derived from questionnaires
+      summary: hasRealWearableData ? {
         avgSleepHours: avgSleepMins ? avgSleepMins / 60 : null,
         avgEfficiency,
         avgDeepSleepMins: avgDeepSleep,
@@ -566,6 +581,14 @@ export const getPatientHealthSummary = query({
                   recentHr.filter((h) => h.hrv_avg).length
               )
             : null,
+      } : {
+        // No wearable connected - return nulls for all wearable-derived metrics
+        avgSleepHours: null,
+        avgEfficiency: null,
+        avgDeepSleepMins: null,
+        avgRemSleepMins: null,
+        avgRestingHr: null,
+        avgHrv: null,
       },
       perceptionAnalysis: {
         overestimateCount,
@@ -579,7 +602,8 @@ export const getPatientHealthSummary = query({
             ? "underestimate"
             : "accurate",
       },
-      recentSleep: recentSleep.map((s) => ({
+      // Only return REAL wearable sleep data (exclude questionnaire-derived)
+      recentSleep: hasRealWearableData ? wearableOnlySleep.map((s) => ({
         date: s.date,
         totalSleepMins: s.total_sleep_mins,
         efficiency: s.sleep_efficiency,
@@ -588,20 +612,24 @@ export const getPatientHealthSummary = query({
         lightMins: s.light_sleep_mins,
         awakeMins: s.awake_mins,
         awakenings: s.interruptions_count,
-      })),
-      recentGaps: recentGaps.map((g) => ({
+        primarySource: s.primary_source,
+      })) : [],
+      // Perception gaps only make sense with wearable data
+      recentGaps: hasRealWearableConnection ? recentGaps.map((g) => ({
         date: g.date,
         subjectiveQuality: g.subjective_quality,
         objectiveEfficiency: g.objective_efficiency,
         gapScore: g.gap_score,
         gapDirection: g.gap_direction,
-      })),
+      })) : [],
     };
   },
 });
 
 /**
- * Get sleep architecture data for visualization
+ * Get sleep architecture data for visualization.
+ * CRITICAL: Sleep stages (deep, light, REM, awake) can ONLY be measured by wearable devices.
+ * They CANNOT be derived from questionnaires. This query returns null if no real wearable data exists.
  */
 export const getSleepArchitecture = query({
   args: {
@@ -611,18 +639,42 @@ export const getSleepArchitecture = query({
   handler: async (ctx, args) => {
     const { userId, limit = 15 } = args;
 
+    // Check if user has a real wearable connected
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+
+    const hasRealWearable = user.apple_health_connected === true;
+
+    // Get sleep data
     const sleepData = await ctx.db
       .query("user_sleep_data")
       .withIndex("by_user", (q) => q.eq("user_id", userId))
       .collect();
 
-    return sleepData
-      .filter(
-        (s) =>
-          s.deep_sleep_mins !== undefined ||
-          s.light_sleep_mins !== undefined ||
-          s.rem_sleep_mins !== undefined
-      )
+    // CRITICAL: Filter to ONLY wearable-sourced data
+    // Questionnaire data does NOT have real sleep stages - any values there were fabricated
+    const wearableData = sleepData.filter(
+      (s) => s.primary_source && s.primary_source !== "Questionnaire"
+    );
+
+    // If no real wearable connection or no wearable data, return null
+    if (!hasRealWearable || wearableData.length === 0) {
+      return null;
+    }
+
+    // Only return data that actually has sleep stage measurements from wearables
+    const dataWithStages = wearableData.filter(
+      (s) =>
+        s.deep_sleep_mins !== undefined ||
+        s.light_sleep_mins !== undefined ||
+        s.rem_sleep_mins !== undefined
+    );
+
+    if (dataWithStages.length === 0) {
+      return null;
+    }
+
+    return dataWithStages
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, limit)
       .map((s, index) => ({
@@ -1116,11 +1168,8 @@ export const computeAllSleepMetricsFromResponses = mutation({
         ? Math.round((totalSleepMins / timeInBedMins) * 100)
         : 0;
 
-      // Generate sleep stages
-      const qualityFactor = quality ? (quality / 5) : 0.7;
-      const deepSleepMins = Math.round(totalSleepMins * (0.15 + qualityFactor * 0.10));
-      const remSleepMins = Math.round(totalSleepMins * (0.18 + qualityFactor * 0.07));
-      const lightSleepMins = totalSleepMins - deepSleepMins - remSleepMins;
+      // NOTE: Sleep stages (deep, REM, light) CANNOT be derived from questionnaires.
+      // They require wearable sensors to measure. We do NOT fabricate these values.
 
       // Calculate timestamps
       const dayDateObj = new Date(date + "T00:00:00");
@@ -1145,13 +1194,11 @@ export const computeAllSleepMetricsFromResponses = mutation({
         wake_time: wakeTimestamp,
         total_sleep_mins: totalSleepMins,
         sleep_efficiency: sleepEfficiency,
-        deep_sleep_mins: deepSleepMins,
-        light_sleep_mins: lightSleepMins,
-        rem_sleep_mins: remSleepMins,
+        // Sleep stages NOT populated - they require wearable sensors
         awake_mins: wasoMins ?? undefined,
         interruptions_count: awakenings ?? undefined,
         sleep_latency_mins: latencyMins ?? undefined,
-        primary_source: "Questionnaire",
+        primary_source: "Questionnaire",  // Critical: marks this as subjective data
         source_bundle_id: "com.zoesleep.app",
         synced_at: now,
       };

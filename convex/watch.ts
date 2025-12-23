@@ -100,17 +100,10 @@ async function computeSleepMetricsForDay(
     sleepEfficiency = Math.round((totalSleepMins / timeInBedMins) * 100);
   }
 
-  // Generate realistic sleep stage distribution (estimated from total sleep)
-  let deepSleepMins: number | undefined;
-  let lightSleepMins: number | undefined;
-  let remSleepMins: number | undefined;
-
-  if (totalSleepMins !== undefined && totalSleepMins > 0) {
-    const qualityFactor = quality ? quality / 5 : 0.7;
-    deepSleepMins = Math.round(totalSleepMins * (0.15 + qualityFactor * 0.1));
-    remSleepMins = Math.round(totalSleepMins * (0.18 + qualityFactor * 0.07));
-    lightSleepMins = totalSleepMins - deepSleepMins - remSleepMins;
-  }
+  // NOTE: Sleep stages (deep, REM, light) CANNOT be derived from questionnaires.
+  // They require wearable sensors (HRV, movement, EEG) to measure.
+  // We do NOT fabricate these values - they will be null for questionnaire-only data.
+  // Only real wearable integrations should populate these fields.
 
   // Convert times to Unix timestamps
   const dateObj = new Date(date + "T00:00:00");
@@ -138,13 +131,12 @@ async function computeSleepMetricsForDay(
     wake_time: wakeTimestamp,
     total_sleep_mins: totalSleepMins,
     sleep_efficiency: sleepEfficiency,
-    deep_sleep_mins: deepSleepMins,
-    light_sleep_mins: lightSleepMins,
-    rem_sleep_mins: remSleepMins,
+    // Sleep stages are NOT populated for questionnaire data - they require wearable sensors
+    // deep_sleep_mins, light_sleep_mins, rem_sleep_mins remain undefined
     awake_mins: wasoMins ?? undefined,
     interruptions_count: awakenings ?? undefined,
     sleep_latency_mins: latencyMins ?? undefined,
-    primary_source: "Questionnaire",
+    primary_source: "Questionnaire",  // Critical: marks this as subjective data
     source_bundle_id: "com.zoesleep.app",
     synced_at: now,
   };

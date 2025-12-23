@@ -173,6 +173,30 @@ struct CompleteSectionResponse: Codable {
     let source: String?
 }
 
+/// Response type for daily completion status (catch-up feature)
+struct DailyCompletionStatus: Codable {
+    struct DayStatus: Codable {
+        let dayNumber: Int
+        let sleepLogCompleted: Bool
+        let assessmentCompleted: Bool
+        let sleepLogCount: Int
+        let assessmentCount: Int
+    }
+
+    struct MissedDay: Codable {
+        let dayNumber: Int
+        let missingSleepLog: Bool
+        let missingAssessment: Bool
+    }
+
+    let currentDay: Int
+    let dailyStatus: [DayStatus]
+    let missedDays: [MissedDay]
+    let hasMissedTasks: Bool
+    let totalMissedSleepLogs: Int
+    let totalMissedAssessments: Int
+}
+
 struct SuccessResponse: Codable {
     let success: Bool
 }
@@ -618,6 +642,16 @@ class ConvexService {
 
         // Use watch:getJourneyState which includes section completion status
         return try await client.query("watch:getJourneyState", args: ["userId": userId])
+    }
+
+    /// Get detailed daily completion status for all days (catch-up feature)
+    /// Returns which days have missed sleep logs or assessments
+    func getDailyCompletionStatus() async throws -> DailyCompletionStatus {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("ios:getDailyCompletionStatus", args: ["userId": userId])
     }
 
     func completeDay(dayNumber: Int) async throws -> CompleteDayResponse {

@@ -90,6 +90,10 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
 
   // AI Analysis action
   const analyzePatient = useAction(api.llm.analyzePatientResponses);
+  const previewPrompt = useAction(api.llm.previewAnalysisPrompt);
+
+  // LLM Settings
+  const llmSettings = useQuery(api.systemSettings.getLLMSettings);
 
   const [analysis, setAnalysis] = useState<{
     summary: string;
@@ -97,6 +101,15 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
     recommendations: string[];
   } | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [promptPreview, setPromptPreview] = useState<{
+    systemPrompt: string;
+    userPrompt: string;
+    estimatedTokens: number;
+    estimatedCost: string;
+    selectedModel: string;
+    modelProvider: string;
+  } | null>(null);
 
   // State for pillar detail modal
   const [selectedPillar, setSelectedPillar] = useState<PillarKey | null>(null);
@@ -116,6 +129,19 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
       setAnalysisError(error instanceof Error ? error.message : "Analysis failed. Please try again.");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handlePreviewPrompt = async () => {
+    setIsLoadingPreview(true);
+    try {
+      const result = await previewPrompt({ userId });
+      setPromptPreview(result);
+    } catch (error) {
+      console.error("Preview failed:", error);
+      setAnalysisError(error instanceof Error ? error.message : "Failed to load prompt preview.");
+    } finally {
+      setIsLoadingPreview(false);
     }
   };
 
@@ -338,7 +364,8 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         questionsAnswered = patient.completedDays * 5; // 5 questions per day
         questionsTotal = patient.user.current_day * 5;
       }
-      if (pillar === "sleepQuantity" && healthSummary?.summary?.avgSleepHours) {
+      // Only use healthSummary for sleep quantity if there's real wearable data
+      if (pillar === "sleepQuantity" && healthSummary?.hasHealthKitData && healthSummary?.summary?.avgSleepHours) {
         const hrs = healthSummary.summary.avgSleepHours;
         score = hrs >= 7 ? 90 : hrs >= 6 ? 70 : hrs >= 5 ? 50 : 30;
         if (hrs < 6) alerts.push("Insufficient sleep duration");
@@ -356,20 +383,23 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
   }, [patientScores, patient, healthSummary, pillarStats]);
 
   // Build subjective vs objective comparison
+  // CRITICAL: Only include objective data if user has real wearable connection
   const sleepComparison = useMemo(() => {
     const latestGap = healthSummary?.recentGaps?.[0];
     const latestSleep = healthSummary?.recentSleep?.[0];
+    const hasWearable = healthSummary?.hasHealthKitData === true;
 
     return {
       date: latestGap?.date || new Date().toISOString().split("T")[0],
       subjective: {
         quality: latestGap?.subjectiveQuality || 7,
-        totalSleep: 420, // Default 7 hours
+        totalSleep: 420, // Default 7 hours - TODO: Get from questionnaire responses
         bedtime: "22:30",
         wakeTime: "06:30",
         awakenings: 2,
       },
-      objective: latestSleep ? {
+      // Only include objective data if wearable is actually connected
+      objective: hasWearable && latestSleep ? {
         efficiency: latestSleep.efficiency || 85,
         totalSleep: latestSleep.totalSleepMins || 420,
         bedtime: "22:45",
@@ -383,9 +413,40 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
   }, [healthSummary]);
 
   const hasHealthKitData = healthSummary?.hasHealthKitData || false;
-  const complianceRate = patient.completedDays > 0
-    ? Math.round((patient.completedDays / patient.user.current_day) * 100)
-    : 0;
+
+  // Calculate REAL compliance - both Sleep Log AND Assessment must be complete for a day to count
+  const actualComplianceData = useMemo(() => {
+    if (complianceDataQuery && complianceDataQuery.length > 0) {
+      // Count days where BOTH tasks are complete
+      const fullyCompleteDays = complianceDataQuery.filter(
+        d => d.sleepLogCompleted && d.assessmentCompleted
+      ).length;
+      // Count days where at least one task is complete (partial)
+      const partialDays = complianceDataQuery.filter(
+        d => (d.sleepLogCompleted || d.assessmentCompleted) && !(d.sleepLogCompleted && d.assessmentCompleted)
+      ).length;
+      // Count days where sleep log is done (for streak)
+      const sleepLogDays = complianceDataQuery.filter(d => d.sleepLogCompleted).length;
+      const assessmentDays = complianceDataQuery.filter(d => d.assessmentCompleted).length;
+
+      return {
+        fullyCompleteDays,
+        partialDays,
+        sleepLogRate: Math.round((sleepLogDays / complianceDataQuery.length) * 100),
+        assessmentRate: Math.round((assessmentDays / complianceDataQuery.length) * 100),
+        overallRate: Math.round((fullyCompleteDays / complianceDataQuery.length) * 100),
+      };
+    }
+    return {
+      fullyCompleteDays: 0,
+      partialDays: 0,
+      sleepLogRate: 0,
+      assessmentRate: 0,
+      overallRate: 0,
+    };
+  }, [complianceDataQuery]);
+
+  const complianceRate = actualComplianceData.overallRate;
 
   return (
     <div className="space-y-6">
@@ -400,23 +461,28 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         />
         <StatCard
           icon={<Moon className="w-5 h-5" />}
-          label="Avg Sleep Quality"
-          value={healthSummary?.summary?.avgEfficiency ? `${healthSummary.summary.avgEfficiency}%` : "—"}
-          subValue="efficiency"
+          label={hasHealthKitData ? "Avg Sleep Quality" : "Wearable Data"}
+          value={hasHealthKitData && healthSummary?.summary?.avgEfficiency ? `${healthSummary.summary.avgEfficiency}%` : "—"}
+          subValue={hasHealthKitData ? "from wearable" : "not connected"}
           color="purple"
         />
         <StatCard
           icon={<Activity className="w-5 h-5" />}
-          label="Sleep Duration"
-          value={healthSummary?.summary?.avgSleepHours ? `${healthSummary.summary.avgSleepHours.toFixed(1)}h` : "—"}
-          subValue="average"
+          label={hasHealthKitData ? "Sleep Duration" : "Sleep Duration"}
+          value={hasHealthKitData && healthSummary?.summary?.avgSleepHours ? `${healthSummary.summary.avgSleepHours.toFixed(1)}h` : "—"}
+          subValue={hasHealthKitData ? "from wearable" : "no wearable"}
           color="green"
         />
         <StatCard
           icon={<TrendingUp className="w-5 h-5" />}
           label="Compliance"
           value={`${complianceRate}%`}
-          subValue={`${patient.completedDays} days`}
+          subValue={actualComplianceData.fullyCompleteDays > 0
+            ? `${actualComplianceData.fullyCompleteDays} complete days`
+            : actualComplianceData.partialDays > 0
+              ? `${actualComplianceData.partialDays} partial`
+              : "no data yet"
+          }
           color="amber"
         />
       </div>
@@ -447,8 +513,12 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         <AIInsightsCard
           insights={insights}
           onRunDeepAnalysis={handleAnalyze}
+          onPreviewPrompt={handlePreviewPrompt}
           isAnalyzing={isAnalyzing}
+          isLoadingPreview={isLoadingPreview}
           lastAnalysisTime={analysis ? "Just now" : undefined}
+          selectedModel={llmSettings?.primaryModel || "claude-sonnet-4-20250514"}
+          modelProvider={llmSettings?.primaryModel?.startsWith("claude") ? "Anthropic" : "OpenAI"}
           error={analysisError}
         />
 
@@ -507,21 +577,27 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
           </div>
         )}
 
-        {/* Sleep Architecture (if available) */}
-        {sleepArchitecture && sleepArchitecture.length > 0 && (
-          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-gray-700/50 flex items-center justify-center text-gray-400">
-                <Moon className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-white">Last Night</h3>
-                <p className="text-xs text-gray-500">Sleep stages</p>
-              </div>
+        {/* Sleep Architecture - requires REAL wearable data (not questionnaire-derived) */}
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-gray-700/50 flex items-center justify-center text-gray-400">
+              <Moon className="w-4 h-4" />
             </div>
-            <SleepBreakdown data={sleepArchitecture[sleepArchitecture.length - 1]} />
+            <div>
+              <h3 className="text-sm font-medium text-white">Last Night</h3>
+              <p className="text-xs text-gray-500">Sleep stages</p>
+            </div>
           </div>
-        )}
+          {sleepArchitecture && sleepArchitecture.length > 0 ? (
+            <SleepBreakdown data={sleepArchitecture[sleepArchitecture.length - 1]} />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-24 text-center">
+              <Watch className="w-8 h-8 text-gray-600 mb-2" />
+              <p className="text-sm text-gray-400">No Wearable Connected</p>
+              <p className="text-xs text-gray-500 mt-1">Sleep stages require Apple Watch or similar device</p>
+            </div>
+          )}
+        </div>
 
         {/* Wearable Status with Data Quality */}
         <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
@@ -656,8 +732,8 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
           </div>
           <ComplianceSummary
             overallPercentage={complianceRate}
-            sleepLogRate={complianceRate}
-            assessmentRate={complianceRate}
+            sleepLogRate={actualComplianceData.sleepLogRate}
+            assessmentRate={actualComplianceData.assessmentRate}
             interventionRate={0}
           />
         </div>
@@ -717,6 +793,74 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
                   </li>
                 ))}
               </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prompt Preview Modal */}
+      {promptPreview && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-700">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Analysis Prompt Preview</h3>
+                <p className="text-sm text-gray-400">
+                  Model: {promptPreview.selectedModel} ({promptPreview.modelProvider})
+                </p>
+              </div>
+              <button
+                onClick={() => setPromptPreview(null)}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-purple-400">System Prompt</h4>
+                  <span className="text-xs text-gray-500">Sets the AI's role and behavior</span>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
+                    {promptPreview.systemPrompt}
+                  </pre>
+                </div>
+              </div>
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-blue-400">User Prompt (Patient Data)</h4>
+                  <span className="text-xs text-gray-500">Contains all patient information</span>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
+                    {promptPreview.userPrompt}
+                  </pre>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-4">
+                  <span className="text-gray-400">
+                    Estimated Tokens: <span className="text-white">{promptPreview.estimatedTokens.toLocaleString()}</span>
+                  </span>
+                  <span className="text-gray-400">
+                    Estimated Cost: <span className="text-white">{promptPreview.estimatedCost}</span>
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `SYSTEM:\n${promptPreview.systemPrompt}\n\nUSER:\n${promptPreview.userPrompt}`
+                    );
+                  }}
+                  className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors text-xs"
+                >
+                  Copy to Clipboard
+                </button>
+              </div>
             </div>
           </div>
         </div>

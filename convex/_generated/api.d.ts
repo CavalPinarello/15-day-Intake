@@ -49,6 +49,7 @@ import type * as seedModules from "../seedModules.js";
 import type * as seedQuestions from "../seedQuestions.js";
 import type * as sleepInsights from "../sleepInsights.js";
 import type * as sleepPhenotype from "../sleepPhenotype.js";
+import type * as systemSettings from "../systemSettings.js";
 import type * as testUserGenerator from "../testUserGenerator.js";
 import type * as testingAPI from "../testingAPI.js";
 import type * as treatment from "../treatment.js";
@@ -104,6 +105,7 @@ declare const fullApi: ApiFromModules<{
   seedQuestions: typeof seedQuestions;
   sleepInsights: typeof sleepInsights;
   sleepPhenotype: typeof sleepPhenotype;
+  systemSettings: typeof systemSettings;
   testUserGenerator: typeof testUserGenerator;
   testingAPI: typeof testingAPI;
   treatment: typeof treatment;

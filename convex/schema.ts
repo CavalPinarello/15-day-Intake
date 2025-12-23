@@ -1691,5 +1691,22 @@ export default defineSchema({
     order_index: v.number(),
   })
     .index("by_window_id", ["window_id"]),
+
+  // ============================================
+  // System Settings
+  // Global configuration for AI analysis and other system-wide settings
+  // ============================================
+
+  system_settings: defineTable({
+    key: v.string(), // Setting key (e.g., "llm_primary_model", "llm_anthropic_key")
+    value: v.string(), // Setting value (API keys stored encrypted)
+    category: v.string(), // "llm", "notifications", "features"
+    description: v.optional(v.string()), // Human-readable description
+    is_secret: v.boolean(), // True for API keys and sensitive data
+    updated_at: v.number(),
+    updated_by: v.optional(v.string()), // User ID or "system"
+  })
+    .index("by_key", ["key"])
+    .index("by_category", ["category"]),
 });
 

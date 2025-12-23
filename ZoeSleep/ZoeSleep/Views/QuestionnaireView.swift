@@ -20,6 +20,7 @@ struct QuestionnaireView: View {
     // Which section to start with (and optionally limit to)
     var startSection: QuestionnaireSection = .sleepLog
     var sectionOnly: Bool = false  // If true, only show this section (don't transition to next)
+    var isCatchUp: Bool = false  // If true, this is a catch-up for a missed day (not current day)
 
     // Section State
     @State private var currentSection: QuestionnaireSection = .sleepLog

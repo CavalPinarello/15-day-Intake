@@ -153,11 +153,21 @@ struct HealthKitIntegrationView: View {
     }
     
     private func checkAuthorizationStatus() {
-        // Check if we have authorization
-        // This is a simplified check - in production, check specific types
+        // Check if we have authorization by verifying actual data access
         if healthKitManager.isHealthKitAvailable {
-            // You would check actual authorization status here
-            // For now, we'll assume not authorized until user requests it
+            // First check the manager's cached authorization state
+            if healthKitManager.isAuthorized {
+                isAuthorized = true
+            } else {
+                // Verify by attempting to access data
+                healthKitManager.verifyDataAccess { hasAccess in
+                    isAuthorized = hasAccess
+                    if hasAccess {
+                        syncStatus = "Authorization verified. Ready to sync."
+                    }
+                }
+            }
+        } else {
             isAuthorized = false
         }
     }
@@ -170,7 +180,12 @@ struct HealthKitIntegrationView: View {
                     syncStatus = "Authorization granted! You can now sync your health data."
                 } else {
                     isAuthorized = false
-                    syncStatus = "Authorization failed: \(error?.localizedDescription ?? "Unknown error")"
+                    // Provide helpful guidance when authorization is denied
+                    if let error = error {
+                        syncStatus = "Authorization failed: \(error.localizedDescription)"
+                    } else {
+                        syncStatus = "Authorization not granted. To enable, go to Settings > Privacy & Security > Health > Zoe Sleep and turn on access."
+                    }
                 }
             }
         }

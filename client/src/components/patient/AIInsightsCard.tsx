@@ -27,9 +27,13 @@ interface AIInsight {
 interface AIInsightsCardProps {
   insights: AIInsight[];
   onRunDeepAnalysis?: () => void;
+  onPreviewPrompt?: () => void;
   onInsightClick?: (insight: AIInsight) => void;
   isAnalyzing?: boolean;
+  isLoadingPreview?: boolean;
   lastAnalysisTime?: string;
+  selectedModel?: string;
+  modelProvider?: string;
   error?: string | null;
 }
 
@@ -76,9 +80,13 @@ const categoryIcons: Record<InsightCategory, string> = {
 export function AIInsightsCard({
   insights,
   onRunDeepAnalysis,
+  onPreviewPrompt,
   onInsightClick,
   isAnalyzing = false,
+  isLoadingPreview = false,
   lastAnalysisTime,
+  selectedModel,
+  modelProvider,
   error,
 }: AIInsightsCardProps) {
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
@@ -95,7 +103,7 @@ export function AIInsightsCard({
   return (
     <BentoCard
       title="AI Insights"
-      subtitle={lastAnalysisTime ? `Last analyzed ${lastAnalysisTime}` : "GPT-4o analysis"}
+      subtitle={lastAnalysisTime ? `Last analyzed ${lastAnalysisTime}` : selectedModel ? `${selectedModel}${modelProvider ? ` (${modelProvider})` : ''}` : "AI analysis"}
       size="medium"
       icon={
         <svg
@@ -206,64 +214,129 @@ export function AIInsightsCard({
           )}
         </div>
 
-        {/* Deep Analysis button */}
-        {onRunDeepAnalysis && (
-          <button
-            onClick={onRunDeepAnalysis}
-            disabled={isAnalyzing}
-            className={`
-              w-full py-2 px-3 rounded-lg font-medium text-sm
-              transition-all flex items-center justify-center gap-2
-              ${
-                isAnalyzing
-                  ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white"
-              }
-            `}
-          >
-            {isAnalyzing ? (
-              <>
-                <svg
-                  className="animate-spin h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          {/* Preview Prompt button */}
+          {onPreviewPrompt && (
+            <button
+              onClick={onPreviewPrompt}
+              disabled={isLoadingPreview || isAnalyzing}
+              className={`
+                flex-1 py-2 px-3 rounded-lg font-medium text-sm
+                transition-all flex items-center justify-center gap-2
+                border border-gray-600 text-gray-300 hover:bg-gray-700/50
+                ${(isLoadingPreview || isAnalyzing) ? "opacity-50 cursor-not-allowed" : ""}
+              `}
+            >
+              {isLoadingPreview ? (
+                <>
+                  <svg
+                    className="animate-spin h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
                     stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-                Run Deep Analysis
-              </>
-            )}
-          </button>
-        )}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                  Preview Prompt
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Deep Analysis button */}
+          {onRunDeepAnalysis && (
+            <button
+              onClick={onRunDeepAnalysis}
+              disabled={isAnalyzing}
+              className={`
+                flex-1 py-2 px-3 rounded-lg font-medium text-sm
+                transition-all flex items-center justify-center gap-2
+                ${
+                  isAnalyzing
+                    ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white"
+                }
+              `}
+            >
+              {isAnalyzing ? (
+                <>
+                  <svg
+                    className="animate-spin h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  Run Analysis
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </BentoCard>
   );

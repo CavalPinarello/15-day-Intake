@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
 import {
@@ -16,6 +16,11 @@ import {
   Lock,
   CheckCircle,
   AlertCircle,
+  Bot,
+  Key,
+  RefreshCw,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
 
@@ -28,6 +33,7 @@ async function sha256(message: string): Promise<string> {
 }
 
 export default function PhysicianSettingsPage() {
+  // Password change state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -37,7 +43,109 @@ export default function PhysicianSettingsPage() {
     text: string;
   } | null>(null);
 
+  // AI Configuration state
+  const [anthropicKey, setAnthropicKey] = useState("");
+  const [openaiKey, setOpenaiKey] = useState("");
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+  const [isTestingAnthropic, setIsTestingAnthropic] = useState(false);
+  const [isTestingOpenai, setIsTestingOpenai] = useState(false);
+  const [isSavingAnthropic, setIsSavingAnthropic] = useState(false);
+  const [isSavingOpenai, setIsSavingOpenai] = useState(false);
+  const [aiMessage, setAiMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  // Queries and mutations
   const changeMasterPassword = useMutation(api.physicianAuth.changeMasterPassword);
+  const llmSettings = useQuery(api.systemSettings.getLLMSettings);
+  const modelOptions = useQuery(api.systemSettings.getModelOptions);
+  const setPrimaryModel = useMutation(api.systemSettings.setPrimaryModel);
+  const setFallbackModel = useMutation(api.systemSettings.setFallbackModel);
+  const setAnthropicKeyMutation = useMutation(api.systemSettings.setAnthropicKey);
+  const setOpenAIKeyMutation = useMutation(api.systemSettings.setOpenAIKey);
+  const toggleFallback = useMutation(api.systemSettings.toggleFallback);
+  const testAnthropicKey = useAction(api.systemSettings.testAnthropicKey);
+  const testOpenAIKey = useAction(api.systemSettings.testOpenAIKey);
+
+  // Handle API key save
+  const handleSaveAnthropicKey = async () => {
+    if (!anthropicKey.trim()) return;
+    setIsSavingAnthropic(true);
+    setAiMessage(null);
+    try {
+      await setAnthropicKeyMutation({ apiKey: anthropicKey });
+      setAiMessage({ type: "success", text: "Anthropic API key saved successfully" });
+      setAnthropicKey("");
+    } catch (err) {
+      setAiMessage({ type: "error", text: "Failed to save Anthropic API key" });
+    } finally {
+      setIsSavingAnthropic(false);
+    }
+  };
+
+  const handleSaveOpenAIKey = async () => {
+    if (!openaiKey.trim()) return;
+    setIsSavingOpenai(true);
+    setAiMessage(null);
+    try {
+      await setOpenAIKeyMutation({ apiKey: openaiKey });
+      setAiMessage({ type: "success", text: "OpenAI API key saved successfully" });
+      setOpenaiKey("");
+    } catch (err) {
+      setAiMessage({ type: "error", text: "Failed to save OpenAI API key" });
+    } finally {
+      setIsSavingOpenai(false);
+    }
+  };
+
+  // Handle API key test
+  const handleTestAnthropicKey = async () => {
+    const keyToTest = anthropicKey.trim() || llmSettings?.settings?.llm_anthropic_key;
+    if (!keyToTest) {
+      setAiMessage({ type: "error", text: "No Anthropic API key to test" });
+      return;
+    }
+    setIsTestingAnthropic(true);
+    setAiMessage(null);
+    try {
+      // Use the new key if entered, otherwise we can't test the stored one (it's masked)
+      if (!anthropicKey.trim()) {
+        setAiMessage({ type: "error", text: "Enter a new key to test, or the stored key is masked" });
+        return;
+      }
+      const result = await testAnthropicKey({ apiKey: anthropicKey });
+      setAiMessage({
+        type: result.success ? "success" : "error",
+        text: result.message,
+      });
+    } catch (err) {
+      setAiMessage({ type: "error", text: "Failed to test API key" });
+    } finally {
+      setIsTestingAnthropic(false);
+    }
+  };
+
+  const handleTestOpenAIKey = async () => {
+    if (!openaiKey.trim()) {
+      setAiMessage({ type: "error", text: "Enter a key to test" });
+      return;
+    }
+    setIsTestingOpenai(true);
+    setAiMessage(null);
+    try {
+      const result = await testOpenAIKey({ apiKey: openaiKey });
+      setAiMessage({
+        type: result.success ? "success" : "error",
+        text: result.message,
+      });
+    } catch (err) {
+      setAiMessage({ type: "error", text: "Failed to test API key" });
+    } finally {
+      setIsTestingOpenai(false);
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,6 +367,232 @@ export default function PhysicianSettingsPage() {
                 <option value="pending">Pending Review</option>
                 <option value="questions">Question Manager</option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Configuration Section */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Bot className="w-5 h-5 text-gray-400" />
+            <h3 className="text-lg font-semibold text-gray-900">AI Analysis Configuration</h3>
+          </div>
+
+          <div className="space-y-6">
+            {/* Model Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Primary Model
+                </label>
+                <select
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  value={llmSettings?.primaryModel || "claude-sonnet-4-20250514"}
+                  onChange={(e) => setPrimaryModel({ modelId: e.target.value })}
+                >
+                  <optgroup label="Anthropic (Claude)">
+                    {modelOptions?.anthropic.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="OpenAI (GPT)">
+                    {modelOptions?.openai.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Used for patient analysis</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fallback Model
+                </label>
+                <select
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  value={llmSettings?.fallbackModel || "gpt-4o"}
+                  onChange={(e) => setFallbackModel({ modelId: e.target.value })}
+                >
+                  <optgroup label="OpenAI (GPT)">
+                    {modelOptions?.openai.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Anthropic (Claude)">
+                    {modelOptions?.anthropic.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Used if primary fails</p>
+              </div>
+            </div>
+
+            {/* Fallback Toggle */}
+            <label className="flex items-center justify-between cursor-pointer">
+              <div>
+                <p className="font-medium text-gray-900">Enable Fallback</p>
+                <p className="text-sm text-gray-500">
+                  Automatically try fallback model if primary fails
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={llmSettings?.enableFallback ?? true}
+                onChange={(e) => toggleFallback({ enabled: e.target.checked })}
+                className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"
+              />
+            </label>
+
+            {/* API Keys Section */}
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Key className="w-4 h-4 text-gray-500" />
+                <h4 className="font-medium text-gray-900">API Keys</h4>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Enter your API keys. Keys are stored encrypted and override environment variables.
+              </p>
+
+              {/* Status indicators */}
+              <div className="flex gap-4 mb-4">
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                  llmSettings?.hasAnthropicKey
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-500"
+                }`}>
+                  {llmSettings?.hasAnthropicKey ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4" />
+                  )}
+                  Anthropic: {llmSettings?.hasAnthropicKey ? "Configured" : "Not set"}
+                </div>
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                  llmSettings?.hasOpenAIKey
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-500"
+                }`}>
+                  {llmSettings?.hasOpenAIKey ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4" />
+                  )}
+                  OpenAI: {llmSettings?.hasOpenAIKey ? "Configured" : "Not set"}
+                </div>
+              </div>
+
+              {/* Anthropic API Key */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Anthropic API Key
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showAnthropicKey ? "text" : "password"}
+                      value={anthropicKey}
+                      onChange={(e) => setAnthropicKey(e.target.value)}
+                      placeholder={llmSettings?.hasAnthropicKey ? "••••••••••••" : "sk-ant-..."}
+                      className="w-full px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAnthropicKey(!showAnthropicKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showAnthropicKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleTestAnthropicKey}
+                    disabled={isTestingAnthropic || !anthropicKey.trim()}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  >
+                    {isTestingAnthropic ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Test"
+                    )}
+                  </button>
+                  <button
+                    onClick={handleSaveAnthropicKey}
+                    disabled={isSavingAnthropic || !anthropicKey.trim()}
+                    className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSavingAnthropic ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+
+              {/* OpenAI API Key */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  OpenAI API Key
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showOpenaiKey ? "text" : "password"}
+                      value={openaiKey}
+                      onChange={(e) => setOpenaiKey(e.target.value)}
+                      placeholder={llmSettings?.hasOpenAIKey ? "••••••••••••" : "sk-..."}
+                      className="w-full px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOpenaiKey(!showOpenaiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showOpenaiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleTestOpenAIKey}
+                    disabled={isTestingOpenai || !openaiKey.trim()}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  >
+                    {isTestingOpenai ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Test"
+                    )}
+                  </button>
+                  <button
+                    onClick={handleSaveOpenAIKey}
+                    disabled={isSavingOpenai || !openaiKey.trim()}
+                    className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSavingOpenai ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Message display */}
+              {aiMessage && (
+                <div
+                  className={`p-3 rounded-lg flex items-center gap-2 ${
+                    aiMessage.type === "success"
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-red-50 text-red-700 border border-red-200"
+                  }`}
+                >
+                  {aiMessage.type === "success" ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4" />
+                  )}
+                  {aiMessage.text}
+                </div>
+              )}
             </div>
           </div>
         </div>

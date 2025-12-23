@@ -77,6 +77,10 @@ struct MainDashboardView: View {
     // Motivational message - stored to prevent flickering on re-renders
     @State private var motivationalMessage: String = ""
 
+    // Catch-up feature - track missed days
+    @State private var missedDays: [DailyCompletionStatus.MissedDay] = []
+    @State private var catchUpDayNumber: Int? = nil
+
     // Poll every 5 seconds when app is active (for cross-device sync)
     private let refreshInterval: TimeInterval = 5.0
 
@@ -100,6 +104,11 @@ struct MainDashboardView: View {
 
                     // Journey Progress Card
                     journeyProgressCard
+
+                    // Catch-up Card (if there are missed days)
+                    if !missedDays.isEmpty {
+                        catchUpCard
+                    }
 
                     // Today's Tasks Card
                     todaysTasksCard
@@ -944,7 +953,154 @@ struct MainDashboardView: View {
                     await questionnaireManager.loadExpansionScheduleForDay(progress.currentDay)
                 }
             }
+
+            // Load missed days for catch-up feature
+            await loadMissedDays()
         }
+    }
+
+    /// Load missed days from Convex for catch-up feature
+    private func loadMissedDays() async {
+        do {
+            let status = try await ConvexService.shared.getDailyCompletionStatus()
+            await MainActor.run {
+                self.missedDays = status.missedDays
+            }
+        } catch {
+            print("[iOS] Failed to load missed days: \(error)")
+        }
+    }
+
+    // MARK: - Catch-up Card
+
+    private var catchUpCard: some View {
+        VStack(spacing: Spacing.md) {
+            // Header
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("Catch Up")
+                    .font(.system(size: Typography.headline, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.textOnCard)
+                Spacer()
+                Text("\(missedDays.count) day\(missedDays.count > 1 ? "s" : "")")
+                    .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                    .foregroundColor(.orange)
+            }
+
+            Text("You have incomplete tasks from previous days. Complete them to improve your sleep analysis accuracy.")
+                .font(.system(size: Typography.caption, design: .rounded))
+                .foregroundColor(theme.textOnCardSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // List missed days (show up to 3)
+            ForEach(missedDays.prefix(3), id: \.dayNumber) { missed in
+                MissedDayRow(
+                    dayNumber: missed.dayNumber,
+                    missingSleepLog: missed.missingSleepLog,
+                    missingAssessment: missed.missingAssessment,
+                    onTap: {
+                        catchUpDayNumber = missed.dayNumber
+                    }
+                )
+            }
+
+            // Show "View all" if more than 3 missed days
+            if missedDays.count > 3 {
+                Text("+ \(missedDays.count - 3) more days")
+                    .font(.system(size: Typography.caption, design: .rounded))
+                    .foregroundColor(theme.textOnCardMuted)
+            }
+        }
+        .padding(Spacing.lg)
+        .background(GlassyCardBackground(opacity: 0.6, tint: .orange))
+        .cornerRadius(CornerRadius.large)
+        // Navigation to catch-up questionnaire
+        .background(
+            Group {
+                if let dayNum = catchUpDayNumber {
+                    let missedItem = missedDays.first { $0.dayNumber == dayNum }
+                    let startSection: QuestionnaireSection = missedItem?.missingSleepLog == true ? .sleepLog : .assessment
+                    NavigationLink(
+                        destination: QuestionnaireView(
+                            currentDay: .constant(dayNum),
+                            startSection: startSection,
+                            sectionOnly: true,
+                            isCatchUp: true
+                        )
+                        .environmentObject(healthKitManager)
+                        .environmentObject(themeManager),
+                        isActive: Binding(
+                            get: { catchUpDayNumber != nil },
+                            set: { if !$0 { catchUpDayNumber = nil } }
+                        )
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
+                }
+            }
+        )
+    }
+}
+
+// MARK: - Missed Day Row Component
+
+struct MissedDayRow: View {
+    let dayNumber: Int
+    let missingSleepLog: Bool
+    let missingAssessment: Bool
+    let onTap: () -> Void
+
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: Spacing.md) {
+                // Day number badge
+                Text("Day \(dayNumber)")
+                    .font(.system(size: Typography.subheadline, weight: .bold, design: .rounded))
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.2))
+                    .cornerRadius(8)
+
+                // Missing tasks
+                VStack(alignment: .leading, spacing: 2) {
+                    if missingSleepLog {
+                        HStack(spacing: 4) {
+                            Image(systemName: "moon.zzz")
+                                .font(.caption)
+                            Text("Sleep Log")
+                                .font(.system(size: Typography.caption, design: .rounded))
+                        }
+                        .foregroundColor(theme.textOnCardSecondary)
+                    }
+                    if missingAssessment {
+                        HStack(spacing: 4) {
+                            Image(systemName: "list.bullet.clipboard")
+                                .font(.caption)
+                            Text("Assessment")
+                                .font(.system(size: Typography.caption, design: .rounded))
+                        }
+                        .foregroundColor(theme.textOnCardSecondary)
+                    }
+                }
+
+                Spacer()
+
+                // Chevron
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(theme.textOnCardMuted)
+            }
+            .padding(Spacing.sm)
+            .background(theme.cardBackground.opacity(0.3))
+            .cornerRadius(8)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
