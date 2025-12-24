@@ -8,14 +8,15 @@ import { v } from "convex/values";
 
 /**
  * Submit morning check-in
- * Records sleep quality, energy level, and mood upon waking
+ * Records sleep quality, energy level, mood, and focus upon waking
  */
 export const submitMorningCheckIn = mutation({
   args: {
     userId: v.id("users"),
     sleepQuality: v.number(),       // 1-5
-    energyLevel: v.number(),        // 1-4
-    mood: v.optional(v.number()),   // 1-5
+    energyLevel: v.number(),        // 1-6 (Watch: animal icons)
+    mood: v.optional(v.number()),   // 1-6 (Watch: weather icons)
+    focusLevel: v.optional(v.number()), // 1-5 (Watch: clarity icons)
     deviceType: v.optional(v.string()), // "ios", "watch"
   },
   returns: v.id("daily_checkins"),
@@ -37,6 +38,7 @@ export const submitMorningCheckIn = mutation({
         sleep_quality: args.sleepQuality,
         energy_level: args.energyLevel,
         mood: args.mood,
+        focus_level: args.focusLevel,
         completed: true,
         completed_at: now,
         device_type: args.deviceType,
@@ -55,6 +57,7 @@ export const submitMorningCheckIn = mutation({
       sleep_quality: args.sleepQuality,
       energy_level: args.energyLevel,
       mood: args.mood,
+      focus_level: args.focusLevel,
       device_type: args.deviceType,
       created_at: now,
       updated_at: now,
@@ -749,5 +752,189 @@ export const watchQuickMiddayCheckIn = mutation({
       created_at: now,
       updated_at: now,
     });
+  },
+});
+
+/**
+ * Unified Watch Check-In (NEW - for minimal watch app)
+ *
+ * Submits a check-in with Energy (animal icons), Mood (weather), and Focus (clarity).
+ * This is the primary check-in method for the redesigned minimal Watch app.
+ *
+ * Energy levels (1-6): sleepingSeal, turtle, cat, dog, ostrich, rabbit
+ * Mood levels (1-6): stormy, rainy, cloudy, partlySunny, sunny, rainbow
+ * Focus levels (1-5): foggy, hazy, clearing, clear, crystal
+ */
+export const watchSubmitCheckIn = mutation({
+  args: {
+    userId: v.id("users"),
+    checkInType: v.union(v.literal("morning"), v.literal("midday"), v.literal("evening")),
+    energyLevel: v.number(),      // 1-6 (animal icons)
+    moodLevel: v.number(),        // 1-6 (weather icons)
+    focusLevel: v.number(),       // 1-5 (clarity icons)
+  },
+  returns: v.object({
+    checkInId: v.id("daily_checkins"),
+    checkInsCompletedToday: v.number(),
+    isFirstCheckInToday: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const today = new Date().toISOString().split("T")[0];
+
+    // Check if this type of check-in already exists for today
+    const existing = await ctx.db
+      .query("daily_checkins")
+      .withIndex("by_user_date_type", (q) =>
+        q.eq("user_id", args.userId).eq("checkin_date", today).eq("checkin_type", args.checkInType)
+      )
+      .first();
+
+    let checkInId: typeof existing._id;
+    const isFirstCheckInToday = !existing;
+
+    if (existing) {
+      // Update existing check-in
+      const updateData: Record<string, unknown> = {
+        energy_level: args.energyLevel,
+        mood: args.moodLevel,
+        focus_level: args.focusLevel,
+        completed: true,
+        completed_at: now,
+        device_type: "watch",
+        updated_at: now,
+      };
+
+      // For midday, also set midday_energy
+      if (args.checkInType === "midday") {
+        updateData.midday_energy = args.energyLevel;
+      }
+
+      // For evening, also set overall_day_rating (derive from mood)
+      if (args.checkInType === "evening") {
+        // Map 6-point mood scale to 5-point day rating
+        updateData.overall_day_rating = Math.min(5, Math.ceil(args.moodLevel * 5 / 6));
+      }
+
+      await ctx.db.patch(existing._id, updateData);
+      checkInId = existing._id;
+    } else {
+      // Create new check-in
+      const insertData: Record<string, unknown> = {
+        user_id: args.userId,
+        checkin_date: today,
+        checkin_type: args.checkInType,
+        completed: true,
+        completed_at: now,
+        energy_level: args.energyLevel,
+        mood: args.moodLevel,
+        focus_level: args.focusLevel,
+        device_type: "watch",
+        created_at: now,
+        updated_at: now,
+      };
+
+      // For midday, also set midday_energy
+      if (args.checkInType === "midday") {
+        insertData.midday_energy = args.energyLevel;
+      }
+
+      // For evening, also set overall_day_rating
+      if (args.checkInType === "evening") {
+        insertData.overall_day_rating = Math.min(5, Math.ceil(args.moodLevel * 5 / 6));
+      }
+
+      checkInId = await ctx.db.insert("daily_checkins", insertData as any);
+    }
+
+    // Count completed check-ins for today
+    const todayCheckIns = await ctx.db
+      .query("daily_checkins")
+      .withIndex("by_user_date", (q) =>
+        q.eq("user_id", args.userId).eq("checkin_date", today)
+      )
+      .collect();
+
+    const checkInsCompletedToday = todayCheckIns.filter(c => c.completed).length;
+
+    return {
+      checkInId,
+      checkInsCompletedToday,
+      isFirstCheckInToday,
+    };
+  },
+});
+
+/**
+ * Get watch check-in status for today
+ * Returns which check-ins are done and what the recommended next check-in is
+ */
+export const getWatchCheckInStatus = query({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.object({
+    morningDone: v.boolean(),
+    middayDone: v.boolean(),
+    eveningDone: v.boolean(),
+    totalDone: v.number(),
+    recommendedNext: v.union(v.literal("morning"), v.literal("midday"), v.literal("evening"), v.null()),
+    // Last check-in data for display
+    lastEnergyLevel: v.optional(v.number()),
+    lastMoodLevel: v.optional(v.number()),
+    lastFocusLevel: v.optional(v.number()),
+  }),
+  handler: async (ctx, args) => {
+    const today = new Date().toISOString().split("T")[0];
+    const currentHour = new Date().getHours();
+
+    // Get all check-ins for today
+    const todayCheckIns = await ctx.db
+      .query("daily_checkins")
+      .withIndex("by_user_date", (q) =>
+        q.eq("user_id", args.userId).eq("checkin_date", today)
+      )
+      .collect();
+
+    const morning = todayCheckIns.find(c => c.checkin_type === "morning" && c.completed);
+    const midday = todayCheckIns.find(c => c.checkin_type === "midday" && c.completed);
+    const evening = todayCheckIns.find(c => c.checkin_type === "evening" && c.completed);
+
+    const morningDone = !!morning;
+    const middayDone = !!midday;
+    const eveningDone = !!evening;
+    const totalDone = (morningDone ? 1 : 0) + (middayDone ? 1 : 0) + (eveningDone ? 1 : 0);
+
+    // Determine recommended next check-in based on time
+    let recommendedNext: "morning" | "midday" | "evening" | null = null;
+    if (currentHour >= 5 && currentHour < 12 && !morningDone) {
+      recommendedNext = "morning";
+    } else if (currentHour >= 12 && currentHour < 18 && !middayDone) {
+      recommendedNext = "midday";
+    } else if (currentHour >= 18 && currentHour < 24 && !eveningDone) {
+      recommendedNext = "evening";
+    } else if (!morningDone) {
+      recommendedNext = "morning";
+    } else if (!middayDone) {
+      recommendedNext = "midday";
+    } else if (!eveningDone) {
+      recommendedNext = "evening";
+    }
+
+    // Get the most recent check-in data for display
+    const allCompleted = [...todayCheckIns.filter(c => c.completed)];
+    allCompleted.sort((a, b) => (b.completed_at ?? 0) - (a.completed_at ?? 0));
+    const lastCheckIn = allCompleted[0];
+
+    return {
+      morningDone,
+      middayDone,
+      eveningDone,
+      totalDone,
+      recommendedNext,
+      lastEnergyLevel: lastCheckIn?.energy_level,
+      lastMoodLevel: lastCheckIn?.mood,
+      lastFocusLevel: lastCheckIn?.focus_level,
+    };
   },
 });

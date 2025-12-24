@@ -20,6 +20,8 @@ struct WatchJourneyState: Codable {
     // Section-level completion for current day
     let sleepLogCompleted: Bool?
     let assessmentCompleted: Bool?
+    // Overdue expansion packs count (for reminder on Watch)
+    let overdueExpansionsCount: Int?
 }
 
 struct WatchCompleteSectionResponse: Codable {
@@ -162,6 +164,8 @@ class WatchConvexService: ObservableObject {
     // Section-level completion for current day
     @Published var sleepLogCompleted = false
     @Published var assessmentCompleted = false
+    // Overdue expansion packs count (for reminder)
+    @Published var overdueExpansionsCount = 0
 
     private init() {
         let config = URLSessionConfiguration.ephemeral
@@ -192,25 +196,33 @@ class WatchConvexService: ObservableObject {
     }
 
     /// Refresh journey state from Convex (called on app activation)
-    /// Auto-logs in as user3 for development/simulator testing if not authenticated
+    /// Waits for iPhone to sync credentials - does NOT auto-login to avoid user mismatch
     func refreshFromConvex() async {
-        // Auto-login for development if not authenticated
+        // Do NOT auto-login as a different user - wait for iPhone to sync credentials
+        // This prevents the Watch showing one user's data while iPhone shows another
         if !isAuthenticated {
-            print("[WatchConvex] Not authenticated - auto-logging in as user3 for development")
-            do {
-                let userInfo = try await signIn(username: "user3", password: "1")
-                print("[WatchConvex] Auto-logged in as \(userInfo.username), Day \(userInfo.currentDay)")
-            } catch {
-                print("[WatchConvex] Auto-login failed: \(error)")
-                return
-            }
+            print("[WatchConvex] Not authenticated - waiting for credentials from iPhone")
+            print("[WatchConvex] (In simulator, WatchConnectivity may not work - try signing in manually)")
+            return
         }
 
         do {
             _ = try await fetchJourneyState()
-            print("[WatchConvex] Refreshed state: Day \(currentDay)")
+            print("[WatchConvex] Refreshed state for \(username ?? "unknown"): Day \(currentDay), SleepLog=\(sleepLogCompleted), Assessment=\(assessmentCompleted)")
         } catch {
             print("[WatchConvex] Failed to refresh: \(error)")
+        }
+    }
+
+    /// For simulator testing only - manually sign in as the same user as iPhone
+    func signInForTesting(username: String, password: String) async -> Bool {
+        do {
+            let userInfo = try await signIn(username: username, password: password)
+            print("[WatchConvex] Signed in as \(userInfo.username), Day \(userInfo.currentDay)")
+            return true
+        } catch {
+            print("[WatchConvex] Sign in failed: \(error)")
+            return false
         }
     }
 
@@ -422,6 +434,8 @@ class WatchConvexService: ObservableObject {
             // Update section completion status for current day
             self.sleepLogCompleted = state.sleepLogCompleted ?? false
             self.assessmentCompleted = state.assessmentCompleted ?? false
+            // Update overdue expansions count
+            self.overdueExpansionsCount = state.overdueExpansionsCount ?? 0
         }
 
         return state
@@ -763,6 +777,128 @@ class WatchConvexService: ObservableObject {
             "section": section
         ])
     }
+
+    // MARK: - Watch Check-In (Minimal 3-Metric)
+
+    /// Submit a quick check-in from the watch (energy, mood, focus)
+    /// - Parameters:
+    ///   - checkInType: morning, midday, or evening
+    ///   - energyLevel: 1-6 (sleeping seal to rabbit)
+    ///   - moodLevel: 1-6 (stormy to rainbow)
+    ///   - focusLevel: 1-5 (foggy to crystal)
+    func submitWatchCheckIn(
+        checkInType: String,
+        energyLevel: Int,
+        moodLevel: Int,
+        focusLevel: Int
+    ) async throws -> WatchCheckInSubmitResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        var args: [String: Any] = [
+            "userId": userId,
+            "checkInType": checkInType,
+            "energyLevel": energyLevel,
+            "moodLevel": moodLevel,
+            "focusLevel": focusLevel
+        ]
+
+        // Include session token for authorization
+        if let token = sessionToken {
+            args["sessionToken"] = token
+        }
+
+        return try await mutation("checkIn:watchSubmitCheckIn", args: args)
+    }
+
+    /// Get today's check-in status (which check-ins are done)
+    func getWatchCheckInStatus() async throws -> WatchCheckInStatusResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        return try await query("checkIn:getWatchCheckInStatus", args: [
+            "userId": userId
+        ])
+    }
+
+    // MARK: - Weekly Garden
+
+    /// Get the weekly garden state for visualization
+    func getWeeklyGarden() async throws -> WatchGardenResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        return try await query("watchGarden:getWeeklyGarden", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Update garden bloom after completing a check-in or task
+    func updateGardenBloom(
+        date: String,
+        checkInsCompleted: Int,
+        tasksCompleted: Int,
+        totalTasks: Int
+    ) async throws -> WatchGardenUpdateResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        var args: [String: Any] = [
+            "userId": userId,
+            "date": date,
+            "checkInsCompleted": checkInsCompleted,
+            "tasksCompleted": tasksCompleted,
+            "totalTasks": totalTasks
+        ]
+
+        // Include session token for authorization
+        if let token = sessionToken {
+            args["sessionToken"] = token
+        }
+
+        return try await mutation("watchGarden:updateGardenBloom", args: args)
+    }
+
+    /// Sync garden state after a check-in is submitted
+    func syncGardenAfterCheckIn(checkInsCompletedToday: Int) async throws -> WatchGardenUpdateResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        var args: [String: Any] = [
+            "userId": userId,
+            "checkInsCompletedToday": checkInsCompletedToday
+        ]
+
+        // Include session token for authorization
+        if let token = sessionToken {
+            args["sessionToken"] = token
+        }
+
+        return try await mutation("watchGarden:syncGardenAfterCheckIn", args: args)
+    }
+
+    /// Get streak information
+    func getStreakInfo() async throws -> (currentStreak: Int, longestStreak: Int) {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        struct StreakResponse: Codable {
+            let currentStreak: Int
+            let longestStreak: Int
+        }
+
+        let response: StreakResponse = try await query("watchGarden:getStreakInfo", args: [
+            "userId": userId
+        ])
+
+        return (response.currentStreak, response.longestStreak)
+    }
 }
 
 // MARK: - Question Response Models
@@ -790,4 +926,50 @@ struct WatchQuestionsForDayResponse: Codable {
     let sleepLog: [WatchConvexQuestion]
     let assessment: [WatchConvexQuestion]
     let metadata: WatchQuestionsMetadata
+}
+
+// MARK: - Check-In Response Models
+
+struct WatchCheckInSubmitResponse: Codable {
+    let success: Bool
+    let checkInId: String?
+    let checkInsCompletedToday: Int
+    let isFirstCheckInToday: Bool
+    let error: String?
+}
+
+struct WatchCheckInStatusResponse: Codable {
+    let morningDone: Bool
+    let middayDone: Bool
+    let eveningDone: Bool
+    let totalDone: Int
+    let recommendedNext: String?
+    let lastEnergyLevel: Int?
+    let lastMoodLevel: Int?
+    let lastFocusLevel: Int?
+}
+
+// MARK: - Garden Response Models
+
+struct WatchGardenDayResponse: Codable {
+    let date: String
+    let dayOfWeek: String
+    let bloomState: Int
+    let checkInsCompleted: Int
+    let tasksCompleted: Int
+    let totalTasks: Int
+    let isToday: Bool
+}
+
+struct WatchGardenResponse: Codable {
+    let weekStartDate: String
+    let days: [WatchGardenDayResponse]
+    let currentStreak: Int
+    let longestStreak: Int
+}
+
+struct WatchGardenUpdateResponse: Codable {
+    let success: Bool
+    let newBloomState: Int
+    let currentStreak: Int
 }

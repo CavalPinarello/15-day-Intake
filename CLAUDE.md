@@ -113,6 +113,25 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Overdue Expansion Pack Tracking:** Full tracking for incomplete expansion packs from previous days (Dec 24, 2025)
+  - **Problem:** Users could trigger expansion packs on Day N but advance to Day N+1 without completing them, with no visibility
+  - **Backend:** `ios.ts:getDailyCompletionStatus` now returns `overdueExpansions[]` with dayNumber, triggeredGateways, questionCount, answeredCount, estimatedMinutes
+  - **Backend:** `watch.ts:getJourneyState` now returns `overdueExpansionsCount` for Watch reminder
+  - **iOS Dashboard:** Purple "Overdue Deep Dives" card shows incomplete expansion packs with progress and time estimates
+  - **iOS Navigation:** Tap overdue expansion to jump directly to catch-up questionnaire for that day
+  - **Watch App:** Purple reminder card shows count of overdue packs with "Complete on iPhone" indicator
+  - **Files changed:** `convex/ios.ts`, `convex/watch.ts`, `ContentView.swift` (+160 lines), `ConvexService.swift`, `WatchConvexService.swift`, `WatchHomeView.swift`
+- **Next Button UX Fix:** Questions with default values no longer require interaction to proceed (Dec 24, 2025)
+  - **Problem:** Number inputs (e.g., "How many hours looking at screens?") showed default value (6) but Next button was disabled until user changed it
+  - **Fix:** `canProceed` in `QuestionnaireView.swift` now returns `true` for `.number` and `.numberScroll` types
+  - **Smart default saving:** When user taps Next without interacting, the visible default value is saved automatically
+  - **Watch app:** Same fix applied to `isCurrentQuestionAnswered()` for time, scale, and number questions
+  - **Files changed:** `QuestionnaireView.swift` (iOS), `QuestionnaireView.swift` (Watch)
+- **Sleep Log Completion Persistence:** Section completion now saves immediately when showing completion screen (Dec 24, 2025)
+  - **Problem:** Completing Sleep Log showed "Complete!" but tapping back instead of "Proceed to Assessment" didn't persist completion
+  - **Fix:** Added `completeSectionInBackground()` that syncs responses and marks section complete immediately when completion screen appears
+  - **Impact:** Users can tap back after completing Sleep Log and dashboard correctly shows it as done
+  - **Files changed:** `QuestionnaireView.swift` (+60 lines)
 - **AI Analysis Configuration System:** Complete LLM settings management for physician dashboard (Dec 23, 2025)
   - **System Settings Table:** New `system_settings` table in schema for storing API keys and model preferences
   - **Model Selection:** Primary + fallback model configuration with latest models:

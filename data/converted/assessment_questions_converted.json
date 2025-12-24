@@ -63,7 +63,11 @@
       "layout": "horizontal"
     },
     "validation_rules": {
-      "required": true
+      "required": false
+    },
+    "conditional_logic": {
+      "question_id": "35",
+      "equals": "yes"
     },
     "estimated_time_seconds": 30,
     "created_at": 1763104572235,
@@ -103,15 +107,19 @@
     "answer_format": "number_input",
     "format_config": {
       "min": 0,
-      "max": 1000,
+      "max": 20,
       "step": 1,
       "decimalPlaces": 0,
       "inputMode": "numeric"
     },
     "validation_rules": {
-      "required": true,
+      "required": false,
       "min": 0,
-      "max": 1000
+      "max": 20
+    },
+    "conditional_logic": {
+      "question_id": "37",
+      "equals": "yes"
     },
     "estimated_time_seconds": 30,
     "created_at": 1763104572235,
@@ -209,15 +217,15 @@
   },
   {
     "question_id": "53E",
-    "question_text": "On a scale of 1-10, how would you rate your current work-related stress?",
+    "question_text": "How would you rate your current work-related stress?",
     "pillar": "Social",
     "tier": "CORE",
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No stress",
+      "maxLabel": "Extreme stress",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -239,7 +247,7 @@
     "answer_format": "number_input",
     "format_config": {
       "min": 0,
-      "max": 1000,
+      "max": 30,
       "step": 1,
       "decimalPlaces": 0,
       "inputMode": "numeric"
@@ -247,7 +255,7 @@
     "validation_rules": {
       "required": true,
       "min": 0,
-      "max": 1000
+      "max": 30
     },
     "estimated_time_seconds": 30,
     "created_at": 1763104572235,
@@ -255,23 +263,21 @@
   },
   {
     "question_id": "53G",
-    "question_text": "Do you frequently cross time zones (>2 hours)?",
+    "question_text": "How often do you cross time zones (flights >2 hours)?",
     "pillar": "Social",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Never" },
+        { "value": "1", "label": "Rarely (1-2x/year)" },
+        { "value": "2", "label": "Sometimes (monthly)" },
+        { "value": "3", "label": "Often (weekly)" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 4
+      "required": true
     },
     "estimated_time_seconds": 30,
     "created_at": 1763104572235,
@@ -487,23 +493,26 @@
   },
   {
     "question_id": "28",
-    "question_text": "Waist circumference",
+    "question_text": "What is your waist circumference?",
     "pillar": "Metabolic",
     "tier": "CORE",
-    "answer_format": "number_input",
+    "answer_format": "number_scroll",
     "format_config": {
-      "min": 0,
-      "max": 1000,
+      "min": 50,
+      "max": 180,
+      "defaultValue": 85,
       "step": 1,
-      "decimalPlaces": 0,
-      "inputMode": "numeric"
+      "unit": "cm",
+      "unitImperial": "in",
+      "minImperial": 20,
+      "maxImperial": 70,
+      "defaultImperial": 34
     },
     "validation_rules": {
-      "required": true,
-      "min": 0,
-      "max": 1000
+      "required": false
     },
-    "estimated_time_seconds": 30,
+    "help_text": "Measure around your belly button. Skip if you don't know.",
+    "estimated_time_seconds": 20,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
@@ -529,7 +538,30 @@
     "validation_rules": {
       "required": true
     },
-    "estimated_time_seconds": 30,
+    "estimated_time_seconds": 10,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44A_DETAILS",
+    "question_text": "Please list your prescription medications",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "text_area",
+    "format_config": {
+      "placeholder": "e.g., Lisinopril 10mg, Metformin 500mg, Zolpidem 5mg...",
+      "multiline": true,
+      "maxLength": 1000
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "conditional_logic": {
+      "questionId": "44A",
+      "equals": "yes"
+    },
+    "help_text": "Include names and dosages. Many medications affect sleep - this helps your physician provide better recommendations.",
+    "estimated_time_seconds": 60,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
@@ -555,7 +587,30 @@
     "validation_rules": {
       "required": true
     },
-    "estimated_time_seconds": 30,
+    "estimated_time_seconds": 10,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44C_DETAILS",
+    "question_text": "Please list your supplements and vitamins",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "text_area",
+    "format_config": {
+      "placeholder": "e.g., Vitamin D 2000 IU, Melatonin 3mg, Magnesium 400mg...",
+      "multiline": true,
+      "maxLength": 1000
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "conditional_logic": {
+      "questionId": "44C",
+      "equals": "yes"
+    },
+    "help_text": "Include names and dosages if you know them. This helps your physician understand potential interactions with sleep.",
+    "estimated_time_seconds": 60,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
@@ -581,7 +636,30 @@
     "validation_rules": {
       "required": true
     },
-    "estimated_time_seconds": 30,
+    "estimated_time_seconds": 10,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44E_DETAILS",
+    "question_text": "Please describe your chronic medical conditions",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "text_area",
+    "format_config": {
+      "placeholder": "e.g., Type 2 diabetes, hypertension, asthma, thyroid disorder...",
+      "multiline": true,
+      "maxLength": 1000
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "conditional_logic": {
+      "questionId": "44E",
+      "equals": "yes"
+    },
+    "help_text": "Many conditions affect sleep quality. This helps your physician understand the full picture.",
+    "estimated_time_seconds": 60,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
@@ -607,13 +685,36 @@
     "validation_rules": {
       "required": true
     },
-    "estimated_time_seconds": 30,
+    "estimated_time_seconds": 10,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44G_DETAILS",
+    "question_text": "Please describe your recent surgeries or procedures",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "text_area",
+    "format_config": {
+      "placeholder": "e.g., Knee replacement (March 2025), Appendectomy (January 2025)...",
+      "multiline": true,
+      "maxLength": 1000
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "conditional_logic": {
+      "questionId": "44G",
+      "equals": "yes"
+    },
+    "help_text": "Include the type of surgery and approximate date. Recent procedures can affect sleep patterns.",
+    "estimated_time_seconds": 60,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "44I",
-    "question_text": "For women: Are you currently pregnant?",
+    "question_text": "Are you currently pregnant?",
     "pillar": "Metabolic",
     "tier": "CORE",
     "answer_format": "single_select_chips",
@@ -626,10 +727,6 @@
         {
           "value": "no",
           "label": "No"
-        },
-        {
-          "value": "not_applicable",
-          "label": "Not applicable"
         }
       ],
       "layout": "horizontal"
@@ -637,13 +734,20 @@
     "validation_rules": {
       "required": true
     },
+    "conditional_logic": {
+      "all": [
+        { "questionId": "D4", "equals": "female" },
+        { "ageUnder": 55 }
+      ]
+    },
+    "help_text": "Only shown for women of reproductive age",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "44J",
-    "question_text": "For women: Are you currently breastfeeding?",
+    "question_text": "Are you currently breastfeeding?",
     "pillar": "Metabolic",
     "tier": "CORE",
     "answer_format": "single_select_chips",
@@ -656,10 +760,6 @@
         {
           "value": "no",
           "label": "No"
-        },
-        {
-          "value": "not_applicable",
-          "label": "Not applicable"
         }
       ],
       "layout": "horizontal"
@@ -667,45 +767,52 @@
     "validation_rules": {
       "required": true
     },
+    "conditional_logic": {
+      "all": [
+        { "questionId": "D4", "equals": "female" },
+        { "ageUnder": 55 }
+      ]
+    },
+    "help_text": "Only shown for women of reproductive age",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "44K",
-    "question_text": "Do you use recreational drugs or cannabis?",
+    "question_text": "How often do you use recreational drugs or cannabis?",
     "pillar": "Metabolic",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Never" },
+        { "value": "1", "label": "Rarely (a few times/year)" },
+        { "value": "2", "label": "Monthly" },
+        { "value": "3", "label": "Weekly" },
+        { "value": "4", "label": "Daily or almost daily" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 5
+      "required": true
     },
+    "help_text": "Cannabis and other substances can significantly affect sleep quality and architecture.",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "1",
-    "question_text": "Overall sleep quality in past month",
+    "question_text": "How would you rate your overall sleep quality in the past month?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Very poor",
+      "maxLabel": "Excellent",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -721,23 +828,22 @@
   },
   {
     "question_id": "2",
-    "question_text": "How often do you feel refreshed after sleep?",
+    "question_text": "How often do you feel refreshed and rested after sleep?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Never" },
+        { "value": "1", "label": "Rarely" },
+        { "value": "2", "label": "Sometimes" },
+        { "value": "3", "label": "Often" },
+        { "value": "4", "label": "Always" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 5
+      "required": true
     },
     "estimated_time_seconds": 60,
     "created_at": 1763104572236,
@@ -813,21 +919,22 @@
   },
   {
     "question_id": "12C",
-    "question_text": "How long does it typically take you to fall back asleep after waking?",
+    "question_text": "When you wake up during the night, how long does it typically take you to fall back asleep?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
     "answer_format": "minutes_scroll",
     "format_config": {
       "min": 0,
-      "max": 200,
-      "defaultValue": 0,
+      "max": 120,
+      "defaultValue": 15,
       "step": 5
     },
     "validation_rules": {
       "required": true,
       "min": 0,
-      "max": 200
+      "max": 120
     },
+    "help_text": "Your best estimate in minutes",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -851,22 +958,22 @@
   },
   {
     "question_id": "42",
-    "question_text": "How long to fall asleep each night?",
+    "question_text": "During the past month, how many minutes did it typically take you to fall asleep at night?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "single_select_chips",
+    "answer_format": "minutes_scroll",
     "format_config": {
-      "options": [
-        {
-          "value": "minutes",
-          "label": "minutes"
-        }
-      ],
-      "layout": "horizontal"
+      "min": 0,
+      "max": 180,
+      "defaultValue": 15,
+      "step": 5
     },
     "validation_rules": {
-      "required": true
+      "required": true,
+      "min": 0,
+      "max": 180
     },
+    "help_text": "This can be derived from your sleep log",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -890,243 +997,221 @@
   },
   {
     "question_id": "44",
-    "question_text": "How many hours of actual sleep did you get?",
+    "question_text": "During the past month, how many hours of actual sleep did you typically get at night?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "single_select_chips",
+    "answer_format": "number_scroll",
     "format_config": {
-      "options": [
-        {
-          "value": "yes",
-          "label": "Yes"
-        },
-        {
-          "value": "no",
-          "label": "No"
-        }
-      ],
-      "layout": "horizontal"
+      "min": 0,
+      "max": 15,
+      "defaultValue": 7,
+      "step": 0.5
     },
     "validation_rules": {
-      "required": true
+      "required": true,
+      "min": 0,
+      "max": 15
     },
-    "estimated_time_seconds": 30,
+    "help_text": "This can be derived from your sleep log",
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "45",
-    "question_text": "Trouble sleeping: cannot get to sleep within 30 minutes",
+    "question_text": "How often have you had trouble sleeping because you cannot get to sleep within 30 minutes?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not during the past month" },
+        { "value": "1", "label": "Less than once a week" },
+        { "value": "2", "label": "Once or twice a week" },
+        { "value": "3", "label": "Three or more times a week" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 3
+      "required": true
     },
-    "estimated_time_seconds": 60,
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "46",
-    "question_text": "Trouble sleeping: wake up in middle of night or early morning",
+    "question_text": "How often have you had trouble sleeping because you wake up in the middle of the night or early morning?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not during the past month" },
+        { "value": "1", "label": "Less than once a week" },
+        { "value": "2", "label": "Once or twice a week" },
+        { "value": "3", "label": "Three or more times a week" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 3
+      "required": true
     },
-    "estimated_time_seconds": 60,
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "47",
-    "question_text": "Trouble sleeping: have to get up to use bathroom",
+    "question_text": "How often have you had trouble sleeping because you have to get up to use the bathroom?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not during the past month" },
+        { "value": "1", "label": "Less than once a week" },
+        { "value": "2", "label": "Once or twice a week" },
+        { "value": "3", "label": "Three or more times a week" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 3
+      "required": true
     },
-    "estimated_time_seconds": 60,
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "48",
-    "question_text": "Trouble sleeping: cannot breathe comfortably",
+    "question_text": "How often have you had trouble sleeping because you cannot breathe comfortably?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not during the past month" },
+        { "value": "1", "label": "Less than once a week" },
+        { "value": "2", "label": "Once or twice a week" },
+        { "value": "3", "label": "Three or more times a week" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 3
+      "required": true
     },
-    "estimated_time_seconds": 60,
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "49",
-    "question_text": "Trouble sleeping: cough or snore loudly",
+    "question_text": "How often have you had trouble sleeping because you cough or snore loudly?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not during the past month" },
+        { "value": "1", "label": "Less than once a week" },
+        { "value": "2", "label": "Once or twice a week" },
+        { "value": "3", "label": "Three or more times a week" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 3
+      "required": true
     },
-    "estimated_time_seconds": 60,
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "50",
-    "question_text": "Trouble sleeping: feel too cold",
+    "question_text": "How often have you had trouble sleeping because you feel too cold?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not during the past month" },
+        { "value": "1", "label": "Less than once a week" },
+        { "value": "2", "label": "Once or twice a week" },
+        { "value": "3", "label": "Three or more times a week" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 3
+      "required": true
     },
-    "estimated_time_seconds": 60,
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "51",
-    "question_text": "Trouble sleeping: feel too hot",
+    "question_text": "How often have you had trouble sleeping because you feel too hot?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not during the past month" },
+        { "value": "1", "label": "Less than once a week" },
+        { "value": "2", "label": "Once or twice a week" },
+        { "value": "3", "label": "Three or more times a week" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 3
+      "required": true
     },
-    "estimated_time_seconds": 60,
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "52",
-    "question_text": "Trouble sleeping: had bad dreams",
+    "question_text": "How often have you had trouble sleeping because you have bad dreams?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not during the past month" },
+        { "value": "1", "label": "Less than once a week" },
+        { "value": "2", "label": "Once or twice a week" },
+        { "value": "3", "label": "Three or more times a week" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 3
+      "required": true
     },
-    "estimated_time_seconds": 60,
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "53",
-    "question_text": "Trouble sleeping: have pain",
+    "question_text": "How often have you had trouble sleeping because you have pain?",
     "pillar": "Sleep Quality",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not during the past month" },
+        { "value": "1", "label": "Less than once a week" },
+        { "value": "2", "label": "Once or twice a week" },
+        { "value": "3", "label": "Three or more times a week" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 3
+      "required": true
     },
-    "estimated_time_seconds": 60,
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
@@ -2081,65 +2166,66 @@
   },
   {
     "question_id": "4",
-    "question_text": "Hours of sleep per night on WEEKDAYS",
+    "question_text": "On average, how many hours do you sleep per night on weekdays?",
     "pillar": "Sleep Quantity",
     "tier": "CORE",
-    "answer_format": "number_scroll",
+    "answer_format": "hours_minutes_scroll",
     "format_config": {
-      "min": 0,
-      "max": 40,
-      "defaultValue": 0,
-      "unit": "hours",
-      "step": 0.5
+      "minHours": 0,
+      "maxHours": 14,
+      "defaultHours": 7,
+      "defaultMinutes": 0,
+      "minuteStep": 15
     },
     "validation_rules": {
-      "required": true,
-      "min": 0,
-      "max": 40
+      "required": true
     },
+    "help_text": "Your best estimate of actual sleep time, not time in bed",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "5",
-    "question_text": "Hours of sleep per night on WEEKENDS",
+    "question_text": "On average, how many hours do you sleep per night on weekends?",
     "pillar": "Sleep Quantity",
     "tier": "CORE",
-    "answer_format": "number_scroll",
+    "answer_format": "hours_minutes_scroll",
     "format_config": {
-      "min": 0,
-      "max": 40,
-      "defaultValue": 0,
-      "unit": "hours",
-      "step": 0.5
+      "minHours": 0,
+      "maxHours": 14,
+      "defaultHours": 7,
+      "defaultMinutes": 30,
+      "minuteStep": 15
     },
     "validation_rules": {
-      "required": true,
-      "min": 0,
-      "max": 40
+      "required": true
     },
+    "help_text": "Your best estimate of actual sleep time, not time in bed",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "6",
-    "question_text": "How long does it take you to fall asleep?",
+    "question_text": "On average, how long does it take you to fall asleep?",
     "pillar": "Sleep Quantity",
     "tier": "CORE",
     "answer_format": "minutes_scroll",
     "format_config": {
       "min": 0,
-      "max": 200,
-      "defaultValue": 0,
-      "step": 5
+      "max": 120,
+      "defaultValue": 15,
+      "step": 5,
+      "unit": "minutes"
     },
     "validation_rules": {
       "required": true,
       "min": 0,
-      "max": 200
+      "max": 120
     },
+    "can_derive_from": "CSD_LATENCY",
+    "help_text": "This is called 'sleep latency'. Can be derived from your Sleep Log if available.",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -2240,24 +2326,27 @@
   },
   {
     "question_id": "12",
-    "question_text": "How often do you get morning sunlight exposure?",
+    "question_text": "How many days per week do you get morning sunlight exposure within an hour of waking?",
     "pillar": "Sleep Timing",
     "tier": "CORE",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Never (0 days)" },
+        { "value": "1", "label": "1 day" },
+        { "value": "2", "label": "2 days" },
+        { "value": "3", "label": "3 days" },
+        { "value": "4", "label": "4 days" },
+        { "value": "5", "label": "5 days" },
+        { "value": "6", "label": "6 days" },
+        { "value": "7", "label": "Daily (7 days)" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 5
+      "required": true
     },
+    "help_text": "Morning sunlight helps regulate your circadian rhythm and improve sleep quality.",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -2739,24 +2828,29 @@
   },
   {
     "question_id": "15",
-    "question_text": "GATEWAY: In past 2 weeks, felt down, depressed, or hopeless?",
+    "question_text": "Over the past 2 weeks, how often have you felt down, depressed, or hopeless?",
     "pillar": "Mental Health",
     "tier": "GATEWAY",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not at all" },
+        { "value": "1", "label": "Several days" },
+        { "value": "2", "label": "More than half the days" },
+        { "value": "3", "label": "Nearly every day" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 4
+      "required": true
     },
+    "gateway_config": {
+      "gateway_type": "depression",
+      "trigger_threshold": 2,
+      "trigger_condition": ">=",
+      "triggers_questionnaires": ["expansion_phq9", "expansion_dass21"]
+    },
+    "help_text": "Based on the PHQ-2 screening. Scores of 2+ indicate further assessment needed.",
     "estimated_time_seconds": 10,
     "trigger": "Always",
     "created_at": 1763104572236,
@@ -2764,24 +2858,29 @@
   },
   {
     "question_id": "16",
-    "question_text": "GATEWAY: In past 2 weeks, felt nervous, anxious, or on edge?",
+    "question_text": "Over the past 2 weeks, how often have you felt nervous, anxious, or on edge?",
     "pillar": "Mental Health",
     "tier": "GATEWAY",
-    "answer_format": "slider_scale",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
-      "showNumberLabel": true,
-      "step": 1
+      "options": [
+        { "value": "0", "label": "Not at all" },
+        { "value": "1", "label": "Several days" },
+        { "value": "2", "label": "More than half the days" },
+        { "value": "3", "label": "Nearly every day" }
+      ],
+      "layout": "vertical"
     },
     "validation_rules": {
-      "required": true,
-      "min": 1,
-      "max": 4
+      "required": true
     },
+    "gateway_config": {
+      "gateway_type": "anxiety",
+      "trigger_threshold": 2,
+      "trigger_condition": ">=",
+      "triggers_questionnaires": ["expansion_gad7", "expansion_dass21"]
+    },
+    "help_text": "Based on the GAD-2 screening. Scores of 2+ indicate further assessment needed.",
     "estimated_time_seconds": 10,
     "trigger": "Always",
     "created_at": 1763104572236,
@@ -4866,23 +4965,26 @@
   },
   {
     "question_id": "21",
-    "question_text": "Neck circumference",
+    "question_text": "What is your neck circumference?",
     "pillar": "Physical",
     "tier": "CORE",
-    "answer_format": "number_input",
+    "answer_format": "number_scroll",
     "format_config": {
-      "min": 0,
-      "max": 1000,
-      "step": 1,
-      "decimalPlaces": 0,
-      "inputMode": "numeric"
+      "min": 25,
+      "max": 60,
+      "defaultValue": 38,
+      "step": 0.5,
+      "unit": "cm",
+      "unitImperial": "in",
+      "minImperial": 10,
+      "maxImperial": 24,
+      "defaultImperial": 15
     },
     "validation_rules": {
-      "required": true,
-      "min": 0,
-      "max": 1000
+      "required": false
     },
-    "estimated_time_seconds": 30,
+    "help_text": "Measure just below your Adam's apple. Important for sleep apnea assessment.",
+    "estimated_time_seconds": 20,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },

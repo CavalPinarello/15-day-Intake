@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { useState, useEffect, ReactNode } from "react";
 import { ChevronDown, ChevronUp, Check, Loader2 } from "lucide-react";

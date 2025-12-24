@@ -186,7 +186,7 @@ export default function TreatmentPage() {
               Complete Your Assessment First
             </h2>
             <p className="text-gray-600 mb-2">
-              You're on day {treatmentPhase.intakeDay} of your 14-day intake assessment.
+              You&apos;re on day {treatmentPhase.intakeDay} of your 14-day intake assessment.
             </p>
             <p className="text-gray-500 text-sm mb-6">
               Once you complete the assessment, your physician will create a personalized
@@ -236,7 +236,7 @@ export default function TreatmentPage() {
               your results and creating a personalized treatment plan.
             </p>
             <p className="text-gray-500 text-sm">
-              You'll receive a notification when your treatment plan is ready.
+              You&apos;ll receive a notification when your treatment plan is ready.
             </p>
           </div>
         </main>
@@ -275,7 +275,7 @@ export default function TreatmentPage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <Target className="w-5 h-5 text-teal-600" />
-              Today's Progress
+              Today&apos;s Progress
             </h3>
             <span className="text-2xl font-bold text-teal-600">
               {completionPercentage}%
@@ -419,7 +419,7 @@ export default function TreatmentPage() {
                 No treatment tasks yet
               </h3>
               <p className="text-gray-500 max-w-sm mx-auto">
-                Your physician hasn't assigned any treatment tasks yet.
+                Your physician hasn&apos;t assigned any treatment tasks yet.
                 Check back soon!
               </p>
             </div>

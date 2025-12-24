@@ -45,6 +45,21 @@ enum SharedPillar: String, Codable, CaseIterable {
     case sleepLog
 }
 
+// MARK: - Shared Conditional Logic
+
+/// Conditional logic for showing/hiding questions based on previous answers
+struct SharedConditionalLogic: Codable {
+    let questionId: String
+    let equals: String?
+    let greaterThan: Double?
+
+    init(questionId: String, equals: String? = nil, greaterThan: Double? = nil) {
+        self.questionId = questionId
+        self.equals = equals
+        self.greaterThan = greaterThan
+    }
+}
+
 // MARK: - Shared Question Definition
 
 /// Platform-agnostic question definition that can be used by both iOS and watchOS
@@ -69,6 +84,9 @@ struct SharedQuestion: Identifiable, Codable {
     // HealthKit auto-fill identifier (for demographics)
     var healthKitIdentifier: String?
 
+    // Conditional logic for showing/hiding this question
+    var conditionalLogic: SharedConditionalLogic?
+
     init(
         id: String,
         text: String,
@@ -84,7 +102,8 @@ struct SharedQuestion: Identifiable, Codable {
         unit: String? = nil,
         helpText: String? = nil,
         required: Bool = true,
-        healthKitIdentifier: String? = nil
+        healthKitIdentifier: String? = nil,
+        conditionalLogic: SharedConditionalLogic? = nil
     ) {
         self.id = id
         self.text = text
@@ -101,6 +120,7 @@ struct SharedQuestion: Identifiable, Codable {
         self.helpText = helpText
         self.required = required
         self.healthKitIdentifier = healthKitIdentifier
+        self.conditionalLogic = conditionalLogic
     }
 }
 
@@ -349,12 +369,13 @@ struct SharedQuestionBank {
         ),
         SharedQuestion(
             id: "PSQI_2",
-            text: "During the past month, how long (in minutes) has it usually taken you to fall asleep each night?",
+            text: "During the past month, how many minutes did it typically take you to fall asleep at night?",
             pillar: .sleepQuality,
             type: .minutesScroll,
             minValue: 0,
             maxValue: 180,
-            unit: "minutes"
+            unit: "minutes",
+            helpText: "This can be derived from your sleep log"
         ),
         SharedQuestion(
             id: "PSQI_3",
@@ -365,12 +386,13 @@ struct SharedQuestionBank {
         ),
         SharedQuestion(
             id: "PSQI_4",
-            text: "During the past month, how many hours of actual sleep did you get at night?",
+            text: "During the past month, how many hours of actual sleep did you typically get at night?",
             pillar: .sleepQuality,
-            type: .number,
+            type: .numberScroll,
             minValue: 0,
             maxValue: 15,
-            unit: "hours"
+            unit: "hours",
+            helpText: "This can be derived from your sleep log"
         )
     ]
 
@@ -399,10 +421,59 @@ struct SharedQuestionBank {
             options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
         ),
         SharedQuestion(
+            id: "PSQI_5d",
+            text: "How often have you had trouble sleeping because you cannot breathe comfortably?",
+            pillar: .sleepQuality,
+            type: .singleSelect,
+            options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
+        ),
+        SharedQuestion(
+            id: "PSQI_5e",
+            text: "How often have you had trouble sleeping because you cough or snore loudly?",
+            pillar: .sleepQuality,
+            type: .singleSelect,
+            options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
+        ),
+        SharedQuestion(
+            id: "PSQI_5f",
+            text: "How often have you had trouble sleeping because you feel too cold?",
+            pillar: .sleepQuality,
+            type: .singleSelect,
+            options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
+        ),
+        SharedQuestion(
+            id: "PSQI_5g",
+            text: "How often have you had trouble sleeping because you feel too hot?",
+            pillar: .sleepQuality,
+            type: .singleSelect,
+            options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
+        ),
+        SharedQuestion(
+            id: "PSQI_5h",
+            text: "How often have you had trouble sleeping because you have bad dreams?",
+            pillar: .sleepQuality,
+            type: .singleSelect,
+            options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
+        ),
+        SharedQuestion(
+            id: "PSQI_5i",
+            text: "How often have you had trouble sleeping because you have pain?",
+            pillar: .sleepQuality,
+            type: .singleSelect,
+            options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
+        ),
+        SharedQuestion(
+            id: "PSQI_5j",
+            text: "How often have you had trouble sleeping because of other reason(s)?",
+            pillar: .sleepQuality,
+            type: .singleSelect,
+            options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
+        ),
+        SharedQuestion(
             id: "12A",
             text: "How many times do you typically wake up during the night?",
             pillar: .sleepQuality,
-            type: .number,
+            type: .numberScroll,
             minValue: 0,
             maxValue: 15
         ),
@@ -412,6 +483,16 @@ struct SharedQuestionBank {
             pillar: .sleepQuality,
             type: .singleSelect,
             options: ["Bathroom needs", "Pain/discomfort", "Noise", "Light", "Hot/cold", "Dreams/nightmares", "Worry/stress", "Other"]
+        ),
+        SharedQuestion(
+            id: "12C",
+            text: "When you wake up during the night, how long does it typically take you to fall back asleep?",
+            pillar: .sleepQuality,
+            type: .minutesScroll,
+            minValue: 0,
+            maxValue: 120,
+            unit: "minutes",
+            helpText: "Your best estimate in minutes"
         ),
 
         // Sleep Regularity
@@ -643,7 +724,8 @@ struct SharedQuestionBank {
             text: "If yes, do they snore or disturb your sleep?",
             pillar: .social,
             type: .yesNo,
-            required: false
+            required: false,
+            conditionalLogic: SharedConditionalLogic(questionId: "35", equals: "Yes")
         ),
         SharedQuestion(
             id: "37",

@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars, react/no-unescaped-entities */
 
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";

@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft, TrendingUp, TrendingDown, Moon, Sun, Brain,
-  Heart, Activity, Utensils, Clock, AlertTriangle, CheckCircle,
-  Info, ChevronRight, Lightbulb, Target, Zap
+  ArrowLeft, TrendingUp, TrendingDown, Moon, Brain,
+  Activity, Clock, AlertTriangle, CheckCircle,
+  ChevronRight, Lightbulb, Target, Zap
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 interface SleepLogEntry {
   date: string;
@@ -25,7 +26,7 @@ interface Insight {
   description: string;
   metric?: string;
   trend?: 'up' | 'down' | 'stable';
-  icon: any;
+  icon: LucideIcon;
   color: string;
 }
 
@@ -108,6 +109,7 @@ export default function InsightsPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = () => {

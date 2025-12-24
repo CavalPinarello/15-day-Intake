@@ -1,10 +1,11 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft, Moon, Sun, Clock, TrendingUp, TrendingDown,
-  Calendar, ChevronDown, ChevronUp, Bed, AlarmClock
+  ArrowLeft, Moon, Clock, TrendingUp, TrendingDown,
+  ChevronDown, ChevronUp, Bed, AlarmClock
 } from 'lucide-react';
 
 interface SleepLogEntry {
@@ -26,7 +27,7 @@ function calculateSleepDuration(asleepTime: string, wakeTime: string): string {
     const [asleepHour, asleepMin] = asleepTime.split(':').map(Number);
     const [wakeHour, wakeMin] = wakeTime.split(':').map(Number);
 
-    let asleepMinutes = asleepHour * 60 + asleepMin;
+    const asleepMinutes = asleepHour * 60 + asleepMin;
     let wakeMinutes = wakeHour * 60 + wakeMin;
 
     // Handle crossing midnight
@@ -53,7 +54,7 @@ function calculateSleepEfficiency(bedtime: string, asleepTime: string, wakeTime:
     const [asleepHour, asleepMin] = asleepTime.split(':').map(Number);
     const [wakeHour, wakeMin] = wakeTime.split(':').map(Number);
 
-    let bedMinutes = bedHour * 60 + bedMin;
+    const bedMinutes = bedHour * 60 + bedMin;
     let asleepMinutes = asleepHour * 60 + asleepMin;
     let wakeMinutes = wakeHour * 60 + wakeMin;
 

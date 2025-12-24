@@ -442,8 +442,51 @@ struct WatchHomeView: View {
             if pendingTasksCount > 0 && !isDayComplete {
                 treatmentTasksCard
             }
+
+            // Overdue expansion packs reminder (complete on iPhone)
+            if convexService.overdueExpansionsCount > 0 {
+                overdueExpansionsReminder
+            }
         }
         .foregroundColor(palette.textPrimary)
+    }
+
+    // MARK: - Overdue Expansions Reminder
+
+    private var overdueExpansionsReminder: some View {
+        let palette = WatchCircadianPalette.current
+        let count = convexService.overdueExpansionsCount
+
+        return HStack {
+            Image(systemName: "exclamationmark.bubble.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.purple)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Overdue Deep Dives")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(palette.textPrimary)
+                Text("\(count) pack\(count > 1 ? "s" : "") on iPhone")
+                    .font(.system(size: 10))
+                    .foregroundColor(palette.textSecondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "iphone.badge.exclamationmark")
+                .font(.system(size: 14))
+                .foregroundColor(.purple.opacity(0.7))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.purple.opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(Color.purple.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Day Complete Celebration (Enhanced)

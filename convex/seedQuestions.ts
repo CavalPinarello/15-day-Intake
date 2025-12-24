@@ -45,6 +45,9 @@ export const seedAssessmentQuestions = internalMutation({
             validation_rules: JSON.stringify(q.validation_rules),
             estimated_time_seconds: q.estimated_time_seconds,
             trigger: q.trigger,
+            conditional_logic: q.conditional_logic
+              ? JSON.stringify(q.conditional_logic)
+              : undefined,
             updated_at: Date.now()
           });
         } else {
@@ -60,6 +63,9 @@ export const seedAssessmentQuestions = internalMutation({
             validation_rules: JSON.stringify(q.validation_rules),
             estimated_time_seconds: q.estimated_time_seconds,
             trigger: q.trigger,
+            conditional_logic: q.conditional_logic
+              ? JSON.stringify(q.conditional_logic)
+              : undefined,
             created_at: Date.now(),
             updated_at: Date.now()
           });

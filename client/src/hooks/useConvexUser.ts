@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";

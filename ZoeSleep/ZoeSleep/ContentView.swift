@@ -81,6 +81,9 @@ struct MainDashboardView: View {
     @State private var missedDays: [DailyCompletionStatus.MissedDay] = []
     @State private var catchUpDayNumber: Int? = nil
 
+    // Overdue expansion packs from previous days
+    @State private var overdueExpansions: [DailyCompletionStatus.OverdueExpansion] = []
+
     // Poll every 5 seconds when app is active (for cross-device sync)
     private let refreshInterval: TimeInterval = 5.0
 
@@ -108,6 +111,11 @@ struct MainDashboardView: View {
                     // Catch-up Card (if there are missed days)
                     if !missedDays.isEmpty {
                         catchUpCard
+                    }
+
+                    // Overdue Expansions Card (if there are incomplete expansion packs)
+                    if !overdueExpansions.isEmpty {
+                        overdueExpansionsCard
                     }
 
                     // Today's Tasks Card
@@ -959,12 +967,13 @@ struct MainDashboardView: View {
         }
     }
 
-    /// Load missed days from Convex for catch-up feature
+    /// Load missed days and overdue expansions from Convex for catch-up feature
     private func loadMissedDays() async {
         do {
             let status = try await ConvexService.shared.getDailyCompletionStatus()
             await MainActor.run {
                 self.missedDays = status.missedDays
+                self.overdueExpansions = status.overdueExpansions ?? []
             }
         } catch {
             print("[iOS] Failed to load missed days: \(error)")
@@ -1041,6 +1050,163 @@ struct MainDashboardView: View {
                 }
             }
         )
+    }
+
+    // MARK: - Overdue Expansions Card
+
+    @State private var overdueExpansionDayNumber: Int? = nil
+
+    private var overdueExpansionsCard: some View {
+        VStack(spacing: Spacing.md) {
+            // Header
+            HStack {
+                Image(systemName: "exclamationmark.bubble.fill")
+                    .foregroundColor(.purple)
+                Text("Overdue Deep Dives")
+                    .font(.system(size: Typography.headline, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.textOnCard)
+                Spacer()
+                Text("\(overdueExpansions.count) pack\(overdueExpansions.count > 1 ? "s" : "")")
+                    .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                    .foregroundColor(.purple)
+            }
+
+            Text("You triggered expansion packs on previous days but didn't complete them. Finish them to get personalized insights.")
+                .font(.system(size: Typography.caption, design: .rounded))
+                .foregroundColor(theme.textOnCardSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // List overdue expansions (show up to 3)
+            ForEach(overdueExpansions.prefix(3), id: \.dayNumber) { expansion in
+                OverdueExpansionRow(
+                    dayNumber: expansion.dayNumber,
+                    triggeredGateways: expansion.triggeredGateways,
+                    questionCount: expansion.questionCount,
+                    answeredCount: expansion.answeredCount,
+                    estimatedMinutes: expansion.estimatedMinutes,
+                    onTap: {
+                        overdueExpansionDayNumber = expansion.dayNumber
+                    }
+                )
+            }
+
+            if overdueExpansions.count > 3 {
+                Text("+ \(overdueExpansions.count - 3) more packs")
+                    .font(.system(size: Typography.caption, design: .rounded))
+                    .foregroundColor(theme.textOnCardMuted)
+            }
+        }
+        .padding(Spacing.lg)
+        .background(GlassyCardBackground(opacity: 0.6, tint: .purple))
+        .cornerRadius(CornerRadius.large)
+        // Navigation to expansion questionnaire
+        .background(
+            Group {
+                if let dayNum = overdueExpansionDayNumber {
+                    NavigationLink(
+                        destination: QuestionnaireView(
+                            currentDay: .constant(dayNum),
+                            startSection: .assessment,
+                            sectionOnly: true,
+                            isCatchUp: true
+                        )
+                        .environmentObject(healthKitManager)
+                        .environmentObject(themeManager),
+                        isActive: Binding(
+                            get: { overdueExpansionDayNumber != nil },
+                            set: { if !$0 { overdueExpansionDayNumber = nil } }
+                        )
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
+                }
+            }
+        )
+    }
+}
+
+// MARK: - Overdue Expansion Row Component
+
+struct OverdueExpansionRow: View {
+    let dayNumber: Int
+    let triggeredGateways: [String]
+    let questionCount: Int
+    let answeredCount: Int
+    let estimatedMinutes: Int
+    let onTap: () -> Void
+
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    private var gatewayDisplayNames: String {
+        triggeredGateways.prefix(2).map { gateway in
+            switch gateway.lowercased() {
+            case "insomnia": return "Insomnia"
+            case "sleep_apnea": return "Sleep Apnea"
+            case "mental_health": return "Mental Health"
+            case "circadian": return "Circadian"
+            case "restless_legs": return "Restless Legs"
+            case "parasomnia": return "Parasomnia"
+            case "hypersomnia": return "Hypersomnia"
+            case "pain": return "Pain"
+            case "substance": return "Substance"
+            case "medical": return "Medical"
+            default: return gateway.capitalized
+            }
+        }.joined(separator: ", ")
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: Spacing.md) {
+                // Day number badge
+                Text("Day \(dayNumber)")
+                    .font(.system(size: Typography.subheadline, weight: .bold, design: .rounded))
+                    .foregroundColor(.purple)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.purple.opacity(0.2))
+                    .cornerRadius(8)
+
+                // Gateway info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(gatewayDisplayNames)
+                        .font(.system(size: Typography.subheadline, weight: .medium, design: .rounded))
+                        .foregroundColor(theme.textOnCard)
+                        .lineLimit(1)
+
+                    HStack(spacing: 8) {
+                        // Progress
+                        Text("\(answeredCount)/\(questionCount) questions")
+                            .font(.system(size: Typography.caption, design: .rounded))
+                            .foregroundColor(theme.textOnCardMuted)
+
+                        if answeredCount > 0 {
+                            // Show partial progress
+                            Text("(\(Int(Double(answeredCount) / Double(questionCount) * 100))%)")
+                                .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                                .foregroundColor(.orange)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                // Time estimate
+                Text("~\(estimatedMinutes) min")
+                    .font(.system(size: Typography.caption, design: .rounded))
+                    .foregroundColor(theme.textOnCardMuted)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: Typography.caption, weight: .semibold))
+                    .foregroundColor(.purple)
+            }
+            .padding(Spacing.md)
+            .background(Color.purple.opacity(0.1))
+            .cornerRadius(CornerRadius.medium)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

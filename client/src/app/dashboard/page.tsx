@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Moon, Sun, Clock, CheckCircle, ChevronRight, Calendar,
+  Moon, CheckCircle, ChevronRight,
   TrendingUp, BookOpen, Settings, RefreshCw, Sparkles,
-  ClipboardList, Activity, AlertCircle
+  ClipboardList, AlertCircle
 } from 'lucide-react';
 
 // Types matching iOS models
@@ -109,6 +109,7 @@ export default function DashboardPage() {
   // Load data on mount
   useEffect(() => {
     loadDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadDashboardData = async () => {
@@ -277,7 +278,7 @@ export default function DashboardPage() {
         {/* Today's Tasks Card */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">Today's Tasks</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Today&apos;s Tasks</h2>
           </div>
 
           {/* Sleep Log Task */}
@@ -344,7 +345,7 @@ export default function DashboardPage() {
               <div>
                 <h3 className="font-semibold text-amber-900">Personalized Assessments Triggered</h3>
                 <p className="text-sm text-amber-700 mt-1">
-                  Based on your responses, we've added these assessments:
+                  Based on your responses, we&apos;ve added these assessments:
                 </p>
                 <div className="flex flex-wrap gap-2 mt-3">
                   {journeyProgress.triggeredGateways.map((gateway) => (

@@ -7,14 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		4A5E3DW0022C8E123456789W002 /* CheckInModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DW0012C8E123456789W001 /* CheckInModels.swift */; };
-		4A5E3DW0042C8E123456789W004 /* GardenModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DW0032C8E123456789W003 /* GardenModels.swift */; };
-		4A5E3DW0102C8E123456789W010 /* MinimalHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DW0092C8E123456789W009 /* MinimalHomeView.swift */; };
-		4A5E3DW0122C8E123456789W012 /* MinimalTasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DW0112C8E123456789W011 /* MinimalTasksView.swift */; };
-		4A5E3DW0142C8E123456789W014 /* QuickCheckInFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DW0132C8E123456789W013 /* QuickCheckInFlowView.swift */; };
-		4A5E3DW0162C8E123456789W016 /* FlowerPotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DW0152C8E123456789W015 /* FlowerPotView.swift */; };
-		4A5E3DW0182C8E123456789W018 /* WeeklyGardenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DW0172C8E123456789W017 /* WeeklyGardenView.swift */; };
-		4A5E3DW0202C8E123456789W020 /* WatchNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DW0192C8E123456789W019 /* WatchNotificationManager.swift */; };
 		0B9EC77D84F102DE23410E2C /* QuestionnaireManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D6451B3D19E53A7CD71DB5 /* QuestionnaireManagerTests.swift */; };
 		0D97EC66CE10EC7ECD68B062 /* ConvexServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9414AB93A32DAEF40FEADC /* ConvexServiceTests.swift */; };
 		0F9D37F820E042F288907520 /* TestUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF6080214D734AC815952E0F /* TestUtilities.swift */; };
@@ -34,12 +26,17 @@
 		4A5E3BA82C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BA72C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift */; };
 		4A5E3BAC2C8E123456789A0C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5E3BAB2C8E123456789A0C /* Assets.xcassets */; };
 		4A5E3BB52C8E123456789A0F /* HealthKitWatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB42C8E123456789A0F /* HealthKitWatchManager.swift */; };
+		4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */; };
+		4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */; };
 		4A5E3BBB2C8E123456789A12 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */; };
 		4A5E3BC52C8E123456789B01 /* QuestionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BC62C8E123456789B02 /* QuestionModels.swift */; };
 		4A5E3BC72C8E123456789B03 /* QuestionnaireManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */; };
 		4A5E3BC92C8E123456789B05 /* QuestionComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */; };
 		4A5E3BCB2C8E123456789B07 /* QuestionnaireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */; };
 		4A5E3BCD2C8E123456789B09 /* ConvexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BCE2C8E123456789B0A /* ConvexService.swift */; };
+		4A5E3BD02C8E123456789C01 /* TreatmentTasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD12C8E123456789C02 /* TreatmentTasksView.swift */; };
+		4A5E3BD22C8E123456789C03 /* SleepLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD32C8E123456789C04 /* SleepLogView.swift */; };
+		4A5E3BD42C8E123456789C05 /* WatchQuestionComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD52C8E123456789C06 /* WatchQuestionComponents.swift */; };
 		4A5E3BD62C8E123456789C07 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD72C8E123456789C08 /* SettingsView.swift */; };
 		4A5E3BD82C8E123456789C09 /* TreatmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD92C8E123456789C0A /* TreatmentView.swift */; };
 		4A5E3BDA2C8E123456789C0B /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */; };
@@ -47,6 +44,7 @@
 		4A5E3BE02C8E123456789D01 /* WatchThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */; };
 		4A5E3BE22C8E123456789D03 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */; };
 		4A5E3BE42C8E123456789D05 /* WatchConvexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE52C8E123456789D06 /* WatchConvexService.swift */; };
+		4A5E3BE62C8E123456789D07 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE72C8E123456789D08 /* WatchHomeView.swift */; };
 		4A5E3BF02C8E123456789E01 /* CircadianWaveBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF12C8E123456789E02 /* CircadianWaveBackground.swift */; };
 		4A5E3BF22C8E123456789E03 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */; };
 		4A5E3BF42C8E123456789F01 /* SharedQuestionBank.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */; };
@@ -129,14 +127,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		4A5E3DW0012C8E123456789W001 /* CheckInModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInModels.swift; sourceTree = "<group>"; };
-		4A5E3DW0032C8E123456789W003 /* GardenModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenModels.swift; sourceTree = "<group>"; };
-		4A5E3DW0092C8E123456789W009 /* MinimalHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimalHomeView.swift; sourceTree = "<group>"; };
-		4A5E3DW0112C8E123456789W011 /* MinimalTasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimalTasksView.swift; sourceTree = "<group>"; };
-		4A5E3DW0132C8E123456789W013 /* QuickCheckInFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCheckInFlowView.swift; sourceTree = "<group>"; };
-		4A5E3DW0152C8E123456789W015 /* FlowerPotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerPotView.swift; sourceTree = "<group>"; };
-		4A5E3DW0172C8E123456789W017 /* WeeklyGardenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyGardenView.swift; sourceTree = "<group>"; };
-		4A5E3DW0192C8E123456789W019 /* WatchNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchNotificationManager.swift; sourceTree = "<group>"; };
 		025C43C0F7D4EA449A2B34ED /* MiddayCheckInView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MiddayCheckInView.swift; path = Views/CheckIn/MiddayCheckInView.swift; sourceTree = "<group>"; };
 		037F9206B99764D48FD1C894 /* HealthKitManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthKitManagerTests.swift; sourceTree = "<group>"; };
 		0693D7D01C2394F0DD9088A7 /* ZoeSleepUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZoeSleepUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -163,12 +153,17 @@
 		4A5E3BAD2C8E123456789A1A /* ZoeSleep Watch App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "ZoeSleep Watch App.entitlements"; sourceTree = "<group>"; };
 		4A5E3BAF2C8E123456789A1B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4A5E3BB42C8E123456789A0F /* HealthKitWatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitWatchManager.swift; sourceTree = "<group>"; };
+		4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireView.swift; sourceTree = "<group>"; };
+		4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationsView.swift; sourceTree = "<group>"; };
 		4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		4A5E3BC62C8E123456789B02 /* QuestionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionModels.swift; sourceTree = "<group>"; };
 		4A5E3BC82C8E123456789B04 /* QuestionnaireManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireManager.swift; sourceTree = "<group>"; };
 		4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionComponents.swift; sourceTree = "<group>"; };
 		4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireView.swift; sourceTree = "<group>"; };
 		4A5E3BCE2C8E123456789B0A /* ConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvexService.swift; sourceTree = "<group>"; };
+		4A5E3BD12C8E123456789C02 /* TreatmentTasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentTasksView.swift; sourceTree = "<group>"; };
+		4A5E3BD32C8E123456789C04 /* SleepLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepLogView.swift; sourceTree = "<group>"; };
+		4A5E3BD52C8E123456789C06 /* WatchQuestionComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchQuestionComponents.swift; sourceTree = "<group>"; };
 		4A5E3BD72C8E123456789C08 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4A5E3BD92C8E123456789C0A /* TreatmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentView.swift; sourceTree = "<group>"; };
 		4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
@@ -176,6 +171,7 @@
 		4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchThemeManager.swift; sourceTree = "<group>"; };
 		4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		4A5E3BE52C8E123456789D06 /* WatchConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConvexService.swift; sourceTree = "<group>"; };
+		4A5E3BE72C8E123456789D08 /* WatchHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
 		4A5E3BF12C8E123456789E02 /* CircadianWaveBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircadianWaveBackground.swift; sourceTree = "<group>"; };
 		4A5E3BF32C8E123456789E04 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
 		4A5E3BF52C8E123456789F02 /* SharedQuestionBank.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedQuestionBank.swift; sourceTree = "<group>"; };
@@ -273,58 +269,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		4A5E3DWM012C8E123456789WM01 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				4A5E3DW0012C8E123456789W001 /* CheckInModels.swift */,
-				4A5E3DW0032C8E123456789W003 /* GardenModels.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		4A5E3DWC012C8E123456789WC01 /* Components */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Components;
-			sourceTree = "<group>";
-		};
-		4A5E3DWV022C8E123456789WV02 /* CheckIn */ = {
-			isa = PBXGroup;
-			children = (
-				4A5E3DW0132C8E123456789W013 /* QuickCheckInFlowView.swift */,
-			);
-			path = CheckIn;
-			sourceTree = "<group>";
-		};
-		4A5E3DWV032C8E123456789WV03 /* Garden */ = {
-			isa = PBXGroup;
-			children = (
-				4A5E3DW0152C8E123456789W015 /* FlowerPotView.swift */,
-				4A5E3DW0172C8E123456789W017 /* WeeklyGardenView.swift */,
-			);
-			path = Garden;
-			sourceTree = "<group>";
-		};
-		4A5E3DWV012C8E123456789WV01 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				4A5E3DWV022C8E123456789WV02 /* CheckIn */,
-				4A5E3DWV032C8E123456789WV03 /* Garden */,
-				4A5E3DW0092C8E123456789W009 /* MinimalHomeView.swift */,
-				4A5E3DW0112C8E123456789W011 /* MinimalTasksView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		4A5E3DWG012C8E123456789WG01 /* Managers */ = {
-			isa = PBXGroup;
-			children = (
-				4A5E3DW0192C8E123456789W019 /* WatchNotificationManager.swift */,
-			);
-			path = Managers;
-			sourceTree = "<group>";
-		};
 		208DD4BA1FEE2424A3848A51 /* ZoeSleepUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -435,18 +379,20 @@
 		4A5E3BA62C8E123456789A20 /* ZoeSleep Watch App */ = {
 			isa = PBXGroup;
 			children = (
-				4A5E3DWM012C8E123456789WM01 /* Models */,
-				4A5E3DWC012C8E123456789WC01 /* Components */,
-				4A5E3DWV012C8E123456789WV01 /* Views */,
-				4A5E3DWG012C8E123456789WG01 /* Managers */,
 				4A5E3BAD2C8E123456789A1A /* ZoeSleep Watch App.entitlements */,
 				4A5E3BAF2C8E123456789A1B /* Info.plist */,
 				4A5E3BA72C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift */,
 				4A5E3BB42C8E123456789A0F /* HealthKitWatchManager.swift */,
+				4A5E3BB62C8E123456789A10 /* QuestionnaireView.swift */,
+				4A5E3BB82C8E123456789A11 /* RecommendationsView.swift */,
 				4A5E3BBA2C8E123456789A12 /* WatchConnectivityManager.swift */,
+				4A5E3BD12C8E123456789C02 /* TreatmentTasksView.swift */,
+				4A5E3BD32C8E123456789C04 /* SleepLogView.swift */,
+				4A5E3BD52C8E123456789C06 /* WatchQuestionComponents.swift */,
 				4A5E3BD72C8E123456789C08 /* SettingsView.swift */,
 				4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */,
 				4A5E3BE52C8E123456789D06 /* WatchConvexService.swift */,
+				4A5E3BE72C8E123456789D08 /* WatchHomeView.swift */,
 				4A5E3BAB2C8E123456789A0C /* Assets.xcassets */,
 			);
 			path = "ZoeSleep Watch App";
@@ -867,21 +813,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4A5E3DW0022C8E123456789W002 /* CheckInModels.swift in Sources */,
-				4A5E3DW0042C8E123456789W004 /* GardenModels.swift in Sources */,
-				4A5E3DW0102C8E123456789W010 /* MinimalHomeView.swift in Sources */,
-				4A5E3DW0122C8E123456789W012 /* MinimalTasksView.swift in Sources */,
-				4A5E3DW0142C8E123456789W014 /* QuickCheckInFlowView.swift in Sources */,
-				4A5E3DW0162C8E123456789W016 /* FlowerPotView.swift in Sources */,
-				4A5E3DW0182C8E123456789W018 /* WeeklyGardenView.swift in Sources */,
-				4A5E3DW0202C8E123456789W020 /* WatchNotificationManager.swift in Sources */,
 				4A5E3BF62C8E123456789F03 /* SharedQuestionBank.swift in Sources */,
 				4A5E3BB52C8E123456789A0F /* HealthKitWatchManager.swift in Sources */,
+				4A5E3BB72C8E123456789A10 /* QuestionnaireView.swift in Sources */,
+				4A5E3BB92C8E123456789A11 /* RecommendationsView.swift in Sources */,
 				4A5E3BBB2C8E123456789A12 /* WatchConnectivityManager.swift in Sources */,
 				4A5E3BA82C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift in Sources */,
+				4A5E3BD02C8E123456789C01 /* TreatmentTasksView.swift in Sources */,
+				4A5E3BD22C8E123456789C03 /* SleepLogView.swift in Sources */,
+				4A5E3BD42C8E123456789C05 /* WatchQuestionComponents.swift in Sources */,
 				4A5E3BD62C8E123456789C07 /* SettingsView.swift in Sources */,
 				4A5E3BE02C8E123456789D01 /* WatchThemeManager.swift in Sources */,
 				4A5E3BE42C8E123456789D05 /* WatchConvexService.swift in Sources */,
+				4A5E3BE62C8E123456789D07 /* WatchHomeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

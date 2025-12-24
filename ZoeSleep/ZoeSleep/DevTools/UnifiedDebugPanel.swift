@@ -17,6 +17,53 @@
 
 import SwiftUI
 
+// MARK: - Expansion Module (for schedule preview)
+
+struct ExpansionModule: Identifiable {
+    let id: String
+    let name: String
+    let instrument: String
+    let questionCount: Int
+    let estimatedMinutes: Int
+    let priority: Int
+    let requiredGateway: GatewayType
+
+    static let allModules: [ExpansionModule] = [
+        ExpansionModule(id: "expansion_isi", name: "Insomnia Severity", instrument: "ISI", questionCount: 7, estimatedMinutes: 3, priority: 1, requiredGateway: .insomnia),
+        ExpansionModule(id: "expansion_phq9", name: "Depression Screen", instrument: "PHQ-9", questionCount: 9, estimatedMinutes: 4, priority: 1, requiredGateway: .depression),
+        ExpansionModule(id: "expansion_gad7", name: "Anxiety Screen", instrument: "GAD-7", questionCount: 7, estimatedMinutes: 3, priority: 1, requiredGateway: .anxiety),
+        ExpansionModule(id: "expansion_stop_bang", name: "OSA Screen", instrument: "STOP-BANG", questionCount: 8, estimatedMinutes: 3, priority: 1, requiredGateway: .osa),
+        ExpansionModule(id: "expansion_ess", name: "Sleepiness Scale", instrument: "ESS", questionCount: 8, estimatedMinutes: 3, priority: 2, requiredGateway: .excessiveSleepiness),
+        ExpansionModule(id: "expansion_berlin", name: "Berlin OSA", instrument: "Berlin", questionCount: 10, estimatedMinutes: 4, priority: 2, requiredGateway: .osa),
+        ExpansionModule(id: "expansion_dbas", name: "Sleep Beliefs", instrument: "DBAS-16", questionCount: 16, estimatedMinutes: 6, priority: 3, requiredGateway: .insomnia),
+        ExpansionModule(id: "expansion_sleep_hygiene", name: "Sleep Hygiene", instrument: "SHI", questionCount: 10, estimatedMinutes: 4, priority: 3, requiredGateway: .insomnia),
+        ExpansionModule(id: "expansion_psas", name: "Pre-Sleep Arousal", instrument: "PSAS", questionCount: 16, estimatedMinutes: 6, priority: 3, requiredGateway: .insomnia),
+        ExpansionModule(id: "expansion_fss", name: "Fatigue Scale", instrument: "FSS", questionCount: 9, estimatedMinutes: 4, priority: 3, requiredGateway: .excessiveSleepiness),
+        ExpansionModule(id: "expansion_fosq", name: "Functional Outcomes", instrument: "FOSQ-10", questionCount: 10, estimatedMinutes: 4, priority: 3, requiredGateway: .excessiveSleepiness),
+        ExpansionModule(id: "expansion_dass21", name: "DASS-21", instrument: "DASS-21", questionCount: 21, estimatedMinutes: 8, priority: 4, requiredGateway: .anxiety),
+        ExpansionModule(id: "expansion_promis_cognitive", name: "Cognitive Function", instrument: "PROMIS-Cog", questionCount: 6, estimatedMinutes: 2, priority: 4, requiredGateway: .cognitive),
+        ExpansionModule(id: "expansion_bpi", name: "Pain Inventory", instrument: "BPI", questionCount: 11, estimatedMinutes: 4, priority: 4, requiredGateway: .pain),
+        ExpansionModule(id: "expansion_medas", name: "Diet Assessment", instrument: "MEDAS", questionCount: 14, estimatedMinutes: 5, priority: 5, requiredGateway: .dietImpact),
+        ExpansionModule(id: "expansion_meq", name: "Chronotype", instrument: "MEQ", questionCount: 19, estimatedMinutes: 7, priority: 5, requiredGateway: .sleepTiming),
+    ]
+}
+
+// MARK: - Schedule Preview Model
+
+struct SchedulePreview {
+    let totalQuestions: Int
+    let totalDays: Int
+    let totalMinutes: Int
+    let days: [DayPreview]
+
+    struct DayPreview {
+        let dayNumber: Int
+        let modules: [String]
+        let questionCount: Int
+        let estimatedMinutes: Int
+    }
+}
+
 // MARK: - Generation Mode
 
 enum DataGenerationMode: String, CaseIterable, Identifiable {

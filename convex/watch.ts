@@ -445,6 +445,22 @@ export const getJourneyState = query({
       assessmentCompleted: false,
     };
 
+    // Check for overdue expansion packs from previous days
+    const expansionSchedule = await ctx.db
+      .query("user_expansion_schedules")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    let overdueExpansionsCount = 0;
+    if (expansionSchedule && expansionSchedule.day_assignments) {
+      for (const assignment of expansionSchedule.day_assignments) {
+        // Count days before current day that have incomplete expansion packs
+        if (assignment.day_number < user.current_day && assignment.completed !== true && assignment.question_count > 0) {
+          overdueExpansionsCount++;
+        }
+      }
+    }
+
     return {
       currentDay: user.current_day,
       completedDays: completedDays.sort((a, b) => a - b),
@@ -455,6 +471,8 @@ export const getJourneyState = query({
       assessmentCompleted: currentDaySections.assessmentCompleted,
       // Full section status for all days
       daySectionStatus,
+      // Overdue expansion packs (for Watch to show reminder)
+      overdueExpansionsCount,
     };
   },
 });
@@ -1687,6 +1705,7 @@ export const getQuestionsForUserDay = query({
         options?: string[];
         helpText?: string;
         formatConfig?: Record<string, unknown>;
+        conditionalLogic?: { question_id: string; equals?: string; greater_than?: number };
       }>;
       assessment: Array<{
         id: string;
@@ -1697,6 +1716,7 @@ export const getQuestionsForUserDay = query({
         helpText?: string;
         moduleName?: string;
         formatConfig?: Record<string, unknown>;
+        conditionalLogic?: { question_id: string; equals?: string; greater_than?: number };
       }>;
       metadata: {
         sleepLogCount: number;
@@ -1705,6 +1725,7 @@ export const getQuestionsForUserDay = query({
         triggeredGateways: string[];
         dayDescription: string;
         dayExplanation: string;
+        modules: string[];  // Module IDs included in today's assessment
       };
     } = {
       sleepLog: [],
@@ -1716,6 +1737,7 @@ export const getQuestionsForUserDay = query({
         triggeredGateways: [...triggeredGatewayIds],
         dayDescription: getDayDescription(args.dayNumber),
         dayExplanation: getDayExplanation(args.dayNumber),
+        modules: [],  // Will be populated as modules are processed
       },
     };
 
@@ -1786,6 +1808,9 @@ export const getQuestionsForUserDay = query({
           }
         }
 
+        // Track this module as included
+        result.metadata.modules.push(dayModule.module_id);
+
         // Get questions in this module
         const moduleQuestions = await ctx.db
           .query("module_questions")
@@ -1818,6 +1843,7 @@ export const getQuestionsForUserDay = query({
               moduleName: module.name,
               formatConfig: question.format_config ? JSON.parse(question.format_config) : undefined,
               options: question.format_config ? parseOptions(question.format_config) : undefined,
+              conditionalLogic: question.conditional_logic ? parseConditionalLogic(question.conditional_logic) : undefined,
             });
 
             totalSeconds += question.estimated_time_seconds || 30;
@@ -1903,6 +1929,17 @@ function parseOptions(formatConfig: string): string[] | undefined {
 function parseConditionalLogic(conditionalLogicJson: string): { question_id: string; equals?: string; greater_than?: number } | undefined {
   try {
     const logic = JSON.parse(conditionalLogicJson);
+
+    // Handle direct format: {"question_id": "35", "equals": "yes"}
+    if (logic.question_id) {
+      return {
+        question_id: logic.question_id,
+        equals: logic.equals,
+        greater_than: logic.greater_than,
+      };
+    }
+
+    // Handle show_if wrapper format: {"show_if": {"question_id": "35", "value": "yes"}}
     if (logic.show_if) {
       return {
         question_id: logic.show_if.question_id,
@@ -1910,6 +1947,7 @@ function parseConditionalLogic(conditionalLogicJson: string): { question_id: str
         greater_than: logic.show_if.operator === "greater_than" ? Number(logic.show_if.value) : undefined,
       };
     }
+
     return undefined;
   } catch {
     return undefined;

@@ -741,6 +741,95 @@ struct MinutesScrollPicker: View {
     }
 }
 
+// MARK: - Hours & Minutes Scroll Picker (for sleep duration with 15-min increments)
+
+struct HoursMinutesScrollPicker: View {
+    let question: Question
+    @Binding var totalMinutes: Int
+
+    // Circadian-aware check
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    // Derived hours and minutes
+    private var hours: Int {
+        totalMinutes / 60
+    }
+
+    private var minutes: Int {
+        totalMinutes % 60
+    }
+
+    // Minute options (15-minute increments)
+    private let minuteOptions = [0, 15, 30, 45]
+
+    // Max hours (default 14 if not specified)
+    private var maxHours: Int {
+        question.maxValue ?? 14
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 0) {
+                // Hours picker
+                Picker("Hours", selection: Binding(
+                    get: { hours },
+                    set: { newHours in
+                        totalMinutes = newHours * 60 + minutes
+                    }
+                )) {
+                    ForEach(0...maxHours, id: \.self) { hour in
+                        Text("\(hour) hr")
+                            .tag(hour)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 100, height: 150)
+                .clipped()
+
+                // Minutes picker (15-min increments)
+                Picker("Minutes", selection: Binding(
+                    get: {
+                        // Round to nearest 15
+                        let roundedMinutes = (minutes / 15) * 15
+                        return roundedMinutes
+                    },
+                    set: { newMinutes in
+                        totalMinutes = hours * 60 + newMinutes
+                    }
+                )) {
+                    ForEach(minuteOptions, id: \.self) { min in
+                        Text("\(min) min")
+                            .tag(min)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 100, height: 150)
+                .clipped()
+            }
+            // Apply circadian-aware styling
+            .colorScheme(isEvening ? .dark : .light)
+            .tint(isEvening ? Color(red: 0.988, green: 0.827, blue: 0.302) : nil)
+
+            // Show total duration
+            Text(formatDuration(totalMinutes))
+                .font(.caption)
+                .foregroundColor(CircadianColors.secondary)
+        }
+    }
+
+    private func formatDuration(_ totalMins: Int) -> String {
+        let h = totalMins / 60
+        let m = totalMins % 60
+        if m == 0 {
+            return "\(h) hours"
+        } else {
+            return "\(h) hours \(m) minutes"
+        }
+    }
+}
+
 // MARK: - Info Card (for messages)
 
 struct InfoCard: View {

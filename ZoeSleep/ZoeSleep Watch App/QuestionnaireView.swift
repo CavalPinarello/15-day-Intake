@@ -185,6 +185,9 @@ struct QuestionnaireView: View {
 
                             // Next/Done button (right)
                             Button {
+                                // Save current response's smart default if not interacted
+                                saveCurrentResponseIfNeeded()
+
                                 if currentQuestionIndex == questions.count - 1 {
                                     completeQuestionnaire()
                                 } else {
@@ -894,10 +897,10 @@ struct QuestionnaireView: View {
         let question = questions[currentQuestionIndex]
 
         // For time, scale, and number questions:
-        // Check if user has actually interacted with them (not just default values)
-        // This prevents users from skipping through questions without answering
+        // These show a visible default value that user can accept by tapping Next
+        // Allow proceeding without interaction - if they don't change it, they're accepting it
         if question.type == .time || question.type == .scale || question.type == .number {
-            return userInteractedQuestions.contains(question.id)
+            return true
         }
 
         return responses[question.id] != nil
@@ -906,6 +909,46 @@ struct QuestionnaireView: View {
     /// Mark the current question as interacted by the user
     private func markQuestionInteracted(_ questionId: String) {
         userInteractedQuestions.insert(questionId)
+    }
+
+    /// Save current question's smart default to responses if user hasn't interacted
+    /// This ensures scale/time/number questions are saved even when user accepts the default
+    private func saveCurrentResponseIfNeeded() {
+        guard currentQuestionIndex < questions.count else { return }
+        let question = questions[currentQuestionIndex]
+
+        // Only handle questions with visible defaults that user can accept without interaction
+        switch question.type {
+        case .scale:
+            // Save default scale value (5.0) if no response exists
+            if responses[question.id] == nil {
+                responses[question.id] = 5.0
+            }
+            userInteractedQuestions.insert(question.id)
+
+        case .number:
+            // Save default number value (0) if no response exists
+            if responses[question.id] == nil {
+                responses[question.id] = 0.0
+            }
+            userInteractedQuestions.insert(question.id)
+
+        case .time:
+            // Time picker already saves on initialization via updateSelectedTime()
+            // Just mark as interacted
+            userInteractedQuestions.insert(question.id)
+
+        case .year:
+            // Year picker has default of 1990
+            if responses[question.id] == nil {
+                responses[question.id] = 1990
+            }
+            userInteractedQuestions.insert(question.id)
+
+        default:
+            // Other question types require explicit user selection
+            break
+        }
     }
 
     /// Returns the previously answered bedtime to help set smart defaults for subsequent time questions

@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";

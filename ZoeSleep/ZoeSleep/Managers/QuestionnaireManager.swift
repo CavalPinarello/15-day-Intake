@@ -459,19 +459,31 @@ class QuestionnaireManager: ObservableObject {
             Question(id: "PSQI_1", text: "During the past month, when have you usually gone to bed at night?", pillar: .sleepQuality, questionType: .time, helpText: "Your subjective perception - don't check your wearable device"),
             Question(
                 id: "PSQI_2",
-                text: "During the past month, how long (in minutes) has it usually taken you to fall asleep each night?",
+                text: "During the past month, how many minutes did it typically take you to fall asleep at night?",
                 pillar: .sleepQuality,
                 questionType: .minutesScroll,
                 minValue: 0,
                 maxValue: 180,
                 unit: "minutes",
-                helpText: nil,
+                defaultValue: 15,
+                helpText: "This can be derived from your sleep log",
                 isGateway: true,
                 gatewayType: .insomnia,
                 gatewayThreshold: 30
             ),
             Question(id: "PSQI_3", text: "During the past month, when have you usually gotten up in the morning?", pillar: .sleepQuality, questionType: .time, helpText: "Your subjective perception - don't check your wearable"),
-            Question(id: "PSQI_4", text: "During the past month, how many hours of actual sleep do you feel you got at night?", pillar: .sleepQuality, questionType: .number, minValue: 0, maxValue: 15, step: 0.5, unit: "hours", helpText: "Your best estimate is fine - don't check your wearable")
+            Question(
+                id: "PSQI_4",
+                text: "During the past month, how many hours of actual sleep did you typically get at night?",
+                pillar: .sleepQuality,
+                questionType: .numberScroll,
+                minValue: 0,
+                maxValue: 15,
+                step: 0.5,
+                unit: "hours",
+                defaultValue: 7,
+                helpText: "This can be derived from your sleep log"
+            )
         ],
 
         // DAY 2: PSQI Part 2 + Sleep Quantity + Sleep Regularity
@@ -497,8 +509,26 @@ class QuestionnaireManager: ObservableObject {
                 gatewayThreshold: 2
             ),
             Question(id: "PSQI_5c", text: "How often have you had trouble sleeping because you have to get up to use the bathroom?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
-            Question(id: "12A", text: "How many times do you typically wake up during the night?", pillar: .sleepQuality, questionType: .number, minValue: 0, maxValue: 15),
+            Question(id: "PSQI_5d", text: "How often have you had trouble sleeping because you cannot breathe comfortably?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
+            Question(id: "PSQI_5e", text: "How often have you had trouble sleeping because you cough or snore loudly?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
+            Question(id: "PSQI_5f", text: "How often have you had trouble sleeping because you feel too cold?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
+            Question(id: "PSQI_5g", text: "How often have you had trouble sleeping because you feel too hot?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
+            Question(id: "PSQI_5h", text: "How often have you had trouble sleeping because you have bad dreams?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
+            Question(id: "PSQI_5i", text: "How often have you had trouble sleeping because you have pain?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
+            Question(id: "PSQI_5j", text: "How often have you had trouble sleeping because of other reason(s)?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
+            Question(id: "12A", text: "How many times do you typically wake up during the night?", pillar: .sleepQuality, questionType: .numberScroll, minValue: 0, maxValue: 15, defaultValue: 1),
             Question(id: "12B", text: "When you wake up at night, what is the MAIN reason?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Bathroom needs", "Pain/discomfort", "Noise", "Light", "Hot/cold", "Dreams/nightmares", "Worry/stress", "Other"]),
+            Question(
+                id: "12C",
+                text: "When you wake up during the night, how long does it typically take you to fall back asleep?",
+                pillar: .sleepQuality,
+                questionType: .minutesScroll,
+                minValue: 0,
+                maxValue: 120,
+                unit: "minutes",
+                defaultValue: 15,
+                helpText: "Your best estimate in minutes"
+            ),
 
             // Sleep Regularity
             Question(id: "7", text: "What time do you usually go to bed on weekdays?", pillar: .sleepRegularity, questionType: .time),
@@ -520,7 +550,7 @@ class QuestionnaireManager: ObservableObject {
 
         // DAY 3: Sleep Timing + Mental Health Gateways
         3: [
-            Question(id: "11", text: "How often do you get morning sunlight exposure within 1 hour of waking?", pillar: .sleepTiming, questionType: .singleSelect, options: ["Never", "Rarely", "Sometimes", "Often", "Daily"]),
+            Question(id: "11", text: "How many days per week do you get morning sunlight exposure within an hour of waking?", pillar: .sleepTiming, questionType: .singleSelect, options: ["Never (0 days)", "1-2 days", "3-4 days", "5-6 days", "Daily (7 days)"], helpText: "Morning sunlight helps regulate your circadian rhythm"),
             Question(id: "12", text: "How many hours per day do you spend looking at screens for work?", pillar: .social, questionType: .number, minValue: 0, maxValue: 18, step: nil, unit: "hours"),
             Question(id: "13", text: "How often do you use electronic devices within 1 hour of bedtime?", pillar: .sleepTiming, questionType: .singleSelect, options: ["Never", "Rarely", "Sometimes", "Often", "Always"]),
             Question(id: "14", text: "On a scale of 1-10, how would you rate your current stress level?", pillar: .mentalHealth, questionType: .scale, scaleMin: 1, scaleMax: 10, scaleMinLabel: "No stress", scaleMaxLabel: "Extremely stressed"),
@@ -908,6 +938,120 @@ class QuestionnaireManager: ObservableObject {
         ]
     ]
 
+    // MARK: - Sleep Log Derivation
+
+    /// Question IDs that can be derived from sleep log data
+    /// Includes both PSQI questions and general assessment questions
+    private static let derivableFromSleepLog: Set<String> = [
+        "PSQI_2",  // Sleep latency (from CSD_LATENCY)
+        "PSQI_4",  // Hours of actual sleep (from CSD times)
+        "6"        // "How long does it take you to fall asleep?" (from CSD_LATENCY)
+    ]
+
+    /// Check if we have sleep log data to derive PSQI answers
+    /// Returns true if the sleep log for today has been completed
+    func canDerivePSQIFromSleepLog() -> Bool {
+        // Check if we have the key sleep log responses needed for derivation
+        let hasLatency = responses["CSD_LATENCY"] != nil
+        let hasTrySleep = responses["CSD_TRY_SLEEP"] != nil
+        let hasFinalWake = responses["CSD_FINAL_WAKE"] != nil
+        let hasWASO = responses["CSD_WASO"] != nil
+
+        return hasLatency && hasTrySleep && hasFinalWake && hasWASO
+    }
+
+    /// Derive PSQI_2 (sleep latency) from sleep log CSD_LATENCY
+    func derivePSQI2FromSleepLog() -> Double? {
+        guard let latencyResponse = responses["CSD_LATENCY"],
+              let latencyMinutes = latencyResponse.numberValue else {
+            return nil
+        }
+        return latencyMinutes
+    }
+
+    /// Derive PSQI_4 (hours of actual sleep) from sleep log times
+    func derivePSQI4FromSleepLog() -> Double? {
+        guard let trySleepResponse = responses["CSD_TRY_SLEEP"],
+              let finalWakeResponse = responses["CSD_FINAL_WAKE"],
+              let wasoResponse = responses["CSD_WASO"],
+              let trySleepStr = trySleepResponse.stringValue,
+              let finalWakeStr = finalWakeResponse.stringValue,
+              let wasoMinutes = wasoResponse.numberValue else {
+            return nil
+        }
+
+        // Parse times
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+
+        guard let trySleepTime = formatter.date(from: trySleepStr),
+              let finalWakeTime = formatter.date(from: finalWakeStr) else {
+            return nil
+        }
+
+        // Calculate time in bed
+        var timeInBedMinutes = Calendar.current.dateComponents([.minute], from: trySleepTime, to: finalWakeTime).minute ?? 0
+
+        // Handle crossing midnight
+        if timeInBedMinutes < 0 {
+            timeInBedMinutes += 24 * 60
+        }
+
+        // Subtract WASO to get actual sleep time
+        let actualSleepMinutes = Double(timeInBedMinutes) - wasoMinutes
+        let actualSleepHours = actualSleepMinutes / 60.0
+
+        // Round to nearest 0.5 hour
+        return (actualSleepHours * 2).rounded() / 2
+    }
+
+    /// Generate derived responses from sleep log data
+    /// Call this after sleep log is completed to auto-fill derivable questions
+    func generateDerivedPSQIResponses(forDay dayNumber: Int) {
+        guard canDerivePSQIFromSleepLog() else { return }
+
+        // Derive sleep latency questions (PSQI_2 and question 6)
+        if let latencyMinutes = derivePSQI2FromSleepLog() {
+            // PSQI_2 (sleep latency in minutes)
+            let psqi2Response = QuestionResponse(
+                questionId: "PSQI_2",
+                dayNumber: dayNumber,
+                numberValue: latencyMinutes,
+                isDerived: true
+            )
+            responses["PSQI_2"] = psqi2Response
+            saveResponse(psqi2Response)
+
+            // Question 6 ("How long does it take you to fall asleep?") - same source
+            let q6Response = QuestionResponse(
+                questionId: "6",
+                dayNumber: dayNumber,
+                numberValue: latencyMinutes,
+                isDerived: true
+            )
+            responses["6"] = q6Response
+            saveResponse(q6Response)
+        }
+
+        // Derive PSQI_4 (hours of actual sleep)
+        if let sleepHours = derivePSQI4FromSleepLog() {
+            let response = QuestionResponse(
+                questionId: "PSQI_4",
+                dayNumber: dayNumber,
+                numberValue: sleepHours,
+                isDerived: true
+            )
+            responses["PSQI_4"] = response
+            saveResponse(response)
+        }
+    }
+
+    /// Check if a question should be skipped because it can be derived from sleep log
+    func shouldSkipDerivableQuestion(_ questionId: String) -> Bool {
+        guard Self.derivableFromSleepLog.contains(questionId) else { return false }
+        return canDerivePSQIFromSleepLog()
+    }
+
     // MARK: - Get Questions for a Day
 
     func getQuestionsForDay(_ dayNumber: Int) -> [Question] {
@@ -919,16 +1063,24 @@ class QuestionnaireManager: ObservableObject {
         // 2. Add core questions for days 1-5
         if dayNumber <= 5, let coreQuestions = Self.coreQuestionsByDay[dayNumber] {
             // For Day 1, filter out demographic questions already answered during onboarding
+            // AND filter out PSQI questions that can be derived from sleep log
             if dayNumber == 1 {
                 let filteredQuestions = coreQuestions.filter { question in
-                    !shouldSkipDemographicQuestion(question.id)
+                    !shouldSkipDemographicQuestion(question.id) && !shouldSkipDerivableQuestion(question.id)
                 }
                 questions.append(contentsOf: filteredQuestions)
 
                 // Pre-fill responses from onboarding so data is available for analysis
                 prefillFromOnboardingProfile()
+
+                // Generate derived PSQI responses from sleep log
+                generateDerivedPSQIResponses(forDay: dayNumber)
             } else {
-                questions.append(contentsOf: coreQuestions)
+                // For other days, also filter derivable questions
+                let filteredQuestions = coreQuestions.filter { question in
+                    !shouldSkipDerivableQuestion(question.id)
+                }
+                questions.append(contentsOf: filteredQuestions)
             }
         }
 
@@ -969,23 +1121,71 @@ class QuestionnaireManager: ObservableObject {
     private func filterQuestionsWithConditionalLogic(_ questions: [Question]) -> [Question] {
         return questions.filter { question in
             guard let logic = question.conditionalLogic else { return true }
-
-            // Check if the conditional question has been answered
-            guard let response = responses[logic.questionId] else { return false }
-
-            // Evaluate the condition
-            if let equals = logic.equals {
-                return response.stringValue == equals
-            }
-            if let greaterThan = logic.greaterThan, let num = response.numberValue {
-                return num > greaterThan
-            }
-            if let lessThan = logic.lessThan, let num = response.numberValue {
-                return num < lessThan
-            }
-
-            return true
+            return evaluateConditionalLogic(logic)
         }
+    }
+
+    /// Recursively evaluate conditional logic (supports compound AND/OR conditions and age checks)
+    private func evaluateConditionalLogic(_ logic: ConditionalLogic) -> Bool {
+        // Handle compound AND conditions
+        if let allConditions = logic.all {
+            return allConditions.allSatisfy { evaluateConditionalLogic($0) }
+        }
+
+        // Handle compound OR conditions
+        if let anyConditions = logic.any {
+            return anyConditions.contains { evaluateConditionalLogic($0) }
+        }
+
+        // Handle age-based conditions (calculated from D2 birth date)
+        if let ageUnder = logic.ageUnder {
+            guard let age = calculateUserAge() else { return false }
+            return age < ageUnder
+        }
+        if let ageOver = logic.ageOver {
+            guard let age = calculateUserAge() else { return false }
+            return age > ageOver
+        }
+
+        // Handle single question condition
+        guard let questionId = logic.questionId else { return true }
+        guard let response = responses[questionId] else { return false }
+
+        // Evaluate the condition
+        if let equals = logic.equals {
+            return response.stringValue?.lowercased() == equals.lowercased()
+        }
+        if let greaterThan = logic.greaterThan, let num = response.numberValue {
+            return num > greaterThan
+        }
+        if let lessThan = logic.lessThan, let num = response.numberValue {
+            return num < lessThan
+        }
+        if let greaterThanOrEqual = logic.greaterThanOrEqual, let num = response.numberValue {
+            return num >= greaterThanOrEqual
+        }
+        if let lessThanOrEqual = logic.lessThanOrEqual, let num = response.numberValue {
+            return num <= lessThanOrEqual
+        }
+
+        return true
+    }
+
+    /// Calculate user's age from D2 (Date of Birth) response
+    private func calculateUserAge() -> Int? {
+        guard let dobResponse = responses["D2"] else { return nil }
+
+        // D2 is stored as a date string (YYYY-MM-DD format)
+        guard let dobString = dobResponse.stringValue else { return nil }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        guard let birthDate = dateFormatter.date(from: dobString) else { return nil }
+
+        let calendar = Calendar.current
+        let ageComponents = calendar.dateComponents([.year], from: birthDate, to: Date())
+        return ageComponents.year
     }
 
     // MARK: - Gateway Evaluation
@@ -1021,12 +1221,24 @@ class QuestionnaireManager: ObservableObject {
 
         case .depression:
             // Triggered if question 15 >= "More than half the days" (index 2)
-            if let response = responses["15"], let index = getOptionIndex(response.stringValue, for: "15"), index >= 2 { return true }
+            // Handles both text labels and numeric string values from Convex
+            if let response = responses["15"] {
+                // Try numeric value first (from Convex: "0", "1", "2", "3")
+                if let numericIndex = Int(response.stringValue ?? ""), numericIndex >= 2 { return true }
+                // Fall back to text label matching
+                if let index = getOptionIndex(response.stringValue, for: "15"), index >= 2 { return true }
+            }
             return false
 
         case .anxiety:
             // Triggered if question 16 >= "More than half the days" (index 2)
-            if let response = responses["16"], let index = getOptionIndex(response.stringValue, for: "16"), index >= 2 { return true }
+            // Handles both text labels and numeric string values from Convex
+            if let response = responses["16"] {
+                // Try numeric value first (from Convex: "0", "1", "2", "3")
+                if let numericIndex = Int(response.stringValue ?? ""), numericIndex >= 2 { return true }
+                // Fall back to text label matching
+                if let index = getOptionIndex(response.stringValue, for: "16"), index >= 2 { return true }
+            }
             return false
 
         case .excessiveSleepiness:

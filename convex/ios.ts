@@ -1289,6 +1289,58 @@ export const getDailyCompletionStatus = query({
       }
     }
 
+    // Track incomplete expansion packs from previous days (Days 6-14)
+    const overdueExpansions: {
+      dayNumber: number;
+      triggeredGateways: string[];
+      moduleIds: string[];
+      questionCount: number;
+      estimatedMinutes: number;
+      answeredCount: number;
+    }[] = [];
+
+    // Get expansion schedule for this user
+    const expansionSchedule = await ctx.db
+      .query("user_expansion_schedules")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (expansionSchedule && expansionSchedule.day_assignments) {
+      // Check each day assignment for incomplete expansion packs
+      for (const assignment of expansionSchedule.day_assignments) {
+        // Only check days that are before current day AND not completed
+        if (assignment.day_number < user.current_day && assignment.completed !== true) {
+          // Count how many expansion questions were answered for this day
+          const expansionPrefixes = assignment.module_ids.map(m => m.toUpperCase());
+          let answeredCount = 0;
+
+          const dayResponses = dayData[assignment.day_number];
+          if (dayResponses) {
+            // Check assessment responses for expansion module questions
+            for (const qId of dayResponses.assessmentQuestions) {
+              const upperQId = qId.toUpperCase();
+              // Check if this response belongs to one of the expansion modules
+              if (expansionPrefixes.some(prefix => upperQId.startsWith(prefix))) {
+                answeredCount++;
+              }
+            }
+          }
+
+          // Only add to overdue if there are actually questions to complete
+          if (assignment.question_count > 0) {
+            overdueExpansions.push({
+              dayNumber: assignment.day_number,
+              triggeredGateways: expansionSchedule.triggered_gateways,
+              moduleIds: assignment.module_ids,
+              questionCount: assignment.question_count,
+              estimatedMinutes: assignment.estimated_minutes,
+              answeredCount,
+            });
+          }
+        }
+      }
+    }
+
     return {
       currentDay: user.current_day,
       dailyStatus,
@@ -1296,6 +1348,10 @@ export const getDailyCompletionStatus = query({
       hasMissedTasks: missedDays.length > 0,
       totalMissedSleepLogs: missedDays.filter(d => d.missingSleepLog).length,
       totalMissedAssessments: missedDays.filter(d => d.missingAssessment).length,
+      // New: Overdue expansion packs
+      overdueExpansions,
+      hasOverdueExpansions: overdueExpansions.length > 0,
+      totalOverdueExpansions: overdueExpansions.length,
     };
   },
 });

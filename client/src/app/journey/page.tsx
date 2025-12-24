@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { QuestionRenderer } from "@/components/questions";
@@ -102,7 +102,6 @@ export default function JourneyPage() {
     showDayCompletion,
     handleSectionComplete,
     continueToAssessment,
-    setShowDayCompletion,
   } = useSectionManager(userId, currentDay);
 
   // Initialize section from URL or journey state
@@ -155,7 +154,7 @@ export default function JourneyPage() {
       try {
         await completeSection();
         handleSectionComplete(currentSection);
-      } catch (err) {
+      } catch {
         // Error already handled in hook
       }
     }

@@ -78,7 +78,7 @@ export default function PhysicianSettingsPage() {
       await setAnthropicKeyMutation({ apiKey: anthropicKey });
       setAiMessage({ type: "success", text: "Anthropic API key saved successfully" });
       setAnthropicKey("");
-    } catch (err) {
+    } catch {
       setAiMessage({ type: "error", text: "Failed to save Anthropic API key" });
     } finally {
       setIsSavingAnthropic(false);
@@ -93,7 +93,7 @@ export default function PhysicianSettingsPage() {
       await setOpenAIKeyMutation({ apiKey: openaiKey });
       setAiMessage({ type: "success", text: "OpenAI API key saved successfully" });
       setOpenaiKey("");
-    } catch (err) {
+    } catch {
       setAiMessage({ type: "error", text: "Failed to save OpenAI API key" });
     } finally {
       setIsSavingOpenai(false);
@@ -120,7 +120,7 @@ export default function PhysicianSettingsPage() {
         type: result.success ? "success" : "error",
         text: result.message,
       });
-    } catch (err) {
+    } catch {
       setAiMessage({ type: "error", text: "Failed to test API key" });
     } finally {
       setIsTestingAnthropic(false);
@@ -140,7 +140,7 @@ export default function PhysicianSettingsPage() {
         type: result.success ? "success" : "error",
         text: result.message,
       });
-    } catch (err) {
+    } catch {
       setAiMessage({ type: "error", text: "Failed to test API key" });
     } finally {
       setIsTestingOpenai(false);

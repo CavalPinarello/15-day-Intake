@@ -14,7 +14,12 @@ interface SingleSelectChipsProps {
 
 export function SingleSelectChips({ config, value, onChange, error, disabled }: SingleSelectChipsProps) {
   const { options = [], layout = 'vertical' } = config;
-  const { isWarm, textClasses } = useCircadianTheme();
+  const { isWarm } = useCircadianTheme();
+
+  // Hook must be called before any early returns
+  const handleSelect = useCallback((optionValue: string) => {
+    onChange(optionValue);
+  }, [onChange]);
 
   // Guard against missing options
   if (!options || options.length === 0) {
@@ -24,10 +29,6 @@ export function SingleSelectChips({ config, value, onChange, error, disabled }: 
       </div>
     );
   }
-
-  const handleSelect = useCallback((optionValue: string) => {
-    onChange(optionValue);
-  }, [onChange]);
 
   const layoutClasses = {
     horizontal: 'flex flex-wrap gap-3',

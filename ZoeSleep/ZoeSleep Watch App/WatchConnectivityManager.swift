@@ -545,3 +545,61 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
     }
 }
+
+// MARK: - Watch Data Models (for connectivity)
+
+/// Question types for watch questionnaires
+enum WatchQuestionType: String {
+    case scale
+    case multipleChoice
+    case text
+    case time
+    case boolean
+}
+
+/// A question for the watch app
+struct WatchQuestion: Identifiable {
+    let id: String
+    let text: String
+    let type: WatchQuestionType
+    let options: [String]?
+}
+
+/// Recommendation category
+enum RecommendationCategory: String {
+    case sleepHygiene = "sleep_hygiene"
+    case behavioral = "behavioral"
+    case environmental = "environmental"
+    case lifestyle = "lifestyle"
+    case medical = "medical"
+    case other = "other"
+}
+
+/// A physician recommendation
+struct PhysicianRecommendation: Identifiable {
+    enum Priority: String {
+        case high
+        case medium
+        case low
+    }
+
+    let id: String
+    let title: String
+    let summary: String
+    let details: String?
+    let instructions: String?
+    let category: RecommendationCategory
+    let schedule: String?
+    var isCompleted: Bool
+    let createdAt: Date
+    let priority: Priority
+}
+
+/// A treatment task for the watch
+struct WatchTreatmentTask: Identifiable {
+    let id: String
+    let name: String
+    let timing: String?
+    let shortInstructions: String
+    var isCompleted: Bool
+}

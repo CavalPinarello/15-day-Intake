@@ -134,8 +134,9 @@ export default defineSchema({
 
     // Morning check-in data
     sleep_quality: v.optional(v.number()),      // 1-5 rating
-    energy_level: v.optional(v.number()),       // 1-4 rating
-    mood: v.optional(v.number()),               // 1-5 rating
+    energy_level: v.optional(v.number()),       // 1-6 rating (Watch: animal icons)
+    mood: v.optional(v.number()),               // 1-6 rating (Watch: weather icons)
+    focus_level: v.optional(v.number()),        // 1-5 rating (Watch: clarity icons)
 
     // Midday check-in data
     midday_energy: v.optional(v.number()),      // 1-4 rating
@@ -1152,6 +1153,22 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_watch", ["watch_device_id"])
     .index("by_phone", ["phone_device_id"]),
+
+  // ============================================
+  // Watch Garden State (Weekly Flower Visualization)
+  // Tracks daily check-in compliance as blooming flowers
+  // ============================================
+
+  watch_garden_state: defineTable({
+    user_id: v.id("users"),
+    week_start_date: v.string(),     // Monday's date YYYY-MM-DD
+    days_json: v.string(),           // JSON array of DayFlower objects
+    current_streak: v.number(),      // Consecutive days of compliance
+    longest_streak: v.number(),      // Personal best streak
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_week", ["user_id", "week_start_date"]),
 
   // ============================================
   // Physician Master Password System

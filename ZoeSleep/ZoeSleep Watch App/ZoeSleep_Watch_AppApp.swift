@@ -75,27 +75,18 @@ struct WatchContentView: View {
 
     enum WatchTab {
         case home
-        case treatment
         case health
         case settings
     }
 
     var body: some View {
         TabView(selection: $currentTab) {
-            // Home - Start screen with animated ribbons
-            WatchHomeView()
+            // Home - Minimal garden-based check-in hub
+            MinimalHomeView()
                 .tag(WatchTab.home)
                 .tabItem {
-                    Image(systemName: "moon.stars")
-                    Text("Today")
-                }
-
-            // Treatment tasks (after 15-day intake)
-            TreatmentTasksView()
-                .tag(WatchTab.treatment)
-                .tabItem {
-                    Image(systemName: "list.bullet.clipboard")
-                    Text("Tasks")
+                    Image(systemName: "leaf.fill")
+                    Text("Garden")
                 }
 
             // Health summary
@@ -117,6 +108,14 @@ struct WatchContentView: View {
         .onAppear {
             // Request latest data from iPhone
             watchConnectivity.requestDataFromiPhone()
+            // Schedule check-in notifications
+            Task {
+                let granted = await WatchNotificationManager.shared.requestAuthorization()
+                if granted {
+                    WatchNotificationManager.shared.scheduleCheckInReminders()
+                    WatchNotificationManager.shared.registerNotificationCategories()
+                }
+            }
         }
         .onChange(of: currentTab) { _, newTab in
             // Refresh state from Convex when switching to home tab

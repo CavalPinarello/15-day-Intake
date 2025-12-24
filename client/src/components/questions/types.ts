@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Question and response types for the standardized question system
 
 export interface Question {

@@ -56,6 +56,7 @@ import type * as testingAPI from "../testingAPI.js";
 import type * as treatment from "../treatment.js";
 import type * as users from "../users.js";
 import type * as watch from "../watch.js";
+import type * as watchGarden from "../watchGarden.js";
 import type * as web from "../web.js";
 
 import type {
@@ -113,6 +114,7 @@ declare const fullApi: ApiFromModules<{
   treatment: typeof treatment;
   users: typeof users;
   watch: typeof watch;
+  watchGarden: typeof watchGarden;
   web: typeof web;
 }>;
 

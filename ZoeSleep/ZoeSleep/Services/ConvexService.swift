@@ -218,12 +218,25 @@ struct DailyCompletionStatus: Codable {
         let missingAssessment: Bool
     }
 
+    struct OverdueExpansion: Codable {
+        let dayNumber: Int
+        let triggeredGateways: [String]
+        let moduleIds: [String]
+        let questionCount: Int
+        let estimatedMinutes: Int
+        let answeredCount: Int
+    }
+
     let currentDay: Int
     let dailyStatus: [DayStatus]
     let missedDays: [MissedDay]
     let hasMissedTasks: Bool
     let totalMissedSleepLogs: Int
     let totalMissedAssessments: Int
+    // Overdue expansion packs from previous days
+    let overdueExpansions: [OverdueExpansion]?
+    let hasOverdueExpansions: Bool?
+    let totalOverdueExpansions: Int?
 }
 
 struct SuccessResponse: Codable {
@@ -1096,7 +1109,18 @@ struct ConvexConditionalLogic: Codable {
         // Try direct format first
         if let container = try? decoder.container(keyedBy: CodingKeys.self) {
             self.questionId = try container.decode(String.self, forKey: .questionId)
-            self.equals = try container.decodeIfPresent(String.self, forKey: .equals)
+
+            // Handle equals as either String or number (Convex may return either)
+            if let stringValue = try? container.decodeIfPresent(String.self, forKey: .equals) {
+                self.equals = stringValue
+            } else if let intValue = try? container.decodeIfPresent(Int.self, forKey: .equals) {
+                self.equals = String(intValue)
+            } else if let doubleValue = try? container.decodeIfPresent(Double.self, forKey: .equals) {
+                self.equals = String(Int(doubleValue))
+            } else {
+                self.equals = nil
+            }
+
             self.greaterThan = try container.decodeIfPresent(Double.self, forKey: .greaterThan)
         } else {
             // Try show_if format
@@ -1122,6 +1146,24 @@ struct ConvexConditionalLogic: Codable {
             case value
             case greaterThan = "greater_than"
         }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.questionId = try container.decode(String.self, forKey: .questionId)
+
+            // Handle value as either String or number
+            if let stringValue = try? container.decodeIfPresent(String.self, forKey: .value) {
+                self.value = stringValue
+            } else if let intValue = try? container.decodeIfPresent(Int.self, forKey: .value) {
+                self.value = String(intValue)
+            } else if let doubleValue = try? container.decodeIfPresent(Double.self, forKey: .value) {
+                self.value = String(Int(doubleValue))
+            } else {
+                self.value = nil
+            }
+
+            self.greaterThan = try container.decodeIfPresent(Double.self, forKey: .greaterThan)
+        }
     }
 }
 
@@ -1138,6 +1180,7 @@ struct QuestionsMetadata: Codable {
     let triggeredGateways: [String]
     let dayDescription: String
     let dayExplanation: String
+    let modules: [String]?  // Module IDs included in today's assessment (for expansion splash screens)
 }
 
 struct ConvexGatewayState: Codable {

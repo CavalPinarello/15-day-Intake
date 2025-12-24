@@ -58,6 +58,10 @@ struct QuestionnaireView: View {
     @State private var showingSaveError: Bool = false
     @State private var retryAction: (() -> Void)? = nil
 
+    // Expansion Pack Splash Screen
+    @State private var showingExpansionSplash: Bool = false
+    @State private var expansionSplashInfo: [QuestionnaireValidationInfo] = []
+
     @Environment(\.presentationMode) var presentationMode
 
     private var theme: ColorTheme { themeManager.currentTheme }
@@ -77,7 +81,33 @@ struct QuestionnaireView: View {
 
     var body: some View {
         Group {
-            if showingTransition {
+            if showingExpansionSplash && !expansionSplashInfo.isEmpty {
+                // Show expansion pack splash screen with questionnaire rationale
+                if expansionSplashInfo.count == 1, let info = expansionSplashInfo.first {
+                    // Single questionnaire splash
+                    ExpansionQuestionnaireSplashView(
+                        info: info,
+                        triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
+                        onContinue: {
+                            withAnimation {
+                                showingExpansionSplash = false
+                            }
+                        }
+                    )
+                } else {
+                    // Multi-questionnaire day splash
+                    ExpansionDaySplashView(
+                        questionnaires: expansionSplashInfo,
+                        dayNumber: currentDay,
+                        triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
+                        onContinue: {
+                            withAnimation {
+                                showingExpansionSplash = false
+                            }
+                        }
+                    )
+                }
+            } else if showingTransition {
                 SectionTransitionView(
                     fromSection: .sleepLog,
                     toSection: .assessment,
@@ -134,8 +164,10 @@ struct QuestionnaireView: View {
         }
         .onDisappear {
             // When leaving the questionnaire (back button or dismissal),
-            // notify dashboard to refresh from Convex
-            print("[iOS Questionnaire] View disappearing - posting refresh notification")
+            // save any in-progress responses BEFORE posting refresh notification
+            // This ensures partial progress is persisted
+            print("[iOS Questionnaire] View disappearing - saving in-progress responses")
+            saveInProgressResponses()
             NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
         }
         .overlay {
@@ -322,6 +354,12 @@ struct QuestionnaireView: View {
                 MinutesScrollPicker(
                     question: question,
                     value: intBinding(for: question.id, default: question.defaultValue ?? 0)
+                )
+
+            case .hoursMinutesScroll:
+                HoursMinutesScrollPicker(
+                    question: question,
+                    totalMinutes: intBinding(for: question.id, default: (question.defaultValue ?? 7) * 60)
                 )
 
             case .info:
@@ -632,10 +670,11 @@ struct QuestionnaireView: View {
 
         switch question.questionType {
         case .number, .numberScroll:
-            // Number inputs with +/- buttons - user MUST interact to proceed
-            // (otherwise they might accidentally skip without noticing the default)
-            return userInteracted.contains(question.id)
-        case .scale, .time, .date, .minutesScroll:
+            // Number inputs with +/- buttons show a visible default that user can accept
+            // Allow proceeding without interaction - if they don't change it, they're accepting it
+            // The value will be saved when they tap Next (handled in saveCurrentResponse)
+            return true
+        case .scale, .time, .date, .minutesScroll, .hoursMinutesScroll:
             // Scale sliders, time/date/minutes pickers show a visible default that user can accept
             // Allow proceeding without interaction - if they don't change it, they're accepting it
             // The value will be saved when they tap Next (marked as interacted in saveCurrentResponse)
@@ -691,9 +730,12 @@ struct QuestionnaireView: View {
 
                 // Filter out demographic questions (D2, D4, D5, D6) if profile has the data
                 // The data is auto-injected as responses, so scoring still works
+                print("[iOS] Filtering assessment questions. Original count: \(questionsResponse.assessment.count)")
+                print("[iOS] Question IDs before filter: \(questionsResponse.assessment.map { $0.id })")
                 let filteredAssessment = questionsResponse.assessment
                     .filter { !shouldSkipDemographicQuestion($0.id) }
                     .map { convertConvexQuestion($0, isSleepLog: false) }
+                print("[iOS] Questions after filter: \(filteredAssessment.count)")
                 let convertedAssessment = filteredAssessment
 
                 await MainActor.run {
@@ -716,6 +758,11 @@ struct QuestionnaireView: View {
                     // Pre-fill demographics from HealthKit (Day 1 only)
                     if currentDay == 1 {
                         prefillDemographicsFromHealthKit()
+                    }
+
+                    // Check if this is an expansion day (6-14) and show splash for assessment section
+                    if currentDay >= 6 && startSection == .assessment && !assessmentQuestions.isEmpty {
+                        checkAndShowExpansionSplash(modules: questionsResponse.metadata.modules ?? [])
                     }
 
                     // Load saved progress from Convex (cross-device sync)
@@ -786,6 +833,9 @@ struct QuestionnaireView: View {
                 equals: convexLogic.equals,
                 greaterThan: convexLogic.greaterThan
             )
+            print("[iOS] Question \(cq.id) has conditionalLogic: questionId=\(convexLogic.questionId), equals=\(convexLogic.equals ?? "nil")")
+        } else {
+            print("[iOS] Question \(cq.id) has NO conditionalLogic")
         }
 
         return Question(
@@ -1004,12 +1054,14 @@ struct QuestionnaireView: View {
                 // Finished sleep log
                 if sectionOnly || assessmentQuestions.isEmpty {
                     // Sleep log only mode OR no assessment questions - complete section
+                    completeSectionInBackground(section: .sleepLog)
                     withAnimation {
                         completedSectionAtFinish = .sleepLog  // Capture which section we completed
                         showingCompletion = true
                     }
                 } else {
-                    // Show transition to assessment
+                    // Show transition to assessment - also complete sleep log section immediately
+                    completeSectionInBackground(section: .sleepLog)
                     withAnimation {
                         showingTransition = true
                     }
@@ -1042,6 +1094,7 @@ struct QuestionnaireView: View {
 
             if isLast {
                 // Finished assessment - show completion
+                completeSectionInBackground(section: .assessment)
                 withAnimation {
                     completedSectionAtFinish = .assessment  // Capture which section we completed
                     showingCompletion = true
@@ -1069,22 +1122,32 @@ struct QuestionnaireView: View {
         switch questionId {
         case "D2": // Date of Birth
             // Skip if birthYear is valid (between 1900 and current year)
-            return profile.birthYear > 1900 && profile.birthYear < currentYear
+            let shouldSkip = profile.birthYear > 1900 && profile.birthYear < currentYear
+            print("[iOS] D2 check: birthYear=\(profile.birthYear), currentYear=\(currentYear), shouldSkip=\(shouldSkip)")
+            return shouldSkip
         case "D4": // Sex
             // Skip if gender is set and not "prefer not to say"
             let gender = profile.gender.lowercased()
-            return !gender.isEmpty && gender != "prefer not to say"
+            let shouldSkip = !gender.isEmpty && gender != "prefer not to say"
+            print("[iOS] D4 check: gender='\(profile.gender)', shouldSkip=\(shouldSkip)")
+            return shouldSkip
         case "D5": // Height
             // Skip if height is valid (100-250 cm reasonable range)
             if let height = profile.heightCm {
-                return height >= 100 && height <= 250
+                let shouldSkip = height >= 100 && height <= 250
+                print("[iOS] D5 check: heightCm=\(height), shouldSkip=\(shouldSkip)")
+                return shouldSkip
             }
+            print("[iOS] D5 check: heightCm=nil, shouldSkip=false")
             return false
         case "D6": // Weight
             // Skip if weight is valid (30-300 kg reasonable range)
             if let weight = profile.weightKg {
-                return weight >= 30 && weight <= 300
+                let shouldSkip = weight >= 30 && weight <= 300
+                print("[iOS] D6 check: weightKg=\(weight), shouldSkip=\(shouldSkip)")
+                return shouldSkip
             }
+            print("[iOS] D6 check: weightKg=nil, shouldSkip=false")
             return false
         default:
             return false
@@ -1094,19 +1157,28 @@ struct QuestionnaireView: View {
     /// Check if a question should be shown based on its conditional logic
     private func shouldShowQuestion(_ question: Question, responses: [String: Any]) -> Bool {
         guard let condition = question.conditionalLogic else {
+            print("[iOS] shouldShowQuestion(\(question.id)): No condition, showing")
             return true // No condition = always show
         }
 
+        print("[iOS] shouldShowQuestion(\(question.id)): Has condition - questionId=\(condition.questionId), equals=\(condition.equals ?? "nil")")
+
         // Get the response to the dependent question
         guard let dependentResponse = responses[condition.questionId] else {
+            print("[iOS] shouldShowQuestion(\(question.id)): No response for \(condition.questionId), hiding")
             return false // No response to dependent question = hide
         }
+
+        print("[iOS] shouldShowQuestion(\(question.id)): Found response '\(dependentResponse)' for \(condition.questionId)")
 
         // Check equals condition
         if let equalsValue = condition.equals {
             if let stringResponse = dependentResponse as? String {
-                return stringResponse.lowercased() == equalsValue.lowercased()
+                let matches = stringResponse.lowercased() == equalsValue.lowercased()
+                print("[iOS] shouldShowQuestion(\(question.id)): Comparing '\(stringResponse)' == '\(equalsValue)' => \(matches)")
+                return matches
             }
+            print("[iOS] shouldShowQuestion(\(question.id)): Response is not a string, hiding")
             return false
         }
 
@@ -1137,6 +1209,34 @@ struct QuestionnaireView: View {
         while nextIndex < questions.count && !shouldShowQuestion(questions[nextIndex], responses: responses) {
             print("[iOS] Skipping question \(questions[nextIndex].id) - conditional logic not met")
             nextIndex += 1
+        }
+
+        // CRITICAL FIX: If we've skipped past all remaining questions, trigger end-of-section
+        // This prevents the "16 of 15" bug where index exceeds question count
+        if nextIndex >= questions.count {
+            print("[iOS] advanceToNextQuestion: Skipped past all questions (nextIndex=\(nextIndex), count=\(questions.count)) - triggering section completion")
+            if currentSection == .sleepLog {
+                // Finished sleep log via conditional skipping
+                completeSectionInBackground(section: .sleepLog)
+                if sectionOnly || assessmentQuestions.isEmpty {
+                    withAnimation {
+                        completedSectionAtFinish = .sleepLog
+                        showingCompletion = true
+                    }
+                } else {
+                    withAnimation {
+                        showingTransition = true
+                    }
+                }
+            } else {
+                // Finished assessment via conditional skipping
+                completeSectionInBackground(section: .assessment)
+                withAnimation {
+                    completedSectionAtFinish = .assessment
+                    showingCompletion = true
+                }
+            }
+            return
         }
 
         if currentSection == .sleepLog {
@@ -1307,6 +1407,43 @@ struct QuestionnaireView: View {
                 answeredInSeconds: answerTime
             )
             response.numberValue = Double(valueToSave)
+            questionnaireManager.saveResponse(response)
+            return
+        }
+
+        // For number/numberScroll questions, user can accept the smart default by tapping Next
+        if question.questionType == .number || question.questionType == .numberScroll {
+            let valueToSave: Double
+            let defaultValue = NumberInput.smartDefault(for: question)
+            if currentSection == .sleepLog {
+                if let existingValue = sleepLogResponses[question.id] as? Double {
+                    valueToSave = existingValue
+                } else if let existingInt = sleepLogResponses[question.id] as? Int {
+                    valueToSave = Double(existingInt)
+                } else {
+                    valueToSave = defaultValue
+                    sleepLogResponses[question.id] = valueToSave
+                }
+                sleepLogUserInteracted.insert(question.id)
+            } else {
+                if let existingValue = assessmentResponses[question.id] as? Double {
+                    valueToSave = existingValue
+                } else if let existingInt = assessmentResponses[question.id] as? Int {
+                    valueToSave = Double(existingInt)
+                } else {
+                    valueToSave = defaultValue
+                    assessmentResponses[question.id] = valueToSave
+                }
+                assessmentUserInteracted.insert(question.id)
+            }
+
+            var response = QuestionResponse(
+                questionId: question.id,
+                dayNumber: currentDay,
+                answeredAt: Date(),
+                answeredInSeconds: answerTime
+            )
+            response.numberValue = valueToSave
             questionnaireManager.saveResponse(response)
             return
         }
@@ -1581,6 +1718,175 @@ struct QuestionnaireView: View {
         }
 
         questionnaireManager.saveResponse(response)
+    }
+
+    /// Save any in-progress responses when leaving the questionnaire (e.g., via back button)
+    /// This ensures partial progress is persisted and the user can resume later
+    private func saveInProgressResponses() {
+        // Only save if we have responses that the user interacted with
+        guard !sleepLogUserInteracted.isEmpty || !assessmentUserInteracted.isEmpty else {
+            print("[iOS] No user-interacted responses to save on dismiss")
+            return
+        }
+
+        // Fire-and-forget async save - we don't want to block the dismiss
+        Task {
+            do {
+                // Build the responses array similar to syncResponsesToConvex, but simpler
+                var convexResponses: [[String: Any]] = []
+
+                // Save sleep log responses that user interacted with
+                for (questionId, value) in sleepLogResponses {
+                    guard sleepLogUserInteracted.contains(questionId) else { continue }
+                    var response: [String: Any] = ["questionId": questionId]
+                    if let stringValue = value as? String {
+                        response["responseValue"] = stringValue
+                    } else if let numberValue = value as? Double {
+                        response["responseNumber"] = numberValue
+                    } else if let intValue = value as? Int {
+                        response["responseNumber"] = Double(intValue)
+                    } else if let dateValue = value as? Date {
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "HH:mm"
+                        response["responseValue"] = formatter.string(from: dateValue)
+                    } else if let arrayValue = value as? [String] {
+                        response["responseArray"] = arrayValue
+                    }
+                    convexResponses.append(response)
+                }
+
+                // Save assessment responses that user interacted with
+                for (questionId, value) in assessmentResponses {
+                    guard assessmentUserInteracted.contains(questionId) else { continue }
+                    var response: [String: Any] = ["questionId": questionId]
+                    if let stringValue = value as? String {
+                        response["responseValue"] = stringValue
+                    } else if let numberValue = value as? Double {
+                        response["responseNumber"] = numberValue
+                    } else if let intValue = value as? Int {
+                        response["responseNumber"] = Double(intValue)
+                    } else if let dateValue = value as? Date {
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "HH:mm"
+                        response["responseValue"] = formatter.string(from: dateValue)
+                    } else if let arrayValue = value as? [String] {
+                        response["responseArray"] = arrayValue
+                    }
+                    convexResponses.append(response)
+                }
+
+                if !convexResponses.isEmpty {
+                    let result = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
+                    print("[iOS] Saved \(result.savedCount) in-progress responses on dismiss")
+                }
+            } catch {
+                print("[iOS] Warning: Failed to save in-progress responses on dismiss: \(error.localizedDescription)")
+                // We intentionally don't show an error to the user here - it's a background save
+            }
+        }
+    }
+
+    /// Complete the section immediately in the background when showing completion screen
+    /// This ensures the section is marked as complete even if user taps back instead of proceeding
+    private func completeSectionInBackground(section: QuestionnaireSection) {
+        Task {
+            do {
+                // First save all responses for this section
+                let responses = section == .sleepLog ? sleepLogResponses : assessmentResponses
+                let userInteracted = section == .sleepLog ? sleepLogUserInteracted : assessmentUserInteracted
+                let questions = section == .sleepLog ? sleepLogQuestions : assessmentQuestions
+
+                // Save responses locally
+                for (questionId, value) in responses {
+                    saveResponseFromDictionary(questionId: questionId, value: value, questions: questions)
+                }
+
+                // Build Convex responses for sync
+                var convexResponses: [[String: Any]] = []
+                for (questionId, value) in responses {
+                    guard userInteracted.contains(questionId) else { continue }
+                    var response: [String: Any] = ["questionId": questionId]
+
+                    if let stringValue = value as? String {
+                        response["responseValue"] = stringValue
+                    } else if let numberValue = value as? Double {
+                        response["responseNumber"] = numberValue
+                    } else if let intValue = value as? Int {
+                        response["responseNumber"] = Double(intValue)
+                    } else if let dateValue = value as? Date {
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "HH:mm"
+                        response["responseValue"] = formatter.string(from: dateValue)
+                    } else if let arrayValue = value as? [String] {
+                        response["responseArray"] = arrayValue
+                    }
+                    convexResponses.append(response)
+                }
+
+                // Sync responses to Convex
+                if !convexResponses.isEmpty {
+                    let result = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
+                    print("[iOS] Background save: synced \(result.savedCount) responses")
+                }
+
+                // Mark section as complete
+                let sectionName = section == .sleepLog ? "sleepLog" : "assessment"
+                let result = try await ConvexService.shared.completeSection(dayNumber: currentDay, section: sectionName)
+                print("[iOS] Background completion: \(sectionName) marked complete (sleepLog=\(result.sleepLogCompleted), assessment=\(result.assessmentCompleted))")
+
+                // Refresh journey progress so dashboard shows correct state
+                await questionnaireManager.loadJourneyProgress()
+
+                // Notify dashboard to refresh
+                await MainActor.run {
+                    NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                }
+            } catch {
+                print("[iOS] Warning: Background section completion failed: \(error.localizedDescription)")
+                // Don't show error to user - they'll see it when they explicitly try to proceed
+            }
+        }
+    }
+
+    // MARK: - Expansion Splash Screen Logic
+
+    /// Check if we should show an expansion pack splash screen and populate the info
+    /// Only shows once per day when user first enters the assessment section
+    private func checkAndShowExpansionSplash(modules: [String]) {
+        // Get the key for tracking if splash was shown for this day
+        let splashKey = "expansionSplashShown_day\(currentDay)"
+
+        // Check if already shown for this day
+        if UserDefaults.standard.bool(forKey: splashKey) {
+            print("[iOS] Expansion splash already shown for day \(currentDay), skipping")
+            return
+        }
+
+        // Get questionnaire info for the modules in today's assessment
+        // Filter for expansion modules only (those starting with "expansion_")
+        let expansionModules = modules.filter { $0.hasPrefix("expansion_") }
+
+        if expansionModules.isEmpty {
+            print("[iOS] No expansion modules for day \(currentDay), skipping splash")
+            return
+        }
+
+        // Get validation info for these modules
+        let infos = QuestionnaireLibrary.infos(for: expansionModules)
+
+        if infos.isEmpty {
+            print("[iOS] No validation info found for modules: \(expansionModules)")
+            return
+        }
+
+        print("[iOS] Showing expansion splash for day \(currentDay) with \(infos.count) questionnaires")
+
+        // Mark as shown for this day
+        UserDefaults.standard.set(true, forKey: splashKey)
+
+        // Set the splash info and show it
+        expansionSplashInfo = infos
+        showingExpansionSplash = true
     }
 }
 
