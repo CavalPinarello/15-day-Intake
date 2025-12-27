@@ -81,33 +81,17 @@ struct QuestionnaireView: View {
 
     var body: some View {
         Group {
-            if showingExpansionSplash && !expansionSplashInfo.isEmpty {
-                // Show expansion pack splash screen with questionnaire rationale
-                if expansionSplashInfo.count == 1, let info = expansionSplashInfo.first {
-                    // Single questionnaire splash
-                    ExpansionQuestionnaireSplashView(
-                        info: info,
-                        triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
-                        onContinue: {
-                            withAnimation {
-                                showingExpansionSplash = false
-                            }
-                        }
-                    )
-                } else {
-                    // Multi-questionnaire day splash
-                    ExpansionDaySplashView(
-                        questionnaires: expansionSplashInfo,
-                        dayNumber: currentDay,
-                        triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
-                        onContinue: {
-                            withAnimation {
-                                showingExpansionSplash = false
-                            }
-                        }
-                    )
-                }
-            } else if showingTransition {
+            // NOTE: Expansion splash screens temporarily disabled - file not yet added to Xcode project
+            // To enable: Add ExpansionQuestionnaireSplash.swift to the project via Xcode
+            // if showingExpansionSplash && !expansionSplashInfo.isEmpty {
+            //     // Show expansion pack splash screen with questionnaire rationale
+            //     if expansionSplashInfo.count == 1, let info = expansionSplashInfo.first {
+            //         ExpansionQuestionnaireSplashView(...)
+            //     } else {
+            //         ExpansionDaySplashView(...)
+            //     }
+            // } else
+            if showingTransition {
                 SectionTransitionView(
                     fromSection: .sleepLog,
                     toSection: .assessment,
@@ -1161,15 +1145,16 @@ struct QuestionnaireView: View {
             return true // No condition = always show
         }
 
-        print("[iOS] shouldShowQuestion(\(question.id)): Has condition - questionId=\(condition.questionId), equals=\(condition.equals ?? "nil")")
+        print("[iOS] shouldShowQuestion(\(question.id)): Has condition - questionId=\(condition.questionId ?? "nil"), equals=\(condition.equals ?? "nil")")
 
         // Get the response to the dependent question
-        guard let dependentResponse = responses[condition.questionId] else {
-            print("[iOS] shouldShowQuestion(\(question.id)): No response for \(condition.questionId), hiding")
+        guard let questionId = condition.questionId,
+              let dependentResponse = responses[questionId] else {
+            print("[iOS] shouldShowQuestion(\(question.id)): No response for \(condition.questionId ?? "nil"), hiding")
             return false // No response to dependent question = hide
         }
 
-        print("[iOS] shouldShowQuestion(\(question.id)): Found response '\(dependentResponse)' for \(condition.questionId)")
+        print("[iOS] shouldShowQuestion(\(question.id)): Found response '\(dependentResponse)' for \(questionId)")
 
         // Check equals condition
         if let equalsValue = condition.equals {

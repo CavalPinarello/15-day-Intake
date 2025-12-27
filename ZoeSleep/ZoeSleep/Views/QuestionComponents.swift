@@ -340,7 +340,7 @@ struct NumberInput: View {
 
     // Get user's measurement preference (reads from OnboardingManager)
     private var useImperial: Bool {
-        OnboardingManager.shared.measurementSystem == .imperial && question.unitImperial != nil
+        OnboardingManager.shared.profile.measurementSystem == MeasurementSystem.imperial.rawValue && question.unitImperial != nil
     }
 
     // Computed properties for unit-aware values
@@ -362,7 +362,7 @@ struct NumberInput: View {
     /// Call this from the binding's default parameter
     static func smartDefault(for question: Question) -> Double {
         // Check if user prefers imperial and question has imperial settings
-        let useImperial = OnboardingManager.shared.measurementSystem == .imperial && question.unitImperial != nil
+        let useImperial = OnboardingManager.shared.profile.measurementSystem == MeasurementSystem.imperial.rawValue && question.unitImperial != nil
 
         switch question.id {
         // Demographics

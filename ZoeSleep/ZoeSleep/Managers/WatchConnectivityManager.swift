@@ -272,7 +272,7 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
 
     private func mapQuestionTypeForWatch(_ type: QuestionType) -> String {
         switch type {
-        case .scale, .numberScroll, .minutesScroll, .number:
+        case .scale, .numberScroll, .minutesScroll, .hoursMinutesScroll, .number:
             return "scale"
         case .yesNo, .yesNoDontKnow:
             return "radio"
