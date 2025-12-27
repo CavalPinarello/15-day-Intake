@@ -113,6 +113,19 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Workday vs Weekend Day Type Analysis:** Complete day type tracking and clinical pattern detection (Dec 27, 2025)
+  - **Schema enrichment:** Added to `user_sleep_data` table: `day_number`, `day_type`, `naps_taken`, `nap_count`, `nap_total_mins`, `nap_details_json`, `medications_taken`, `medication_time`, `medication_categories_json`, `subjective_quality`
+  - **Day types tracked:** Workday, School Day, Day Off, Vacation, Holiday, Weekend
+  - **Backend extraction:** `healthkit.ts:computeSleepMetricsFromResponses` now extracts day_type, naps, medications from both CSD_ and SD_ question prefixes
+  - **Day type analysis query:** New `physician.ts:getPatientDayTypeAnalysis` compares workday vs weekend stats (duration, efficiency, quality, latency, naps, meds)
+  - **Clinical flags generated:**
+    - `social_jet_lag` - >60 min sleep duration difference between workday/weekend (warning at 60min, alert at 90min)
+    - `compensatory_sleep` - Weekend catch-up sleep suggests weekday sleep debt
+    - `weekend_napping` - Higher nap rate on weekends indicates weekday sleep deficit
+    - `medication_pattern` - Different medication use between workday/weekend
+  - **Dashboard integration:** `SleepDataReview.tsx` now shows comparison grid with all metrics and severity-styled clinical flags
+  - **Schema index:** Added `by_user_day_type` index for efficient day-type queries
+  - **Files changed:** `convex/schema.ts`, `convex/healthkit.ts`, `convex/physician.ts`, `client/src/components/patient/review/SleepDataReview.tsx`
 - **Dynamic Nap Blocks & Conditional Medication Questions:** Structured nap/medication data collection (Dec 27, 2025)
   - **Problem:** Nap question showed free-form text field; medication question was simple yes/no + text
   - **New Nap Details UI:** Dynamic nap blocks based on nap count with time picker + duration quick-select buttons (15min, 30min, 45min, 1h, 1.5h, 2h+)
