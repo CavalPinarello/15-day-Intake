@@ -1102,12 +1102,18 @@ struct Question: Identifiable, Codable {
     var scaleMinLabel: String?
     var scaleMaxLabel: String?
 
-    // Number configuration
+    // Number configuration (metric by default)
     var minValue: Int?
     var maxValue: Int?
     var step: Double?
     var unit: String?
     var defaultValue: Int?
+
+    // Imperial unit configuration (for questions with unit switching)
+    var unitImperial: String?
+    var minImperial: Int?
+    var maxImperial: Int?
+    var defaultImperial: Int?
 
     // Help text
     var helpText: String?
@@ -1148,6 +1154,10 @@ struct Question: Identifiable, Codable {
         step: Double? = nil,
         unit: String? = nil,
         defaultValue: Int? = nil,
+        unitImperial: String? = nil,
+        minImperial: Int? = nil,
+        maxImperial: Int? = nil,
+        defaultImperial: Int? = nil,
         helpText: String? = nil,
         isGateway: Bool = false,
         gatewayType: GatewayType? = nil,
@@ -1175,6 +1185,10 @@ struct Question: Identifiable, Codable {
         self.step = step
         self.unit = unit
         self.defaultValue = defaultValue
+        self.unitImperial = unitImperial
+        self.minImperial = minImperial
+        self.maxImperial = maxImperial
+        self.defaultImperial = defaultImperial
         self.helpText = helpText
         self.isGateway = isGateway
         self.gatewayType = gatewayType

@@ -48,19 +48,29 @@ struct MinimalHomeView: View {
                     }
 
                     // Show logged-in user for debugging
-                    if let username = convexService.username {
-                        HStack {
-                            Image(systemName: "person.circle.fill")
+                    #if DEBUG
+                    HStack {
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(palette.textSecondary)
+                        Text(convexService.username ?? "unknown")
+                            .font(.system(size: 10))
+                            .foregroundColor(palette.textSecondary)
+                        Text("Day \(convexService.currentDay)")
+                            .font(.system(size: 10))
+                            .foregroundColor(palette.accent)
+
+                        // Sign out button for testing
+                        Button(action: {
+                            convexService.clearCredentials()
+                        }) {
+                            Image(systemName: "arrow.right.square")
                                 .font(.system(size: 10))
-                                .foregroundColor(palette.textSecondary)
-                            Text(username)
-                                .font(.system(size: 10))
-                                .foregroundColor(palette.textSecondary)
-                            Text("Day \(convexService.currentDay)")
-                                .font(.system(size: 10))
-                                .foregroundColor(palette.accent)
+                                .foregroundColor(.red)
                         }
+                        .buttonStyle(.plain)
                     }
+                    #endif
 
                     // Check-In Cards (time-locked)
                     checkInSection

@@ -113,6 +113,16 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Physician Review Checklist UX Improvement:** Expandable review sections in analysis workflow (Dec 27, 2025)
+  - **Problem:** Review Checklist only had checkboxes - physicians had to navigate away to see actual data
+  - **Solution:** Click-to-expand sections that show data inline without leaving the workflow
+  - **SleepDataReview:** Shows avg duration, quality, awakenings, efficiency + day-by-day breakdown
+  - **QuestionnaireScoresReview:** All 18 questionnaire scores with severity indicators (Normal/Mild/Moderate/Severe)
+  - **GatewayTriggersReview:** Shows 6 gateways with triggered/not triggered status and scores
+  - **Auto-mark reviewed:** Items auto-check after 2 seconds of viewing expanded content
+  - **Summary previews:** Shows key stats in collapsed state (e.g., "14 days • Avg 6.2h • Quality 3.2/5")
+  - **New files:** `client/src/components/patient/review/ReviewSection.tsx`, `SleepDataReview.tsx`, `QuestionnaireScoresReview.tsx`, `GatewayTriggersReview.tsx`
+  - **Modified:** `client/src/components/patient/PatientAnalysisWorkflow.tsx`
 - **Overdue Expansion Pack Tracking:** Full tracking for incomplete expansion packs from previous days (Dec 24, 2025)
   - **Problem:** Users could trigger expansion packs on Day N but advance to Day N+1 without completing them, with no visibility
   - **Backend:** `ios.ts:getDailyCompletionStatus` now returns `overdueExpansions[]` with dayNumber, triggeredGateways, questionCount, answeredCount, estimatedMinutes

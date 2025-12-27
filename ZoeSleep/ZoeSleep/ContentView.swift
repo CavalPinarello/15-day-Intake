@@ -690,9 +690,16 @@ struct MainDashboardView: View {
     }
 
     private var hasAssessmentToday: Bool {
-        // Core days (1-7) always have assessment
-        if currentDay <= 7 { return true }
-        // Expansion days (8-14) only have assessment if gateways are triggered
+        // Core days (1-5) always have assessment
+        if currentDay <= 5 { return true }
+
+        // Expansion days (6-14): Check the dynamic Convex schedule first
+        if let scheduled = questionnaireManager.scheduledExpansionForToday {
+            // If Convex has a schedule for today, use it
+            return !scheduled.completed && scheduled.totalQuestions > 0
+        }
+
+        // Fallback to static config check (for offline or before schedule loads)
         return !getTriggeredGatewaysForToday().isEmpty
     }
 
@@ -762,7 +769,12 @@ struct MainDashboardView: View {
             return config.estimatedMinutes
         }
 
-        // For expansion days (6-14), calculate based on triggered gateways for today
+        // For expansion days (6-14), use the dynamic Convex schedule
+        if let scheduled = questionnaireManager.scheduledExpansionForToday {
+            return scheduled.estimatedMinutes
+        }
+
+        // Fallback to static calculation
         let todayGateways = getTriggeredGatewaysForToday()
         if todayGateways.isEmpty {
             return 0  // No expansion content if no gateways triggered
@@ -904,12 +916,22 @@ struct MainDashboardView: View {
 
     /// Get the title for today's assessment task
     private func getAssessmentTitle() -> String {
-        // For core days (1-7), use "Assessment"
-        if currentDay <= 7 {
+        // For core days (1-5), use "Assessment"
+        if currentDay <= 5 {
             return "Assessment"
         }
 
-        // For expansion days, use "Deep Dive" or specific area
+        // For expansion days (6-14), use the dynamic Convex schedule
+        if let scheduled = questionnaireManager.scheduledExpansionForToday,
+           !scheduled.modules.isEmpty {
+            // Show the first module's name or "Deep Dive" if multiple
+            if scheduled.modules.count == 1 {
+                return scheduled.modules[0].name
+            }
+            return "Deep Dive: \(scheduled.modules.count) Assessments"
+        }
+
+        // Fallback to static gateway check
         let todayGateways = getTriggeredGatewaysForToday()
         if todayGateways.isEmpty {
             return "Assessment"  // Fallback
@@ -922,15 +944,29 @@ struct MainDashboardView: View {
     }
 
     private func getDayDescription() -> String {
-        // For core days (1-7), show config description
-        if currentDay <= 7 {
+        // For core days (1-5), show config description
+        if currentDay <= 5 {
             guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
                 return "Complete today's questions"
             }
             return config.description
         }
 
-        // For expansion days (8-14), show what's being assessed
+        // For expansion days (6-14), use the dynamic Convex schedule
+        if let scheduled = questionnaireManager.scheduledExpansionForToday,
+           !scheduled.modules.isEmpty {
+            // Show the instruments being assessed
+            let instruments = scheduled.modules.map { $0.instrument }
+            if instruments.count == 1 {
+                return "Detailed \(instruments[0]) assessment"
+            } else if instruments.count <= 3 {
+                return instruments.joined(separator: ", ") + " assessments"
+            } else {
+                return "\(instruments.prefix(2).joined(separator: ", ")) + \(instruments.count - 2) more"
+            }
+        }
+
+        // Fallback to static gateway check
         let todayGateways = getTriggeredGatewaysForToday()
         if todayGateways.isEmpty {
             return "No additional assessments today"

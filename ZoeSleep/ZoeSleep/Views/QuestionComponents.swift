@@ -338,19 +338,40 @@ struct NumberInput: View {
     // NOTE: Smart defaults are now handled by the binding getter in QuestionnaireView
     // This component should NOT set values on appear
 
+    // Get user's measurement preference (reads from OnboardingManager)
+    private var useImperial: Bool {
+        OnboardingManager.shared.measurementSystem == .imperial && question.unitImperial != nil
+    }
+
+    // Computed properties for unit-aware values
+    private var currentUnit: String? {
+        useImperial ? question.unitImperial : question.unit
+    }
+
+    private var currentMinValue: Int {
+        useImperial ? (question.minImperial ?? question.minValue ?? 0) : (question.minValue ?? 0)
+    }
+
+    private var currentMaxValue: Int {
+        useImperial ? (question.maxImperial ?? question.maxValue ?? 100) : (question.maxValue ?? 100)
+    }
+
     private var pillarColor: Color { question.pillar.themeColor }
 
     /// Static helper to compute smart default for a question
     /// Call this from the binding's default parameter
     static func smartDefault(for question: Question) -> Double {
+        // Check if user prefers imperial and question has imperial settings
+        let useImperial = OnboardingManager.shared.measurementSystem == .imperial && question.unitImperial != nil
+
         switch question.id {
         // Demographics
         case "D1":
             return 35    // Age - median adult
         case "D5":
-            return 170   // Height in cm - average
+            return useImperial ? 67 : 170   // Height: 5'7" or 170cm
         case "D6":
-            return 70    // Weight in kg - average
+            return useImperial ? 154 : 70   // Weight: 154lbs or 70kg
         // Sleep-related
         case "SL_AWAKENINGS":
             return 1     // Night awakenings - typical
@@ -364,9 +385,9 @@ struct NumberInput: View {
             if lowerText.contains("age") {
                 return 35
             } else if lowerText.contains("height") {
-                return 170
+                return useImperial ? 67 : 170
             } else if lowerText.contains("weight") {
-                return 70
+                return useImperial ? 154 : 70
             } else if lowerText.contains("wake") && lowerText.contains("times") {
                 return 1
             } else if lowerText.contains("hours") && lowerText.contains("sleep") {
@@ -378,12 +399,16 @@ struct NumberInput: View {
             } else if lowerText.contains("screen") && lowerText.contains("hours") {
                 return 6
             }
-            // Default to middle of range or explicit defaultValue
+            // Use imperial default if available and user prefers imperial
+            if useImperial, let imperialDefault = question.defaultImperial {
+                return Double(imperialDefault)
+            }
+            // Default to explicit defaultValue or middle of range
             if let defaultVal = question.defaultValue {
                 return Double(defaultVal)
             }
-            let minVal = Double(question.minValue ?? 0)
-            let maxVal = Double(question.maxValue ?? 100)
+            let minVal = Double(useImperial ? (question.minImperial ?? question.minValue ?? 0) : (question.minValue ?? 0))
+            let maxVal = Double(useImperial ? (question.maxImperial ?? question.maxValue ?? 100) : (question.maxValue ?? 100))
             return (minVal + maxVal) / 2
         }
     }
@@ -391,17 +416,17 @@ struct NumberInput: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("\(question.minValue ?? 0)")
+                Text("\(currentMinValue)")
                     .font(.caption)
                     .foregroundColor(CircadianColors.secondary)
                 Spacer()
-                if let unit = question.unit {
+                if let unit = currentUnit {
                     Text(unit)
                         .font(.caption)
                         .foregroundColor(CircadianColors.secondary)
                 }
                 Spacer()
-                Text("\(question.maxValue ?? 100)")
+                Text("\(currentMaxValue)")
                     .font(.caption)
                     .foregroundColor(CircadianColors.secondary)
             }
@@ -412,7 +437,7 @@ struct NumberInput: View {
                         .font(.title2)
                         .foregroundColor(pillarColor)
                 }
-                .disabled(value <= Double(question.minValue ?? 0))
+                .disabled(value <= Double(currentMinValue))
 
                 Text(formatValue())
                     .font(.title)
@@ -425,7 +450,7 @@ struct NumberInput: View {
                         .font(.title2)
                         .foregroundColor(pillarColor)
                 }
-                .disabled(value >= Double(question.maxValue ?? 100))
+                .disabled(value >= Double(currentMaxValue))
             }
         }
         // REMOVED: .onAppear that was setting smart defaults
@@ -442,14 +467,12 @@ struct NumberInput: View {
 
     private func incrementValue() {
         let step = question.step ?? 1
-        let maxValue = Double(question.maxValue ?? 100)
-        value = min(value + step, maxValue)
+        value = min(value + step, Double(currentMaxValue))
     }
 
     private func decrementValue() {
         let step = question.step ?? 1
-        let minValue = Double(question.minValue ?? 0)
-        value = max(value - step, minValue)
+        value = max(value - step, Double(currentMinValue))
     }
 }
 

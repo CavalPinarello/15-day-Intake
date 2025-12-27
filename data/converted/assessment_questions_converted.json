@@ -4993,29 +4993,24 @@
     "question_text": "What is the typical temperature in your bedroom at night?",
     "pillar": "Physical",
     "tier": "CORE",
-    "answer_format": "number_input",
+    "answer_format": "number_scroll",
     "format_config": {
-      "unitOptions": [
-        {
-          "value": "c",
-          "label": "°C"
-        },
-        {
-          "value": "f",
-          "label": "°F"
-        }
-      ],
-      "min": 10,
-      "max": 35,
-      "step": 0.5,
-      "decimalPlaces": 1,
-      "inputMode": "decimal"
+      "min": 15,
+      "max": 28,
+      "defaultValue": 20,
+      "step": 1,
+      "unit": "°C",
+      "unitImperial": "°F",
+      "minImperial": 59,
+      "maxImperial": 82,
+      "defaultImperial": 68
     },
     "validation_rules": {
       "required": true,
-      "min": 10,
-      "max": 35
+      "min": 15,
+      "max": 28
     },
+    "help_text": "Ideal sleep temperature is 16-19°C (60-67°F). Most bedrooms are between 18-24°C (64-75°F).",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -5029,9 +5024,9 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Silent (very quiet)",
+      "maxLabel": "Very noisy (disruptive)",
+      "defaultValue": 2,
       "showNumberLabel": true,
       "step": 1
     },
@@ -5040,6 +5035,7 @@
       "min": 1,
       "max": 5
     },
+    "help_text": "1 = Almost no noise. 5 = Frequent noise disturbances (traffic, neighbors, snoring partner).",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -5053,9 +5049,9 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Very dark (blackout)",
+      "maxLabel": "Lots of light disturbance",
+      "defaultValue": 2,
       "showNumberLabel": true,
       "step": 1
     },
@@ -5064,25 +5060,7 @@
       "min": 1,
       "max": 5
     },
-    "estimated_time_seconds": 30,
-    "created_at": 1763104572236,
-    "updated_at": 1763104572236
-  },
-  {
-    "question_id": "33D",
-    "question_text": "Do you use any sleep aids?",
-    "pillar": "Physical",
-    "tier": "CORE",
-    "answer_format": "multi_select_chips",
-    "format_config": {
-      "options": [],
-      "layout": "grid",
-      "minSelections": 0,
-      "maxSelections": 10
-    },
-    "validation_rules": {
-      "required": true
-    },
+    "help_text": "1 = Complete blackout with no visible light. 5 = Significant light from streetlights, electronics, or curtain gaps.",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -5170,23 +5148,27 @@
   },
   {
     "question_id": "23",
-    "question_text": "If yes, pain severity",
+    "question_text": "How would you rate your pain severity on average?",
     "pillar": "Physical",
     "tier": "GATEWAY",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 5,
+      "minLabel": "No pain",
+      "maxLabel": "Worst pain imaginable",
+      "defaultValue": 4,
       "showNumberLabel": true,
       "step": 1
     },
     "validation_rules": {
       "required": true,
-      "min": 1,
+      "min": 0,
       "max": 10
+    },
+    "conditional_logic": {
+      "questionId": "22",
+      "equals": "yes"
     },
     "estimated_time_seconds": 10,
     "trigger": "If pain present",
@@ -5222,22 +5204,27 @@
   },
   {
     "question_id": "25",
-    "question_text": "If yes, hours per week?",
+    "question_text": "How many hours per week do you exercise?",
     "pillar": "Physical",
     "tier": "GATEWAY",
-    "answer_format": "number_input",
+    "answer_format": "number_scroll",
     "format_config": {
       "min": 0,
-      "max": 1000,
-      "step": 1,
-      "decimalPlaces": 0,
-      "inputMode": "numeric"
+      "max": 20,
+      "defaultValue": 3,
+      "step": 0.5,
+      "unit": "hours"
     },
     "validation_rules": {
       "required": true,
       "min": 0,
-      "max": 1000
+      "max": 20
     },
+    "conditional_logic": {
+      "questionId": "24",
+      "equals": "yes"
+    },
+    "help_text": "Include all physical activities like walking, gym, sports, etc.",
     "estimated_time_seconds": 15,
     "trigger": "If exercise",
     "created_at": 1763104572236,
