@@ -988,7 +988,22 @@ export const canAdvanceDay = query({
       }
     }
 
-    const bothSectionsComplete = sleepLogCompleted && assessmentCompleted;
+    // Check if this is an expansion day with no gateways triggered (no assessment needed)
+    let hasAssessmentToday = true;
+    if (currentDay > 5) {
+      // Days 6-14 are expansion days - check if any gateways triggered
+      const userGateways = await ctx.db
+        .query("user_gateway_states")
+        .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+        .collect();
+
+      const triggeredCount = userGateways.filter((g) => g.triggered).length;
+      hasAssessmentToday = triggeredCount > 0;
+    }
+
+    // Completion check: Sleep Log always required, Assessment only if available
+    const assessmentOk = !hasAssessmentToday || assessmentCompleted;
+    const bothSectionsComplete = sleepLogCompleted && assessmentOk;
 
     // Check time restriction (4 AM unlock)
     // In debug mode, skip time check
@@ -1007,11 +1022,13 @@ export const canAdvanceDay = query({
     const canAdvance = bothSectionsComplete && timeUnlocked;
 
     let reason = "";
-    if (!sleepLogCompleted && !assessmentCompleted) {
-      reason = "Complete both Sleep Log and Assessment to unlock the next day";
+    if (!sleepLogCompleted && !assessmentOk) {
+      reason = hasAssessmentToday
+        ? "Complete both Sleep Log and Assessment to unlock the next day"
+        : "Complete the Sleep Log to unlock the next day";
     } else if (!sleepLogCompleted) {
       reason = "Complete the Sleep Log to unlock the next day";
-    } else if (!assessmentCompleted) {
+    } else if (!assessmentOk) {
       reason = "Complete the Assessment to unlock the next day";
     } else if (!timeUnlocked) {
       reason = "Next day unlocks at 4:00 AM";
@@ -1024,6 +1041,7 @@ export const canAdvanceDay = query({
       reason,
       sleepLogCompleted,
       assessmentCompleted,
+      hasAssessmentToday,
       timeUnlocked,
       currentDay,
       nextDay: currentDay + 1,
@@ -1102,10 +1120,26 @@ export const advanceDay = mutation({
     const sleepLogCompleted = progress?.sleep_log_completed ?? progress?.completed ?? false;
     const assessmentCompleted = progress?.assessment_completed ?? progress?.completed ?? false;
 
-    // STRICT CHECK: Both sections must be completed
-    if (!sleepLogCompleted || !assessmentCompleted) {
+    // Check if this is an expansion day with no gateways triggered (no assessment needed)
+    let hasAssessmentToday = true;
+    if (currentDay > 5) {
+      // Days 6-14 are expansion days - check if any gateways triggered
+      const userGateways = await ctx.db
+        .query("user_gateway_states")
+        .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+        .collect();
+
+      const triggeredCount = userGateways.filter((g) => g.triggered).length;
+      hasAssessmentToday = triggeredCount > 0;
+    }
+
+    // COMPLETION CHECK: Sleep Log always required, Assessment only if available
+    const needsAssessment = hasAssessmentToday;
+    const assessmentOk = !needsAssessment || assessmentCompleted;
+
+    if (!sleepLogCompleted || !assessmentOk) {
       let missingSection = "";
-      if (!sleepLogCompleted && !assessmentCompleted) {
+      if (!sleepLogCompleted && !assessmentOk) {
         missingSection = "both Sleep Log and Assessment";
       } else if (!sleepLogCompleted) {
         missingSection = "Sleep Log";
