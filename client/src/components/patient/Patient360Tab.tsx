@@ -12,6 +12,8 @@ import { AIInsightsCard, generateSampleInsights } from "./AIInsightsCard";
 import { PatientEngagementCard } from "./PatientEngagementCard";
 import { PatientAnalysisWorkflow } from "./PatientAnalysisWorkflow";
 import { CheckInHistoryCard } from "./CheckInHistoryCard";
+import { WellnessMetricsChart } from "./WellnessMetricsChart";
+import { CircadianMetricsCard } from "./CircadianMetricsCard";
 import { AdaptiveDifficultyPanel } from "./AdaptiveDifficultyPanel";
 import { ComplianceCorrelationChart } from "@/components/charts/ComplianceCorrelationChart";
 import { ProtocolAssignment } from "@/components/physician/ProtocolAssignment";
@@ -150,7 +152,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
   const patientScores = useMemo(() => {
     if (!scores) return {};
     const scoreMap: Record<string, number> = {};
-    scores.forEach((s) => {
+    scores.forEach((s: NonNullable<typeof scores>[number]) => {
       const key = s.questionnaire_name.toUpperCase().replace(/-/g, "");
       if (key === "ISI" || key === "PHQ9" || key === "GAD7" || key === "ESS" || key === "PSQI") {
         scoreMap[key] = s.score;
@@ -173,7 +175,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
 
     // Add sleep pattern insights from Convex backend
     if (sleepPatternInsights && sleepPatternInsights.length > 0) {
-      sleepPatternInsights.forEach((insight) => {
+      sleepPatternInsights.forEach((insight: NonNullable<typeof sleepPatternInsights>[number]) => {
         // Map insight type to severity
         const severityMap: Record<string, "critical" | "warning" | "info" | "positive"> = {
           "optimization": "info",
@@ -251,11 +253,13 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
   }, [patientScores, healthSummary, analysis, sleepPatternInsights]);
 
   // Build sleep trend data from HealthKit
+  type SleepEntry = NonNullable<typeof healthSummary>["recentSleep"][number];
+  type GapEntry = NonNullable<NonNullable<typeof healthSummary>["recentGaps"]>[number];
   const sleepTrendData = useMemo(() => {
     if (!healthSummary?.recentSleep) return [];
-    return healthSummary.recentSleep.map((s, i) => ({
+    return healthSummary.recentSleep.map((s: SleepEntry, i: number) => ({
       day: i + 1,
-      subjectiveQuality: healthSummary.recentGaps?.find(g => g.date === s.date)?.subjectiveQuality ?? null,
+      subjectiveQuality: healthSummary.recentGaps?.find((g: GapEntry) => g.date === s.date)?.subjectiveQuality ?? null,
       objectiveEfficiency: s.efficiency ?? null,
       bedtimeConsistency: null,
       wakeTimeConsistency: null,
@@ -263,10 +267,11 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
   }, [healthSummary]);
 
   // Build compliance data - prefer accurate query data, fallback to patient.completedDays
+  type ComplianceEntry = NonNullable<typeof complianceDataQuery>[number];
   const complianceData = useMemo(() => {
     // Use accurate compliance query if available
     if (complianceDataQuery && complianceDataQuery.length > 0) {
-      return complianceDataQuery.map((d) => ({
+      return complianceDataQuery.map((d: ComplianceEntry) => ({
         date: d.date,
         day: d.dayNumber,
         tasksCompleted: (d.sleepLogCompleted ? 1 : 0) + (d.assessmentCompleted ? 1 : 0),
@@ -331,7 +336,8 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
       let questionsTotal = 10;
 
       // Get stats from pillarStats query if available
-      const stats = pillarStats?.find(s => s.pillar === pillarNameMap[pillar]);
+      type PillarStat = NonNullable<typeof pillarStats>[number];
+      const stats = pillarStats?.find((s: PillarStat) => s.pillar === pillarNameMap[pillar]);
       if (stats) {
         questionsAnswered = stats.questionsAnswered;
         questionsTotal = stats.questionsTotal;
@@ -420,15 +426,15 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
     if (complianceDataQuery && complianceDataQuery.length > 0) {
       // Count days where BOTH tasks are complete
       const fullyCompleteDays = complianceDataQuery.filter(
-        d => d.sleepLogCompleted && d.assessmentCompleted
+        (d: ComplianceEntry) => d.sleepLogCompleted && d.assessmentCompleted
       ).length;
       // Count days where at least one task is complete (partial)
       const partialDays = complianceDataQuery.filter(
-        d => (d.sleepLogCompleted || d.assessmentCompleted) && !(d.sleepLogCompleted && d.assessmentCompleted)
+        (d: ComplianceEntry) => (d.sleepLogCompleted || d.assessmentCompleted) && !(d.sleepLogCompleted && d.assessmentCompleted)
       ).length;
       // Count days where sleep log is done (for streak)
-      const sleepLogDays = complianceDataQuery.filter(d => d.sleepLogCompleted).length;
-      const assessmentDays = complianceDataQuery.filter(d => d.assessmentCompleted).length;
+      const sleepLogDays = complianceDataQuery.filter((d: ComplianceEntry) => d.sleepLogCompleted).length;
+      const assessmentDays = complianceDataQuery.filter((d: ComplianceEntry) => d.assessmentCompleted).length;
 
       return {
         fullyCompleteDays,
@@ -651,6 +657,9 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
             })()}
           </div>
         </div>
+
+        {/* Circadian Metrics - Light Exposure & Rhythm */}
+        <CircadianMetricsCard userId={userId} />
       </div>
 
       {/* Multi-Source Sleep Comparison - Only show if patient has multiple wearables */}
@@ -690,7 +699,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
             <div className="mt-4 pt-4 border-t border-gray-700/50">
               <h4 className="text-xs font-medium text-gray-400 mb-2">Device Capabilities</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {sourceDetails.map((detail) => (
+                {sourceDetails.map((detail: NonNullable<typeof sourceDetails>[number]) => (
                   <div
                     key={detail.source}
                     className="p-2 rounded-lg bg-gray-700/30 border border-gray-600/30"
@@ -740,6 +749,9 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         </div>
         <ComplianceChart data={complianceData} height={150} />
       </div>
+
+      {/* Watch Wellness Metrics (Energy/Mood/Focus) */}
+      <WellnessMetricsChart userId={userId} />
 
       {/* Treatment Protocol Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

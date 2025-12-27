@@ -146,6 +146,7 @@ struct EnergyCheckInPage: View {
     let onNext: () -> Void
 
     @State private var iconBounce: CGFloat = 1.0
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(spacing: 6) {
@@ -170,6 +171,7 @@ struct EnergyCheckInPage: View {
             .padding(.horizontal, 12)
         }
         .focusable()
+        .focused($isFocused)
         .digitalCrownRotation(
             detent: $crownValue,
             from: 1.0,
@@ -188,6 +190,7 @@ struct EnergyCheckInPage: View {
         }
         .onAppear {
             crownValue = Double(energyLevel.rawValue)
+            isFocused = true
         }
     }
 
@@ -212,6 +215,7 @@ struct MoodCheckInPage: View {
     let onBack: () -> Void
 
     @State private var iconBounce: CGFloat = 1.0
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(spacing: 6) {
@@ -245,6 +249,7 @@ struct MoodCheckInPage: View {
             .padding(.horizontal, 12)
         }
         .focusable()
+        .focused($isFocused)
         .digitalCrownRotation(
             detent: $crownValue,
             from: 1.0,
@@ -263,6 +268,7 @@ struct MoodCheckInPage: View {
         }
         .onAppear {
             crownValue = Double(moodLevel.rawValue)
+            isFocused = true
         }
     }
 
@@ -288,6 +294,7 @@ struct FocusCheckInPage: View {
     let onBack: () -> Void
 
     @State private var iconBounce: CGFloat = 1.0
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(spacing: 6) {
@@ -327,6 +334,7 @@ struct FocusCheckInPage: View {
             .padding(.horizontal, 12)
         }
         .focusable()
+        .focused($isFocused)
         .digitalCrownRotation(
             detent: $crownValue,
             from: 1.0,
@@ -345,6 +353,7 @@ struct FocusCheckInPage: View {
         }
         .onAppear {
             crownValue = Double(focusLevel.rawValue)
+            isFocused = true
         }
     }
 

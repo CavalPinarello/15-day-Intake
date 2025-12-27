@@ -291,6 +291,7 @@ export default defineSchema({
   user_sleep_data: defineTable({
     user_id: v.id("users"),
     date: v.string(), // ISO date string YYYY-MM-DD
+    day_number: v.optional(v.number()), // Journey day number (1-14)
     in_bed_time: v.optional(v.number()), // Unix timestamp
     asleep_time: v.optional(v.number()), // Unix timestamp
     wake_time: v.optional(v.number()), // Unix timestamp
@@ -303,6 +304,19 @@ export default defineSchema({
     interruptions_count: v.optional(v.number()),
     sleep_latency_mins: v.optional(v.number()),
     synced_at: v.number(),
+    // Day context fields (from sleep log responses - for clinical analysis)
+    day_type: v.optional(v.string()), // "Workday", "School Day", "Day Off", "Vacation", "Holiday"
+    // Nap tracking (for daytime sleep patterns)
+    naps_taken: v.optional(v.boolean()),
+    nap_count: v.optional(v.number()),
+    nap_total_mins: v.optional(v.number()),
+    nap_details_json: v.optional(v.string()), // JSON array of {start_time, duration_mins}
+    // Medication tracking (critical for clinical correlation)
+    medications_taken: v.optional(v.boolean()),
+    medication_time: v.optional(v.string()), // Time medication was taken (HH:mm)
+    medication_categories_json: v.optional(v.string()), // JSON array of categories
+    // Subjective quality (from sleep log for perception vs reality)
+    subjective_quality: v.optional(v.number()), // 1-10 scale from SD_SLEEP_QUALITY
     // Source tracking fields
     primary_source: v.optional(v.string()), // "Apple Watch", "Oura", "Fitbit", etc.
     source_bundle_id: v.optional(v.string()), // Bundle ID of the primary source app
@@ -311,7 +325,8 @@ export default defineSchema({
   })
     .index("by_user", ["user_id"])
     .index("by_user_date", ["user_id", "date"])
-    .index("by_date", ["date"]),
+    .index("by_date", ["date"])
+    .index("by_user_day_type", ["user_id", "day_type"]),
 
   user_sleep_stages: defineTable({
     user_id: v.id("users"),
@@ -374,6 +389,40 @@ export default defineSchema({
   })
     .index("by_user", ["user_id"])
     .index("by_user_metric", ["user_id", "metric_name"]),
+
+  // Circadian Signal Tracking (iOS 17+ / watchOS 10+)
+  user_circadian_data: defineTable({
+    user_id: v.id("users"),
+    date: v.string(), // ISO date string YYYY-MM-DD
+
+    // Light Exposure (from HKQuantityTypeIdentifier.timeInDaylight)
+    time_in_daylight_mins: v.optional(v.number()),
+    morning_light_mins: v.optional(v.number()), // Before noon
+    afternoon_light_mins: v.optional(v.number()), // After noon
+
+    // Outdoor Activity (from workouts where HKMetadataKeyIndoorWorkout = false)
+    outdoor_workout_mins: v.optional(v.number()),
+    outdoor_workout_count: v.optional(v.number()),
+
+    // Temperature (Apple Watch Series 8+, from HKQuantityTypeIdentifier.appleSleepingWristTemperature)
+    sleeping_wrist_temp_deviation: v.optional(v.number()), // Celsius deviation from baseline
+    wrist_temp_trend: v.optional(v.string()), // "rising", "falling", "stable"
+
+    // UV Exposure (rarely populated, optional)
+    uv_exposure_index: v.optional(v.number()),
+
+    // Computed Circadian Score (0-100)
+    circadian_score: v.optional(v.number()),
+    score_breakdown_json: v.optional(v.string()), // JSON with component scores
+
+    // Source tracking
+    primary_source: v.optional(v.string()), // "Apple Watch", "iPhone", etc.
+    source_bundle_id: v.optional(v.string()),
+    synced_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "date"])
+    .index("by_date", ["date"]),
 
   // ============================================
   // Intervention Library (ZOE Sleep Circadian)

@@ -264,6 +264,11 @@ struct MainDashboardView: View {
             await questionnaireManager.loadExpansionScheduleForDay(progress.currentDay)
         }
 
+        // Load actual assessment question count for today (source of truth for hasAssessmentToday)
+        if let progress = questionnaireManager.journeyProgress {
+            await questionnaireManager.loadAssessmentQuestionCountForDay(progress.currentDay)
+        }
+
         await MainActor.run {
             // Check if there was an error during the refresh
             if let error = questionnaireManager.error {
@@ -387,19 +392,20 @@ struct MainDashboardView: View {
     }
 
     private var journeyProgressCard: some View {
-        VStack(spacing: Spacing.lg) {
-            // Day indicator with percentage
+        VStack(spacing: Spacing.md) {
+            // Phase badge
             HStack {
-                // Day X of 14
-                HStack(spacing: Spacing.xs) {
-                    Text("Day \(currentDay)")
-                        .font(.system(size: Typography.title3, weight: .bold, design: .rounded))
-                        .foregroundColor(theme.textOnCard)
-
-                    Text("of 14")
-                        .font(.system(size: Typography.title3, weight: .regular, design: .rounded))
-                        .foregroundColor(theme.textOnCardSecondary)
+                HStack(spacing: 6) {
+                    Image(systemName: "waveform.path.ecg")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Assessment Phase")
+                        .font(.system(size: Typography.caption, weight: .semibold, design: .rounded))
                 }
+                .foregroundColor(theme.primary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(theme.primary.opacity(0.15))
+                .clipShape(Capsule())
 
                 Spacer()
 
@@ -407,6 +413,19 @@ struct MainDashboardView: View {
                 Text("\(progressPercentage)%")
                     .font(.system(size: Typography.headline, weight: .bold, design: .rounded))
                     .foregroundColor(theme.primary)
+            }
+
+            // Day indicator
+            HStack(spacing: Spacing.xs) {
+                Text("Day \(currentDay)")
+                    .font(.system(size: Typography.title2, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.textOnCard)
+
+                Text("of 14")
+                    .font(.system(size: Typography.title3, weight: .regular, design: .rounded))
+                    .foregroundColor(theme.textOnCardSecondary)
+
+                Spacer()
             }
 
             // Interactive progress dots - tap completed days to view history
@@ -419,11 +438,17 @@ struct MainDashboardView: View {
                 navigateToSleepDiary = true
             }
 
-            // Encouraging message based on progress - HIGH CONTRAST
-            Text(progressMessage(completedCount: max(0, currentDay - 1)))
-                .font(.system(size: Typography.subheadline, weight: .regular, design: .rounded))
-                .foregroundColor(theme.textOnCardSecondary)
-                .multilineTextAlignment(.center)
+            // Two-line explanation
+            VStack(spacing: 4) {
+                Text(progressMessage(completedCount: max(0, currentDay - 1)))
+                    .font(.system(size: Typography.subheadline, weight: .medium, design: .rounded))
+                    .foregroundColor(theme.textOnCard)
+
+                Text("Personalized treatment follows expert review")
+                    .font(.system(size: Typography.caption, design: .rounded))
+                    .foregroundColor(theme.textOnCardMuted)
+            }
+            .multilineTextAlignment(.center)
 
             // Hint text for interactive dots
             if currentDay > 1 {
@@ -456,19 +481,19 @@ struct MainDashboardView: View {
     private func progressMessage(completedCount: Int) -> String {
         switch completedCount {
         case 0:
-            return "Let's start your sleep journey"
+            return "Let's understand your sleep"
         case 1...4:
             return "Building your sleep profile"
         case 5...9:
-            return "Halfway there! Great progress"
+            return "Discovering patterns in your data"
         case 10...12:
-            return "Almost done! Keep going"
+            return "Almost ready for expert review"
         case 13:
-            return "Final day tomorrow!"
+            return "Final day of assessment"
         case 14:
-            return "Journey complete! Analysis begins soon."
+            return "Assessment complete! Expert review begins."
         default:
-            return "Journey complete!"
+            return "Assessment complete!"
         }
     }
 
@@ -525,8 +550,10 @@ struct MainDashboardView: View {
         return !expansionGateways.isEmpty && currentDay <= 5
     }
 
-    /// Returns expansion pack info if gateways were triggered and assessment is done
+    /// Returns expansion pack info if gateways were triggered, assessment is done, AND expansion not completed
     private var availableExpansionPack: ExpansionPackInfo? {
+        // Don't show if expansion already completed
+        guard !expansionPackCompletedToday else { return nil }
         // Only show expansion pack after assessment is complete
         guard assessmentDone else { return nil }
         return questionnaireManager.getExpansionPackForDay(currentDay)
@@ -709,9 +736,14 @@ struct MainDashboardView: View {
         // Core days (1-5) always have assessment
         if currentDay <= 5 { return true }
 
-        // Expansion days (6-14): Check the dynamic Convex schedule first
+        // Use the actual assessment question count from Convex (source of truth)
+        // This is loaded via loadAssessmentQuestionCountForDay during refresh
+        if questionnaireManager.assessmentQuestionCountForToday > 0 {
+            return true
+        }
+
+        // Also check expansion schedule (if question count not yet loaded)
         if let scheduled = questionnaireManager.scheduledExpansionForToday {
-            // If Convex has a schedule for today, use it
             return !scheduled.completed && scheduled.totalQuestions > 0
         }
 
@@ -1017,6 +1049,9 @@ struct MainDashboardView: View {
                 if progress.currentDay >= 6 {
                     await questionnaireManager.loadExpansionScheduleForDay(progress.currentDay)
                 }
+
+                // Load actual assessment question count (source of truth for hasAssessmentToday)
+                await questionnaireManager.loadAssessmentQuestionCountForDay(progress.currentDay)
             }
 
             // Load missed days for catch-up feature
@@ -1629,7 +1664,7 @@ struct TaskRowView: View {
     private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
-        HStack(spacing: Spacing.md) {
+        HStack(alignment: .top, spacing: Spacing.md) {
             // Icon with completion state
             ZStack {
                 Circle()
@@ -1647,37 +1682,42 @@ struct TaskRowView: View {
                 }
             }
 
-            // Title and subtitle - horizontal flow
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: Typography.body, weight: .semibold, design: .rounded))
-                    .foregroundColor(isCompleted ? theme.textOnCardMuted : theme.textOnCard)
-                    .strikethrough(isCompleted, color: theme.textOnCardMuted)
-                    .fixedSize(horizontal: true, vertical: false)  // Title never truncates
+            // Title, subtitle, and duration in vertical stack
+            VStack(alignment: .leading, spacing: 4) {
+                // Title row with chevron
+                HStack {
+                    Text(title)
+                        .font(.system(size: Typography.body, weight: .semibold, design: .rounded))
+                        .foregroundColor(isCompleted ? theme.textOnCardMuted : theme.textOnCard)
+                        .strikethrough(isCompleted, color: theme.textOnCardMuted)
 
+                    Spacer()
+
+                    // Chevron (only for incomplete tasks)
+                    if !isCompleted {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(theme.textOnCardMuted)
+                    }
+                }
+
+                // Subtitle - full width, wraps naturally
                 Text(subtitle)
                     .font(.system(size: Typography.caption, design: .rounded))
                     .foregroundColor(theme.textOnCardSecondary)
-                    .lineLimit(2)  // Allow 2 lines to prevent truncation of longer subtitles
-                    .fixedSize(horizontal: false, vertical: true)  // Allow vertical expansion
-            }
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            Spacer()
-
-            // Duration and chevron (only for incomplete tasks)
-            if !isCompleted {
-                HStack(spacing: Spacing.xs) {
-                    if let duration = duration {
-                        Text(duration)
-                            .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
-                            .foregroundColor(theme.textOnCardMuted)
-                    }
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                // Duration badge (only for incomplete tasks)
+                if !isCompleted, let duration = duration {
+                    Text(duration)
+                        .font(.system(size: Typography.caption2, weight: .medium, design: .rounded))
                         .foregroundColor(theme.textOnCardMuted)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(theme.backgroundTint.opacity(0.4))
+                        .clipShape(Capsule())
                 }
-                .fixedSize(horizontal: true, vertical: false)
             }
         }
         .padding(.vertical, Spacing.sm)
@@ -3411,14 +3451,18 @@ struct ExpansionPackQuestionnaireView: View {
                     _ = try await ConvexService.shared.saveResponses(dayNumber: currentDay, responses: convexResponses)
                 }
 
-                // For Days 6+, mark the scheduled expansion as completed in Convex
+                // Mark expansion as completed in Convex (for cross-device sync)
                 if currentDay >= 6 {
                     try await ConvexService.shared.markDayExpansionCompleted(dayNumber: currentDay)
-                    print("[ExpansionPack] Marked day \(currentDay) expansion as completed in Convex")
+                    print("[ExpansionPack] Marked day \(currentDay) expansion as completed in Convex (Days 6+)")
+                } else {
+                    // Days 1-5: Same-day expansion - sync to Convex for Watch visibility
+                    try await ConvexService.shared.markExpansionPackCompleted(dayNumber: currentDay)
+                    print("[ExpansionPack] Marked day \(currentDay) expansion pack as completed in Convex (Days 1-5)")
                 }
 
                 await MainActor.run {
-                    // Mark these gateways as having completed their expansion (for Days 1-5)
+                    // Mark these gateways as having completed their expansion locally
                     QuestionnaireManager.shared.markExpansionCompleted(gateways: expansionInfo.triggeredGateways)
 
                     // Also clear the cached scheduled expansion so UI updates

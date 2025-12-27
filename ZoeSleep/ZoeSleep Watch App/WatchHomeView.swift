@@ -215,10 +215,21 @@ struct WatchHomeView: View {
                             .opacity(animateContent ? 1 : 0)
                             .offset(y: animateContent ? 0 : -10)
 
+                        // Today's Focus invitation card (hero-framed mission)
+                        if currentDay <= 14 && !isDayComplete {
+                            WatchTodaysFocusCard(
+                                dayNumber: currentDay,
+                                sleepLogDone: sleepLogCompleted,
+                                assessmentDone: assessmentCompleted
+                            )
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 10)
+                        }
+
                         // Motivational message
                         motivationCard
                             .opacity(animateContent ? 1 : 0)
-                            .offset(y: animateContent ? 0 : 10)
+                            .offset(y: animateContent ? 0 : 15)
 
                         // Action buttons
                         actionButtons

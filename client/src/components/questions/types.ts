@@ -99,6 +99,7 @@ export interface MultiSelectChipsConfig extends BaseFormatConfig {
     value: string;
     label: string;
     icon?: string;
+    description?: string;
   }>;
   minSelections?: number;
   maxSelections?: number;

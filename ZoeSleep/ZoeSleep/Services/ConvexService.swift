@@ -675,6 +675,109 @@ class ConvexService {
         ])
     }
 
+    // MARK: - Circadian Signal Sync
+
+    /// Circadian data structure for syncing to Convex
+    struct CircadianDataPayload {
+        let date: String  // YYYY-MM-DD
+        let timeInDaylightMins: Int?
+        let morningLightMins: Int?
+        let afternoonLightMins: Int?
+        let outdoorWorkoutMins: Int?
+        let outdoorWorkoutCount: Int?
+        let sleepingWristTempDeviation: Double?
+        let wristTempTrend: String?
+        let circadianScore: Int?
+        let scoreBreakdown: [String: Int]?
+        let primarySource: String?
+        let sourceBundleId: String?
+
+        func toDictionary() -> [String: Any] {
+            var dict: [String: Any] = ["date": date]
+            if let v = timeInDaylightMins { dict["timeInDaylightMins"] = v }
+            if let v = morningLightMins { dict["morningLightMins"] = v }
+            if let v = afternoonLightMins { dict["afternoonLightMins"] = v }
+            if let v = outdoorWorkoutMins { dict["outdoorWorkoutMins"] = v }
+            if let v = outdoorWorkoutCount { dict["outdoorWorkoutCount"] = v }
+            if let v = sleepingWristTempDeviation { dict["sleepingWristTempDeviation"] = v }
+            if let v = wristTempTrend { dict["wristTempTrend"] = v }
+            if let v = circadianScore { dict["circadianScore"] = v }
+            if let breakdown = scoreBreakdown {
+                if let jsonData = try? JSONSerialization.data(withJSONObject: breakdown),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    dict["scoreBreakdownJson"] = jsonString
+                }
+            }
+            if let v = primarySource { dict["primarySource"] = v }
+            if let v = sourceBundleId { dict["sourceBundleId"] = v }
+            return dict
+        }
+    }
+
+    struct SyncCircadianResponse: Codable {
+        let success: Bool
+        let recordId: String?
+        let isUpdate: Bool?
+    }
+
+    /// Sync circadian signal data (light exposure, temperature, outdoor activity) to Convex
+    func syncCircadianData(_ data: CircadianDataPayload) async throws -> SyncCircadianResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        var args = data.toDictionary()
+        args["userId"] = userId
+
+        return try await client.mutation("circadian:syncCircadianData", args: args)
+    }
+
+    /// Get circadian data for a date range
+    struct CircadianDataRecord: Codable {
+        let date: String
+        let timeInDaylightMins: Int?
+        let morningLightMins: Int?
+        let afternoonLightMins: Int?
+        let outdoorWorkoutMins: Int?
+        let outdoorWorkoutCount: Int?
+        let sleepingWristTempDeviation: Double?
+        let wristTempTrend: String?
+        let circadianScore: Int?
+        let syncedAt: Double
+    }
+
+    func getCircadianData(days: Int = 7) async throws -> [CircadianDataRecord] {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("circadian:getCircadianData", args: [
+            "userId": userId,
+            "days": days
+        ])
+    }
+
+    /// Get circadian status for today (used by dashboard cards)
+    struct CircadianStatusResponse: Codable {
+        let hasData: Bool
+        let daylightMins: Int
+        let targetMins: Int
+        let percentOfTarget: Int
+        let circadianScore: Int?
+        let needsMoreLight: Bool
+        let morningLightMins: Int
+    }
+
+    func getCircadianStatus() async throws -> CircadianStatusResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("circadian:getCircadianStatus", args: [
+            "userId": userId
+        ])
+    }
+
     // MARK: - Questionnaire/Journey
 
     func getJourneyProgress() async throws -> JourneyProgress {
@@ -1787,13 +1890,26 @@ extension ConvexService {
         ])
     }
 
-    /// Mark a day's expansion modules as completed
+    /// Mark a day's expansion modules as completed (Days 6+)
     func markDayExpansionCompleted(dayNumber: Int) async throws {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
         let _: SuccessResponse = try await client.mutation("expansionScheduler:markDayExpansionCompleted", args: [
+            "userId": userId,
+            "dayNumber": dayNumber
+        ])
+    }
+
+    /// Mark expansion pack as completed for a day (Days 1-5 same-day expansions)
+    /// This syncs to Convex for cross-device visibility (Watch app)
+    func markExpansionPackCompleted(dayNumber: Int) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let _: SuccessResponse = try await client.mutation("ios:markExpansionPackCompleted", args: [
             "userId": userId,
             "dayNumber": dayNumber
         ])

@@ -294,8 +294,10 @@
     "question_text": "For each nap, record the start time and duration.",
     "group_key": "naps",
     "pillar": "Sleep Diary",
-    "answer_format": "repeating_group",
-    "format_config": {},
+    "answer_format": "nap_details",
+    "format_config": {
+      "quickDurations": [15, 20, 30, 45, 60, 90]
+    },
     "validation_rules": {
       "required": true
     },
@@ -308,6 +310,39 @@
     },
     "order_index": 15,
     "estimated_time_seconds": 36,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_MEDS_LIST",
+    "question_text": "What type of sleep medication did you take?",
+    "group_key": "medication",
+    "pillar": "Sleep Diary",
+    "answer_format": "medication_select",
+    "format_config": {
+      "categories": [
+        "Melatonin",
+        "Antihistamines (Benadryl, ZzzQuil)",
+        "Prescription sleep aids (Ambien, Lunesta)",
+        "Benzodiazepines (Valium, Xanax)",
+        "Antidepressants (Trazodone)",
+        "CBD/Cannabis products",
+        "Herbal supplements (Valerian, Chamomile)",
+        "Other"
+      ]
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "SD_MEDICATION_TAKEN",
+        "operator": "equals",
+        "value": "Yes"
+      }
+    },
+    "order_index": 2.5,
+    "estimated_time_seconds": 20,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
   }

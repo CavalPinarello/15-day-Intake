@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 // ============================================
 // Check-In System Mutations
@@ -774,6 +775,7 @@ export const watchSubmitCheckIn = mutation({
     focusLevel: v.number(),       // 1-5 (clarity icons)
   },
   returns: v.object({
+    success: v.boolean(),
     checkInId: v.id("daily_checkins"),
     checkInsCompletedToday: v.number(),
     isFirstCheckInToday: v.boolean(),
@@ -790,7 +792,7 @@ export const watchSubmitCheckIn = mutation({
       )
       .first();
 
-    let checkInId: typeof existing._id;
+    let checkInId: Id<"daily_checkins">;
     const isFirstCheckInToday = !existing;
 
     if (existing) {
@@ -858,9 +860,44 @@ export const watchSubmitCheckIn = mutation({
     const checkInsCompletedToday = todayCheckIns.filter(c => c.completed).length;
 
     return {
+      success: true,
       checkInId,
       checkInsCompletedToday,
       isFirstCheckInToday,
+    };
+  },
+});
+
+/**
+ * Debug: Get all check-ins for a user (last 7 days)
+ */
+export const debugGetRecentCheckIns = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const allCheckins = await ctx.db
+      .query("daily_checkins")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .order("desc")
+      .take(20);
+
+    const utcToday = new Date().toISOString().split("T")[0];
+    const utcNow = new Date().toISOString();
+
+    return {
+      utcToday,
+      utcNow,
+      checkinsCount: allCheckins.length,
+      checkins: allCheckins.map(c => ({
+        date: c.checkin_date,
+        type: c.checkin_type,
+        completed: c.completed,
+        energy: c.energy_level,
+        mood: c.mood,
+        focus: c.focus_level,
+        createdAt: c.created_at ? new Date(c.created_at).toISOString() : null,
+      })),
     };
   },
 });
@@ -935,6 +972,144 @@ export const getWatchCheckInStatus = query({
       lastEnergyLevel: lastCheckIn?.energy_level,
       lastMoodLevel: lastCheckIn?.mood,
       lastFocusLevel: lastCheckIn?.focus_level,
+    };
+  },
+});
+
+/**
+ * Get watch check-in trends for charts
+ * Returns energy/mood/focus per day for the last N days
+ * Used by Watch app trends view
+ */
+export const getWatchCheckInTrends = query({
+  args: {
+    userId: v.id("users"),
+    days: v.optional(v.number()), // Default 7
+  },
+  returns: v.object({
+    // Today's check-ins by time slot
+    today: v.object({
+      morning: v.union(v.object({
+        energy: v.number(),
+        mood: v.number(),
+        focus: v.number(),
+        completedAt: v.number(),
+      }), v.null()),
+      midday: v.union(v.object({
+        energy: v.number(),
+        mood: v.number(),
+        focus: v.number(),
+        completedAt: v.number(),
+      }), v.null()),
+      evening: v.union(v.object({
+        energy: v.number(),
+        mood: v.number(),
+        focus: v.number(),
+        completedAt: v.number(),
+      }), v.null()),
+    }),
+    // Weekly data (array of days, oldest first)
+    week: v.array(v.object({
+      date: v.string(),
+      dayOfWeek: v.string(), // "Mon", "Tue", etc.
+      hasData: v.boolean(),
+      avgEnergy: v.optional(v.number()),
+      avgMood: v.optional(v.number()),
+      avgFocus: v.optional(v.number()),
+      checkInsCount: v.number(),
+    })),
+  }),
+  handler: async (ctx, args) => {
+    const daysToFetch = args.days ?? 7;
+    const today = new Date().toISOString().split("T")[0];
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    // Get all check-ins for this user in the date range
+    const allCheckins = await ctx.db
+      .query("daily_checkins")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Filter completed check-ins with energy/mood/focus data
+    const relevantCheckins = allCheckins.filter(c =>
+      c.completed &&
+      c.energy_level !== undefined &&
+      c.mood !== undefined
+    );
+
+    // Build today's data
+    const todayCheckins = relevantCheckins.filter(c => c.checkin_date === today);
+    const todayMorning = todayCheckins.find(c => c.checkin_type === "morning");
+    const todayMidday = todayCheckins.find(c => c.checkin_type === "midday");
+    const todayEvening = todayCheckins.find(c => c.checkin_type === "evening");
+
+    const todayData = {
+      morning: todayMorning ? {
+        energy: todayMorning.energy_level!,
+        mood: todayMorning.mood!,
+        focus: todayMorning.focus_level ?? 3,
+        completedAt: todayMorning.completed_at ?? todayMorning.created_at,
+      } : null,
+      midday: todayMidday ? {
+        energy: todayMidday.energy_level!,
+        mood: todayMidday.mood!,
+        focus: todayMidday.focus_level ?? 3,
+        completedAt: todayMidday.completed_at ?? todayMidday.created_at,
+      } : null,
+      evening: todayEvening ? {
+        energy: todayEvening.energy_level!,
+        mood: todayEvening.mood!,
+        focus: todayEvening.focus_level ?? 3,
+        completedAt: todayEvening.completed_at ?? todayEvening.created_at,
+      } : null,
+    };
+
+    // Build weekly data
+    const weekData: {
+      date: string;
+      dayOfWeek: string;
+      hasData: boolean;
+      avgEnergy?: number;
+      avgMood?: number;
+      avgFocus?: number;
+      checkInsCount: number;
+    }[] = [];
+
+    for (let i = daysToFetch - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+      const dayOfWeek = dayNames[date.getDay()];
+
+      const dayCheckins = relevantCheckins.filter(c => c.checkin_date === dateStr);
+
+      if (dayCheckins.length > 0) {
+        const energySum = dayCheckins.reduce((sum, c) => sum + (c.energy_level ?? 0), 0);
+        const moodSum = dayCheckins.reduce((sum, c) => sum + (c.mood ?? 0), 0);
+        const focusSum = dayCheckins.reduce((sum, c) => sum + (c.focus_level ?? 3), 0);
+
+        weekData.push({
+          date: dateStr,
+          dayOfWeek,
+          hasData: true,
+          avgEnergy: Math.round((energySum / dayCheckins.length) * 10) / 10,
+          avgMood: Math.round((moodSum / dayCheckins.length) * 10) / 10,
+          avgFocus: Math.round((focusSum / dayCheckins.length) * 10) / 10,
+          checkInsCount: dayCheckins.length,
+        });
+      } else {
+        weekData.push({
+          date: dateStr,
+          dayOfWeek,
+          hasData: false,
+          checkInsCount: 0,
+        });
+      }
+    }
+
+    return {
+      today: todayData,
+      week: weekData,
     };
   },
 });

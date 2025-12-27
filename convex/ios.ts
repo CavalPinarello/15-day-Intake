@@ -1463,6 +1463,56 @@ export const advanceToNextDay = mutation({
 });
 
 /**
+ * Mark expansion pack as completed for the current day
+ * This syncs the same-day expansion completion to Convex for cross-device visibility
+ */
+export const markExpansionPackCompleted = mutation({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get the day entry
+    const days = await ctx.db.query("days").collect();
+    const dayEntry = days.find((d) => d.day_number === args.dayNumber);
+    if (!dayEntry) {
+      throw new Error(`Day ${args.dayNumber} not found`);
+    }
+
+    // Get or create progress entry for this day
+    let progressEntry = await ctx.db
+      .query("user_progress")
+      .withIndex("by_user_day", (q) =>
+        q.eq("user_id", args.userId).eq("day_id", dayEntry._id)
+      )
+      .first();
+
+    if (progressEntry) {
+      // Update existing entry
+      await ctx.db.patch(progressEntry._id, {
+        expansion_pack_completed: true,
+      });
+    } else {
+      // Create new entry with expansion completed
+      await ctx.db.insert("user_progress", {
+        user_id: args.userId,
+        day_id: dayEntry._id,
+        completed: false,
+        created_at: Date.now(),
+        expansion_pack_completed: true,
+      });
+    }
+
+    return { success: true, dayNumber: args.dayNumber };
+  },
+});
+
+/**
  * Reset journey progress (DEBUG MODE ONLY)
  * Resets user to Day 1 and clears all responses
  */

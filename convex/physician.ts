@@ -59,14 +59,17 @@ const CONSENSUS_SLEEP_DIARY_QUESTIONS: Record<string, { text: string; type: stri
   "CSD_REFRESHED": { text: "How refreshed did you feel upon waking?", type: "scale" },
   "CSD_NAPS": { text: "Did you take any naps yesterday?", type: "yes_no" },
   "CSD_NAP_COUNT": { text: "How many naps did you take?", type: "number" },
-  "CSD_NAP_DURATION": { text: "Total nap duration (minutes)", type: "minutes" },
+  "CSD_NAP_DURATION": { text: "Total nap duration (minutes)", type: "minutes" },  // Legacy
+  "CSD_NAP_DETAILS": { text: "Nap details (start time and duration)", type: "nap_details" },
   "CSD_CAFFEINE": { text: "How many caffeinated drinks did you have?", type: "number" },
   "CSD_CAFFEINE_LAST": { text: "When was your last caffeine?", type: "time" },
   "CSD_ALCOHOL": { text: "Did you consume alcohol yesterday?", type: "yes_no" },
   "CSD_ALCOHOL_DRINKS": { text: "How many alcoholic drinks?", type: "number" },
   "CSD_ALCOHOL_LAST": { text: "When was your last alcoholic drink?", type: "time" },
   "CSD_MEDS": { text: "Did you take any sleep aids or medications?", type: "yes_no" },
-  "CSD_MEDS_NAME": { text: "What sleep aids/medications did you take?", type: "text" },
+  "CSD_MEDS_NAME": { text: "What sleep aids/medications did you take?", type: "text" },  // Legacy
+  "CSD_MEDS_LIST": { text: "Sleep medications taken", type: "medication_select" },
+  "CSD_MEDS_OTHER": { text: "Other medication (specify)", type: "text" },
   "CSD_COMMENTS": { text: "Any additional comments about your sleep?", type: "text" },
 };
 
@@ -3024,6 +3027,571 @@ export const getDeveloperModeStatus = query({
     return {
       developerMode: user.developer_mode ?? false,
       currentDay: user.current_day,
+    };
+  },
+});
+
+// ============================================
+// Nap and Medication Summary Queries
+// ============================================
+
+interface NapEntry {
+  napNumber: number;
+  startTime: string;
+  durationMinutes: number;
+}
+
+/**
+ * Get aggregated nap summary for a patient
+ * Returns: days with naps, average nap count, average duration, common nap times
+ */
+export const getPatientNapSummary = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get all nap-related responses
+    const napResponses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("question_id"), "CSD_NAPS"),
+          q.eq(q.field("question_id"), "CSD_NAP_COUNT"),
+          q.eq(q.field("question_id"), "CSD_NAP_DETAILS"),
+          q.eq(q.field("question_id"), "CSD_NAP_DURATION")
+        )
+      )
+      .collect();
+
+    // Group by day
+    const dayData: Record<number, { tookNaps: boolean; napCount: number; napDetails?: NapEntry[]; totalDuration?: number }> = {};
+
+    for (const response of napResponses) {
+      const day = response.day_number ?? 1;
+      if (!dayData[day]) {
+        dayData[day] = { tookNaps: false, napCount: 0 };
+      }
+
+      switch (response.question_id) {
+        case "CSD_NAPS":
+          dayData[day].tookNaps = response.response_value?.toLowerCase() === "yes";
+          break;
+        case "CSD_NAP_COUNT":
+          dayData[day].napCount = response.response_number ?? 0;
+          break;
+        case "CSD_NAP_DETAILS":
+          if (response.response_object) {
+            try {
+              dayData[day].napDetails = JSON.parse(response.response_object);
+            } catch {
+              // Invalid JSON, ignore
+            }
+          }
+          break;
+        case "CSD_NAP_DURATION":
+          dayData[day].totalDuration = response.response_number ?? 0;
+          break;
+      }
+    }
+
+    // Calculate summaries
+    const daysWithNaps = Object.values(dayData).filter((d) => d.tookNaps).length;
+    const totalDays = Object.keys(dayData).length;
+
+    let totalNapCount = 0;
+    let totalDuration = 0;
+    let napDaysWithData = 0;
+    const timeSlots: Record<string, number> = {};
+
+    for (const data of Object.values(dayData)) {
+      if (data.tookNaps) {
+        totalNapCount += data.napCount || 1;
+        napDaysWithData++;
+
+        // Process detailed nap data
+        if (data.napDetails) {
+          for (const nap of data.napDetails) {
+            totalDuration += nap.durationMinutes;
+            // Round to nearest hour for common times
+            const hour = parseInt(nap.startTime.split(":")[0]);
+            const timeSlot = hour < 12 ? `${hour}AM` : hour === 12 ? "12PM" : `${hour - 12}PM`;
+            timeSlots[timeSlot] = (timeSlots[timeSlot] || 0) + 1;
+          }
+        } else if (data.totalDuration) {
+          // Legacy data - use total duration
+          totalDuration += data.totalDuration;
+        }
+      }
+    }
+
+    // Find most common nap times
+    const commonTimes = Object.entries(timeSlots)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([time]) => time);
+
+    return {
+      napDays: daysWithNaps,
+      totalDays,
+      avgNapCount: napDaysWithData > 0 ? totalNapCount / napDaysWithData : 0,
+      avgDuration: napDaysWithData > 0 ? Math.round(totalDuration / napDaysWithData) : 0,
+      commonTimes: commonTimes.length > 0 ? commonTimes : ["2PM", "3PM"],
+    };
+  },
+});
+
+/**
+ * Get aggregated medication summary for a patient
+ * Returns: days with meds, category counts, other medications
+ */
+export const getPatientMedicationSummary = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get all medication-related responses
+    const medResponses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("question_id"), "CSD_MEDS"),
+          q.eq(q.field("question_id"), "CSD_MEDS_LIST"),
+          q.eq(q.field("question_id"), "CSD_MEDS_NAME"),
+          q.eq(q.field("question_id"), "CSD_MEDS_OTHER")
+        )
+      )
+      .collect();
+
+    // Group by day
+    const dayData: Record<number, { tookMeds: boolean; categories: string[]; otherText?: string; legacyName?: string }> = {};
+
+    for (const response of medResponses) {
+      const day = response.day_number ?? 1;
+      if (!dayData[day]) {
+        dayData[day] = { tookMeds: false, categories: [] };
+      }
+
+      switch (response.question_id) {
+        case "CSD_MEDS":
+          dayData[day].tookMeds = response.response_value?.toLowerCase() === "yes";
+          break;
+        case "CSD_MEDS_LIST":
+          if (response.response_array) {
+            try {
+              dayData[day].categories = JSON.parse(response.response_array);
+            } catch {
+              // Invalid JSON, ignore
+            }
+          }
+          break;
+        case "CSD_MEDS_OTHER":
+          dayData[day].otherText = response.response_value;
+          break;
+        case "CSD_MEDS_NAME":
+          // Legacy field
+          dayData[day].legacyName = response.response_value;
+          break;
+      }
+    }
+
+    // Calculate summaries
+    const daysWithMeds = Object.values(dayData).filter((d) => d.tookMeds).length;
+    const totalDays = Object.keys(dayData).length;
+
+    // Aggregate category counts
+    const categoryCounts: Record<string, number> = {};
+    const otherMedications: string[] = [];
+
+    for (const data of Object.values(dayData)) {
+      if (data.tookMeds) {
+        // New format: categories array
+        for (const cat of data.categories) {
+          categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+        }
+
+        // Other text (new format)
+        if (data.otherText && !otherMedications.includes(data.otherText)) {
+          otherMedications.push(data.otherText);
+        }
+
+        // Legacy format: free text name
+        if (data.legacyName && !otherMedications.includes(data.legacyName)) {
+          otherMedications.push(data.legacyName);
+        }
+      }
+    }
+
+    // Category display names
+    const categoryNames: Record<string, string> = {
+      melatonin: "Melatonin",
+      prescription: "Prescription",
+      otc: "OTC Sleep Aid",
+      cbd_thc: "CBD/THC",
+      herbal: "Herbal/Natural",
+      other: "Other",
+    };
+
+    const categories = Object.entries(categoryCounts)
+      .map(([id, count]) => ({
+        id,
+        name: categoryNames[id] || id,
+        count,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      medicationDays: daysWithMeds,
+      totalDays,
+      categories,
+      otherMedications,
+    };
+  },
+});
+
+// ============================================
+// Day Type Analysis (Workday vs Weekend Patterns)
+// ============================================
+
+/**
+ * Get sleep pattern analysis by day type for a patient
+ * Returns: workday vs weekend sleep differences, flagging significant variations
+ * Critical for: Identifying social jet lag, irregular schedules, and compensatory sleep patterns
+ */
+export const getPatientDayTypeAnalysis = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get all sleep data for this user
+    const sleepData = await ctx.db
+      .query("user_sleep_data")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    if (sleepData.length === 0) {
+      return {
+        hasData: false,
+        totalDays: 0,
+        workdayStats: null,
+        weekendStats: null,
+        differences: null,
+        flags: [],
+      };
+    }
+
+    // Group by day type (workday = Workday/School Day, weekend = Day Off/Vacation/Holiday)
+    const workdayTypes = ["Workday", "School Day"];
+    const weekendTypes = ["Day Off", "Vacation", "Holiday", "Weekend"];
+
+    const workdays = sleepData.filter(d => workdayTypes.includes(d.day_type ?? ""));
+    const weekends = sleepData.filter(d => weekendTypes.includes(d.day_type ?? ""));
+
+    // Helper to calculate stats
+    const calcStats = (days: typeof sleepData) => {
+      if (days.length === 0) return null;
+
+      const validSleep = days.filter(d => d.total_sleep_mins != null);
+      const validEfficiency = days.filter(d => d.sleep_efficiency != null);
+      const validLatency = days.filter(d => d.sleep_latency_mins != null);
+      const validQuality = days.filter(d => d.subjective_quality != null);
+
+      return {
+        count: days.length,
+        avgSleepMins: validSleep.length > 0
+          ? Math.round(validSleep.reduce((sum, d) => sum + (d.total_sleep_mins ?? 0), 0) / validSleep.length)
+          : null,
+        avgEfficiency: validEfficiency.length > 0
+          ? Math.round(validEfficiency.reduce((sum, d) => sum + (d.sleep_efficiency ?? 0), 0) / validEfficiency.length)
+          : null,
+        avgLatencyMins: validLatency.length > 0
+          ? Math.round(validLatency.reduce((sum, d) => sum + (d.sleep_latency_mins ?? 0), 0) / validLatency.length)
+          : null,
+        avgQuality: validQuality.length > 0
+          ? Math.round((validQuality.reduce((sum, d) => sum + (d.subjective_quality ?? 0), 0) / validQuality.length) * 10) / 10
+          : null,
+        daysWithNaps: days.filter(d => d.naps_taken === true).length,
+        daysWithMeds: days.filter(d => d.medications_taken === true).length,
+      };
+    };
+
+    const workdayStats = calcStats(workdays);
+    const weekendStats = calcStats(weekends);
+
+    // Calculate differences (weekend - workday)
+    let differences = null;
+    if (workdayStats && weekendStats && workdayStats.avgSleepMins && weekendStats.avgSleepMins) {
+      differences = {
+        sleepDiffMins: weekendStats.avgSleepMins - workdayStats.avgSleepMins,
+        efficiencyDiff: (weekendStats.avgEfficiency ?? 0) - (workdayStats.avgEfficiency ?? 0),
+        latencyDiff: (weekendStats.avgLatencyMins ?? 0) - (workdayStats.avgLatencyMins ?? 0),
+        qualityDiff: (weekendStats.avgQuality ?? 0) - (workdayStats.avgQuality ?? 0),
+      };
+    }
+
+    // Generate clinical flags
+    const flags: { type: string; severity: "info" | "warning" | "alert"; message: string }[] = [];
+
+    // Social jet lag: >60 min difference in sleep duration between workday/weekend
+    if (differences && Math.abs(differences.sleepDiffMins) > 60) {
+      const moreOn = differences.sleepDiffMins > 0 ? "weekends" : "workdays";
+      flags.push({
+        type: "social_jet_lag",
+        severity: Math.abs(differences.sleepDiffMins) > 90 ? "alert" : "warning",
+        message: `Sleeps ${Math.abs(differences.sleepDiffMins)} min more on ${moreOn} (social jet lag indicator)`,
+      });
+    }
+
+    // Compensatory sleep: significant weekend catch-up suggests weekday sleep debt
+    if (differences && differences.sleepDiffMins > 90) {
+      flags.push({
+        type: "compensatory_sleep",
+        severity: "warning",
+        message: "Weekend catch-up sleep suggests weekday sleep debt",
+      });
+    }
+
+    // Higher nap rate on weekends
+    if (workdayStats && weekendStats && weekendStats.count > 0 && workdayStats.count > 0) {
+      const workdayNapRate = workdayStats.daysWithNaps / workdayStats.count;
+      const weekendNapRate = weekendStats.daysWithNaps / weekendStats.count;
+      if (weekendNapRate > workdayNapRate + 0.3) {
+        flags.push({
+          type: "weekend_napping",
+          severity: "info",
+          message: "Higher nap rate on weekends may indicate weekday sleep deficit",
+        });
+      }
+    }
+
+    // Medication use pattern
+    if (workdayStats && weekendStats && workdayStats.daysWithMeds !== weekendStats.daysWithMeds) {
+      const diff = Math.abs(workdayStats.daysWithMeds - weekendStats.daysWithMeds);
+      if (diff > 1) {
+        const moreOn = workdayStats.daysWithMeds > weekendStats.daysWithMeds ? "workdays" : "weekends";
+        flags.push({
+          type: "medication_pattern",
+          severity: "info",
+          message: `More sleep medication use on ${moreOn}`,
+        });
+      }
+    }
+
+    return {
+      hasData: true,
+      totalDays: sleepData.length,
+      workdayStats,
+      weekendStats,
+      differences,
+      flags,
+    };
+  },
+});
+
+// ============================================
+// Patient Check-In Trends (Energy/Mood/Focus)
+// ============================================
+
+/**
+ * Get a patient's daily check-in trends for the physician dashboard
+ * Returns energy, mood, and focus levels over time from watch check-ins
+ */
+export const getPatientCheckInTrends = query({
+  args: {
+    patientId: v.id("users"),
+    days: v.optional(v.number()), // Default 30
+  },
+  returns: v.object({
+    // Daily data points (array of days, oldest first)
+    dailyData: v.array(v.object({
+      date: v.string(),
+      dayOfWeek: v.string(),
+      hasData: v.boolean(),
+      // Averages for the day (across all check-ins)
+      avgEnergy: v.optional(v.number()),
+      avgMood: v.optional(v.number()),
+      avgFocus: v.optional(v.number()),
+      // Individual check-ins for detail view
+      checkIns: v.array(v.object({
+        type: v.string(), // "morning", "midday", "evening"
+        energy: v.number(),
+        mood: v.number(),
+        focus: v.number(),
+        completedAt: v.number(),
+      })),
+    })),
+    // Summary statistics
+    summary: v.object({
+      totalDays: v.number(),
+      daysWithData: v.number(),
+      avgEnergy: v.optional(v.number()),
+      avgMood: v.optional(v.number()),
+      avgFocus: v.optional(v.number()),
+      // Trends (positive = improving)
+      energyTrend: v.optional(v.number()),
+      moodTrend: v.optional(v.number()),
+      focusTrend: v.optional(v.number()),
+    }),
+  }),
+  handler: async (ctx, args) => {
+    const daysToFetch = args.days ?? 30;
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    // Get all check-ins for this patient
+    const allCheckins = await ctx.db
+      .query("daily_checkins")
+      .withIndex("by_user", (q) => q.eq("user_id", args.patientId))
+      .collect();
+
+    // Filter completed check-ins with energy/mood/focus data
+    const relevantCheckins = allCheckins.filter(c =>
+      c.completed &&
+      c.energy_level !== undefined &&
+      c.mood !== undefined
+    );
+
+    // Build daily data for the requested period
+    const dailyData: {
+      date: string;
+      dayOfWeek: string;
+      hasData: boolean;
+      avgEnergy?: number;
+      avgMood?: number;
+      avgFocus?: number;
+      checkIns: {
+        type: string;
+        energy: number;
+        mood: number;
+        focus: number;
+        completedAt: number;
+      }[];
+    }[] = [];
+
+    let totalEnergy = 0;
+    let totalMood = 0;
+    let totalFocus = 0;
+    let totalCheckIns = 0;
+
+    // First half averages (for trend calculation)
+    let firstHalfEnergy = 0;
+    let firstHalfMood = 0;
+    let firstHalfFocus = 0;
+    let firstHalfCount = 0;
+
+    // Second half averages
+    let secondHalfEnergy = 0;
+    let secondHalfMood = 0;
+    let secondHalfFocus = 0;
+    let secondHalfCount = 0;
+
+    const halfwayPoint = Math.floor(daysToFetch / 2);
+
+    for (let i = daysToFetch - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+      const dayOfWeek = dayNames[date.getDay()];
+
+      const dayCheckins = relevantCheckins.filter(c => c.checkin_date === dateStr);
+
+      if (dayCheckins.length > 0) {
+        const checkIns = dayCheckins.map(c => ({
+          type: c.checkin_type || "unknown",
+          energy: c.energy_level!,
+          mood: c.mood!,
+          focus: c.focus_level ?? 3,
+          completedAt: c.completed_at ?? c.created_at,
+        }));
+
+        const energySum = checkIns.reduce((sum, c) => sum + c.energy, 0);
+        const moodSum = checkIns.reduce((sum, c) => sum + c.mood, 0);
+        const focusSum = checkIns.reduce((sum, c) => sum + c.focus, 0);
+
+        const avgEnergy = Math.round((energySum / checkIns.length) * 10) / 10;
+        const avgMood = Math.round((moodSum / checkIns.length) * 10) / 10;
+        const avgFocus = Math.round((focusSum / checkIns.length) * 10) / 10;
+
+        dailyData.push({
+          date: dateStr,
+          dayOfWeek,
+          hasData: true,
+          avgEnergy,
+          avgMood,
+          avgFocus,
+          checkIns,
+        });
+
+        // Accumulate totals
+        totalEnergy += energySum;
+        totalMood += moodSum;
+        totalFocus += focusSum;
+        totalCheckIns += checkIns.length;
+
+        // Track first/second half for trends
+        const dayIndex = daysToFetch - 1 - i;
+        if (dayIndex < halfwayPoint) {
+          firstHalfEnergy += energySum;
+          firstHalfMood += moodSum;
+          firstHalfFocus += focusSum;
+          firstHalfCount += checkIns.length;
+        } else {
+          secondHalfEnergy += energySum;
+          secondHalfMood += moodSum;
+          secondHalfFocus += focusSum;
+          secondHalfCount += checkIns.length;
+        }
+      } else {
+        dailyData.push({
+          date: dateStr,
+          dayOfWeek,
+          hasData: false,
+          checkIns: [],
+        });
+      }
+    }
+
+    // Calculate summary
+    const daysWithData = dailyData.filter(d => d.hasData).length;
+
+    let summary: {
+      totalDays: number;
+      daysWithData: number;
+      avgEnergy?: number;
+      avgMood?: number;
+      avgFocus?: number;
+      energyTrend?: number;
+      moodTrend?: number;
+      focusTrend?: number;
+    } = {
+      totalDays: daysToFetch,
+      daysWithData,
+    };
+
+    if (totalCheckIns > 0) {
+      summary.avgEnergy = Math.round((totalEnergy / totalCheckIns) * 10) / 10;
+      summary.avgMood = Math.round((totalMood / totalCheckIns) * 10) / 10;
+      summary.avgFocus = Math.round((totalFocus / totalCheckIns) * 10) / 10;
+
+      // Calculate trends (positive = improving)
+      if (firstHalfCount > 0 && secondHalfCount > 0) {
+        const firstHalfAvgEnergy = firstHalfEnergy / firstHalfCount;
+        const secondHalfAvgEnergy = secondHalfEnergy / secondHalfCount;
+        summary.energyTrend = Math.round((secondHalfAvgEnergy - firstHalfAvgEnergy) * 10) / 10;
+
+        const firstHalfAvgMood = firstHalfMood / firstHalfCount;
+        const secondHalfAvgMood = secondHalfMood / secondHalfCount;
+        summary.moodTrend = Math.round((secondHalfAvgMood - firstHalfAvgMood) * 10) / 10;
+
+        const firstHalfAvgFocus = firstHalfFocus / firstHalfCount;
+        const secondHalfAvgFocus = secondHalfFocus / secondHalfCount;
+        summary.focusTrend = Math.round((secondHalfAvgFocus - firstHalfAvgFocus) * 10) / 10;
+      }
+    }
+
+    return {
+      dailyData,
+      summary,
     };
   },
 });

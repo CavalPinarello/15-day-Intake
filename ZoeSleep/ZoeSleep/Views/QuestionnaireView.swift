@@ -58,9 +58,17 @@ struct QuestionnaireView: View {
     @State private var showingSaveError: Bool = false
     @State private var retryAction: (() -> Void)? = nil
 
-    // Expansion Pack Splash Screen
+    // Day Splash Screen (hero-framed intro for ALL 14 days)
+    @State private var showingDaySplash: Bool = false
+    @State private var daySplashInfo: DaySplashInfo? = nil
+
+    // Legacy Expansion Pack Splash Screen (detailed questionnaire info)
     @State private var showingExpansionSplash: Bool = false
     @State private var expansionSplashInfo: [QuestionnaireValidationInfo] = []
+
+    // Smart Pre-fill for Sleep Log (after Day 1)
+    @State private var showingPreFillConfirmation: Bool = false
+    @State private var preFillSuggestions: [String: Any] = [:]
 
     @Environment(\.presentationMode) var presentationMode
 
@@ -81,8 +89,19 @@ struct QuestionnaireView: View {
 
     var body: some View {
         Group {
-            if showingExpansionSplash && !expansionSplashInfo.isEmpty {
-                // Show expansion pack splash screen with questionnaire rationale
+            if showingDaySplash, let splashInfo = daySplashInfo {
+                // Hero-framed day splash for ALL 14 days
+                DaySplashView(
+                    dayInfo: splashInfo,
+                    triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
+                    onContinue: {
+                        withAnimation {
+                            showingDaySplash = false
+                        }
+                    }
+                )
+            } else if showingExpansionSplash && !expansionSplashInfo.isEmpty {
+                // Legacy: Detailed expansion pack splash with questionnaire rationale (for detailed clinical info)
                 if expansionSplashInfo.count == 1, let info = expansionSplashInfo.first {
                     ExpansionQuestionnaireSplashView(
                         info: info,
@@ -294,11 +313,21 @@ struct QuestionnaireView: View {
         SectionQuestionCard(section: currentSection, question: question) {
             switch question.questionType {
             case .scale:
-                ScaleInput(
-                    question: question,
-                    value: binding(for: question.id, default: ScaleInput.smartDefault(for: question)),
-                    theme: theme
-                )
+                // Use discrete buttons for validated questionnaires with small scales (≤5 options)
+                // This provides better UX with labeled options like "Not at all" → "Nearly every day"
+                if shouldUseDiscreteScale(for: question) {
+                    DiscreteScaleInput(
+                        question: question,
+                        value: binding(for: question.id, default: ScaleInput.smartDefault(for: question)),
+                        theme: theme
+                    )
+                } else {
+                    ScaleInput(
+                        question: question,
+                        value: binding(for: question.id, default: ScaleInput.smartDefault(for: question)),
+                        theme: theme
+                    )
+                }
 
             case .yesNo, .yesNoDontKnow:
                 YesNoInput(
@@ -366,8 +395,62 @@ struct QuestionnaireView: View {
             case .repeatingGroup:
                 Text("Repeating group input (coming soon)")
                     .foregroundColor(.secondary)
+
+            case .napDetails:
+                NapDetailsInput(
+                    question: question,
+                    napEntries: napEntriesBinding(for: question.id),
+                    napCount: getNapCount(),
+                    theme: theme
+                )
+
+            case .medicationSelect:
+                MedicationSelectInput(
+                    question: question,
+                    selectedCategories: arrayBinding(for: question.id),
+                    otherText: stringBinding(for: "CSD_MEDS_OTHER"),
+                    theme: theme
+                )
             }
         }
+    }
+
+    // MARK: - Scale Type Detection
+
+    /// Determine whether to use discrete buttons vs slider for a scale question
+    /// Use discrete buttons for validated questionnaires with ≤5 options
+    private func shouldUseDiscreteScale(for question: Question) -> Bool {
+        let scaleRange = (question.scaleMax ?? 10) - (question.scaleMin ?? 0)
+
+        // Only use discrete for small scales (5 or fewer options)
+        guard scaleRange <= 5 else { return false }
+
+        // Detect validated questionnaires by ID prefix
+        let id = question.id.uppercased()
+        let validatedPrefixes = [
+            "ISI",      // Insomnia Severity Index (0-4)
+            "PHQ",      // PHQ-9 (0-3)
+            "GAD",      // GAD-7 (0-3)
+            "DASS",     // DASS-21 (0-3)
+            "ESS",      // Epworth Sleepiness Scale (0-3)
+            "PSAS",     // Pre-Sleep Arousal Scale (1-5)
+            "SHI",      // Sleep Hygiene Index (0-4)
+            "FOSQ",     // Functional Outcomes (1-4)
+            "PSQI"      // Pittsburgh Sleep Quality Index
+        ]
+
+        for prefix in validatedPrefixes {
+            if id.hasPrefix(prefix) { return true }
+        }
+
+        // Also check group field
+        if let group = question.group?.uppercased() {
+            for prefix in validatedPrefixes {
+                if group.contains(prefix) { return true }
+            }
+        }
+
+        return false
     }
 
     // MARK: - Binding Helpers
@@ -488,6 +571,67 @@ struct QuestionnaireView: View {
                 }
             }
         )
+    }
+
+    /// Binding for nap entries (stored as JSON array)
+    private func napEntriesBinding(for questionId: String) -> Binding<[NapEntry]> {
+        Binding(
+            get: {
+                // Try to get existing nap entries from responses
+                if currentSection == .sleepLog {
+                    if let entries = sleepLogResponses[questionId] as? [NapEntry] {
+                        return entries
+                    }
+                    // Try to decode from JSON string
+                    if let jsonString = sleepLogResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let entries = try? JSONDecoder().decode([NapEntry].self, from: data) {
+                        return entries
+                    }
+                } else {
+                    if let entries = assessmentResponses[questionId] as? [NapEntry] {
+                        return entries
+                    }
+                    if let jsonString = assessmentResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let entries = try? JSONDecoder().decode([NapEntry].self, from: data) {
+                        return entries
+                    }
+                }
+                // Return empty array - will be populated by NapDetailsInput on appear
+                return []
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
+                } else {
+                    assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
+                }
+            }
+        )
+    }
+
+    /// Gets the nap count from SD_NAPS_COUNT or CSD_NAP_COUNT response
+    private func getNapCount() -> Int {
+        // Question IDs to check (SD_ is current format, CSD_ is legacy)
+        let napCountIds = ["SD_NAPS_COUNT", "CSD_NAP_COUNT"]
+
+        let responses = currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
+
+        for id in napCountIds {
+            // Check for Double first (common from number input)
+            if let count = responses[id] as? Double {
+                return max(1, Int(count))
+            }
+            // Check for Int
+            if let count = responses[id] as? Int {
+                return max(1, count)
+            }
+        }
+        // Default to 1 nap if not specified
+        return 1
     }
 
     // MARK: - Smart Default Helpers
@@ -686,6 +830,14 @@ struct QuestionnaireView: View {
         case .multiSelect:
             guard let response = responses[question.id] else { return false }
             return !(response as? [String] ?? []).isEmpty
+        case .napDetails:
+            // Nap details shows pre-initialized entries, allow proceeding immediately
+            // User can accept the defaults or modify them
+            return true
+        case .medicationSelect:
+            // Medication select requires at least one selection
+            guard let response = responses[question.id] else { return false }
+            return !(response as? [String] ?? []).isEmpty
         default:
             // For other types, check if user interacted OR if response exists
             return userInteracted.contains(question.id) || responses[question.id] != nil
@@ -758,9 +910,24 @@ struct QuestionnaireView: View {
                         prefillDemographicsFromHealthKit()
                     }
 
-                    // Check if this is an expansion day (6-14) and show splash for assessment section
-                    if currentDay >= 6 && startSection == .assessment && !assessmentQuestions.isEmpty {
-                        checkAndShowExpansionSplash(modules: questionsResponse.metadata.modules ?? [])
+                    // Smart pre-fill for Sleep Log (Day 2+ only)
+                    // Load previous day's responses to reduce friction
+                    if currentDay > 1 && startSection == .sleepLog && !sleepLogQuestions.isEmpty {
+                        let suggestions = loadPreFillSuggestions()
+                        if !suggestions.isEmpty {
+                            preFillSuggestions = suggestions
+                            // Apply pre-fill silently - user confirms via normal interaction
+                            applyPreFillSuggestions()
+                        }
+                    }
+
+                    // Show day splash for ALL days (hero-framed intro)
+                    // For assessment section: show for both core and expansion days
+                    if startSection == .assessment && !assessmentQuestions.isEmpty {
+                        checkAndShowDaySplash(
+                            questionCount: assessmentQuestions.count,
+                            estimatedMinutes: questionsResponse.metadata.totalMinutes
+                        )
                     }
 
                     // Load saved progress from Convex (cross-device sync)
@@ -805,10 +972,14 @@ struct QuestionnaireView: View {
         case "multiSelect": questionType = .multiSelect
         case "text": questionType = .text
         case "info": questionType = .info
+        case "napDetails": questionType = .napDetails
+        case "medicationSelect": questionType = .medicationSelect
         default: questionType = .text
         }
 
         // Extract scale config from formatConfig if available
+        // Convex uses: scaleMin, scaleMax, labels (array)
+        // Legacy uses: min, max, minLabel, maxLabel
         var scaleMin: Int? = nil
         var scaleMax: Int? = nil
         var scaleMinLabel: String? = nil
@@ -817,10 +988,21 @@ struct QuestionnaireView: View {
         var maxValue: Int? = nil
 
         if let config = cq.formatConfig {
-            if let min = config["min"]?.value as? Int { scaleMin = min; minValue = min }
-            if let max = config["max"]?.value as? Int { scaleMax = max; maxValue = max }
-            if let minLabel = config["minLabel"]?.value as? String { scaleMinLabel = minLabel }
-            if let maxLabel = config["maxLabel"]?.value as? String { scaleMaxLabel = maxLabel }
+            // Try Convex format first (scaleMin/scaleMax)
+            if let min = config["scaleMin"]?.value as? Int { scaleMin = min; minValue = min }
+            if let max = config["scaleMax"]?.value as? Int { scaleMax = max; maxValue = max }
+            // Fallback to legacy format (min/max)
+            if scaleMin == nil, let min = config["min"]?.value as? Int { scaleMin = min; minValue = min }
+            if scaleMax == nil, let max = config["max"]?.value as? Int { scaleMax = max; maxValue = max }
+
+            // Extract labels from Convex labels array OR legacy minLabel/maxLabel
+            if let labels = config["labels"]?.value as? [String], !labels.isEmpty {
+                scaleMinLabel = labels.first
+                scaleMaxLabel = labels.last
+            } else {
+                if let minLabel = config["minLabel"]?.value as? String { scaleMinLabel = minLabel }
+                if let maxLabel = config["maxLabel"]?.value as? String { scaleMaxLabel = maxLabel }
+            }
         }
 
         // Convert conditional logic if present
@@ -1194,6 +1376,60 @@ struct QuestionnaireView: View {
             return false
         }
 
+        // Check contains condition (for array responses like medication categories)
+        if let containsValue = condition.contains {
+            // Check if response is an array of strings
+            if let arrayResponse = dependentResponse as? [String] {
+                let matches = arrayResponse.contains(containsValue)
+                print("[iOS] shouldShowQuestion(\(question.id)): Array contains '\(containsValue)' => \(matches)")
+                return matches
+            }
+            // Check if response is a JSON string array
+            if let stringResponse = dependentResponse as? String,
+               let data = stringResponse.data(using: .utf8),
+               let arrayResponse = try? JSONDecoder().decode([String].self, from: data) {
+                let matches = arrayResponse.contains(containsValue)
+                print("[iOS] shouldShowQuestion(\(question.id)): JSON array contains '\(containsValue)' => \(matches)")
+                return matches
+            }
+            print("[iOS] shouldShowQuestion(\(question.id)): Response is not an array for contains check, hiding")
+            return false
+        }
+
+        // Check compound conditions (all)
+        if let allConditions = condition.all {
+            for subCondition in allConditions {
+                let subQuestion = Question(
+                    id: question.id,
+                    text: "",
+                    pillar: .sleepLog,
+                    questionType: .text,
+                    conditionalLogic: subCondition
+                )
+                if !shouldShowQuestion(subQuestion, responses: responses) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        // Check compound conditions (any)
+        if let anyConditions = condition.any {
+            for subCondition in anyConditions {
+                let subQuestion = Question(
+                    id: question.id,
+                    text: "",
+                    pillar: .sleepLog,
+                    questionType: .text,
+                    conditionalLogic: subCondition
+                )
+                if shouldShowQuestion(subQuestion, responses: responses) {
+                    return true
+                }
+            }
+            return false
+        }
+
         return true
     }
 
@@ -1275,12 +1511,25 @@ struct QuestionnaireView: View {
                     NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
                     isSaving = false
 
-                    // Only transition after successful save
+                    // Transition to assessment section
+                    currentSection = .assessment
+                    assessmentIndex = 0
+                    questionStartTime = Date()
+
+                    // Check if we should show the day splash screen for the assessment
+                    // This ensures the splash appears when proceeding from Sleep Log completion
+                    print("[iOS] proceedToAssessment: assessmentQuestions.count = \(assessmentQuestions.count)")
+                    if !assessmentQuestions.isEmpty {
+                        let estimatedMinutes = max(5, assessmentQuestions.count * 1) // ~1 min per question, min 5
+                        print("[iOS] proceedToAssessment: Calling checkAndShowDaySplash with \(assessmentQuestions.count) questions, ~\(estimatedMinutes) min")
+                        checkAndShowDaySplash(questionCount: assessmentQuestions.count, estimatedMinutes: estimatedMinutes)
+                        print("[iOS] proceedToAssessment: After checkAndShowDaySplash - showingDaySplash = \(showingDaySplash)")
+                    }
+
+                    // Dismiss the completion view AFTER potentially setting up the splash
+                    // The splash view takes priority in the view hierarchy (checked first in body)
                     withAnimation(.easeInOut(duration: 0.3)) {
                         showingCompletion = false
-                        currentSection = .assessment
-                        assessmentIndex = 0
-                        questionStartTime = Date()
                     }
                 }
             } catch {
@@ -1833,12 +2082,38 @@ struct QuestionnaireView: View {
                 let result = try await ConvexService.shared.completeSection(dayNumber: currentDay, section: sectionName)
                 print("[iOS] Background completion: \(sectionName) marked complete (sleepLog=\(result.sleepLogCompleted), assessment=\(result.assessmentCompleted))")
 
+                // CRITICAL: Sync gateway states to Convex after assessment completion
+                // This enables proper expansion pack filtering on Days 6-14
+                if section == .assessment && currentDay <= 5 {
+                    print("[iOS] Syncing gateway states to Convex after Day \(currentDay) assessment...")
+                    questionnaireManager.evaluateGateways()
+                    for gateway in questionnaireManager.gatewayStates {
+                        do {
+                            try await ConvexService.shared.updateGatewayState(
+                                gatewayId: gateway.gatewayType.rawValue,
+                                isTriggered: gateway.triggered,
+                                triggerQuestionId: nil,
+                                triggerValue: nil
+                            )
+                        } catch {
+                            print("[iOS] Warning: Failed to sync gateway \(gateway.gatewayType.rawValue): \(error.localizedDescription)")
+                        }
+                    }
+                    let triggeredCount = questionnaireManager.gatewayStates.filter { $0.triggered }.count
+                    print("[iOS] Gateway sync complete: \(triggeredCount) gateways triggered")
+                }
+
                 // Refresh journey progress so dashboard shows correct state
                 await questionnaireManager.loadJourneyProgress()
 
                 // Notify dashboard to refresh
                 await MainActor.run {
                     NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+
+                    // Save sleep log responses for smart pre-fill on next day
+                    if section == .sleepLog {
+                        saveSleepLogForPreFill()
+                    }
                 }
             } catch {
                 print("[iOS] Warning: Background section completion failed: \(error.localizedDescription)")
@@ -1847,10 +2122,140 @@ struct QuestionnaireView: View {
         }
     }
 
-    // MARK: - Expansion Splash Screen Logic
+    // MARK: - Smart Pre-fill for Sleep Log
+
+    /// Save current sleep log responses for next day's pre-fill
+    private func saveSleepLogForPreFill() {
+        // Save time-based responses that make sense to pre-fill
+        // Note: Quality, awakenings, and nap details are NEVER pre-filled (must be fresh each day)
+        //
+        // Pre-fillable questions (times tend to be consistent):
+        // - Bed times: SD_GOT_INTO_BED, SD_LIGHTS_OUT, SD_FINAL_WAKE, SD_OUT_OF_BED
+        // - Medication: SD_MEDICATION_TAKEN (pattern), SD_MEDICATION_TIME
+        // - Day type: SD_DAY_TYPE (for reference)
+        //
+        // NEVER pre-fill (changes daily):
+        // - SD_SLEEP_QUALITY, SD_SLEEP_LATENCY, SD_AWAKENINGS_COUNT, SD_AWAKENINGS_DURATION
+        // - SD_NAPS_TAKEN, SD_NAPS_COUNT, SD_NAP_DETAILS
+        let preFillableQuestionIds = [
+            // Time questions (tend to be consistent day-to-day)
+            "SD_GOT_INTO_BED", "SD_LIGHTS_OUT", "SD_FINAL_WAKE", "SD_OUT_OF_BED",
+            // Medication pattern (consistent unless they stop)
+            "SD_MEDICATION_TAKEN", "SD_MEDICATION_TIME",
+            // Day type for reference
+            "SD_DAY_TYPE"
+        ]
+
+        var preFillData: [String: Any] = [:]
+        for questionId in preFillableQuestionIds {
+            if let value = sleepLogResponses[questionId] {
+                // Store Date as string for UserDefaults
+                if let dateValue = value as? Date {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "HH:mm"
+                    preFillData[questionId] = formatter.string(from: dateValue)
+                } else {
+                    preFillData[questionId] = value
+                }
+            }
+        }
+
+        // Store with day type info for smart matching
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: Date())
+        let dayType = (weekday == 1 || weekday == 7) ? "Weekend" : "Weekday"
+        preFillData["_dayType"] = dayType
+        preFillData["_savedDay"] = currentDay
+
+        UserDefaults.standard.set(preFillData, forKey: "sleepLogPreFill")
+        print("[iOS] Saved \(preFillData.count - 2) sleep log responses for next day pre-fill (dayType: \(dayType))")
+    }
+
+    /// Load previous day's sleep log for pre-fill suggestions
+    /// Returns dictionary of suggested values
+    private func loadPreFillSuggestions() -> [String: Any] {
+        guard currentDay > 1 else { return [:] }
+
+        guard let saved = UserDefaults.standard.dictionary(forKey: "sleepLogPreFill") else {
+            print("[iOS] No previous sleep log data for pre-fill")
+            return [:]
+        }
+
+        // Check if same day type (workday vs weekend) for better accuracy
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: Date())
+        let todayDayType = (weekday == 1 || weekday == 7) ? "Weekend" : "Weekday"
+        let savedDayType = saved["_dayType"] as? String ?? ""
+
+        if todayDayType != savedDayType {
+            print("[iOS] Day type mismatch (today: \(todayDayType), saved: \(savedDayType)) - still offering pre-fill with note")
+        }
+
+        print("[iOS] Loaded \(saved.count - 2) pre-fill suggestions from previous sleep log")
+        return saved
+    }
+
+    /// Apply pre-fill suggestions to current sleep log
+    private func applyPreFillSuggestions() {
+        let suggestions = loadPreFillSuggestions()
+
+        for (questionId, value) in suggestions {
+            // Skip metadata keys
+            if questionId.hasPrefix("_") { continue }
+
+            // Convert time strings back to Date
+            if let timeString = value as? String,
+               let question = sleepLogQuestions.first(where: { $0.id == questionId }),
+               question.questionType == .time {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                if let date = formatter.date(from: timeString) {
+                    sleepLogResponses[questionId] = date
+                }
+            } else {
+                sleepLogResponses[questionId] = value
+            }
+            // Note: NOT marking as user-interacted - user must confirm or change
+        }
+
+        print("[iOS] Applied \(suggestions.count - 2) pre-fill suggestions (user must confirm)")
+    }
+
+    // MARK: - Day Splash Screen Logic
+
+    /// Check if we should show the hero-framed day splash for ANY day (1-14)
+    /// Shows once per day when user first enters the assessment section
+    private func checkAndShowDaySplash(questionCount: Int, estimatedMinutes: Int) {
+        // Get the key for tracking if splash was shown for this day's assessment
+        let splashKey = "daySplashShown_day\(currentDay)_assessment"
+
+        // Check if already shown for this day
+        if UserDefaults.standard.bool(forKey: splashKey) {
+            print("[iOS] Day splash already shown for day \(currentDay) assessment, skipping")
+            return
+        }
+
+        // Get splash info from library (with dynamic question count from backend)
+        guard let info = DaySplashLibrary.info(for: currentDay, questionCount: questionCount, estimatedMinutes: estimatedMinutes) else {
+            print("[iOS] No day splash info found for day \(currentDay)")
+            return
+        }
+
+        print("[iOS] Showing day splash for day \(currentDay): \"\(info.title)\" (\(questionCount) questions, ~\(estimatedMinutes) min)")
+
+        // Mark as shown for this day
+        UserDefaults.standard.set(true, forKey: splashKey)
+
+        // Set the splash info and show it
+        daySplashInfo = info
+        showingDaySplash = true
+    }
+
+    // MARK: - Legacy Expansion Splash Screen Logic
 
     /// Check if we should show an expansion pack splash screen and populate the info
     /// Only shows once per day when user first enters the assessment section
+    /// NOTE: This is the detailed clinical questionnaire info splash (legacy)
     private func checkAndShowExpansionSplash(modules: [String]) {
         // Get the key for tracking if splash was shown for this day
         let splashKey = "expansionSplashShown_day\(currentDay)"

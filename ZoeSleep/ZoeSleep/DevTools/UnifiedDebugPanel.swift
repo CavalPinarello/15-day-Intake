@@ -843,6 +843,12 @@ struct UnifiedDebugPanel: View {
         Task {
             do {
                 _ = try await ConvexService.shared.resetJourneyProgress()
+
+                // Clear UserDefaults splash screen tracking so they show again
+                await MainActor.run {
+                    clearSplashScreenTracking()
+                }
+
                 await questionnaireManager.loadJourneyProgress()
                 await MainActor.run {
                     questionnaireManager.currentDay = 1
@@ -858,6 +864,18 @@ struct UnifiedDebugPanel: View {
                 }
             }
         }
+    }
+
+    /// Clear UserDefaults keys that track if splash screens have been shown
+    private func clearSplashScreenTracking() {
+        // Clear day splash keys (daySplashShown_day1_assessment through day14)
+        for day in 1...14 {
+            UserDefaults.standard.removeObject(forKey: "daySplashShown_day\(day)_assessment")
+            UserDefaults.standard.removeObject(forKey: "expansionSplashShown_day\(day)")
+        }
+        // Also clear journey intro shown flag
+        UserDefaults.standard.removeObject(forKey: "hasSeenJourneyIntro")
+        print("[Debug] Cleared all splash screen tracking UserDefaults")
     }
 
     private func refreshFromServer() {

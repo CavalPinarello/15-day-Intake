@@ -113,6 +113,15 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Smart Question Derivation & Scale Labels Fix:** Reduce user burden by deriving redundant questions from Sleep Log (Dec 27, 2025)
+  - **Problem 1:** Questions 12A (# awakenings), 12C (time to fall back asleep) asked in Assessment despite same data being in Sleep Log
+  - **Problem 2:** Scale questions showed bare numbers (0, 1, 2, 3) instead of meaningful labels
+  - **Derivation System:** Added 12A and 12C to `derivableFromSleepLog` set in QuestionnaireManager.swift
+  - **New functions:** `derive12AFromSleepLog()` gets awakenings from `CSD_AWAKENINGS`, `derive12CFromSleepLog()` calculates avg time = `CSD_WASO / CSD_AWAKENINGS`
+  - **Conditional logic:** 12B (reason for waking) now only shows if user reported awakenings > 0
+  - **Scale labels fix:** `convertConvexQuestion()` now extracts `scaleMin`/`scaleMax`/`labels` from Convex format
+  - **iOS→Convex format mapping:** Convex uses `scaleMin`/`scaleMax`/`labels[]`, iOS expected `min`/`max`/`minLabel`/`maxLabel`
+  - **Files changed:** `QuestionnaireManager.swift` (+50 lines derivation), `QuestionnaireView.swift` (formatConfig extraction)
 - **Dynamic Task Counter & Expansion Pack Integration:** Complete task tracking system for iOS and Watch (Dec 27, 2025)
   - **Problem:** Task count was static "1 of 2" even when expansion packs triggered; no-gateway days showed misleading "Assessment: Pending"
   - **Dynamic task count:** Now shows "1 of 1" (no assessment), "2 of 2" (with assessment), or "2 of 3" (with expansion pack)

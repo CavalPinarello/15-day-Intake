@@ -92,10 +92,14 @@ struct WatchResponseValue: Codable {
 struct WatchUserInfo: Codable {
     let userId: String
     let username: String
-    let currentDay: Int
-    let onboardingCompleted: Bool
-    let sessionToken: String? // NEW: Session token for authenticated requests
+    let currentDay: Int?  // Made optional - might be nil for new users
+    let onboardingCompleted: Bool?  // Made optional
+    let sessionToken: String?
     let expiresAt: Double?
+
+    // Provide defaults for optional fields
+    var safeCurrentDay: Int { currentDay ?? 1 }
+    var safeOnboardingCompleted: Bool { onboardingCompleted ?? false }
 }
 
 struct WatchUserLookup: Codable {
@@ -146,6 +150,7 @@ enum WatchConvexError: LocalizedError {
 
 // MARK: - Watch Convex Service
 
+@MainActor
 class WatchConvexService: ObservableObject {
     static let shared = WatchConvexService()
 
@@ -221,14 +226,16 @@ class WatchConvexService: ObservableObject {
     }
 
     /// For simulator testing only - manually sign in as the same user as iPhone
-    func signInForTesting(username: String, password: String) async -> Bool {
+    /// Returns nil on success, error message on failure
+    func signInForTesting(username: String, password: String) async -> String? {
         do {
             let userInfo = try await signIn(username: username, password: password)
-            print("[WatchConvex] Signed in as \(userInfo.username), Day \(userInfo.currentDay)")
-            return true
+            print("[WatchConvex] Signed in as \(userInfo.username), Day \(userInfo.safeCurrentDay)")
+            return nil // Success
         } catch {
-            print("[WatchConvex] Sign in failed: \(error)")
-            return false
+            let errorMessage = "\(error)"
+            print("[WatchConvex] Sign in failed: \(errorMessage)")
+            return errorMessage
         }
     }
 
@@ -345,24 +352,39 @@ class WatchConvexService: ObservableObject {
                 throw WatchConvexError.httpError(httpResponse.statusCode)
             }
 
-            // Convex wraps response in { "value": ... }
-            if let wrapper = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                if let value = wrapper["value"] {
-                    // Handle null values - check if value is NSNull
-                    if value is NSNull {
-                        // For optional types, this will fail gracefully
-                        throw WatchConvexError.invalidResponse
-                    }
-                    // Ensure value is JSON-serializable before proceeding
-                    guard JSONSerialization.isValidJSONObject(value) || value is String || value is NSNumber || value is Bool else {
-                        throw WatchConvexError.decodingError("Response value is not JSON-serializable")
-                    }
-                    let valueData = try JSONSerialization.data(withJSONObject: value)
-                    return try decoder.decode(T.self, from: valueData)
-                }
+            // Parse the JSON response
+            guard let wrapper = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw WatchConvexError.decodingError("Could not parse JSON response")
             }
 
-            return try decoder.decode(T.self, from: data)
+            // Check for Convex error response FIRST (status code is 200 but contains error)
+            if let status = wrapper["status"] as? String, status == "error" {
+                let errorMessage = wrapper["errorMessage"] as? String ?? wrapper["error"] as? String ?? "Unknown server error"
+                throw WatchConvexError.serverError(errorMessage)
+            }
+
+            // Also check for simple error field (older Convex format)
+            if let errorMessage = wrapper["error"] as? String {
+                throw WatchConvexError.serverError(errorMessage)
+            }
+
+            // Convex wraps successful response in { "value": ... }
+            guard let value = wrapper["value"] else {
+                throw WatchConvexError.decodingError("Response missing 'value' field")
+            }
+
+            // Handle null values
+            if value is NSNull {
+                throw WatchConvexError.invalidResponse
+            }
+
+            // Ensure value is JSON-serializable before proceeding
+            guard JSONSerialization.isValidJSONObject(value) || value is String || value is NSNumber || value is Bool else {
+                throw WatchConvexError.decodingError("Response value is not JSON-serializable")
+            }
+
+            let valueData = try JSONSerialization.data(withJSONObject: value)
+            return try decoder.decode(T.self, from: valueData)
         } catch let error as WatchConvexError {
             throw error
         } catch let decodingError as DecodingError {
@@ -396,10 +418,8 @@ class WatchConvexService: ObservableObject {
         // Save credentials including session token for secure API calls
         saveCredentials(userId: response.userId, username: response.username, sessionToken: response.sessionToken)
 
-        await MainActor.run {
-            self.currentDay = response.currentDay
-            self.journeyComplete = response.onboardingCompleted
-        }
+        self.currentDay = response.safeCurrentDay
+        self.journeyComplete = response.safeOnboardingCompleted
 
         print("[WatchConvex] Signed in with session token: \(response.sessionToken != nil)")
 
@@ -433,19 +453,17 @@ class WatchConvexService: ObservableObject {
             "userId": userId
         ])
 
-        await MainActor.run {
-            self.currentDay = state.currentDay
-            self.completedDays = state.completedDays
-            self.journeyComplete = state.journeyComplete
-            // Update section completion status for current day
-            self.sleepLogCompleted = state.sleepLogCompleted ?? false
-            self.assessmentCompleted = state.assessmentCompleted ?? false
-            // Update expansion pack status for current day
-            self.hasExpansionPackToday = state.hasExpansionPackToday ?? false
-            self.expansionPackCompleted = state.expansionPackCompleted ?? false
-            // Update overdue expansions count
-            self.overdueExpansionsCount = state.overdueExpansionsCount ?? 0
-        }
+        self.currentDay = state.currentDay
+        self.completedDays = state.completedDays
+        self.journeyComplete = state.journeyComplete
+        // Update section completion status for current day
+        self.sleepLogCompleted = state.sleepLogCompleted ?? false
+        self.assessmentCompleted = state.assessmentCompleted ?? false
+        // Update expansion pack status for current day
+        self.hasExpansionPackToday = state.hasExpansionPackToday ?? false
+        self.expansionPackCompleted = state.expansionPackCompleted ?? false
+        // Update overdue expansions count
+        self.overdueExpansionsCount = state.overdueExpansionsCount ?? 0
 
         return state
     }
@@ -493,15 +511,13 @@ class WatchConvexService: ObservableObject {
             "source": "watch"
         ])
 
-        await MainActor.run {
-            if response.success {
-                if !self.completedDays.contains(dayNumber) {
-                    self.completedDays.append(dayNumber)
-                    self.completedDays.sort()
-                }
-                self.currentDay = response.newDay
-                self.journeyComplete = response.journeyComplete
+        if response.success {
+            if !self.completedDays.contains(dayNumber) {
+                self.completedDays.append(dayNumber)
+                self.completedDays.sort()
             }
+            self.currentDay = response.newDay
+            self.journeyComplete = response.journeyComplete
         }
 
         return response
@@ -527,29 +543,27 @@ class WatchConvexService: ObservableObject {
 
         let response: WatchCompleteSectionResponse = try await mutation("watch:completeSection", args: args)
 
-        await MainActor.run {
-            if response.success {
-                self.sleepLogCompleted = response.sleepLogCompleted
-                self.assessmentCompleted = response.assessmentCompleted
+        if response.success {
+            self.sleepLogCompleted = response.sleepLogCompleted
+            self.assessmentCompleted = response.assessmentCompleted
 
-                // Notify iPhone that section was completed (triggers immediate refresh)
-                WatchConnectivityManager().notifyiPhoneSectionCompleted(
-                    section: section,
-                    dayNumber: dayNumber
-                )
+            // Notify iPhone that section was completed (triggers immediate refresh)
+            WatchConnectivityManager().notifyiPhoneSectionCompleted(
+                section: section,
+                dayNumber: dayNumber
+            )
 
-                if response.dayFullyCompleted {
-                    if !self.completedDays.contains(dayNumber) {
-                        self.completedDays.append(dayNumber)
-                        self.completedDays.sort()
-                    }
-                    self.currentDay = response.currentDay
-                    self.journeyComplete = response.journeyComplete
-                    // Reset section completion for the new day
-                    if response.currentDay != dayNumber {
-                        self.sleepLogCompleted = false
-                        self.assessmentCompleted = false
-                    }
+            if response.dayFullyCompleted {
+                if !self.completedDays.contains(dayNumber) {
+                    self.completedDays.append(dayNumber)
+                    self.completedDays.sort()
+                }
+                self.currentDay = response.currentDay
+                self.journeyComplete = response.journeyComplete
+                // Reset section completion for the new day
+                if response.currentDay != dayNumber {
+                    self.sleepLogCompleted = false
+                    self.assessmentCompleted = false
                 }
             }
         }
@@ -591,19 +605,17 @@ class WatchConvexService: ObservableObject {
 
         let response: WatchAdvanceDayResponse = try await mutation("watch:advanceDay", args: args)
 
-        await MainActor.run {
-            if response.success {
-                if let previousDay = response.previousDay,
-                   !self.completedDays.contains(previousDay) {
-                    self.completedDays.append(previousDay)
-                    self.completedDays.sort()
-                }
-                if let newDay = response.newDay {
-                    self.currentDay = newDay
-                    // Reset section completion for the new day
-                    self.sleepLogCompleted = false
-                    self.assessmentCompleted = false
-                }
+        if response.success {
+            if let previousDay = response.previousDay,
+               !self.completedDays.contains(previousDay) {
+                self.completedDays.append(previousDay)
+                self.completedDays.sort()
+            }
+            if let newDay = response.newDay {
+                self.currentDay = newDay
+                // Reset section completion for the new day
+                self.sleepLogCompleted = false
+                self.assessmentCompleted = false
             }
         }
 
@@ -627,12 +639,10 @@ class WatchConvexService: ObservableObject {
 
         let response: WatchResetResponse = try await mutation("watch:resetProgress", args: args)
 
-        await MainActor.run {
-            if response.success {
-                self.currentDay = 1
-                self.completedDays = []
-                self.journeyComplete = false
-            }
+        if response.success {
+            self.currentDay = 1
+            self.completedDays = []
+            self.journeyComplete = false
         }
 
         return response
@@ -802,8 +812,14 @@ class WatchConvexService: ObservableObject {
         focusLevel: Int
     ) async throws -> WatchCheckInSubmitResponse {
         guard let userId = userId else {
+            print("[WatchConvex] ❌ submitWatchCheckIn failed: not authenticated (userId is nil)")
             throw WatchConvexError.notAuthenticated
         }
+
+        print("[WatchConvex] 📤 submitWatchCheckIn called:")
+        print("[WatchConvex]   userId: \(userId)")
+        print("[WatchConvex]   checkInType: \(checkInType)")
+        print("[WatchConvex]   energy: \(energyLevel), mood: \(moodLevel), focus: \(focusLevel)")
 
         var args: [String: Any] = [
             "userId": userId,
@@ -816,9 +832,17 @@ class WatchConvexService: ObservableObject {
         // Include session token for authorization
         if let token = sessionToken {
             args["sessionToken"] = token
+            print("[WatchConvex]   sessionToken: \(String(token.prefix(20)))...")
         }
 
-        return try await mutation("checkIn:watchSubmitCheckIn", args: args)
+        do {
+            let response = try await mutation("checkIn:watchSubmitCheckIn", args: args) as WatchCheckInSubmitResponse
+            print("[WatchConvex] ✅ Check-in succeeded! checkInId: \(response.checkInId ?? "nil")")
+            return response
+        } catch {
+            print("[WatchConvex] ❌ Check-in FAILED: \(error)")
+            throw error
+        }
     }
 
     /// Get today's check-in status (which check-ins are done)
@@ -829,6 +853,18 @@ class WatchConvexService: ObservableObject {
 
         return try await query("checkIn:getWatchCheckInStatus", args: [
             "userId": userId
+        ])
+    }
+
+    /// Get check-in trends for charts (today's slots + weekly averages)
+    func getWatchCheckInTrends(days: Int = 7) async throws -> WatchCheckInTrendsResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        return try await query("checkIn:getWatchCheckInTrends", args: [
+            "userId": userId,
+            "days": days
         ])
     }
 
@@ -908,6 +944,21 @@ class WatchConvexService: ObservableObject {
 
         return (response.currentStreak, response.longestStreak)
     }
+
+    // MARK: - Circadian Signal Tracking
+
+    /// Get today's circadian status for the light exposure card
+    func getCircadianStatus() async throws -> WatchCircadianStatusResponse {
+        guard let userId = userId else {
+            throw WatchConvexError.notAuthenticated
+        }
+
+        let response: WatchCircadianStatusResponse = try await query("circadian:getCircadianStatus", args: [
+            "userId": userId
+        ])
+
+        return response
+    }
 }
 
 // MARK: - Question Response Models
@@ -981,4 +1032,46 @@ struct WatchGardenUpdateResponse: Codable {
     let success: Bool
     let newBloomState: Int
     let currentStreak: Int
+}
+
+// MARK: - Check-In Trends Response Models
+
+struct WatchCheckInTrendsSlotData: Codable {
+    let energy: Int
+    let mood: Int
+    let focus: Int
+    let completedAt: Double
+}
+
+struct WatchCheckInTrendsTodayData: Codable {
+    let morning: WatchCheckInTrendsSlotData?
+    let midday: WatchCheckInTrendsSlotData?
+    let evening: WatchCheckInTrendsSlotData?
+}
+
+struct WatchCheckInTrendsWeekDay: Codable {
+    let date: String
+    let dayOfWeek: String
+    let hasData: Bool
+    let avgEnergy: Double?
+    let avgMood: Double?
+    let avgFocus: Double?
+    let checkInsCount: Int
+}
+
+struct WatchCheckInTrendsResponse: Codable {
+    let today: WatchCheckInTrendsTodayData
+    let week: [WatchCheckInTrendsWeekDay]
+}
+
+// MARK: - Circadian Status Response Model
+
+struct WatchCircadianStatusResponse: Codable {
+    let hasData: Bool
+    let daylightMins: Int
+    let targetMins: Int
+    let percentOfTarget: Int
+    let circadianScore: Int?
+    let needsMoreLight: Bool
+    let morningLightMins: Int
 }

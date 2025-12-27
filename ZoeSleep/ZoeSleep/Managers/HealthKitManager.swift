@@ -140,6 +140,27 @@ class HealthKitManager: ObservableObject {
         // Workouts
         readTypes.insert(HKObjectType.workoutType())
 
+        // MARK: - Circadian Signal Types (iOS 17+ / watchOS 10+)
+
+        // Time in Daylight - measures outdoor light exposure
+        if #available(iOS 17.0, watchOS 10.0, *) {
+            if let timeInDaylightType = HKObjectType.quantityType(forIdentifier: .timeInDaylight) {
+                readTypes.insert(timeInDaylightType)
+            }
+        }
+
+        // Sleeping Wrist Temperature - deviation from baseline (Apple Watch Series 8+)
+        if #available(iOS 17.0, watchOS 10.0, *) {
+            if let wristTempType = HKObjectType.quantityType(forIdentifier: .appleSleepingWristTemperature) {
+                readTypes.insert(wristTempType)
+            }
+        }
+
+        // UV Exposure (optional, rarely populated)
+        if let uvExposureType = HKObjectType.quantityType(forIdentifier: .uvExposure) {
+            readTypes.insert(uvExposureType)
+        }
+
         // MARK: - Demographics (for auto-filling questionnaire)
 
         // Date of Birth (Characteristic - read-only)
@@ -1219,6 +1240,363 @@ class HealthKitManager: ObservableObject {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Circadian Signal Data Fetching
+
+    /// Circadian data result structure
+    struct CircadianData {
+        var date: String
+        var timeInDaylightMins: Double?
+        var morningLightMins: Double?
+        var afternoonLightMins: Double?
+        var sleepingWristTempDeviation: Double?
+        var outdoorWorkoutMins: Double?
+        var outdoorWorkoutCount: Int?
+        var circadianScore: Int?
+        var scoreBreakdown: [String: Int]?
+    }
+
+    /// Fetch time spent in daylight for the specified date range
+    /// Only available on iOS 17+ / watchOS 10+
+    @available(iOS 17.0, watchOS 10.0, *)
+    func fetchTimeInDaylight(daysBack: Int = 14, completion: @escaping (Result<[(date: String, totalMins: Double, morningMins: Double, afternoonMins: Double)], Error>) -> Void) {
+        guard let daylightType = HKQuantityType.quantityType(forIdentifier: .timeInDaylight) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Time in daylight type not available"])))
+            return
+        }
+
+        let calendar = Calendar.current
+        let endDate = Date()
+        guard let startDate = calendar.date(byAdding: .day, value: -daysBack, to: endDate) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid date calculation"])))
+            return
+        }
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+
+        // Query individual samples to separate morning vs afternoon
+        let query = HKSampleQuery(
+            sampleType: daylightType,
+            predicate: predicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+        ) { _, samples, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            var dailyData: [String: (total: Double, morning: Double, afternoon: Double)] = [:]
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+
+            for sample in (samples as? [HKQuantitySample]) ?? [] {
+                let dateKey = dateFormatter.string(from: sample.startDate)
+                let minutes = sample.quantity.doubleValue(for: .minute())
+
+                // Determine if morning (before noon) or afternoon
+                let hour = calendar.component(.hour, from: sample.startDate)
+                let isMorning = hour < 12
+
+                var current = dailyData[dateKey] ?? (total: 0, morning: 0, afternoon: 0)
+                current.total += minutes
+                if isMorning {
+                    current.morning += minutes
+                } else {
+                    current.afternoon += minutes
+                }
+                dailyData[dateKey] = current
+            }
+
+            let result = dailyData.map { (date: $0.key, totalMins: $0.value.total, morningMins: $0.value.morning, afternoonMins: $0.value.afternoon) }
+                .sorted { $0.date > $1.date }
+
+            completion(.success(result))
+        }
+
+        healthStore.execute(query)
+    }
+
+    /// Fetch sleeping wrist temperature deviation
+    /// Only available on Apple Watch Series 8+ with iOS 17+
+    @available(iOS 17.0, watchOS 10.0, *)
+    func fetchSleepingWristTemperature(daysBack: Int = 14, completion: @escaping (Result<[(date: String, deviation: Double)], Error>) -> Void) {
+        guard let tempType = HKQuantityType.quantityType(forIdentifier: .appleSleepingWristTemperature) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Wrist temperature type not available"])))
+            return
+        }
+
+        let calendar = Calendar.current
+        let endDate = Date()
+        guard let startDate = calendar.date(byAdding: .day, value: -daysBack, to: endDate) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid date calculation"])))
+            return
+        }
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+
+        let query = HKSampleQuery(
+            sampleType: tempType,
+            predicate: predicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+        ) { _, samples, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            var dailyData: [(date: String, deviation: Double)] = []
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+
+            for sample in (samples as? [HKQuantitySample]) ?? [] {
+                let dateKey = dateFormatter.string(from: sample.startDate)
+                let deviation = sample.quantity.doubleValue(for: .degreeCelsius())
+                dailyData.append((date: dateKey, deviation: deviation))
+            }
+
+            // Sort by date descending
+            dailyData.sort { $0.date > $1.date }
+            completion(.success(dailyData))
+        }
+
+        healthStore.execute(query)
+    }
+
+    /// Fetch outdoor workout minutes (workouts where indoor = false)
+    func fetchOutdoorWorkoutMinutes(daysBack: Int = 14, completion: @escaping (Result<[(date: String, minutes: Double, count: Int)], Error>) -> Void) {
+        let calendar = Calendar.current
+        let endDate = Date()
+        guard let startDate = calendar.date(byAdding: .day, value: -daysBack, to: endDate) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid date calculation"])))
+            return
+        }
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+
+        let query = HKSampleQuery(
+            sampleType: HKWorkoutType.workoutType(),
+            predicate: predicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+        ) { _, samples, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            var dailyData: [String: (minutes: Double, count: Int)] = [:]
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+
+            for workout in (samples as? [HKWorkout]) ?? [] {
+                // Check if workout is outdoor (HKMetadataKeyIndoorWorkout = false or nil for outdoor types)
+                let isIndoor = workout.metadata?[HKMetadataKeyIndoorWorkout] as? Bool ?? false
+
+                // Also consider activity types that are inherently outdoor
+                let inherentlyOutdoor: Set<HKWorkoutActivityType> = [
+                    .running, .cycling, .walking, .hiking, .golf, .soccer,
+                    .tennis, .snowSports, .surfingSports, .swimming
+                ]
+
+                let isOutdoor = !isIndoor || inherentlyOutdoor.contains(workout.workoutActivityType)
+
+                if isOutdoor {
+                    let dateKey = dateFormatter.string(from: workout.startDate)
+                    let durationMins = workout.duration / 60.0
+
+                    var current = dailyData[dateKey] ?? (minutes: 0, count: 0)
+                    current.minutes += durationMins
+                    current.count += 1
+                    dailyData[dateKey] = current
+                }
+            }
+
+            let result = dailyData.map { (date: $0.key, minutes: $0.value.minutes, count: $0.value.count) }
+                .sorted { $0.date > $1.date }
+
+            completion(.success(result))
+        }
+
+        healthStore.execute(query)
+    }
+
+    /// Compute circadian score from available data
+    /// Score: 0-100 based on light exposure (60%), morning bonus (10%), temperature (15%), outdoor activity (15%)
+    func computeCircadianScore(
+        timeInDaylightMins: Double?,
+        morningLightMins: Double?,
+        temperatureDeviation: Double?,
+        outdoorWorkoutMins: Double?
+    ) -> (score: Int, breakdown: [String: Int]) {
+        var score = 0
+        var breakdown: [String: Int] = [:]
+
+        // Light exposure score (60 points max)
+        // Target: 80-120 minutes daily
+        if let daylight = timeInDaylightMins {
+            let lightScore: Int
+            if daylight >= 80 && daylight <= 120 {
+                lightScore = 60 // Optimal
+            } else if daylight >= 60 && daylight < 80 {
+                lightScore = 50 // Good
+            } else if daylight >= 30 && daylight < 60 {
+                lightScore = 35 // Fair
+            } else if daylight > 120 {
+                lightScore = 55 // Slightly over but still good
+            } else {
+                lightScore = Int((daylight / 30.0) * 20) // Below 30 mins
+            }
+            score += lightScore
+            breakdown["light_exposure"] = lightScore
+        }
+
+        // Morning light bonus (up to 10 points) - weighted higher per plan
+        if let morningLight = morningLightMins {
+            let bonus: Int
+            if morningLight >= 30 {
+                bonus = 10 // Full bonus
+            } else if morningLight >= 20 {
+                bonus = 7
+            } else {
+                bonus = Int((morningLight / 20.0) * 7)
+            }
+            score += bonus
+            breakdown["morning_light_bonus"] = bonus
+        }
+
+        // Temperature regularity score (15 points max)
+        // Lower deviation is better (< 0.2C is excellent)
+        if let tempDev = temperatureDeviation {
+            let absDeviation = abs(tempDev)
+            let tempScore: Int
+            if absDeviation < 0.2 {
+                tempScore = 15
+            } else if absDeviation < 0.3 {
+                tempScore = 12
+            } else if absDeviation < 0.5 {
+                tempScore = 9
+            } else if absDeviation < 0.8 {
+                tempScore = 5
+            } else {
+                tempScore = 2
+            }
+            score += tempScore
+            breakdown["temperature"] = tempScore
+        }
+
+        // Outdoor activity score (15 points max)
+        // Target: 30+ minutes outdoor exercise
+        if let outdoorMins = outdoorWorkoutMins {
+            let outdoorScore: Int
+            if outdoorMins >= 60 {
+                outdoorScore = 15
+            } else if outdoorMins >= 30 {
+                outdoorScore = 12
+            } else if outdoorMins >= 15 {
+                outdoorScore = 8
+            } else {
+                outdoorScore = Int((outdoorMins / 15.0) * 5)
+            }
+            score += outdoorScore
+            breakdown["outdoor_activity"] = outdoorScore
+        }
+
+        return (score: min(100, score), breakdown: breakdown)
+    }
+
+    /// Fetch all circadian data and compute scores for the specified date range
+    func fetchCircadianData(daysBack: Int = 14, completion: @escaping (Result<[CircadianData], Error>) -> Void) {
+        var allDaylightData: [(date: String, totalMins: Double, morningMins: Double, afternoonMins: Double)] = []
+        var allTempData: [(date: String, deviation: Double)] = []
+        var allOutdoorData: [(date: String, minutes: Double, count: Int)] = []
+        var fetchError: Error?
+
+        let group = DispatchGroup()
+
+        // Fetch time in daylight (iOS 17+)
+        if #available(iOS 17.0, watchOS 10.0, *) {
+            group.enter()
+            fetchTimeInDaylight(daysBack: daysBack) { result in
+                switch result {
+                case .success(let data):
+                    allDaylightData = data
+                case .failure(let error):
+                    print("[HealthKit] Time in daylight fetch error: \(error.localizedDescription)")
+                    // Don't fail - this data may not be available
+                }
+                group.leave()
+            }
+
+            // Fetch wrist temperature
+            group.enter()
+            fetchSleepingWristTemperature(daysBack: daysBack) { result in
+                switch result {
+                case .success(let data):
+                    allTempData = data
+                case .failure(let error):
+                    print("[HealthKit] Wrist temp fetch error: \(error.localizedDescription)")
+                    // Don't fail - this requires Series 8+
+                }
+                group.leave()
+            }
+        }
+
+        // Fetch outdoor workouts (always available)
+        group.enter()
+        fetchOutdoorWorkoutMinutes(daysBack: daysBack) { result in
+            switch result {
+            case .success(let data):
+                allOutdoorData = data
+            case .failure(let error):
+                if fetchError == nil { fetchError = error }
+            }
+            group.leave()
+        }
+
+        // Combine all data by date
+        group.notify(queue: .main) {
+            // Get all unique dates
+            var allDates = Set<String>()
+            allDaylightData.forEach { allDates.insert($0.date) }
+            allTempData.forEach { allDates.insert($0.date) }
+            allOutdoorData.forEach { allDates.insert($0.date) }
+
+            // Build combined data for each date
+            var results: [CircadianData] = []
+
+            for date in allDates {
+                let daylightEntry = allDaylightData.first { $0.date == date }
+                let tempEntry = allTempData.first { $0.date == date }
+                let outdoorEntry = allOutdoorData.first { $0.date == date }
+
+                // Compute score
+                let scoreResult = self.computeCircadianScore(
+                    timeInDaylightMins: daylightEntry?.totalMins,
+                    morningLightMins: daylightEntry?.morningMins,
+                    temperatureDeviation: tempEntry?.deviation,
+                    outdoorWorkoutMins: outdoorEntry?.minutes
+                )
+
+                results.append(CircadianData(
+                    date: date,
+                    timeInDaylightMins: daylightEntry?.totalMins,
+                    morningLightMins: daylightEntry?.morningMins,
+                    afternoonLightMins: daylightEntry?.afternoonMins,
+                    sleepingWristTempDeviation: tempEntry?.deviation,
+                    outdoorWorkoutMins: outdoorEntry?.minutes,
+                    outdoorWorkoutCount: outdoorEntry?.count,
+                    circadianScore: scoreResult.score,
+                    scoreBreakdown: scoreResult.breakdown
+                ))
+            }
+
+            // Sort by date descending
+            results.sort { $0.date > $1.date }
+            completion(.success(results))
         }
     }
 }

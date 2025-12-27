@@ -113,13 +113,20 @@ export default function TreatmentPage() {
     }
   };
 
+  // Type helpers
+  type InterventionTask = NonNullable<typeof activeInterventions>[number];
+  type ComplianceDay = NonNullable<typeof complianceHistory>[number];
+
   // Group tasks by timing
-  const tasksByTiming = (activeInterventions || []).reduce((acc, task) => {
-    const timing = task.timing || "Anytime";
-    if (!acc[timing]) acc[timing] = [];
-    acc[timing].push(task);
-    return acc;
-  }, {} as Record<string, typeof activeInterventions>);
+  const tasksByTiming = (activeInterventions || []).reduce(
+    (acc: Record<string, InterventionTask[]>, task: InterventionTask) => {
+      const timing = task.timing || "Anytime";
+      if (!acc[timing]) acc[timing] = [];
+      acc[timing].push(task);
+      return acc;
+    },
+    {} as Record<string, InterventionTask[]>
+  );
 
   // Calculate progress
   const completionPercentage = todaySummary?.completionPercentage || 0;
@@ -314,7 +321,7 @@ export default function TreatmentPage() {
 
         {/* Tasks by Time of Day */}
         <section className="space-y-6">
-          {Object.entries(tasksByTiming).map(([timing, timingTasks]) => {
+          {(Object.entries(tasksByTiming) as [string, InterventionTask[]][]).map(([timing, timingTasks]) => {
             if (!timingTasks || timingTasks.length === 0) return null;
 
             const colors = timingColors[timing] || timingColors.Morning;
@@ -435,7 +442,7 @@ export default function TreatmentPage() {
             </h3>
 
             <div className="flex justify-between gap-2">
-              {complianceHistory.slice().reverse().map((day) => {
+              {complianceHistory.slice().reverse().map((day: ComplianceDay) => {
                 const percentage = day.totalTasks > 0
                   ? Math.round((day.completedTasks / day.totalTasks) * 100)
                   : 0;

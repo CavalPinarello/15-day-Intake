@@ -1,5 +1,11 @@
 "use client";
 
+interface WorkflowRequirement {
+  id: string;
+  label: string;
+  complete: boolean;
+}
+
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -155,9 +161,10 @@ export function PatientAnalysisWorkflow({
   }
 
   // Intervention counts
+  type InterventionType = NonNullable<typeof interventions>[number];
   const interventionCount = interventions?.length ?? 0;
-  const draftInterventions = interventions?.filter((i) => i.status === "draft") || [];
-  const activeInterventions = interventions?.filter((i) => i.status === "active") || [];
+  const draftInterventions = interventions?.filter((i: InterventionType) => i.status === "draft") || [];
+  const activeInterventions = interventions?.filter((i: InterventionType) => i.status === "active") || [];
 
   const handleChecklistUpdate = async (item: string, checked: boolean) => {
     const updates: Record<string, boolean> = {};
@@ -191,7 +198,7 @@ export function PatientAnalysisWorkflow({
   const handleSaveRecommendations = async (markComplete: boolean) => {
     setIsSaving(true);
     try {
-      const interventionIds = interventions?.map((i) => i._id) || [];
+      const interventionIds = interventions?.map((i: InterventionType) => i._id) || [];
       await saveRecommendations({
         userId,
         recommendedInterventions: interventionIds,
@@ -621,7 +628,7 @@ export function PatientAnalysisWorkflow({
                           Preparation Checklist
                         </h4>
                         <div className="space-y-2">
-                          {requirements.map((req) => (
+                          {requirements.map((req: WorkflowRequirement) => (
                             <div
                               key={req.id}
                               className="flex items-center gap-3 p-2 rounded-lg"
@@ -660,7 +667,7 @@ export function PatientAnalysisWorkflow({
                             Assigned Interventions ({interventions.length})
                           </h4>
                           <div className="flex flex-wrap gap-2">
-                            {interventions.map((intervention) => (
+                            {interventions.map((intervention: InterventionType) => (
                               <span
                                 key={intervention._id}
                                 className="px-2 py-1 text-xs bg-purple-500/20 text-purple-300 rounded"

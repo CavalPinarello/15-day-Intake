@@ -113,7 +113,7 @@ export function ProtocolAssignment({ userId, physicianId }: ProtocolAssignmentPr
     // Extract intervention IDs from tasks
     const ids = protocol.tasks
       .map((t: { interventionId?: string }) => t.interventionId)
-      .filter((id): id is string => !!id);
+      .filter((id: string | undefined): id is string => !!id);
     return new Set(ids);
   }, [userProtocols, activeTab]);
 

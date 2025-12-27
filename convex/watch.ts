@@ -317,6 +317,8 @@ function simpleHash(str: string): string {
 
 // SHA256 of "1" - the test password
 const TEST_PASSWORD_SHA256 = "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b";
+// SHA256 of "test" - alternative test password
+const TEST_PASSWORD_TEST_SHA256 = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
 // Simple hash of "1" - what Watch currently sends
 const TEST_PASSWORD_SIMPLE = simpleHash("1"); // "31"
 
@@ -332,10 +334,19 @@ export const signIn = mutation({
     deviceId: v.optional(v.string()), // Watch device ID for session tracking
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
+    // Try username first, then email
+    let user = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", args.username))
       .first();
+
+    // If not found by username, try email
+    if (!user) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.username))
+        .first();
+    }
 
     if (!user) {
       throw new Error("User not found");
@@ -346,6 +357,7 @@ export const signIn = mutation({
       user.password_hash,           // Whatever is in DB (SHA256)
       TEST_PASSWORD_SIMPLE,         // "31" - simple hash of "1"
       TEST_PASSWORD_SHA256,         // SHA256 of "1"
+      TEST_PASSWORD_TEST_SHA256,    // SHA256 of "test"
       "31",                         // Direct simple hash
     ];
 
@@ -645,7 +657,7 @@ export const completeSection = mutation({
                 .query("user_gateway_states")
                 .withIndex("by_user", (q) => q.eq("user_id", args.userId))
                 .collect();
-              const triggeredIds = new Set(userGateways.filter(g => g.is_triggered).map(g => g.gateway_id));
+              const triggeredIds = new Set(userGateways.filter(g => g.triggered).map(g => g.gateway_id));
 
               const hasTriggeredGateway = moduleGateways.some(mg => triggeredIds.has(mg.gateway_id));
               if (hasTriggeredGateway) {
@@ -1764,7 +1776,7 @@ export const getQuestionsForUserDay = query({
 
     const triggeredGatewayIds = new Set(
       gatewayStates
-        .filter((g) => g.is_triggered)
+        .filter((g) => g.triggered)
         .map((g) => g.gateway_id)
     );
 
@@ -1863,22 +1875,34 @@ export const getQuestionsForUserDay = query({
 
         // Check if this is an expansion module that requires a gateway trigger
         if (module.tier === "expansion" || module.tier === "specialized") {
-          // Get the gateway requirements for this module
-          const moduleGateways = await ctx.db
+          // Get all gateway definitions to find which gateways trigger this module
+          const allGateways = await ctx.db
             .query("module_gateways")
-            .withIndex("by_module_id", (q) => q.eq("module_id", dayModule.module_id))
             .collect();
 
-          // If module has gateway requirements, check if ANY are triggered
-          if (moduleGateways.length > 0) {
-            const hasTriggeredGateway = moduleGateways.some((mg) =>
-              triggeredGatewayIds.has(mg.gateway_id)
-            );
-
-            if (!hasTriggeredGateway) {
-              console.log(`[Convex] Skipping module ${dayModule.module_id} - no gateway triggered`);
-              continue; // Skip this module - gateway not triggered
+          // Find if ANY triggered gateway includes this module in its target_modules
+          let isModuleTriggered = false;
+          for (const gateway of allGateways) {
+            // Check if this gateway is triggered
+            if (triggeredGatewayIds.has(gateway.gateway_id)) {
+              // Parse target modules for this gateway
+              try {
+                const targetModules = JSON.parse(gateway.target_modules_json || "[]") as string[];
+                if (targetModules.includes(dayModule.module_id)) {
+                  isModuleTriggered = true;
+                  console.log(`[Convex] Module ${dayModule.module_id} triggered by gateway ${gateway.gateway_id}`);
+                  break;
+                }
+              } catch {
+                console.log(`[Convex] Warning: Could not parse target_modules_json for gateway ${gateway.gateway_id}`);
+              }
             }
+          }
+
+          // If no triggered gateway includes this module, skip it
+          if (!isModuleTriggered) {
+            console.log(`[Convex] Skipping module ${dayModule.module_id} - no triggered gateway targets it`);
+            continue;
           }
         }
 
@@ -1975,6 +1999,9 @@ function mapAnswerFormatToType(answerFormat: string): string {
     date: "year",
     date_picker: "year",
     date_auto: "text",  // Auto-fill dates shown as text
+    // Specialized input types
+    nap_details: "napDetails",
+    medication_select: "medicationSelect",
   };
   return mapping[answerFormat] || "text";
 }
@@ -2053,21 +2080,20 @@ export const updateGatewayState = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        is_triggered: args.isTriggered,
+        triggered: args.isTriggered,
         trigger_question_id: args.triggerQuestionId,
         trigger_value: args.triggerValue,
-        updated_at: now,
+        last_evaluated_at: now,
       });
     } else {
       await ctx.db.insert("user_gateway_states", {
         user_id: args.userId,
         gateway_id: args.gatewayId,
-        is_triggered: args.isTriggered,
+        triggered: args.isTriggered,
         trigger_question_id: args.triggerQuestionId,
         trigger_value: args.triggerValue,
         triggered_at: args.isTriggered ? now : undefined,
-        created_at: now,
-        updated_at: now,
+        last_evaluated_at: now,
       });
     }
 
@@ -2092,11 +2118,61 @@ export const getGatewayStates = query({
 
     return states.map((s) => ({
       gatewayId: s.gateway_id,
-      isTriggered: s.is_triggered,
+      isTriggered: s.triggered,
       triggerQuestionId: s.trigger_question_id,
       triggerValue: s.trigger_value,
       triggeredAt: s.triggered_at,
     }));
+  },
+});
+
+/**
+ * Migration: Convert is_triggered to triggered field in user_gateway_states
+ * This fixes existing data that was written with the wrong field name.
+ */
+export const migrateGatewayStates = mutation({
+  args: {
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    // Get all gateway states (optionally filtered by user)
+    let states;
+    if (args.userId) {
+      states = await ctx.db
+        .query("user_gateway_states")
+        .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+        .collect();
+    } else {
+      states = await ctx.db.query("user_gateway_states").collect();
+    }
+
+    let migratedCount = 0;
+    for (const state of states) {
+      // Check if this record has the old field name (is_triggered) but not the new one (triggered)
+      const hasOldField = (state as Record<string, unknown>).is_triggered !== undefined;
+      const hasNewField = state.triggered !== undefined;
+
+      if (hasOldField && !hasNewField) {
+        // Migrate: copy is_triggered value to triggered
+        const oldValue = (state as Record<string, unknown>).is_triggered as boolean;
+        await ctx.db.patch(state._id, {
+          triggered: oldValue,
+          last_evaluated_at: Date.now(),
+        });
+        migratedCount++;
+        console.log(`[Migration] Migrated gateway ${state.gateway_id} for user ${state.user_id}: is_triggered=${oldValue} -> triggered=${oldValue}`);
+      } else if (!hasNewField && !hasOldField) {
+        // No triggered field at all - default to false
+        await ctx.db.patch(state._id, {
+          triggered: false,
+          last_evaluated_at: Date.now(),
+        });
+        migratedCount++;
+        console.log(`[Migration] Set default triggered=false for gateway ${state.gateway_id}`);
+      }
+    }
+
+    return { migratedCount, totalRecords: states.length };
   },
 });
 

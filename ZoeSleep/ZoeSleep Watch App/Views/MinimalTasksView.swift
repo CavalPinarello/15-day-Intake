@@ -21,22 +21,17 @@ struct MinimalTasksView: View {
 
     private let palette = WatchCircadianPalette.current
 
-    // Card background color derived from palette
+    // Card background color - always light on dark since we use dark background
     private var cardBackground: Color {
-        palette.isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.05)
+        Color.white.opacity(0.1)
     }
 
-    // Create a darker gradient for status bar visibility
-    private var adjustedBackground: [Color] {
-        if palette.isDark {
-            return palette.background
-        } else {
-            return [
-                Color(red: 0.15, green: 0.18, blue: 0.22),
-                palette.background[0],
-                palette.background.count > 1 ? palette.background[1] : palette.background[0]
-            ]
-        }
+    // Always use dark background for watchOS (OLED-friendly, better readability)
+    private var darkBackground: [Color] {
+        [
+            Color(red: 0.08, green: 0.08, blue: 0.10),
+            Color(red: 0.12, green: 0.12, blue: 0.14)
+        ]
     }
 
     init(taskStatus: WatchTaskStatus, overdueExpansionsCount: Int = 0) {
@@ -69,7 +64,7 @@ struct MinimalTasksView: View {
                 .padding(.vertical, 8)
             }
             .background(
-                LinearGradient(colors: adjustedBackground, startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: darkBackground, startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
             )
             .navigationTitle("Today")
@@ -110,11 +105,11 @@ struct MinimalTasksView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Sleep Log")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(localTaskStatus.sleepLogDone ? palette.textSecondary : palette.textPrimary)
+                    .foregroundColor(localTaskStatus.sleepLogDone ? .white.opacity(0.6) : .white)
 
                 Text(localTaskStatus.sleepLogDone ? "Completed" : "Complete on iPhone")
                     .font(.system(size: 10))
-                    .foregroundColor(palette.textSecondary)
+                    .foregroundColor(.white.opacity(0.6))
             }
 
             Spacer()
@@ -122,7 +117,7 @@ struct MinimalTasksView: View {
             if !localTaskStatus.sleepLogDone {
                 Image(systemName: "iphone")
                     .font(.system(size: 12))
-                    .foregroundColor(palette.textSecondary)
+                    .foregroundColor(.white.opacity(0.6))
             }
         }
         .padding(10)
@@ -157,11 +152,11 @@ struct MinimalTasksView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Assessment")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(localTaskStatus.assessmentDone ? palette.textSecondary : palette.textPrimary)
+                    .foregroundColor(localTaskStatus.assessmentDone ? .white.opacity(0.6) : .white)
 
                 Text(localTaskStatus.assessmentDone ? "Completed" : "Complete on iPhone")
                     .font(.system(size: 10))
-                    .foregroundColor(palette.textSecondary)
+                    .foregroundColor(.white.opacity(0.6))
             }
 
             Spacer()
@@ -169,7 +164,7 @@ struct MinimalTasksView: View {
             if !localTaskStatus.assessmentDone {
                 Image(systemName: "iphone")
                     .font(.system(size: 12))
-                    .foregroundColor(palette.textSecondary)
+                    .foregroundColor(.white.opacity(0.6))
             }
         }
         .padding(10)
@@ -198,11 +193,11 @@ struct MinimalTasksView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Deep Dive Pending")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(palette.textPrimary)
+                    .foregroundColor(.white)
 
                 Text("\(overdueExpansionsCount) questionnaire\(overdueExpansionsCount == 1 ? "" : "s") on iPhone")
                     .font(.system(size: 10))
-                    .foregroundColor(palette.textSecondary)
+                    .foregroundColor(.white.opacity(0.6))
             }
 
             Spacer()
@@ -237,13 +232,13 @@ struct MinimalTasksView: View {
 
                 Text("Protocol")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(palette.textPrimary)
+                    .foregroundColor(.white)
 
                 Spacer()
 
                 Text("\(localTaskStatus.pendingProtocolCount) remaining")
                     .font(.system(size: 10))
-                    .foregroundColor(palette.textSecondary)
+                    .foregroundColor(.white.opacity(0.6))
             }
             .padding(.horizontal, 4)
 
@@ -314,13 +309,13 @@ struct ProtocolTaskRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(task.name)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(task.isCompleted ? palette.textSecondary : palette.textPrimary)
-                        .strikethrough(task.isCompleted, color: palette.textSecondary)
+                        .foregroundColor(task.isCompleted ? .white.opacity(0.6) : .white)
+                        .strikethrough(task.isCompleted, color: .white.opacity(0.6))
                         .lineLimit(1)
 
                     Text(task.timing)
                         .font(.system(size: 9))
-                        .foregroundColor(palette.textSecondary)
+                        .foregroundColor(.white.opacity(0.6))
                 }
 
                 Spacer()

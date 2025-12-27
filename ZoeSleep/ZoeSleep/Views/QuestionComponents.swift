@@ -137,16 +137,72 @@ struct ScaleInput: View {
     // This component should NOT set values on appear, as that would incorrectly
     // mark the question as user-interacted before the user actually touches the slider
 
+    /// Detect questionnaire type from question ID for standardized labels
+    private var detectedQuestionnaire: String? {
+        let id = question.id.uppercased()
+        if id.hasPrefix("ISI") { return "ISI" }
+        if id.hasPrefix("DBAS") { return "DBAS-16" }
+        if id.hasPrefix("ESS") { return "ESS" }
+        if id.hasPrefix("FSS") { return "FSS" }
+        if id.hasPrefix("PHQ") { return "PHQ-9" }
+        if id.hasPrefix("GAD") { return "GAD-7" }
+        if id.hasPrefix("DASS") { return "DASS-21" }
+        if id.hasPrefix("PSAS") { return "PSAS" }
+        if id.hasPrefix("SHI") { return "SHI" }
+        if id.hasPrefix("FOSQ") { return "FOSQ-10" }
+        if id.hasPrefix("BPI") { return "BPI" }
+        if id.hasPrefix("PSQI") { return "PSQI" }
+        if id.hasPrefix("MEQ") { return "MEQ" }
+        // Check group field for questionnaire identification
+        if let group = question.group?.uppercased() {
+            if group.contains("ISI") { return "ISI" }
+            if group.contains("DBAS") { return "DBAS-16" }
+            if group.contains("PHQ") { return "PHQ-9" }
+            if group.contains("GAD") { return "GAD-7" }
+            if group.contains("DASS") { return "DASS-21" }
+        }
+        return nil
+    }
+
+    /// Get standardized label for current value
+    private var currentValueLabel: String? {
+        guard let questionnaire = detectedQuestionnaire else { return nil }
+        guard let labels = StandardizedAnswerLabels.labels(for: questionnaire) else { return nil }
+        return labels[Int(value)]
+    }
+
+    /// Get min/max labels from standardized system
+    private var standardizedMinLabel: String {
+        if let explicit = question.scaleMinLabel { return explicit }
+        if let questionnaire = detectedQuestionnaire,
+           let minMax = StandardizedAnswerLabels.minMaxLabels(for: questionnaire) {
+            return minMax.min
+        }
+        return "\(question.scaleMin ?? 0)"
+    }
+
+    private var standardizedMaxLabel: String {
+        if let explicit = question.scaleMaxLabel { return explicit }
+        if let questionnaire = detectedQuestionnaire,
+           let minMax = StandardizedAnswerLabels.minMaxLabels(for: questionnaire) {
+            return minMax.max
+        }
+        return "\(question.scaleMax ?? 10)"
+    }
+
     var body: some View {
         VStack(spacing: 12) {
+            // Min/Max labels with standardized descriptors
             HStack {
-                Text(question.scaleMinLabel ?? "\(question.scaleMin ?? 0)")
+                Text(standardizedMinLabel)
                     .font(.caption)
                     .foregroundColor(CircadianColors.secondary)
+                    .multilineTextAlignment(.leading)
                 Spacer()
-                Text(question.scaleMaxLabel ?? "\(question.scaleMax ?? 10)")
+                Text(standardizedMaxLabel)
                     .font(.caption)
                     .foregroundColor(CircadianColors.secondary)
+                    .multilineTextAlignment(.trailing)
             }
 
             Slider(
@@ -156,10 +212,27 @@ struct ScaleInput: View {
             )
             .accentColor(question.pillar.themeColor)
 
-            Text("\(Int(value))")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(question.pillar.themeColor)
+            // Current value with semantic label
+            VStack(spacing: 4) {
+                Text("\(Int(value))")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(question.pillar.themeColor)
+
+                // Show semantic label if available
+                if let label = currentValueLabel {
+                    Text(label)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(CircadianColors.primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(question.pillar.themeColor.opacity(0.15))
+                        )
+                }
+            }
         }
         // REMOVED: .onAppear that was setting smart defaults
         // This was causing values to be saved before user interaction
@@ -200,6 +273,120 @@ struct ScaleInput: View {
             }
             // Default to middle of range
             return round(middleValue)
+        }
+    }
+}
+
+// MARK: - Discrete Scale Input (For validated questionnaires with labeled options)
+
+/// Shows all scale options as tappable buttons with standardized labels
+/// Use for PHQ-9 (0-3), GAD-7 (0-3), ISI (0-4), DASS-21 (0-3), etc.
+struct DiscreteScaleInput: View {
+    let question: Question
+    @Binding var value: Double
+    var theme: ColorTheme = ColorTheme.shared
+
+    private var pillarColor: Color { question.pillar.themeColor }
+
+    private var minValue: Int { question.scaleMin ?? 0 }
+    private var maxValue: Int { question.scaleMax ?? 4 }
+
+    /// Detect questionnaire type from question ID
+    private var detectedQuestionnaire: String? {
+        let id = question.id.uppercased()
+        if id.hasPrefix("ISI") { return "ISI" }
+        if id.hasPrefix("DBAS") { return "DBAS-16" }
+        if id.hasPrefix("ESS") { return "ESS" }
+        if id.hasPrefix("FSS") { return "FSS" }
+        if id.hasPrefix("PHQ") { return "PHQ-9" }
+        if id.hasPrefix("GAD") { return "GAD-7" }
+        if id.hasPrefix("DASS") { return "DASS-21" }
+        if id.hasPrefix("PSAS") { return "PSAS" }
+        if id.hasPrefix("SHI") { return "SHI" }
+        if id.hasPrefix("FOSQ") { return "FOSQ-10" }
+        if id.hasPrefix("BPI") { return "BPI" }
+        if id.hasPrefix("PSQI") { return "PSQI" }
+        if let group = question.group?.uppercased() {
+            if group.contains("ISI") { return "ISI" }
+            if group.contains("DBAS") { return "DBAS-16" }
+            if group.contains("PHQ") { return "PHQ-9" }
+            if group.contains("GAD") { return "GAD-7" }
+            if group.contains("DASS") { return "DASS-21" }
+        }
+        return nil
+    }
+
+    /// Get all labels for the scale from standardized system
+    private var scaleLabels: [Int: String] {
+        guard let questionnaire = detectedQuestionnaire,
+              let labels = StandardizedAnswerLabels.labels(for: questionnaire) else {
+            return [:]
+        }
+        return labels
+    }
+
+    /// Get label for a specific value
+    private func label(for optionValue: Int) -> String {
+        // Check for explicit option labels first
+        if let labels = scaleLabels[optionValue] {
+            return labels
+        }
+        // Fall back to min/max labels if at boundaries
+        if optionValue == minValue, let minLabel = question.scaleMinLabel {
+            return minLabel
+        }
+        if optionValue == maxValue, let maxLabel = question.scaleMaxLabel {
+            return maxLabel
+        }
+        return "\(optionValue)"
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ForEach(minValue...maxValue, id: \.self) { optionValue in
+                Button(action: { value = Double(optionValue) }) {
+                    HStack(spacing: 12) {
+                        // Value badge
+                        Text("\(optionValue)")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .frame(width: 32, height: 32)
+                            .background(
+                                Circle()
+                                    .fill(Int(value) == optionValue ? pillarColor : CircadianColors.secondaryBackground)
+                            )
+                            .foregroundColor(Int(value) == optionValue ? .white : CircadianColors.primary)
+
+                        // Label text
+                        Text(label(for: optionValue))
+                            .font(.subheadline)
+                            .foregroundColor(CircadianColors.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        // Checkmark for selected
+                        if Int(value) == optionValue {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(pillarColor)
+                        }
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .background(
+                        Int(value) == optionValue
+                            ? pillarColor.opacity(0.1)
+                            : CircadianColors.secondaryBackground
+                    )
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                Int(value) == optionValue ? pillarColor : CircadianColors.border,
+                                lineWidth: Int(value) == optionValue ? 2 : 1
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }
@@ -373,12 +560,46 @@ struct NumberInput: View {
         case "D6":
             return useImperial ? 154 : 70   // Weight: 154lbs or 70kg
         // Sleep-related
-        case "SL_AWAKENINGS":
+        case "SL_AWAKENINGS", "12A":
             return 1     // Night awakenings - typical
         case "PSQI_2":
             return 15    // Time to fall asleep (minutes)
         case "PSQI_4":
             return 7     // Hours of actual sleep
+        // Caffeine/Alcohol
+        case "30":
+            return 2     // Cups of caffeine per day
+        case "33":
+            return 2     // Alcoholic drinks per week
+        // Meal timing
+        case "54B":
+            return 2     // Hours before bed to finish eating
+        // Diet/Nutrition (MEDAS and related)
+        case "54D", "219":
+            return 3     // Servings of vegetables per day
+        case "220":
+            return 2     // Pieces of fruit per day
+        case "221":
+            return 1     // Servings of red meat per day
+        case "222":
+            return 1     // Servings of butter/margarine per day
+        case "223":
+            return 1     // Sweet beverages per day
+        case "224":
+            return 2     // Glasses of wine per week
+        case "225":
+            return 2     // Servings of legumes per week
+        case "226":
+            return 2     // Servings of fish per week
+        case "227":
+            return 1     // Commercial pastries per week
+        case "228":
+            return 3     // Servings of nuts per week
+        case "230":
+            return 2     // Times per week pasta/rice with tomato sauce
+        // Screen time
+        case "53D":
+            return 6     // Hours of screen time for work per day
         default:
             // Smart inference based on question text
             let lowerText = question.text.lowercased()
@@ -394,21 +615,35 @@ struct NumberInput: View {
                 return 7
             } else if lowerText.contains("minutes") && (lowerText.contains("fall asleep") || lowerText.contains("latency")) {
                 return 15
-            } else if lowerText.contains("caffeine") || lowerText.contains("coffee") {
+            } else if lowerText.contains("caffeine") || lowerText.contains("coffee") || lowerText.contains("cups") {
+                return 2
+            } else if lowerText.contains("alcohol") || lowerText.contains("drinks") || lowerText.contains("wine") {
                 return 2
             } else if lowerText.contains("screen") && lowerText.contains("hours") {
                 return 6
+            } else if lowerText.contains("hours before bed") || lowerText.contains("hours") && lowerText.contains("eating") {
+                return 2
+            } else if lowerText.contains("servings") || lowerText.contains("vegetables") || lowerText.contains("fruit") {
+                return 2
+            } else if lowerText.contains("per day") && (lowerText.contains("meat") || lowerText.contains("butter") || lowerText.contains("pastries")) {
+                return 1
+            } else if lowerText.contains("per week") {
+                return 2
             }
             // Use imperial default if available and user prefers imperial
             if useImperial, let imperialDefault = question.defaultImperial {
                 return Double(imperialDefault)
             }
-            // Default to explicit defaultValue or middle of range
+            // Default to explicit defaultValue or middle of range (capped at reasonable values)
             if let defaultVal = question.defaultValue {
                 return Double(defaultVal)
             }
             let minVal = Double(useImperial ? (question.minImperial ?? question.minValue ?? 0) : (question.minValue ?? 0))
-            let maxVal = Double(useImperial ? (question.maxImperial ?? question.maxValue ?? 100) : (question.maxValue ?? 100))
+            var maxVal = Double(useImperial ? (question.maxImperial ?? question.maxValue ?? 100) : (question.maxValue ?? 100))
+            // Cap unrealistic max values to prevent absurd defaults
+            if maxVal > 100 {
+                maxVal = 20  // Reasonable cap for most quantity questions
+            }
             return (minVal + maxVal) / 2
         }
     }
@@ -1002,6 +1237,329 @@ struct GatewayAlertBanner: View {
             .padding(12)
             .background(theme.warning.opacity(0.15))
             .cornerRadius(8)
+        }
+    }
+}
+
+// MARK: - Nap Details Input
+
+/// Dynamic nap entry component with start time wheel picker and duration quick buttons
+struct NapDetailsInput: View {
+    let question: Question
+    @Binding var napEntries: [NapEntry]
+    let napCount: Int
+    var theme: ColorTheme = ColorTheme.shared
+
+    // Duration options as quick-select buttons
+    private let durationOptions: [(Int, String)] = [
+        (15, "15 min"),
+        (30, "30 min"),
+        (45, "45 min"),
+        (60, "1h"),
+        (90, "1.5h"),
+        (120, "2h+")
+    ]
+
+    // Circadian-aware check
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var pillarColor: Color { question.pillar.themeColor }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            ForEach(0..<napCount, id: \.self) { index in
+                napBlock(for: index)
+            }
+        }
+        .onAppear {
+            // Initialize nap entries if needed
+            initializeNapEntries()
+        }
+        .onChange(of: napCount) { _, newCount in
+            // Re-initialize when nap count changes
+            while napEntries.count < newCount {
+                let napNumber = napEntries.count + 1
+                let defaultTime = NapEntry.defaultStartTime(for: napNumber)
+                napEntries.append(NapEntry(napNumber: napNumber, startTime: defaultTime, durationMinutes: 30))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func napBlock(for index: Int) -> some View {
+        let napNumber = index + 1
+
+        VStack(alignment: .leading, spacing: 12) {
+            // Nap header
+            HStack {
+                Image(systemName: "moon.zzz.fill")
+                    .foregroundColor(pillarColor)
+                Text("Nap \(napNumber)")
+                    .font(.headline)
+                    .foregroundColor(CircadianColors.primary)
+                Spacer()
+            }
+
+            // Start time picker
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Start time")
+                    .font(.caption)
+                    .foregroundColor(CircadianColors.secondary)
+
+                DatePicker(
+                    "",
+                    selection: timeBinding(for: index),
+                    displayedComponents: .hourAndMinute
+                )
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .frame(height: 100)
+                .colorScheme(isEvening ? .dark : .light)
+                .tint(isEvening ? Color(red: 0.988, green: 0.827, blue: 0.302) : nil)
+            }
+
+            // Duration quick buttons
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Duration")
+                    .font(.caption)
+                    .foregroundColor(CircadianColors.secondary)
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 70))], spacing: 8) {
+                    ForEach(durationOptions, id: \.0) { duration, label in
+                        Button(action: {
+                            setDuration(duration, for: index)
+                        }) {
+                            Text(label)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(
+                                    getDuration(for: index) == duration
+                                        ? pillarColor.opacity(0.2)
+                                        : CircadianColors.secondaryBackground
+                                )
+                                .foregroundColor(
+                                    getDuration(for: index) == duration
+                                        ? pillarColor
+                                        : CircadianColors.primary
+                                )
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(
+                                            getDuration(for: index) == duration
+                                                ? pillarColor
+                                                : CircadianColors.border,
+                                            lineWidth: getDuration(for: index) == duration ? 2 : 1
+                                        )
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(CircadianColors.secondaryBackground.opacity(0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(CircadianColors.border, lineWidth: 1)
+        )
+    }
+
+    // MARK: - Helpers
+
+    private func initializeNapEntries() {
+        // Create default entries if array is too small
+        while napEntries.count < napCount {
+            let napNumber = napEntries.count + 1
+            let defaultTime = NapEntry.defaultStartTime(for: napNumber)
+            napEntries.append(NapEntry(napNumber: napNumber, startTime: defaultTime, durationMinutes: 30))
+        }
+    }
+
+    private func timeBinding(for index: Int) -> Binding<Date> {
+        Binding(
+            get: {
+                guard index < napEntries.count else {
+                    return defaultDate(for: index)
+                }
+                return dateFromTimeString(napEntries[index].startTime)
+            },
+            set: { newDate in
+                ensureEntry(at: index)
+                napEntries[index].startTime = timeStringFromDate(newDate)
+            }
+        )
+    }
+
+    private func getDuration(for index: Int) -> Int {
+        guard index < napEntries.count else { return 30 }
+        return napEntries[index].durationMinutes
+    }
+
+    private func setDuration(_ duration: Int, for index: Int) {
+        ensureEntry(at: index)
+        napEntries[index].durationMinutes = duration
+    }
+
+    private func ensureEntry(at index: Int) {
+        while napEntries.count <= index {
+            let napNumber = napEntries.count + 1
+            let defaultTime = NapEntry.defaultStartTime(for: napNumber)
+            napEntries.append(NapEntry(napNumber: napNumber, startTime: defaultTime, durationMinutes: 30))
+        }
+    }
+
+    private func defaultDate(for index: Int) -> Date {
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.hour = 14 + (index * 2)  // 2 PM, 4 PM, 6 PM...
+        components.minute = 0
+        return calendar.date(from: components) ?? Date()
+    }
+
+    private func dateFromTimeString(_ timeString: String) -> Date {
+        let parts = timeString.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]),
+              let minute = Int(parts[1]) else {
+            return defaultDate(for: 0)
+        }
+
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+        return calendar.date(from: components) ?? Date()
+    }
+
+    private func timeStringFromDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        return String(format: "%02d:%02d", hour, minute)
+    }
+}
+
+// MARK: - Medication Select Input
+
+/// Multi-select medication category component with "Other" text field option
+struct MedicationSelectInput: View {
+    let question: Question
+    @Binding var selectedCategories: [String]
+    @Binding var otherText: String
+    var theme: ColorTheme = ColorTheme.shared
+
+    // Circadian-aware check
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var pillarColor: Color { question.pillar.themeColor }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            // Medication category chips
+            ForEach(MedicationCategory.allCategories) { category in
+                Button(action: {
+                    toggleCategory(category.id)
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: category.icon)
+                            .font(.system(size: 18))
+                            .frame(width: 24)
+                            .foregroundColor(
+                                selectedCategories.contains(category.id)
+                                    ? pillarColor
+                                    : CircadianColors.secondary
+                            )
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(category.name)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(CircadianColors.primary)
+
+                            if let subtitle = category.subtitle {
+                                Text(subtitle)
+                                    .font(.caption)
+                                    .foregroundColor(CircadianColors.muted)
+                            }
+                        }
+
+                        Spacer()
+
+                        Image(systemName: selectedCategories.contains(category.id) ? "checkmark.square.fill" : "square")
+                            .foregroundColor(
+                                selectedCategories.contains(category.id)
+                                    ? pillarColor
+                                    : CircadianColors.secondary
+                            )
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .background(
+                        selectedCategories.contains(category.id)
+                            ? pillarColor.opacity(0.1)
+                            : CircadianColors.secondaryBackground
+                    )
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(
+                                selectedCategories.contains(category.id)
+                                    ? pillarColor
+                                    : CircadianColors.border,
+                                lineWidth: selectedCategories.contains(category.id) ? 2 : 1
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
+            // "Other" text field (shown when "other" is selected)
+            if selectedCategories.contains("other") {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Please specify:")
+                        .font(.caption)
+                        .foregroundColor(CircadianColors.secondary)
+
+                    TextField("Medication name", text: $otherText)
+                        .foregroundColor(CircadianColors.primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            isEvening
+                                ? Color(red: 0.2, green: 0.12, blue: 0.08)
+                                : Color(.systemBackground)
+                        )
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(CircadianColors.border, lineWidth: 1)
+                        )
+                }
+                .padding(.top, 8)
+            }
+        }
+    }
+
+    private func toggleCategory(_ categoryId: String) {
+        if let index = selectedCategories.firstIndex(of: categoryId) {
+            selectedCategories.remove(at: index)
+            // Clear other text if "other" was deselected
+            if categoryId == "other" {
+                otherText = ""
+            }
+        } else {
+            selectedCategories.append(categoryId)
         }
     }
 }

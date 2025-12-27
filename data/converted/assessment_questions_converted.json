@@ -1222,13 +1222,14 @@
     "tier": "CORE",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Very good",
+      "maxLabel": "Very bad",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Very good", "Fairly good", "Fairly bad", "Very bad"]
     },
     "validation_rules": {
       "required": true,
@@ -1246,13 +1247,14 @@
     "tier": "CORE",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No problem",
+      "maxLabel": "Very big problem",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No problem at all", "Slight problem", "Somewhat of a problem", "Very big problem"]
     },
     "validation_rules": {
       "required": true,
@@ -1270,13 +1272,14 @@
     "tier": "CORE",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No problem",
+      "maxLabel": "Very big problem",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No problem at all", "Slight problem", "Somewhat of a problem", "Very big problem"]
     },
     "validation_rules": {
       "required": true,
@@ -1321,13 +1324,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "None",
+      "maxLabel": "Very Severe",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["None", "Mild", "Moderate", "Severe", "Very Severe"]
     },
     "validation_rules": {
       "required": false,
@@ -1346,13 +1350,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "None",
+      "maxLabel": "Very Severe",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["None", "Mild", "Moderate", "Severe", "Very Severe"]
     },
     "validation_rules": {
       "required": false,
@@ -1371,13 +1376,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "None",
+      "maxLabel": "Very Severe",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["None", "Mild", "Moderate", "Severe", "Very Severe"]
     },
     "validation_rules": {
       "required": false,
@@ -1396,13 +1402,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Very Satisfied",
+      "maxLabel": "Very Dissatisfied",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Very Satisfied", "Satisfied", "Neutral", "Dissatisfied", "Very Dissatisfied"]
     },
     "validation_rules": {
       "required": false,
@@ -1421,13 +1428,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Very noticeable",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "A little", "Somewhat", "Much", "Very noticeable"]
     },
     "validation_rules": {
       "required": false,
@@ -1446,13 +1454,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Very worried",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "A little", "Somewhat", "Much", "Very worried"]
     },
     "validation_rules": {
       "required": false,
@@ -1471,13 +1480,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Very much",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "A little", "Somewhat", "Much", "Very much"]
     },
     "validation_rules": {
       "required": false,
@@ -1496,10 +1506,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1521,10 +1531,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1546,10 +1556,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1571,10 +1581,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1596,10 +1606,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1621,10 +1631,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1646,10 +1656,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1671,10 +1681,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1696,10 +1706,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1721,10 +1731,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1746,10 +1756,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1771,10 +1781,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1796,10 +1806,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1821,10 +1831,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1846,10 +1856,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -1872,12 +1882,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -1897,12 +1908,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -1922,12 +1934,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -1947,12 +1960,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -1972,12 +1986,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -1997,12 +2012,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -2022,12 +2038,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -2047,12 +2064,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -2072,12 +2090,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -2097,12 +2116,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -2122,12 +2142,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -2147,12 +2168,13 @@
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
-      "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "max": 5,
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Frequently", "Always"]
     },
     "validation_rules": {
       "required": false,
@@ -2439,11 +2461,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Not at all",
+      "maxLabel": "Very dependent",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Fairly", "Very dependent"]
     },
     "validation_rules": {
       "required": false,
@@ -2464,11 +2487,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Not easy",
+      "maxLabel": "Very easy",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all easy", "Slightly easy", "Fairly easy", "Very easy"]
     },
     "validation_rules": {
       "required": false,
@@ -2489,11 +2513,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Not alert",
+      "maxLabel": "Very alert",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all alert", "Slightly alert", "Fairly alert", "Very alert"]
     },
     "validation_rules": {
       "required": false,
@@ -2514,11 +2539,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Very poor",
+      "maxLabel": "Very good",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Very poor", "Fairly poor", "Fairly good", "Very good"]
     },
     "validation_rules": {
       "required": false,
@@ -2539,11 +2565,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Very tired",
+      "maxLabel": "Very refreshed",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Very tired", "Fairly tired", "Fairly refreshed", "Very refreshed"]
     },
     "validation_rules": {
       "required": false,
@@ -2564,11 +2591,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Same time",
+      "maxLabel": "2+ hours later",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Same time", "Less than 1hr later", "1-2 hours later", "2+ hours later"]
     },
     "validation_rules": {
       "required": false,
@@ -2589,11 +2617,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Very badly",
+      "maxLabel": "In good form",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Very badly", "Not so well", "Reasonably well", "In good form"]
     },
     "validation_rules": {
       "required": false,
@@ -2655,11 +2684,12 @@
     "format_config": {
       "min": 1,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Not tired at all",
+      "maxLabel": "Very tired",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not tired at all", "A little tired", "Very tired"]
     },
     "validation_rules": {
       "required": false,
@@ -2749,11 +2779,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Very badly",
+      "maxLabel": "In good form",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Very badly", "Not so well", "Reasonably well", "In good form"]
     },
     "validation_rules": {
       "required": false,
@@ -2810,11 +2841,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Definitely morning",
+      "maxLabel": "Definitely evening",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Definitely morning", "More morning", "More evening", "Definitely evening"]
     },
     "validation_rules": {
       "required": false,
@@ -2895,11 +2927,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -2920,11 +2953,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -2945,11 +2979,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -2970,11 +3005,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -2995,11 +3031,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3020,11 +3057,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3045,11 +3083,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3070,11 +3109,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3095,11 +3135,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3120,11 +3161,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3145,11 +3187,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3170,11 +3213,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3195,11 +3239,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3220,11 +3265,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 3,
+      "minLabel": "Not at all",
+      "maxLabel": "Extremely",
+      "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Slightly", "Moderately", "A lot", "Extremely"]
     },
     "validation_rules": {
       "required": false,
@@ -3243,13 +3289,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3268,13 +3315,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3293,13 +3341,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3318,13 +3367,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3343,13 +3393,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3368,13 +3419,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3393,13 +3445,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3418,13 +3471,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3443,13 +3497,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3468,13 +3523,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3493,13 +3549,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3518,13 +3575,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3543,13 +3601,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3568,13 +3627,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3593,13 +3653,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3618,13 +3679,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Nearly every day",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Several days", "More than half the days", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -3643,13 +3705,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3668,13 +3731,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3693,13 +3757,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3718,13 +3783,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3743,13 +3809,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3768,13 +3835,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3793,13 +3861,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3818,13 +3887,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3843,13 +3913,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3868,13 +3939,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3893,13 +3965,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3918,13 +3991,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3943,13 +4017,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3968,13 +4043,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -3993,13 +4069,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -4018,13 +4095,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -4043,13 +4121,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -4068,13 +4147,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "Not at all",
+      "maxLabel": "Almost always",
+      "defaultValue": 0,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Not at all", "Sometimes", "Often", "Almost always"]
     },
     "validation_rules": {
       "required": false,
@@ -4095,11 +4175,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Always",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Often", "Always"]
     },
     "validation_rules": {
       "required": true,
@@ -4145,13 +4226,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No chance",
+      "maxLabel": "High chance",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No chance", "Slight chance", "Moderate chance", "High chance"]
     },
     "validation_rules": {
       "required": false,
@@ -4170,13 +4252,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No chance",
+      "maxLabel": "High chance",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No chance", "Slight chance", "Moderate chance", "High chance"]
     },
     "validation_rules": {
       "required": false,
@@ -4195,13 +4278,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No chance",
+      "maxLabel": "High chance",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No chance", "Slight chance", "Moderate chance", "High chance"]
     },
     "validation_rules": {
       "required": false,
@@ -4220,13 +4304,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No chance",
+      "maxLabel": "High chance",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No chance", "Slight chance", "Moderate chance", "High chance"]
     },
     "validation_rules": {
       "required": false,
@@ -4245,13 +4330,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No chance",
+      "maxLabel": "High chance",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No chance", "Slight chance", "Moderate chance", "High chance"]
     },
     "validation_rules": {
       "required": false,
@@ -4270,13 +4356,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No chance",
+      "maxLabel": "High chance",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No chance", "Slight chance", "Moderate chance", "High chance"]
     },
     "validation_rules": {
       "required": false,
@@ -4295,13 +4382,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No chance",
+      "maxLabel": "High chance",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No chance", "Slight chance", "Moderate chance", "High chance"]
     },
     "validation_rules": {
       "required": false,
@@ -4320,13 +4408,14 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 3,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
-      "defaultValue": 2,
+      "minLabel": "No chance",
+      "maxLabel": "High chance",
+      "defaultValue": 1,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No chance", "Slight chance", "Moderate chance", "High chance"]
     },
     "validation_rules": {
       "required": false,
@@ -4347,8 +4436,8 @@
     "format_config": {
       "min": 1,
       "max": 7,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 4,
       "showNumberLabel": true,
       "step": 1
@@ -4372,8 +4461,8 @@
     "format_config": {
       "min": 1,
       "max": 7,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 4,
       "showNumberLabel": true,
       "step": 1
@@ -4397,8 +4486,8 @@
     "format_config": {
       "min": 1,
       "max": 7,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 4,
       "showNumberLabel": true,
       "step": 1
@@ -4422,8 +4511,8 @@
     "format_config": {
       "min": 1,
       "max": 7,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 4,
       "showNumberLabel": true,
       "step": 1
@@ -4447,8 +4536,8 @@
     "format_config": {
       "min": 1,
       "max": 7,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 4,
       "showNumberLabel": true,
       "step": 1
@@ -4472,8 +4561,8 @@
     "format_config": {
       "min": 1,
       "max": 7,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 4,
       "showNumberLabel": true,
       "step": 1
@@ -4497,8 +4586,8 @@
     "format_config": {
       "min": 1,
       "max": 7,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Strongly Disagree",
+      "maxLabel": "Strongly Agree",
       "defaultValue": 4,
       "showNumberLabel": true,
       "step": 1
@@ -4522,11 +4611,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4547,11 +4637,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4572,11 +4663,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4597,11 +4689,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4622,11 +4715,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4647,11 +4741,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4672,11 +4767,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4697,11 +4793,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4722,11 +4819,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4747,11 +4845,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No difficulty",
+      "maxLabel": "Extreme difficulty",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["No difficulty", "Mild difficulty", "Moderate difficulty", "Extreme difficulty"]
     },
     "validation_rules": {
       "required": false,
@@ -4772,11 +4871,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Very often",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Often", "Very often"]
     },
     "validation_rules": {
       "required": false,
@@ -4797,11 +4897,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Very often",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Often", "Very often"]
     },
     "validation_rules": {
       "required": false,
@@ -4822,11 +4923,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Very often",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Often", "Very often"]
     },
     "validation_rules": {
       "required": false,
@@ -4847,11 +4949,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Very often",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Often", "Very often"]
     },
     "validation_rules": {
       "required": false,
@@ -4872,11 +4975,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Very often",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Often", "Very often"]
     },
     "validation_rules": {
       "required": false,
@@ -4897,11 +5001,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Very often",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Often", "Very often"]
     },
     "validation_rules": {
       "required": false,
@@ -4922,11 +5027,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Very often",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Often", "Very often"]
     },
     "validation_rules": {
       "required": false,
@@ -4947,11 +5053,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Very often",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "Rarely", "Sometimes", "Often", "Very often"]
     },
     "validation_rules": {
       "required": false,
@@ -5455,11 +5562,12 @@
     "format_config": {
       "min": 1,
       "max": 4,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Slightly loud",
+      "maxLabel": "Extremely loud",
       "defaultValue": 2,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Slightly loud", "As loud as talking", "Louder than talking", "Extremely loud"]
     },
     "validation_rules": {
       "required": false,
@@ -5480,11 +5588,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Nearly every day",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "1-2 times/month", "1-2 times/week", "3-4 times/week", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -5559,11 +5668,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Nearly every day",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "1-2 times/month", "1-2 times/week", "3-4 times/week", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -5584,11 +5694,12 @@
     "format_config": {
       "min": 1,
       "max": 5,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Never",
+      "maxLabel": "Nearly every day",
       "defaultValue": 3,
       "showNumberLabel": true,
-      "step": 1
+      "step": 1,
+      "scaleLabels": ["Never", "1-2 times/month", "1-2 times/week", "3-4 times/week", "Nearly every day"]
     },
     "validation_rules": {
       "required": false,
@@ -5688,10 +5799,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No pain",
+      "maxLabel": "Worst pain imaginable",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5713,10 +5824,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No pain",
+      "maxLabel": "Worst pain imaginable",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5738,10 +5849,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No pain",
+      "maxLabel": "Worst pain imaginable",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5763,10 +5874,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "No pain",
+      "maxLabel": "Worst pain imaginable",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5811,10 +5922,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Does not interfere",
+      "maxLabel": "Completely interferes",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5836,10 +5947,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Does not interfere",
+      "maxLabel": "Completely interferes",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5861,10 +5972,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Does not interfere",
+      "maxLabel": "Completely interferes",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5886,10 +5997,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Does not interfere",
+      "maxLabel": "Completely interferes",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5911,10 +6022,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Does not interfere",
+      "maxLabel": "Completely interferes",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5936,10 +6047,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Does not interfere",
+      "maxLabel": "Completely interferes",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1
@@ -5961,10 +6072,10 @@
     "tier": "EXPANSION",
     "answer_format": "slider_scale",
     "format_config": {
-      "min": 1,
+      "min": 0,
       "max": 10,
-      "minLabel": "Minimum",
-      "maxLabel": "Maximum",
+      "minLabel": "Does not interfere",
+      "maxLabel": "Completely interferes",
       "defaultValue": 5,
       "showNumberLabel": true,
       "step": 1

@@ -31,13 +31,20 @@ export function PatientBadgesCard({ userId }: PatientBadgesCardProps) {
   const { earned, inProgress } = badges;
   const displayBadges = showAll ? earned : earned.slice(0, 8);
 
+  // Type aliases for badges
+  type BadgeType = typeof earned[number];
+  type InProgressBadgeType = typeof inProgress[number];
+
   // Group badges by category
-  const badgesByCategory = earned.reduce((acc, badge) => {
-    const category = badge.badge_category;
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(badge);
-    return acc;
-  }, {} as Record<string, typeof earned>);
+  const badgesByCategory = earned.reduce(
+    (acc: Record<string, BadgeType[]>, badge: BadgeType) => {
+      const category = badge.badge_category;
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(badge);
+      return acc;
+    },
+    {} as Record<string, BadgeType[]>
+  );
 
   const categoryColors: Record<string, string> = {
     journey: "from-blue-500/20 to-cyan-500/20",
@@ -91,7 +98,7 @@ export function PatientBadgesCard({ userId }: PatientBadgesCardProps) {
       ) : showAll ? (
         // Expanded view - grouped by category
         <div className="space-y-3">
-          {Object.entries(badgesByCategory).map(([category, categoryBadges]) => (
+          {(Object.entries(badgesByCategory) as [string, BadgeType[]][]).map(([category, categoryBadges]) => (
             <div key={category}>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-gray-500 uppercase tracking-wide">
@@ -110,7 +117,7 @@ export function PatientBadgesCard({ userId }: PatientBadgesCardProps) {
       ) : (
         // Compact view - just icons
         <div className="flex flex-wrap gap-2">
-          {displayBadges.map((badge) => (
+          {displayBadges.map((badge: BadgeType) => (
             <BadgeItem key={badge.badge_id} badge={badge} compact />
           ))}
         </div>
@@ -124,7 +131,7 @@ export function PatientBadgesCard({ userId }: PatientBadgesCardProps) {
             <span>In Progress ({inProgress.length})</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {inProgress.slice(0, 4).map((badge) => (
+            {inProgress.slice(0, 4).map((badge: InProgressBadgeType) => (
               <div
                 key={badge.badge_id}
                 className="relative"

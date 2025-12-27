@@ -17,6 +17,7 @@ import type * as assessmentQueries from "../assessmentQueries.js";
 import type * as auth from "../auth.js";
 import type * as challenges from "../challenges.js";
 import type * as checkIn from "../checkIn.js";
+import type * as circadian from "../circadian.js";
 import type * as clinicalScenarios from "../clinicalScenarios.js";
 import type * as cohortCompute from "../cohortCompute.js";
 import type * as cohortStats from "../cohortStats.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   challenges: typeof challenges;
   checkIn: typeof checkIn;
+  circadian: typeof circadian;
   clinicalScenarios: typeof clinicalScenarios;
   cohortCompute: typeof cohortCompute;
   cohortStats: typeof cohortStats;

@@ -30,6 +30,10 @@ class QuestionnaireManager: ObservableObject {
     // Cached expansion schedule from Convex (for Days 6+)
     @Published var scheduledExpansionForToday: ExpansionDayInfo?
 
+    // Actual assessment question count for today (loaded from getQuestionsForUserDay)
+    // This is the source of truth for whether there's an assessment to show
+    @Published var assessmentQuestionCountForToday: Int = 0
+
     // HealthKit demographics cache - set by views with HealthKitManager access
     // Used to skip demographic questions if HealthKit has the data
     var healthKitDateOfBirth: Date?
@@ -92,6 +96,7 @@ class QuestionnaireManager: ObservableObject {
         responses = [:]
         error = nil
         scheduledExpansionForToday = nil
+        assessmentQuestionCountForToday = 0
         answeredSemanticConcepts.removeAll()  // Reset redundancy tracking
         initializeGatewayStates()
     }
@@ -122,23 +127,43 @@ class QuestionnaireManager: ObservableObject {
         }
     }
 
+    /// Load the actual assessment question count for a day from Convex
+    /// This is the source of truth for whether there's an assessment to show
+    func loadAssessmentQuestionCountForDay(_ dayNumber: Int) async {
+        do {
+            let questions = try await convexService.getQuestionsForUserDay(dayNumber: dayNumber, section: "assessment")
+            // Filter out the INFO_NO_QUESTIONS placeholder
+            let realQuestions = questions.assessment.filter { $0.id != "INFO_NO_QUESTIONS" }
+            await MainActor.run {
+                self.assessmentQuestionCountForToday = realQuestions.count
+                print("[QuestionnaireManager] Loaded assessment question count for day \(dayNumber): \(realQuestions.count) questions")
+            }
+        } catch {
+            print("[QuestionnaireManager] Failed to load assessment question count: \(error)")
+            await MainActor.run {
+                // Fall back to expansion schedule count if available
+                self.assessmentQuestionCountForToday = self.scheduledExpansionForToday?.totalQuestions ?? 0
+            }
+        }
+    }
+
     // MARK: - Day Configuration
 
     static let dayConfigurations: [DayConfiguration] = [
-        DayConfiguration(id: 1, dayNumber: 1, title: "Demographics & Sleep Quality", description: "Foundation: Basic demographics & sleep quality overview with gateway questions", estimatedMinutes: 12, moduleIds: ["core_social", "core_metabolic", "core_sleep_quality_part1"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 2, dayNumber: 2, title: "PSQI & Sleep Patterns", description: "PSQI completion + sleep patterns (weekday vs weekend, bedtimes, wake times)", estimatedMinutes: 11, moduleIds: ["core_sleep_quality_part2", "core_sleep_quantity", "core_sleep_regularity"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 3, dayNumber: 3, title: "Sleep Timing & Mental Health", description: "Light exposure, screens, mental health & cognitive function gateways", estimatedMinutes: 8, moduleIds: ["core_sleep_timing", "gateway_mental_health"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 4, dayNumber: 4, title: "Physical Health & Metabolic", description: "OSA screening, pain assessment, exercise habits, metabolic health basics", estimatedMinutes: 9, moduleIds: ["core_physical", "gateway_physical"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 5, dayNumber: 5, title: "Nutritional & Social", description: "Caffeine, alcohol, diet impacts, social sleep factors. CORE COMPLETE.", estimatedMinutes: 7, moduleIds: ["core_nutritional", "core_social_part2"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 6, dayNumber: 6, title: "ISI - Insomnia Severity", description: "Insomnia Severity Index assessment", estimatedMinutes: 8, moduleIds: ["expansion_isi"], isExpansionDay: true, requiredGateways: [.insomnia, .poorSleepQuality]),
-        DayConfiguration(id: 7, dayNumber: 7, title: "DBAS-16 Part 1", description: "Dysfunctional Beliefs About Sleep (first half)", estimatedMinutes: 8, moduleIds: ["expansion_dbas_part1"], isExpansionDay: true, requiredGateways: [.insomnia]),
-        DayConfiguration(id: 8, dayNumber: 8, title: "DBAS-16 Part 2 & Sleep Hygiene", description: "Complete beliefs + start sleep hygiene habits", estimatedMinutes: 14, moduleIds: ["expansion_dbas_part2", "expansion_sleep_hygiene_part1"], isExpansionDay: true, requiredGateways: [.insomnia]),
-        DayConfiguration(id: 9, dayNumber: 9, title: "Sleep Hygiene & PSAS Part 1", description: "Complete hygiene + start pre-sleep arousal", estimatedMinutes: 13, moduleIds: ["expansion_sleep_hygiene_part2", "expansion_psas_part1"], isExpansionDay: true, requiredGateways: [.insomnia]),
-        DayConfiguration(id: 10, dayNumber: 10, title: "PSAS Part 2 & ESS", description: "Complete pre-sleep arousal. ESS if daytime sleepiness triggered", estimatedMinutes: 16, moduleIds: ["expansion_psas_part2", "expansion_ess"], isExpansionDay: true, requiredGateways: [.insomnia, .excessiveSleepiness]),
-        DayConfiguration(id: 11, dayNumber: 11, title: "FSS & FOSQ-10 Part 1", description: "Fatigue scale + functional outcomes", estimatedMinutes: 14, moduleIds: ["expansion_fss", "expansion_fosq_part1"], isExpansionDay: true, requiredGateways: [.excessiveSleepiness]),
-        DayConfiguration(id: 12, dayNumber: 12, title: "FOSQ-10 Part 2 & PHQ-9 & GAD-7", description: "Complete functional outcomes. Start mental health assessments", estimatedMinutes: 14, moduleIds: ["expansion_fosq_part2", "expansion_phq9", "expansion_gad7_part1"], isExpansionDay: true, requiredGateways: [.depression, .anxiety]),
-        DayConfiguration(id: 13, dayNumber: 13, title: "GAD-7 Part 2 & DASS-21 & PROMIS", description: "Complete anxiety screen. Comprehensive mental health + cognitive function", estimatedMinutes: 16, moduleIds: ["expansion_gad7_part2", "expansion_dass21_part1", "expansion_promis_cognitive"], isExpansionDay: true, requiredGateways: [.anxiety, .cognitive]),
-        DayConfiguration(id: 14, dayNumber: 14, title: "Final Assessments", description: "Complete remaining assessments: DASS-21, OSA screens, pain, diet, chronotype. Journey complete!", estimatedMinutes: 35, moduleIds: ["expansion_dass21_part2", "expansion_stop_bang", "expansion_berlin", "expansion_bpi", "expansion_medas", "expansion_meq"], isExpansionDay: true, requiredGateways: [.osa, .pain, .dietImpact, .sleepTiming])
+        DayConfiguration(id: 1, dayNumber: 1, title: "Demographics & Sleep Quality", description: "About you and your sleep habits", estimatedMinutes: 12, moduleIds: ["core_social", "core_metabolic", "core_sleep_quality_part1"], isExpansionDay: false, requiredGateways: nil),
+        DayConfiguration(id: 2, dayNumber: 2, title: "PSQI & Sleep Patterns", description: "Sleep patterns and quality assessment", estimatedMinutes: 11, moduleIds: ["core_sleep_quality_part2", "core_sleep_quantity", "core_sleep_regularity"], isExpansionDay: false, requiredGateways: nil),
+        DayConfiguration(id: 3, dayNumber: 3, title: "Sleep Timing & Mental Health", description: "Light, screens, and wellbeing", estimatedMinutes: 8, moduleIds: ["core_sleep_timing", "gateway_mental_health"], isExpansionDay: false, requiredGateways: nil),
+        DayConfiguration(id: 4, dayNumber: 4, title: "Physical Health & Metabolic", description: "Physical health and activity", estimatedMinutes: 9, moduleIds: ["core_physical", "gateway_physical"], isExpansionDay: false, requiredGateways: nil),
+        DayConfiguration(id: 5, dayNumber: 5, title: "Nutritional & Social", description: "Diet, substances, and social factors", estimatedMinutes: 7, moduleIds: ["core_nutritional", "core_social_part2"], isExpansionDay: false, requiredGateways: nil),
+        DayConfiguration(id: 6, dayNumber: 6, title: "ISI - Insomnia Severity", description: "Insomnia severity assessment", estimatedMinutes: 8, moduleIds: ["expansion_isi"], isExpansionDay: true, requiredGateways: [.insomnia, .poorSleepQuality]),
+        DayConfiguration(id: 7, dayNumber: 7, title: "DBAS-16 Part 1", description: "Sleep beliefs assessment (part 1)", estimatedMinutes: 8, moduleIds: ["expansion_dbas_part1"], isExpansionDay: true, requiredGateways: [.insomnia]),
+        DayConfiguration(id: 8, dayNumber: 8, title: "DBAS-16 Part 2 & Sleep Hygiene", description: "Sleep beliefs and habits", estimatedMinutes: 14, moduleIds: ["expansion_dbas_part2", "expansion_sleep_hygiene_part1"], isExpansionDay: true, requiredGateways: [.insomnia]),
+        DayConfiguration(id: 9, dayNumber: 9, title: "Sleep Hygiene & PSAS Part 1", description: "Habits and pre-sleep arousal", estimatedMinutes: 13, moduleIds: ["expansion_sleep_hygiene_part2", "expansion_psas_part1"], isExpansionDay: true, requiredGateways: [.insomnia]),
+        DayConfiguration(id: 10, dayNumber: 10, title: "PSAS Part 2 & ESS", description: "Arousal and daytime sleepiness", estimatedMinutes: 16, moduleIds: ["expansion_psas_part2", "expansion_ess"], isExpansionDay: true, requiredGateways: [.insomnia, .excessiveSleepiness]),
+        DayConfiguration(id: 11, dayNumber: 11, title: "FSS & FOSQ-10 Part 1", description: "Fatigue and daily functioning", estimatedMinutes: 14, moduleIds: ["expansion_fss", "expansion_fosq_part1"], isExpansionDay: true, requiredGateways: [.excessiveSleepiness]),
+        DayConfiguration(id: 12, dayNumber: 12, title: "FOSQ-10 Part 2 & PHQ-9 & GAD-7", description: "Mental health screening", estimatedMinutes: 14, moduleIds: ["expansion_fosq_part2", "expansion_phq9", "expansion_gad7_part1"], isExpansionDay: true, requiredGateways: [.depression, .anxiety]),
+        DayConfiguration(id: 13, dayNumber: 13, title: "GAD-7 Part 2 & DASS-21 & PROMIS", description: "Anxiety and cognitive function", estimatedMinutes: 16, moduleIds: ["expansion_gad7_part2", "expansion_dass21_part1", "expansion_promis_cognitive"], isExpansionDay: true, requiredGateways: [.anxiety, .cognitive]),
+        DayConfiguration(id: 14, dayNumber: 14, title: "Final Assessments", description: "Final assessments to complete your profile", estimatedMinutes: 35, moduleIds: ["expansion_dass21_part2", "expansion_stop_bang", "expansion_berlin", "expansion_bpi", "expansion_medas", "expansion_meq"], isExpansionDay: true, requiredGateways: [.osa, .pain, .dietImpact, .sleepTiming])
     ]
 
     // MARK: - Consensus Sleep Diary Questions (Asked Every Day)
@@ -277,14 +302,11 @@ class QuestionnaireManager: ObservableObject {
             group: "sleep_context"
         ),
         Question(
-            id: "CSD_NAP_DURATION",
-            text: "Total nap time yesterday?",
+            id: "CSD_NAP_DETAILS",
+            text: "For each nap, record the start time and duration.",
             pillar: .sleepLog,
-            questionType: .minutesScroll,
-            minValue: 5,
-            maxValue: 240,
-            unit: "minutes",
-            defaultValue: 30,
+            questionType: .napDetails,
+            helpText: "Tap each nap to set the time and how long you slept",
             conditionalLogic: ConditionalLogic(questionId: "CSD_NAPS", equals: "Yes"),
             group: "sleep_context"
         ),
@@ -348,12 +370,26 @@ class QuestionnaireManager: ObservableObject {
             group: "sleep_context"
         ),
         Question(
-            id: "CSD_MEDS_NAME",
+            id: "CSD_MEDS_LIST",
             text: "What did you take?",
             pillar: .sleepLog,
-            questionType: .text,
-            helpText: "Medication name and dose if known",
+            questionType: .medicationSelect,
+            helpText: "Select all that apply",
             conditionalLogic: ConditionalLogic(questionId: "CSD_MEDS", equals: "Yes"),
+            group: "sleep_context"
+        ),
+        Question(
+            id: "CSD_MEDS_OTHER",
+            text: "Please specify the other medication(s):",
+            pillar: .sleepLog,
+            questionType: .text,
+            helpText: "Enter the name and dose if known",
+            conditionalLogic: ConditionalLogic(
+                all: [
+                    ConditionalLogic(questionId: "CSD_MEDS", equals: "Yes"),
+                    ConditionalLogic(questionId: "CSD_MEDS_LIST", contains: "other")
+                ]
+            ),
             group: "sleep_context"
         ),
 
@@ -516,8 +552,27 @@ class QuestionnaireManager: ObservableObject {
             Question(id: "PSQI_5h", text: "How often have you had trouble sleeping because you have bad dreams?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
             Question(id: "PSQI_5i", text: "How often have you had trouble sleeping because you have pain?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
             Question(id: "PSQI_5j", text: "How often have you had trouble sleeping because of other reason(s)?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]),
-            Question(id: "12A", text: "How many times do you typically wake up during the night?", pillar: .sleepQuality, questionType: .numberScroll, minValue: 0, maxValue: 15, defaultValue: 1),
-            Question(id: "12B", text: "When you wake up at night, what is the MAIN reason?", pillar: .sleepQuality, questionType: .singleSelect, options: ["Bathroom needs", "Pain/discomfort", "Noise", "Light", "Hot/cold", "Dreams/nightmares", "Worry/stress", "Other"]),
+            // NOTE: 12A, 12B, 12C are related to night awakenings
+            // 12A and 12C are derived from sleep log (CSD_AWAKENINGS and CSD_WASO)
+            // 12B is only shown if the user reported awakenings in the sleep log
+            Question(
+                id: "12A",
+                text: "How many times do you typically wake up during the night?",
+                pillar: .sleepQuality,
+                questionType: .numberScroll,
+                minValue: 0,
+                maxValue: 15,
+                defaultValue: 1,
+                helpText: "Auto-derived from your Sleep Log"
+            ),
+            Question(
+                id: "12B",
+                text: "When you wake up at night, what is the MAIN reason?",
+                pillar: .sleepQuality,
+                questionType: .singleSelect,
+                options: ["Bathroom needs", "Pain/discomfort", "Noise", "Light", "Hot/cold", "Dreams/nightmares", "Worry/stress", "Other"],
+                conditionalLogic: ConditionalLogic(questionId: "CSD_AWAKENINGS", greaterThan: 0)
+            ),
             Question(
                 id: "12C",
                 text: "When you wake up during the night, how long does it typically take you to fall back asleep?",
@@ -527,7 +582,8 @@ class QuestionnaireManager: ObservableObject {
                 maxValue: 120,
                 unit: "minutes",
                 defaultValue: 15,
-                helpText: "Your best estimate in minutes"
+                helpText: "Auto-derived from your Sleep Log",
+                conditionalLogic: ConditionalLogic(questionId: "CSD_AWAKENINGS", greaterThan: 0)
             ),
 
             // Sleep Regularity
@@ -945,7 +1001,9 @@ class QuestionnaireManager: ObservableObject {
     private static let derivableFromSleepLog: Set<String> = [
         "PSQI_2",  // Sleep latency (from CSD_LATENCY)
         "PSQI_4",  // Hours of actual sleep (from CSD times)
-        "6"        // "How long does it take you to fall asleep?" (from CSD_LATENCY)
+        "6",       // "How long does it take you to fall asleep?" (from CSD_LATENCY)
+        "12A",     // "How many times do you typically wake up during the night?" (from CSD_AWAKENINGS)
+        "12C"      // "How long does it typically take you to fall back asleep?" (from CSD_WASO / CSD_AWAKENINGS)
     ]
 
     /// Check if we have sleep log data to derive PSQI answers
@@ -956,8 +1014,9 @@ class QuestionnaireManager: ObservableObject {
         let hasTrySleep = responses["CSD_TRY_SLEEP"] != nil
         let hasFinalWake = responses["CSD_FINAL_WAKE"] != nil
         let hasWASO = responses["CSD_WASO"] != nil
+        let hasAwakenings = responses["CSD_AWAKENINGS"] != nil
 
-        return hasLatency && hasTrySleep && hasFinalWake && hasWASO
+        return hasLatency && hasTrySleep && hasFinalWake && hasWASO && hasAwakenings
     }
 
     /// Derive PSQI_2 (sleep latency) from sleep log CSD_LATENCY
@@ -1005,6 +1064,29 @@ class QuestionnaireManager: ObservableObject {
         return (actualSleepHours * 2).rounded() / 2
     }
 
+    /// Derive 12A (number of awakenings) from sleep log CSD_AWAKENINGS
+    func derive12AFromSleepLog() -> Double? {
+        guard let awakeningsResponse = responses["CSD_AWAKENINGS"],
+              let awakenings = awakeningsResponse.numberValue else {
+            return nil
+        }
+        return awakenings
+    }
+
+    /// Derive 12C (time to fall back asleep) from sleep log CSD_WASO / CSD_AWAKENINGS
+    /// Returns average time per awakening in minutes
+    func derive12CFromSleepLog() -> Double? {
+        guard let wasoResponse = responses["CSD_WASO"],
+              let awakeningsResponse = responses["CSD_AWAKENINGS"],
+              let wasoMinutes = wasoResponse.numberValue,
+              let awakenings = awakeningsResponse.numberValue,
+              awakenings > 0 else {
+            return nil
+        }
+        // Average time to fall back asleep = total wake time / number of awakenings
+        return wasoMinutes / awakenings
+    }
+
     /// Generate derived responses from sleep log data
     /// Call this after sleep log is completed to auto-fill derivable questions
     func generateDerivedPSQIResponses(forDay dayNumber: Int) {
@@ -1042,6 +1124,30 @@ class QuestionnaireManager: ObservableObject {
                 isDerived: true
             )
             responses["PSQI_4"] = response
+            saveResponse(response)
+        }
+
+        // Derive 12A (number of awakenings) from sleep log
+        if let awakenings = derive12AFromSleepLog() {
+            let response = QuestionResponse(
+                questionId: "12A",
+                dayNumber: dayNumber,
+                numberValue: awakenings,
+                isDerived: true
+            )
+            responses["12A"] = response
+            saveResponse(response)
+        }
+
+        // Derive 12C (time to fall back asleep) from sleep log
+        if let avgFallBackAsleepMinutes = derive12CFromSleepLog() {
+            let response = QuestionResponse(
+                questionId: "12C",
+                dayNumber: dayNumber,
+                numberValue: avgFallBackAsleepMinutes,
+                isDerived: true
+            )
+            responses["12C"] = response
             saveResponse(response)
         }
     }
@@ -2055,12 +2161,10 @@ class QuestionnaireManager: ObservableObject {
 
     func prefillFromHealthKit(_ sleepSummary: HealthKitSleepSummary) {
         // Pre-fill sleep log questions with HealthKit data
-        if let inBedTime = sleepSummary.formattedInBedTime {
-            // Don't auto-fill - just show as suggestion
-            // User should enter their subjective perception
-        }
-
-        // Could show a comparison view after user enters their data
+        // Note: We intentionally don't auto-fill sleep times because users
+        // should enter their subjective perception, not objective data.
+        // HealthKit data could be shown as a comparison after user enters their data.
+        _ = sleepSummary // Placeholder for future comparison feature
     }
 
     /// Pre-fills demographic questions (D2, D4, D5, D6) with data from Apple Health

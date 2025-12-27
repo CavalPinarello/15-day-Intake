@@ -223,8 +223,9 @@ export function ScoreDetailModal({
 
   // Get historical scores for trend analysis
   const allScores = useQuery(api.physician.getQuestionnaireScores, { userId });
+  type ScoreType = NonNullable<typeof allScores>[number];
   const historicalScores = allScores?.filter(
-    (s) => s.questionnaire_name === score.questionnaire_name
+    (s: ScoreType) => s.questionnaire_name === score.questionnaire_name
   ) || [];
 
   // Fetch question responses if not provided
@@ -301,7 +302,7 @@ export function ScoreDetailModal({
         score: score.score,
         maxScore,
         severity,
-        questionResponses: displayResponses.map((q) => ({
+        questionResponses: displayResponses.map((q: QuestionResponse) => ({
           questionId: q.questionId,
           questionText: q.questionText,
           responseValue: q.responseValue,
@@ -433,7 +434,7 @@ export function ScoreDetailModal({
                 <h3 className="text-sm font-medium text-gray-400">Score History</h3>
               </div>
               <div className="space-y-2">
-                {historicalScores.slice(0, 5).map((s) => (
+                {historicalScores.slice(0, 5).map((s: ScoreType) => (
                   <div key={s._id} className="flex items-center justify-between text-sm">
                     <span className="text-gray-400">
                       {new Date(s.calculated_at).toLocaleDateString()}
@@ -461,16 +462,16 @@ export function ScoreDetailModal({
                 </h3>
               </div>
               <div className="flex flex-wrap gap-2">
-                {displayResponses.some(q => q.responseSource === "profile") && (
+                {displayResponses.some((q: QuestionResponse) => q.responseSource === "profile") && (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-full border border-blue-500/20">
                     <User className="w-3 h-3" />
-                    {displayResponses.filter(q => q.responseSource === "profile").length} from onboarding
+                    {displayResponses.filter((q: QuestionResponse) => q.responseSource === "profile").length} from onboarding
                   </span>
                 )}
-                {displayResponses.some(q => q.isDerived || q.responseSource === "derived") && (
+                {displayResponses.some((q: QuestionResponse) => q.isDerived || q.responseSource === "derived") && (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 text-amber-400 text-xs rounded-full border border-amber-500/20">
                     <Link2 className="w-3 h-3" />
-                    {displayResponses.filter(q => q.isDerived || q.responseSource === "derived").length} derived
+                    {displayResponses.filter((q: QuestionResponse) => q.isDerived || q.responseSource === "derived").length} derived
                   </span>
                 )}
               </div>
@@ -482,7 +483,7 @@ export function ScoreDetailModal({
               </div>
             ) : displayResponses.length > 0 ? (
               <div className="space-y-3 max-h-60 overflow-y-auto">
-                {displayResponses.map((q, i) => (
+                {displayResponses.map((q: QuestionResponse, i: number) => (
                   <div key={i} className={`flex items-start justify-between gap-4 p-3 rounded-lg ${
                     q.isDerived ? "bg-amber-900/20 border border-amber-500/20" : "bg-gray-900/50"
                   }`}>

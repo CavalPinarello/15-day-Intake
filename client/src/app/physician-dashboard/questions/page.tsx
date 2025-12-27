@@ -428,7 +428,7 @@ export default function QuestionManagerPage() {
           {/* Modules View */}
           {viewMode === "modules" && (
             <div className="divide-y divide-gray-100">
-              {allModules?.map((module) => {
+              {allModules?.map((module: NonNullable<typeof allModules>[number]) => {
                 const isExpanded = expandedModules.has(module.module_id);
                 const pillarStyle = pillarColors[module.pillar] || pillarColors.Demographics;
 
@@ -498,7 +498,7 @@ export default function QuestionManagerPage() {
                 </p>
               </div>
               <div className="divide-y divide-gray-100 max-h-[calc(100vh-400px)] overflow-y-auto">
-                {filteredQuestions?.map((question) => {
+                {filteredQuestions?.map((question: any) => {
                   const pillarStyle =
                     pillarColors[question.pillar] || pillarColors.Demographics;
                   const isEditing = editingQuestion === question.question_id;

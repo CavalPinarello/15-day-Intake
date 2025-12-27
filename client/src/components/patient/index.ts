@@ -29,3 +29,5 @@ export {
   timeWindows,
   type TimeWindowId,
 } from "./InterventionTimeWindows";
+export { WellnessMetricsChart } from "./WellnessMetricsChart";
+export { CircadianMetricsCard } from "./CircadianMetricsCard";

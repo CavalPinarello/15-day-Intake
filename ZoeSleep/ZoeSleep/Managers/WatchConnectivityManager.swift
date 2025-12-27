@@ -278,7 +278,7 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             return "radio"
         case .singleSelect:
             return "radio"
-        case .multiSelect:
+        case .multiSelect, .medicationSelect:
             return "checkbox"
         case .text, .email:
             return "text"
@@ -286,7 +286,7 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             return "time"
         case .date:
             return "date"
-        case .info, .repeatingGroup:
+        case .info, .repeatingGroup, .napDetails:
             return "text"
         }
     }

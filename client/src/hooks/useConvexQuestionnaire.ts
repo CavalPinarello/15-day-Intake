@@ -41,6 +41,13 @@ interface QuestionsForDayResponse {
   };
 }
 
+// Type for saved response value
+interface SavedResponseValue {
+  stringValue?: string;
+  numberValue?: number;
+  arrayValue?: string[];
+}
+
 /**
  * Main hook for questionnaire functionality
  * Encapsulates all Convex interactions for the questionnaire
@@ -104,7 +111,7 @@ export function useConvexQuestionnaire({
     if (savedResponses) {
       setLocalResponses((prev) => {
         const merged = new Map(prev);
-        Object.entries(savedResponses).forEach(([qId, val]) => {
+        (Object.entries(savedResponses) as [string, SavedResponseValue][]).forEach(([qId, val]) => {
           if (!merged.has(qId)) {
             const responseValue = val.stringValue ?? val.numberValue ?? val.arrayValue ?? null;
             if (responseValue !== null) {

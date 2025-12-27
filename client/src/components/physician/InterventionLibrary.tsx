@@ -99,15 +99,17 @@ export function InterventionLibrary({
   const bundles = useQuery(api.interventionLibrary.getBundles);
 
   // Group interventions by category
+  type InterventionType = NonNullable<typeof interventions>[number];
+  type CategoryType = NonNullable<typeof categories>[number];
   const interventionsByCategory = useMemo(() => {
     if (!interventions) return {};
     return interventions.reduce(
-      (acc, intv) => {
+      (acc: Record<string, InterventionType[]>, intv: InterventionType) => {
         if (!acc[intv.category]) acc[intv.category] = [];
         acc[intv.category].push(intv);
         return acc;
       },
-      {} as Record<string, typeof interventions>
+      {} as Record<string, InterventionType[]>
     );
   }, [interventions]);
 
@@ -115,10 +117,11 @@ export function InterventionLibrary({
   const isSelected = (id: Id<"interventions">) => selectedInterventions.includes(id);
 
   // Check if intervention is suggested
+  type SuggestionItemType = NonNullable<typeof suggestions>["suggestedInterventions"][number];
   const getSuggestionInfo = (interventionId: string) => {
     if (!suggestions) return null;
     const suggested = suggestions.suggestedInterventions.find(
-      (s) => s.intervention_id === interventionId
+      (s: SuggestionItemType) => s.intervention_id === interventionId
     );
     return suggested;
   };
@@ -188,7 +191,7 @@ export function InterventionLibrary({
           >
             All
           </button>
-          {categories.map((cat) => (
+          {categories.map((cat: NonNullable<typeof categories>[number]) => (
             <button
               key={cat.category_id}
               onClick={() =>
@@ -232,7 +235,7 @@ export function InterventionLibrary({
                 {suggestions.patientProfile.phenotype.replace(/_/g, " ")}
               </span>
             )}
-            {suggestions.patientProfile.triggeredGateways.map((gateway) => (
+            {suggestions.patientProfile.triggeredGateways.map((gateway: string) => (
               <span
                 key={gateway}
                 className="text-xs px-2 py-1 bg-white rounded-full text-amber-700 border border-amber-200"
@@ -245,9 +248,9 @@ export function InterventionLibrary({
 
           {/* Top Suggestions */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {suggestions.suggestedInterventions.slice(0, 6).map((suggestion) => {
+            {suggestions.suggestedInterventions.slice(0, 6).map((suggestion: SuggestionItemType) => {
               const fullIntervention = interventions.find(
-                (i) => i.intervention_id === suggestion.intervention_id
+                (i: InterventionType) => i.intervention_id === suggestion.intervention_id
               );
               if (!fullIntervention) return null;
 
@@ -303,7 +306,7 @@ export function InterventionLibrary({
       <div className={`space-y-4 ${compact ? "px-4 pb-4 max-h-96 overflow-y-auto" : ""}`}>
         {selectedCategory
           ? // Single category view
-            interventions.map((intervention) => (
+            interventions.map((intervention: InterventionType) => (
               <InterventionCard
                 key={intervention._id}
                 intervention={intervention}
@@ -316,11 +319,11 @@ export function InterventionLibrary({
               />
             ))
           : // Grouped by category view
-            Object.entries(interventionsByCategory).map(([category, categoryInterventions]) => (
+            (Object.entries(interventionsByCategory) as [string, InterventionType[]][]).map(([category, categoryInterventions]) => (
               <CategorySection
                 key={category}
                 category={category}
-                categoryName={categories.find((c) => c.category_id === category)?.name || category}
+                categoryName={categories.find((c: CategoryType) => c.category_id === category)?.name || category}
                 interventions={categoryInterventions}
                 selectedInterventions={selectedInterventions}
                 expandedIntervention={expandedIntervention}

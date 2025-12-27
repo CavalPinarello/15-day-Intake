@@ -927,7 +927,7 @@ export const computeSleepMetricsFromResponses = mutation({
   handler: async (ctx, args) => {
     const { userId, dayNumber, date } = args;
 
-    // Get all CSD_ responses for this user and day
+    // Get all sleep log responses for this user and day (CSD_ or SD_ prefix)
     const responses = await ctx.db
       .query("user_assessment_responses")
       .withIndex("by_user_day", (q) =>
@@ -935,22 +935,31 @@ export const computeSleepMetricsFromResponses = mutation({
       )
       .collect();
 
-    // Filter to only CSD_ questions
-    const csdResponses = responses.filter(r => r.question_id.startsWith("CSD_"));
+    // Filter to sleep diary questions (both CSD_ and SD_ prefixes)
+    const sleepResponses = responses.filter(r =>
+      r.question_id.startsWith("CSD_") || r.question_id.startsWith("SD_")
+    );
 
-    if (csdResponses.length === 0) {
-      console.log(`[computeSleepMetrics] No CSD_ responses found for user ${userId} day ${dayNumber}`);
+    if (sleepResponses.length === 0) {
+      console.log(`[computeSleepMetrics] No sleep log responses found for user ${userId} day ${dayNumber}`);
       return { success: true }; // No data to compute, but not an error
     }
 
-    // Build response map for easy lookup
-    const responseMap = new Map<string, { value?: string; number?: number }>();
-    for (const r of csdResponses) {
+    // Build response map for easy lookup (supports both CSD_ and SD_ prefixes)
+    const responseMap = new Map<string, { value?: string; number?: number; object?: string; array?: string }>();
+    for (const r of sleepResponses) {
       responseMap.set(r.question_id, {
         value: r.response_value ?? undefined,
         number: r.response_number ?? undefined,
+        object: r.response_object ?? undefined,
+        array: r.response_array ?? undefined,
       });
     }
+
+    // Helper to get response by either CSD_ or SD_ prefix
+    const getResponse = (csdKey: string, sdKey: string) => {
+      return responseMap.get(csdKey) ?? responseMap.get(sdKey);
+    };
 
     // Parse time string to minutes since midnight
     const parseTimeToMinutes = (timeStr: string | undefined): number | null => {
@@ -962,15 +971,44 @@ export const computeSleepMetricsFromResponses = mutation({
       return hours * 60 + mins;
     };
 
-    // Extract values from responses
-    const intoBedTime = parseTimeToMinutes(responseMap.get("CSD_INTO_BED")?.value);
-    const trySleepTime = parseTimeToMinutes(responseMap.get("CSD_TRY_SLEEP")?.value);
-    const finalWakeTime = parseTimeToMinutes(responseMap.get("CSD_FINAL_WAKE")?.value);
-    const outOfBedTime = parseTimeToMinutes(responseMap.get("CSD_OUT_BED")?.value);
-    const latencyMins = responseMap.get("CSD_LATENCY")?.number ?? null;
-    const awakenings = responseMap.get("CSD_AWAKENINGS")?.number ?? null;
-    const wasoMins = responseMap.get("CSD_WASO")?.number ?? null;
-    const quality = responseMap.get("CSD_QUALITY")?.number ?? null;
+    // Extract values from responses (supporting both CSD_ and SD_ prefixes)
+    const intoBedTime = parseTimeToMinutes(getResponse("CSD_INTO_BED", "SD_GOT_INTO_BED")?.value);
+    const trySleepTime = parseTimeToMinutes(getResponse("CSD_TRY_SLEEP", "SD_LIGHTS_OUT")?.value);
+    const finalWakeTime = parseTimeToMinutes(getResponse("CSD_FINAL_WAKE", "SD_FINAL_WAKE")?.value);
+    const outOfBedTime = parseTimeToMinutes(getResponse("CSD_OUT_BED", "SD_OUT_OF_BED")?.value);
+    const latencyMins = getResponse("CSD_LATENCY", "SD_SLEEP_LATENCY")?.number ?? null;
+    const awakenings = getResponse("CSD_AWAKENINGS", "SD_AWAKENINGS_COUNT")?.number ?? null;
+    const wasoMins = getResponse("CSD_WASO", "SD_AWAKENINGS_DURATION")?.number ?? null;
+    const quality = getResponse("CSD_QUALITY", "SD_SLEEP_QUALITY")?.number ?? null;
+
+    // Extract day context fields (new fields for clinical analysis)
+    const dayType = getResponse("CSD_DAY_TYPE", "SD_DAY_TYPE")?.value ?? undefined;
+
+    // Nap tracking
+    const napsTaken = getResponse("CSD_NAPS", "SD_NAPS_TAKEN")?.value;
+    const napsTakenBool = napsTaken === "Yes" || napsTaken === "true";
+    const napCount = napsTakenBool ? (getResponse("CSD_NAP_COUNT", "SD_NAPS_COUNT")?.number ?? undefined) : undefined;
+    const napDetailsRaw = napsTakenBool ? (getResponse("CSD_NAP_DETAILS", "SD_NAP_DETAILS")?.object ?? undefined) : undefined;
+
+    // Calculate total nap duration from details if available
+    let napTotalMins: number | undefined;
+    if (napDetailsRaw) {
+      try {
+        const napDetails = JSON.parse(napDetailsRaw);
+        if (Array.isArray(napDetails)) {
+          napTotalMins = napDetails.reduce((sum: number, nap: { nap_duration_minutes?: number }) =>
+            sum + (nap.nap_duration_minutes ?? 0), 0);
+        }
+      } catch (e) {
+        console.log(`[computeSleepMetrics] Failed to parse nap details: ${e}`);
+      }
+    }
+
+    // Medication tracking
+    const medsTaken = getResponse("CSD_MEDS", "SD_MEDICATION_TAKEN")?.value;
+    const medsTakenBool = medsTaken === "Yes" || medsTaken === "true";
+    const medsTime = medsTakenBool ? (getResponse("CSD_MEDS_TIME", "SD_MEDICATION_TIME")?.value ?? undefined) : undefined;
+    const medsCategoriesRaw = getResponse("CSD_MEDS_CATEGORIES", "SD_MEDICATION_CATEGORIES")?.array ?? undefined;
 
     // Calculate derived metrics
     let totalSleepMins: number | undefined;
@@ -1034,6 +1072,9 @@ export const computeSleepMetricsFromResponses = mutation({
 
     const now = Date.now();
     const sleepData = {
+      // Journey context
+      day_number: dayNumber,
+      // Time fields
       in_bed_time: inBedTimestamp,
       asleep_time: asleepTimestamp,
       wake_time: wakeTimestamp,
@@ -1045,6 +1086,20 @@ export const computeSleepMetricsFromResponses = mutation({
       awake_mins: wasoMins ?? undefined,
       interruptions_count: awakenings ?? undefined,
       sleep_latency_mins: latencyMins ?? undefined,
+      // Day context (for clinical analysis of workday vs weekend patterns)
+      day_type: dayType,
+      // Nap tracking (daytime sleep patterns)
+      naps_taken: napsTakenBool || undefined,
+      nap_count: napCount,
+      nap_total_mins: napTotalMins,
+      nap_details_json: napDetailsRaw,
+      // Medication tracking (critical for clinical correlation)
+      medications_taken: medsTakenBool || undefined,
+      medication_time: medsTime,
+      medication_categories_json: medsCategoriesRaw,
+      // Subjective quality (for perception vs reality analysis)
+      subjective_quality: quality ?? undefined,
+      // Source tracking
       primary_source: "Questionnaire",
       source_bundle_id: "com.zoesleep.app",
       synced_at: now,
@@ -1052,14 +1107,14 @@ export const computeSleepMetricsFromResponses = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, sleepData);
-      console.log(`[computeSleepMetrics] Updated sleep data for ${date}: ${totalSleepMins} mins, ${sleepEfficiency}% efficiency`);
+      console.log(`[computeSleepMetrics] Updated sleep data for ${date}: ${totalSleepMins} mins, ${sleepEfficiency}% eff, dayType=${dayType}, naps=${napsTakenBool}, meds=${medsTakenBool}`);
     } else {
       await ctx.db.insert("user_sleep_data", {
         user_id: userId,
         date,
         ...sleepData,
       });
-      console.log(`[computeSleepMetrics] Created sleep data for ${date}: ${totalSleepMins} mins, ${sleepEfficiency}% efficiency`);
+      console.log(`[computeSleepMetrics] Created sleep data for ${date}: ${totalSleepMins} mins, ${sleepEfficiency}% eff, dayType=${dayType}, naps=${napsTakenBool}, meds=${medsTakenBool}`);
     }
 
     return { success: true };

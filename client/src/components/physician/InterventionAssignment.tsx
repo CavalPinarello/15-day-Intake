@@ -266,9 +266,10 @@ export function InterventionAssignment({
                     <button
                       onClick={() => {
                         // Add all suggested interventions
+                        type SuggestionType = NonNullable<typeof suggestions>["suggestedInterventions"][number];
                         suggestions.suggestedInterventions
                           .slice(0, 8)
-                          .forEach((s) => {
+                          .forEach((s: SuggestionType) => {
                             // We'd need to look up the full intervention here
                           });
                       }}
@@ -362,7 +363,7 @@ export function InterventionAssignment({
                   Current Interventions
                 </h3>
                 <div className="space-y-2">
-                  {existingInterventions.map((intervention) => (
+                  {existingInterventions.map((intervention: NonNullable<typeof existingInterventions>[number]) => (
                     <div
                       key={intervention._id}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"

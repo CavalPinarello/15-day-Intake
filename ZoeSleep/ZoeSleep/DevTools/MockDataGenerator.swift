@@ -125,6 +125,14 @@ class MockDataGenerator {
 
         case .repeatingGroup:
             return generateRepeatingGroupValue(for: question)
+
+        case .napDetails:
+            // Generate mock nap data (0-2 naps with times and durations)
+            return (nil, nil, nil, "[]")
+
+        case .medicationSelect:
+            // Generate mock medication selection (usually none or minimal)
+            return (nil, nil, ["None"], nil)
         }
     }
 
@@ -580,10 +588,11 @@ class MockDataGenerator {
         case .scale: return "slider_scale"
         case .yesNo, .yesNoDontKnow: return "single_select_chips"
         case .singleSelect: return "single_select_chips"
-        case .multiSelect: return "multi_select_chips"
+        case .multiSelect, .medicationSelect: return "multi_select_chips"
         case .text, .email: return "text_input"
         case .info: return "info"
         case .repeatingGroup: return "repeating_group"
+        case .napDetails: return "nap_details"
         }
     }
 }

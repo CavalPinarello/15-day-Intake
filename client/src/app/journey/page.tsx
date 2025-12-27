@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { QuestionRenderer } from "@/components/questions";
@@ -77,7 +77,7 @@ function normalizeSection(section: string | null): QuestionnaireSection {
   return "sleepLog";
 }
 
-export default function JourneyPage() {
+function JourneyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSection = normalizeSection(searchParams.get("section"));
@@ -491,5 +491,17 @@ export default function JourneyPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function JourneyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="animate-pulse text-gray-400">Loading...</div>
+      </div>
+    }>
+      <JourneyPageContent />
+    </Suspense>
   );
 }

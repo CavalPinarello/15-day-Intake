@@ -328,7 +328,7 @@ struct WatchSettingsView: View {
         Task {
             do {
                 let userInfo = try await convexService.signIn(username: "user3", password: "1")
-                print("[Watch Settings] Auto-logged in as \(userInfo.username), Day \(userInfo.currentDay)")
+                print("[Watch Settings] Auto-logged in as \(userInfo.username), Day \(userInfo.safeCurrentDay)")
                 await MainActor.run {
                     loginError = nil
                 }

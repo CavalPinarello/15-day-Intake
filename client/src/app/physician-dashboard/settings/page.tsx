@@ -1,5 +1,11 @@
 "use client";
 
+interface ModelOption {
+  id: string;
+  name: string;
+  provider: string;
+}
+
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useAction } from "convex/react";
@@ -391,14 +397,14 @@ export default function PhysicianSettingsPage() {
                   onChange={(e) => setPrimaryModel({ modelId: e.target.value })}
                 >
                   <optgroup label="Anthropic (Claude)">
-                    {modelOptions?.anthropic.map((model) => (
+                    {modelOptions?.anthropic.map((model: ModelOption) => (
                       <option key={model.id} value={model.id}>
                         {model.name}
                       </option>
                     ))}
                   </optgroup>
                   <optgroup label="OpenAI (GPT)">
-                    {modelOptions?.openai.map((model) => (
+                    {modelOptions?.openai.map((model: ModelOption) => (
                       <option key={model.id} value={model.id}>
                         {model.name}
                       </option>
@@ -418,14 +424,14 @@ export default function PhysicianSettingsPage() {
                   onChange={(e) => setFallbackModel({ modelId: e.target.value })}
                 >
                   <optgroup label="OpenAI (GPT)">
-                    {modelOptions?.openai.map((model) => (
+                    {modelOptions?.openai.map((model: ModelOption) => (
                       <option key={model.id} value={model.id}>
                         {model.name}
                       </option>
                     ))}
                   </optgroup>
                   <optgroup label="Anthropic (Claude)">
-                    {modelOptions?.anthropic.map((model) => (
+                    {modelOptions?.anthropic.map((model: ModelOption) => (
                       <option key={model.id} value={model.id}>
                         {model.name}
                       </option>

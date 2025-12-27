@@ -50,6 +50,8 @@ export function PatientEngagementCard({ userId }: PatientEngagementCardProps) {
     insights,
   } = engagement;
 
+  type BadgeType = NonNullable<typeof engagement>["badges"][number];
+
   const lastActiveDate = lastActive ? new Date(lastActive) : null;
   const lastActiveText = lastActiveDate
     ? formatLastActive(lastActiveDate)
@@ -147,7 +149,7 @@ export function PatientEngagementCard({ userId }: PatientEngagementCardProps) {
           </div>
           {badges.length > 0 && (
             <div className="flex gap-1 mt-1 flex-wrap">
-              {badges.slice(0, 4).map((badge) => (
+              {badges.slice(0, 4).map((badge: BadgeType) => (
                 <span key={badge.id} title={badge.name} className="text-sm">
                   {badge.icon}
                 </span>
@@ -173,7 +175,7 @@ export function PatientEngagementCard({ userId }: PatientEngagementCardProps) {
             <Sparkles className="w-3 h-3" />
             <span>Engagement Insights</span>
           </div>
-          {insights.map((insight, idx) => (
+          {insights.map((insight: NonNullable<typeof engagement>["insights"][number], idx: number) => (
             <div
               key={idx}
               className={`flex items-start gap-2 text-xs p-2 rounded-lg ${

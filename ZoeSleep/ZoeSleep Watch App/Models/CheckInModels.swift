@@ -326,3 +326,313 @@ extension FocusLevel {
     static var preview: FocusLevel { .clear }
 }
 #endif
+
+// MARK: - Encouragement Message Library
+
+/// A library of 50+ encouragement messages to keep check-ins fresh and engaging.
+/// Messages are randomly selected to prevent user desensitization.
+struct EncouragementMessages {
+
+    // MARK: - Check-In Completion Messages (50+)
+
+    static let checkInComplete: [String] = [
+        // Celebratory
+        "Nailed it! Your future self thanks you.",
+        "Boom! Another data point for better sleep.",
+        "You're building a sleep superpower!",
+        "Logged! You're crushing this.",
+        "That's the stuff! Keep it rolling.",
+
+        // Mindful
+        "Awareness is the first step to change.",
+        "Noticing patterns is how healing begins.",
+        "You just invested 10 seconds in yourself.",
+        "Small acts, big impact.",
+        "Every check-in is a gift to future you.",
+
+        // Progress-focused
+        "One more step toward understanding yourself.",
+        "Your sleep data is getting smarter.",
+        "Pattern detected: You're consistent!",
+        "This data will reveal your secrets.",
+        "Building your sleep fingerprint...",
+
+        // Playful
+        "Even koalas would be impressed!",
+        "Your circadian rhythm says thanks.",
+        "If sleep tracking were a sport, you'd medal.",
+        "Achievement unlocked: Self-awareness!",
+        "Your pillow sends its regards.",
+
+        // Scientific
+        "Data point captured. Science in action!",
+        "Your biometrics are taking shape.",
+        "One more variable for the algorithm.",
+        "Correlations loading...",
+        "Sleep science appreciates you.",
+
+        // Encouraging
+        "You showed up. That's what matters.",
+        "Consistency beats perfection.",
+        "Slow progress is still progress.",
+        "You're doing the work. Respect.",
+        "This is self-care in action.",
+
+        // Motivational
+        "Champions track their progress.",
+        "Elite sleepers check in daily.",
+        "You're taking control.",
+        "Ownership starts with awareness.",
+        "This is how habits form.",
+
+        // Warm
+        "Thanks for sharing how you're feeling.",
+        "We see you. Keep going.",
+        "Your wellbeing matters.",
+        "Taking care of yourself today.",
+        "One mindful moment at a time.",
+
+        // Fun facts
+        "Fun fact: Tracking improves sleep by 19%!",
+        "Did you know? Awareness reduces sleep onset time.",
+        "Science says: Self-monitoring works!",
+        "Pro tip: Consistency is the secret sauce.",
+        "Research shows: You're doing it right!",
+
+        // Streak-related
+        "Your streak is growing stronger!",
+        "Another day, another win.",
+        "Momentum is on your side.",
+        "You're building something here.",
+        "This is becoming a habit!",
+
+        // Evening-specific variations
+        "Wrapping up the day mindfully.",
+        "Reflection is a superpower.",
+        "Day logged. Rest awaits.",
+        "You've earned your rest.",
+        "Ready for restorative sleep.",
+    ]
+
+    // MARK: - Morning Reminder Messages
+
+    static let morningReminders: [String] = [
+        "Good morning! Quick check-in?",
+        "Rise and shine! How are you feeling?",
+        "Morning vibes check!",
+        "Start your day with a check-in",
+        "How did you wake up today?",
+        "10 seconds to log your morning",
+        "Capture how you're feeling now",
+        "Morning energy check!",
+        "Your future self wants to know",
+        "Quick morning pulse check",
+        "How's the morning treating you?",
+        "Log your morning mood!",
+        "Start tracking your day",
+        "Morning check-in time!",
+        "Begin your day mindfully",
+    ]
+
+    // MARK: - Midday Reminder Messages
+
+    static let middayReminders: [String] = [
+        "Midday check! How's your energy?",
+        "Afternoon pulse check",
+        "How's your day going?",
+        "Quick midday moment",
+        "Time for a focus check",
+        "Halfway through! How do you feel?",
+        "Afternoon vibes check",
+        "Energy still holding up?",
+        "Quick check-in break",
+        "Moment of self-awareness",
+        "How's your focus right now?",
+        "Midday mood check!",
+        "Pause and reflect",
+        "Afternoon check-in time!",
+        "Track your afternoon state",
+    ]
+
+    // MARK: - Evening Reminder Messages
+
+    static let eveningReminders: [String] = [
+        "Evening wind-down check",
+        "How was your day?",
+        "Time to reflect on today",
+        "Evening energy check",
+        "Wrapping up the day",
+        "End-of-day reflection",
+        "How are you feeling now?",
+        "Evening mood check!",
+        "Wind down with a check-in",
+        "Log your evening state",
+        "Ready for rest? Quick check!",
+        "Capture your evening mood",
+        "Day's almost done - check in!",
+        "Evening self-care moment",
+        "Reflect before you rest",
+    ]
+
+    // MARK: - Streak Messages
+
+    static let streakMessages: [String] = [
+        "Day %d! You're on fire!",
+        "%d days strong!",
+        "Streak: %d days! Keep it alive!",
+        "%d day streak! Impressive!",
+        "You've checked in %d days in a row!",
+        "%d days of consistency!",
+        "Wow! %d days and counting!",
+        "%d day streak - don't break it!",
+        "Your %d day streak is legendary!",
+        "Consistency king: %d days!",
+    ]
+
+    // MARK: - Missed Check-In Messages
+
+    static let missedCheckIn: [String] = [
+        "We missed you! Check in when ready.",
+        "No worries, you can catch up now.",
+        "Yesterday's check-in awaits.",
+        "It's okay to miss one. Ready now?",
+        "Let's get back on track!",
+        "New day, fresh start!",
+        "Your streak misses you!",
+        "One tap to get back in the game.",
+        "Ready when you are!",
+        "Let's keep the momentum going.",
+    ]
+
+    // MARK: - Personalized Messages Based on Levels
+
+    static func energyMessage(level: Int) -> String {
+        switch level {
+        case 1: return "Rest is valid. Take it easy today."
+        case 2: return "Low energy noted. Be gentle with yourself."
+        case 3: return "Moderate energy - pace yourself."
+        case 4: return "Good energy! Use it wisely."
+        case 5: return "High energy day! Make it count."
+        case 6: return "You're bouncing! Channel that power!"
+        default: return "Thanks for checking in!"
+        }
+    }
+
+    static func moodMessage(level: Int) -> String {
+        switch level {
+        case 1: return "Tough day. This too shall pass."
+        case 2: return "Feeling low is okay. You're not alone."
+        case 3: return "Hanging in there. That's enough."
+        case 4: return "Good vibes detected!"
+        case 5: return "Sunny disposition! Love to see it."
+        case 6: return "You're radiant today!"
+        default: return "Thanks for sharing how you feel."
+        }
+    }
+
+    static func focusMessage(level: Int) -> String {
+        switch level {
+        case 1: return "Foggy days happen. Rest your mind."
+        case 2: return "A bit hazy? That's okay."
+        case 3: return "Finding your focus. Keep going."
+        case 4: return "Clear-headed! Nice."
+        case 5: return "Crystal clear focus! Impressive."
+        default: return "Thanks for logging your clarity."
+        }
+    }
+
+    // MARK: - Random Selection Helpers
+
+    static func randomCompletionMessage() -> String {
+        checkInComplete.randomElement() ?? "Check-in complete!"
+    }
+
+    static func randomReminderMessage(for type: ReminderType) -> String {
+        switch type {
+        case .morning:
+            return morningReminders.randomElement() ?? "Morning check-in time!"
+        case .midday:
+            return middayReminders.randomElement() ?? "Midday check-in time!"
+        case .evening:
+            return eveningReminders.randomElement() ?? "Evening check-in time!"
+        }
+    }
+
+    static func streakMessage(days: Int) -> String {
+        let template = streakMessages.randomElement() ?? "Day %d!"
+        return String(format: template, days)
+    }
+
+    static func personalizedMessage(energy: Int, mood: Int, focus: Int) -> String {
+        let lowestMetric = min(energy, mood, focus)
+
+        if lowestMetric <= 2 {
+            if energy == lowestMetric {
+                return energyMessage(level: energy)
+            } else if mood == lowestMetric {
+                return moodMessage(level: mood)
+            } else {
+                return focusMessage(level: focus)
+            }
+        } else if lowestMetric >= 5 {
+            let celebrations = [
+                "All systems go! You're having a great day!",
+                "Energy, mood, and focus all high! Amazing!",
+                "Triple threat! You're firing on all cylinders!",
+                "Peak performance mode activated!",
+                "You're crushing it across the board!",
+            ]
+            return celebrations.randomElement() ?? "Great job!"
+        } else {
+            return randomCompletionMessage()
+        }
+    }
+
+    enum ReminderType {
+        case morning, midday, evening
+    }
+
+    struct NotificationContent {
+        let title: String
+        let body: String
+        let sound: Bool
+    }
+
+    static func notificationContent(for type: ReminderType, reminderNumber: Int) -> NotificationContent {
+        let body = randomReminderMessage(for: type)
+
+        switch reminderNumber {
+        case 1:
+            return NotificationContent(title: type.title, body: body, sound: false)
+        case 2:
+            return NotificationContent(title: type.title, body: body, sound: true)
+        case 3:
+            let urgentBodies = [
+                "Last chance for \(type.rawValue.lowercased()) check-in!",
+                "Don't miss your \(type.rawValue.lowercased()) check-in!",
+                "Window closing soon!",
+            ]
+            return NotificationContent(title: "Check-In Reminder", body: urgentBodies.randomElement() ?? body, sound: true)
+        default:
+            return NotificationContent(title: type.title, body: body, sound: true)
+        }
+    }
+}
+
+extension EncouragementMessages.ReminderType {
+    var title: String {
+        switch self {
+        case .morning: return "Morning Check-In"
+        case .midday: return "Midday Check-In"
+        case .evening: return "Evening Check-In"
+        }
+    }
+
+    var rawValue: String {
+        switch self {
+        case .morning: return "Morning"
+        case .midday: return "Midday"
+        case .evening: return "Evening"
+        }
+    }
+}

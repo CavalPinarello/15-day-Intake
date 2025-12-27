@@ -832,6 +832,58 @@ enum QuestionType: String, Codable, CaseIterable {
     case hoursMinutesScroll = "HoursMinutesScroll"  // For sleep duration with 15-min increments
     case repeatingGroup = "RepeatingGroup"
     case info = "Info"
+    case napDetails = "NapDetails"  // Dynamic nap blocks with start time + duration
+    case medicationSelect = "MedicationSelect"  // Multi-select medication categories
+}
+
+// MARK: - Nap Entry Model
+
+/// Represents a single nap with start time and duration
+struct NapEntry: Codable, Identifiable, Equatable {
+    var id: Int { napNumber }
+    let napNumber: Int          // 1, 2, 3...
+    var startTime: String       // "14:30" (24h format)
+    var durationMinutes: Int    // 15, 30, 45, 60, 90, 120
+
+    init(napNumber: Int, startTime: String = "14:00", durationMinutes: Int = 30) {
+        self.napNumber = napNumber
+        self.startTime = startTime
+        self.durationMinutes = durationMinutes
+    }
+
+    /// Default start time for a nap based on its number (2 PM, 4 PM, 6 PM, etc.)
+    static func defaultStartTime(for napNumber: Int) -> String {
+        let baseHour = 14  // 2 PM
+        let hour = baseHour + ((napNumber - 1) * 2)
+        return String(format: "%02d:00", min(hour, 20))  // Cap at 8 PM
+    }
+}
+
+// MARK: - Medication Category Model
+
+/// Represents a sleep medication category for multi-select
+struct MedicationCategory: Identifiable {
+    let id: String
+    let name: String
+    let subtitle: String?
+    let icon: String
+
+    init(id: String, name: String, subtitle: String? = nil, icon: String) {
+        self.id = id
+        self.name = name
+        self.subtitle = subtitle
+        self.icon = icon
+    }
+
+    /// All available medication categories
+    static let allCategories: [MedicationCategory] = [
+        MedicationCategory(id: "melatonin", name: "Melatonin", icon: "moon.stars"),
+        MedicationCategory(id: "prescription", name: "Prescription", subtitle: "Ambien, Lunesta, Trazodone", icon: "pills"),
+        MedicationCategory(id: "otc", name: "OTC Sleep Aid", subtitle: "ZzzQuil, Unisom, Benadryl", icon: "cross.case"),
+        MedicationCategory(id: "cbd_thc", name: "CBD/THC", icon: "leaf"),
+        MedicationCategory(id: "herbal", name: "Herbal/Natural", subtitle: "Valerian, Magnesium, L-Theanine", icon: "leaf.circle"),
+        MedicationCategory(id: "other", name: "Other", icon: "ellipsis.circle")
+    ]
 }
 
 enum Pillar: String, Codable, CaseIterable {
@@ -1218,6 +1270,9 @@ struct ConditionalLogic: Codable {
     var greaterThanOrEqual: Double?
     var lessThanOrEqual: Double?
 
+    // Array condition: Check if array response contains a value
+    var contains: String?
+
     // Age-based condition (calculated from D2 birth date)
     var ageUnder: Int?
     var ageOver: Int?
@@ -1229,13 +1284,14 @@ struct ConditionalLogic: Codable {
     var any: [ConditionalLogic]?
 
     // Simple initializer for single condition
-    init(questionId: String, equals: String? = nil, greaterThan: Double? = nil, lessThan: Double? = nil, greaterThanOrEqual: Double? = nil, lessThanOrEqual: Double? = nil) {
+    init(questionId: String, equals: String? = nil, greaterThan: Double? = nil, lessThan: Double? = nil, greaterThanOrEqual: Double? = nil, lessThanOrEqual: Double? = nil, contains: String? = nil) {
         self.questionId = questionId
         self.equals = equals
         self.greaterThan = greaterThan
         self.lessThan = lessThan
         self.greaterThanOrEqual = greaterThanOrEqual
         self.lessThanOrEqual = lessThanOrEqual
+        self.contains = contains
     }
 
     // Initializer for compound conditions

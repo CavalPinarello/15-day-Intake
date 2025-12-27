@@ -97,11 +97,12 @@ export function PillarDetailModal({
 
   if (!isOpen) return null;
 
+  type QuestionType = NonNullable<typeof pillarResponses>["questions"][number];
   const answeredQuestions = pillarResponses?.questions.filter(
-    (q) => q.responseValue || q.responseNumber !== undefined
+    (q: QuestionType) => q.responseValue || q.responseNumber !== undefined
   ) || [];
   const unansweredQuestions = pillarResponses?.questions.filter(
-    (q) => !q.responseValue && q.responseNumber === undefined
+    (q: QuestionType) => !q.responseValue && q.responseNumber === undefined
   ) || [];
 
   return (
@@ -260,7 +261,7 @@ export function PillarDetailModal({
                 Answered Questions ({answeredQuestions.length})
               </h3>
               <div className="space-y-2">
-                {answeredQuestions.map((q) => (
+                {answeredQuestions.map((q: QuestionType) => (
                   <div
                     key={q.questionId}
                     className="rounded-lg border border-gray-700 bg-gray-800/30 p-3"
@@ -295,7 +296,7 @@ export function PillarDetailModal({
                 Pending Questions ({unansweredQuestions.length})
               </h3>
               <div className="space-y-2">
-                {unansweredQuestions.slice(0, 5).map((q) => (
+                {unansweredQuestions.slice(0, 5).map((q: QuestionType) => (
                   <div
                     key={q.questionId}
                     className="rounded-lg border border-gray-700/50 bg-gray-800/20 p-3 opacity-60"
