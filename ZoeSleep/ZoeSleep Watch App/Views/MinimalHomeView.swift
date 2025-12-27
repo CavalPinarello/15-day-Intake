@@ -33,6 +33,20 @@ struct MinimalHomeView: View {
         CheckInWindow.current(hour: currentHour)
     }
 
+    // Create a darker gradient for status bar visibility
+    private var adjustedBackground: [Color] {
+        if palette.isDark {
+            return palette.background
+        } else {
+            // For light palettes, start with a darker top for status bar contrast
+            return [
+                Color(red: 0.15, green: 0.18, blue: 0.22),  // Dark top for status bar
+                palette.background[0],
+                palette.background.count > 1 ? palette.background[1] : palette.background[0]
+            ]
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
@@ -86,8 +100,12 @@ struct MinimalHomeView: View {
             .padding(.vertical, 8)
         }
         .background(
-            LinearGradient(colors: palette.background, startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea()
+            LinearGradient(
+                colors: adjustedBackground,
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
         )
         .sheet(isPresented: $showCheckInFlow) {
             if let type = currentCheckInWindow.checkInType, canDoCheckIn(for: type) {
@@ -289,6 +307,9 @@ struct MinimalHomeView: View {
 
     private var notAuthenticatedCard: some View {
         VStack(spacing: 12) {
+            Spacer()
+                .frame(height: 20)  // Space for status bar
+
             // Icon
             ZStack {
                 Circle()
@@ -302,11 +323,11 @@ struct MinimalHomeView: View {
 
             Text("Connect to iPhone")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(palette.textPrimary)
+                .foregroundColor(.white)
 
             Text("Open the Zoe Sleep app on your iPhone to sync your account")
                 .font(.system(size: 11))
-                .foregroundColor(palette.textSecondary)
+                .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
 
@@ -314,25 +335,27 @@ struct MinimalHomeView: View {
             #if DEBUG
             Button(action: {
                 Task {
-                    // Try to sign in as the same test user
-                    // In production, this would come from iPhone
                     _ = await convexService.signInForTesting(username: "user1", password: "1")
                     loadData()
                 }
             }) {
-                Text("Debug: Sign in as user1")
-                    .font(.system(size: 10))
-                    .foregroundColor(.blue)
+                Text("Sign in as user1")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.blue)
+                    )
             }
             .buttonStyle(.plain)
-            .padding(.top, 4)
+            .padding(.top, 8)
             #endif
+
+            Spacer()
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(cardBackground)
-        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Streak Card

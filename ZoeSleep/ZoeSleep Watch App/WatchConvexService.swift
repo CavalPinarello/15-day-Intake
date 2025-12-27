@@ -20,6 +20,9 @@ struct WatchJourneyState: Codable {
     // Section-level completion for current day
     let sleepLogCompleted: Bool?
     let assessmentCompleted: Bool?
+    // Expansion pack status for current day (same-day deep dives on Days 1-5)
+    let hasExpansionPackToday: Bool?
+    let expansionPackCompleted: Bool?
     // Overdue expansion packs count (for reminder on Watch)
     let overdueExpansionsCount: Int?
 }
@@ -164,6 +167,9 @@ class WatchConvexService: ObservableObject {
     // Section-level completion for current day
     @Published var sleepLogCompleted = false
     @Published var assessmentCompleted = false
+    // Expansion pack status for current day (same-day deep dives on Days 1-5)
+    @Published var hasExpansionPackToday = false
+    @Published var expansionPackCompleted = false
     // Overdue expansion packs count (for reminder)
     @Published var overdueExpansionsCount = 0
 
@@ -434,6 +440,9 @@ class WatchConvexService: ObservableObject {
             // Update section completion status for current day
             self.sleepLogCompleted = state.sleepLogCompleted ?? false
             self.assessmentCompleted = state.assessmentCompleted ?? false
+            // Update expansion pack status for current day
+            self.hasExpansionPackToday = state.hasExpansionPackToday ?? false
+            self.expansionPackCompleted = state.expansionPackCompleted ?? false
             // Update overdue expansions count
             self.overdueExpansionsCount = state.overdueExpansionsCount ?? 0
         }

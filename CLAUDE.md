@@ -113,6 +113,19 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **New Zoe Logo & App Icons:** Updated all app icons with new spiral crescent moon logo from official brand SVG (Dec 27, 2025)
+  - **Logo source:** Frame 3.svg - spiral crescent moon design
+  - **Color scheme:** Warm cream (#F5E6D3) on dark warm brown gradient (#1a1512 to #0d0a08)
+  - **iOS icons:** 15 icons regenerated (20x20 to 1024x1024) - RGB, no alpha channel
+  - **Watch icons:** 17 icons regenerated (24x24@2x to 1024x1024) - RGB, no alpha channel
+  - **ZoeLogo.swift:** Complete rewrite with exact SVG path recreation
+    - `ZoeLogoSVG` - Pixel-perfect SVG path implementation
+    - `ZoeLogoSimple` - Performance-optimized circle approximation
+    - `OuterCrescentShape` / `InnerCrescentShape` - Shape primitives
+  - **SplashScreenView.swift:** Updated to use `ZoeLogoSVG` with warm cream color
+  - **AuthenticationView.swift:** Updated to use `ZoeLogoSVG` with warm cream color
+  - **Icon generation script:** `scripts/generate-icons.sh` - regenerates all icons from SVG
+  - **No alpha channel:** All icons are 8-bit RGB (avoids App Store rejection)
 - **Expansion Pack Splash Screens:** Educational rationale screens for all 16 validated questionnaires (Dec 27, 2025)
   - **Purpose:** When users encounter expansion packs (Days 6-14), they now see a splash screen explaining why they're being asked these questions
   - **Content per questionnaire:** Full name, abbreviation, citation count, what it measures, why we're asking, scientific background (authors, year, journal, sensitivity/specificity, Cronbach's α)

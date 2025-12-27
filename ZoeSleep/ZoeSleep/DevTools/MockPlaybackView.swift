@@ -207,9 +207,9 @@ struct MockPlaybackView: View {
                 .foregroundColor(theme.textSecondary)
 
             HStack(spacing: Spacing.lg) {
-                StatBadge(icon: "calendar", value: "15", label: "Days")
-                StatBadge(icon: "list.bullet", value: "~200", label: "Questions")
-                StatBadge(icon: "clock", value: "~2", label: "Minutes")
+                MockStatBadge(icon: "calendar", value: "15", label: "Days")
+                MockStatBadge(icon: "list.bullet", value: "~200", label: "Questions")
+                MockStatBadge(icon: "clock", value: "~2", label: "Minutes")
             }
         }
         .padding(Spacing.md)
@@ -434,13 +434,13 @@ struct MockPlaybackView: View {
 
     private var generationStatsSection: some View {
         HStack(spacing: Spacing.lg) {
-            StatBadge(
+            MockStatBadge(
                 icon: "checkmark.circle",
                 value: "\(controller.progress.totalQuestionsAnswered)",
                 label: "Answered"
             )
 
-            StatBadge(
+            MockStatBadge(
                 icon: "clock",
                 value: formatTime(controller.progress.elapsedTime),
                 label: "Elapsed"
@@ -644,7 +644,7 @@ struct MockPlaybackView: View {
 
 // MARK: - Supporting Views
 
-struct StatBadge: View {
+struct MockStatBadge: View {
     let icon: String
     let value: String
     let label: String

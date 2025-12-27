@@ -44,6 +44,7 @@
 		4A5E3BD82C8E123456789C09 /* TreatmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BD92C8E123456789C0A /* TreatmentView.swift */; };
 		4A5E3BDA2C8E123456789C0B /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */; };
 		4A5E3BDE2C8E123456789C0F /* QuestionnaireSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */; };
+		4A5E3EXP2C8E123456789EX2 /* ExpansionQuestionnaireSplash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3EXP2C8E123456789EX1 /* ExpansionQuestionnaireSplash.swift */; };
 		4A5E3BE02C8E123456789D01 /* WatchThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */; };
 		4A5E3BE22C8E123456789D03 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */; };
 		4A5E3BE42C8E123456789D05 /* WatchConvexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3BE52C8E123456789D06 /* WatchConvexService.swift */; };
@@ -173,6 +174,7 @@
 		4A5E3BD92C8E123456789C0A /* TreatmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentView.swift; sourceTree = "<group>"; };
 		4A5E3BDB2C8E123456789C0C /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		4A5E3BDF2C8E123456789C10 /* QuestionnaireSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionnaireSections.swift; sourceTree = "<group>"; };
+		4A5E3EXP2C8E123456789EX1 /* ExpansionQuestionnaireSplash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpansionQuestionnaireSplash.swift; sourceTree = "<group>"; };
 		4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchThemeManager.swift; sourceTree = "<group>"; };
 		4A5E3BE32C8E123456789D04 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		4A5E3BE52C8E123456789D06 /* WatchConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConvexService.swift; sourceTree = "<group>"; };
@@ -484,6 +486,7 @@
 			children = (
 				4101092100CACE818B6EE578 /* PostIntake */,
 				4A5E3B9F2C8E123456789A09 /* AuthenticationView.swift */,
+				4A5E3EXP2C8E123456789EX1 /* ExpansionQuestionnaireSplash.swift */,
 				4A5E3BA12C8E123456789A0A /* HealthKitIntegrationView.swift */,
 				4A5E3BCA2C8E123456789B06 /* QuestionComponents.swift */,
 				4A5E3BCC2C8E123456789B08 /* QuestionnaireView.swift */,
@@ -816,6 +819,7 @@
 				4A5E3BC72C8E123456789B03 /* QuestionnaireManager.swift in Sources */,
 				4A5E3BC92C8E123456789B05 /* QuestionComponents.swift in Sources */,
 				4A5E3BCB2C8E123456789B07 /* QuestionnaireView.swift in Sources */,
+				4A5E3EXP2C8E123456789EX2 /* ExpansionQuestionnaireSplash.swift in Sources */,
 				4A5E3BCD2C8E123456789B09 /* ConvexService.swift in Sources */,
 				4A5E3BD82C8E123456789C09 /* TreatmentView.swift in Sources */,
 				4A5E3BDA2C8E123456789C0B /* ThemeManager.swift in Sources */,

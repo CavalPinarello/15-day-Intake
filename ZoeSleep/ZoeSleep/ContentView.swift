@@ -485,8 +485,21 @@ struct MainDashboardView: View {
     // MARK: - Today's Tasks Card
 
     private var isDayComplete: Bool {
-        (questionnaireManager.journeyProgress?.sleepLogCompleted ?? false) &&
-        (questionnaireManager.journeyProgress?.assessmentCompleted ?? false)
+        let sleepLogComplete = questionnaireManager.journeyProgress?.sleepLogCompleted ?? false
+        let assessmentComplete = questionnaireManager.journeyProgress?.assessmentCompleted ?? false
+        let expansionComplete = questionnaireManager.journeyProgress?.expansionPackCompleted ?? false
+
+        // If there's no assessment to do today (expansion day with 0 gateways), only need Sleep Log
+        if !hasAssessmentToday {
+            return sleepLogComplete
+        }
+
+        // If there's an expansion pack available today (same-day deep dive on Days 1-5), require that too
+        if hadExpansionPackToday {
+            return sleepLogComplete && assessmentComplete && expansionComplete
+        }
+
+        return sleepLogComplete && assessmentComplete
     }
 
     private var sleepLogDone: Bool {
@@ -677,6 +690,9 @@ struct MainDashboardView: View {
                                     isCompleted: false
                                 )
                             }
+                        } else if currentDay > 5 {
+                            // No-gateway expansion day - show friendly message
+                            NoAssessmentTodayView()
                         }
                     }
                 }
@@ -707,12 +723,17 @@ struct MainDashboardView: View {
         var count = 0
         if sleepLogDone { count += 1 }
         if hasAssessmentToday && assessmentDone { count += 1 }
+        // Include expansion pack if triggered and completed (same-day deep dive on Days 1-5)
+        if hadExpansionPackToday && expansionPackCompletedToday { count += 1 }
         return count
     }
 
     private var totalTaskCount: Int {
-        // Always have sleep log (1), assessment only if content exists
-        return hasAssessmentToday ? 2 : 1
+        var count = 1 // Always have sleep log
+        if hasAssessmentToday { count += 1 }
+        // Include expansion pack in total (same-day deep dive on Days 1-5)
+        if hadExpansionPackToday { count += 1 }
+        return count
     }
 
     private func advanceToNextDay() {
@@ -2955,6 +2976,50 @@ struct DayCompleteCelebrationView: View {
         } else {
             timeUntilUnlock = "\(seconds)s remaining"
         }
+    }
+}
+
+// MARK: - No Assessment Today View
+
+struct NoAssessmentTodayView: View {
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            // Checkmark icon
+            ZStack {
+                Circle()
+                    .fill(theme.success.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(theme.success)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("You're on track!")
+                    .font(.system(size: Typography.subheadline, weight: .semibold, design: .rounded))
+                    .foregroundColor(theme.textOnCard)
+
+                Text("No additional assessments needed today. Your sleep patterns look stable.")
+                    .font(.system(size: Typography.caption, design: .rounded))
+                    .foregroundColor(theme.textOnCardSecondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .fill(theme.success.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .stroke(theme.success.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 

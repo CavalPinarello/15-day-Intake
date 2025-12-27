@@ -81,17 +81,31 @@ struct QuestionnaireView: View {
 
     var body: some View {
         Group {
-            // NOTE: Expansion splash screens temporarily disabled - file not yet added to Xcode project
-            // To enable: Add ExpansionQuestionnaireSplash.swift to the project via Xcode
-            // if showingExpansionSplash && !expansionSplashInfo.isEmpty {
-            //     // Show expansion pack splash screen with questionnaire rationale
-            //     if expansionSplashInfo.count == 1, let info = expansionSplashInfo.first {
-            //         ExpansionQuestionnaireSplashView(...)
-            //     } else {
-            //         ExpansionDaySplashView(...)
-            //     }
-            // } else
-            if showingTransition {
+            if showingExpansionSplash && !expansionSplashInfo.isEmpty {
+                // Show expansion pack splash screen with questionnaire rationale
+                if expansionSplashInfo.count == 1, let info = expansionSplashInfo.first {
+                    ExpansionQuestionnaireSplashView(
+                        info: info,
+                        triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
+                        onContinue: {
+                            withAnimation {
+                                showingExpansionSplash = false
+                            }
+                        }
+                    )
+                } else {
+                    ExpansionDaySplashView(
+                        questionnaires: expansionSplashInfo,
+                        dayNumber: currentDay,
+                        triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
+                        onContinue: {
+                            withAnimation {
+                                showingExpansionSplash = false
+                            }
+                        }
+                    )
+                }
+            } else if showingTransition {
                 SectionTransitionView(
                     fromSection: .sleepLog,
                     toSection: .assessment,

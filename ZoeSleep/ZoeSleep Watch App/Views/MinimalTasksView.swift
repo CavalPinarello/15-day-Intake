@@ -26,6 +26,19 @@ struct MinimalTasksView: View {
         palette.isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.05)
     }
 
+    // Create a darker gradient for status bar visibility
+    private var adjustedBackground: [Color] {
+        if palette.isDark {
+            return palette.background
+        } else {
+            return [
+                Color(red: 0.15, green: 0.18, blue: 0.22),
+                palette.background[0],
+                palette.background.count > 1 ? palette.background[1] : palette.background[0]
+            ]
+        }
+    }
+
     init(taskStatus: WatchTaskStatus, overdueExpansionsCount: Int = 0) {
         self.taskStatus = taskStatus
         self.overdueExpansionsCount = overdueExpansionsCount
@@ -56,7 +69,7 @@ struct MinimalTasksView: View {
                 .padding(.vertical, 8)
             }
             .background(
-                LinearGradient(colors: palette.background, startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: adjustedBackground, startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
             )
             .navigationTitle("Today")
@@ -67,6 +80,7 @@ struct MinimalTasksView: View {
                         dismiss()
                     }
                     .font(.system(size: 12))
+                    .foregroundColor(.white)
                 }
             }
         }

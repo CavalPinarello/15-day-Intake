@@ -104,6 +104,8 @@ export default defineSchema({
     // Section-level completion tracking for cross-device sync
     sleep_log_completed: v.optional(v.boolean()),
     assessment_completed: v.optional(v.boolean()),
+    // Expansion pack (same-day deep dive) completion tracking
+    expansion_pack_completed: v.optional(v.boolean()),
   })
     .index("by_user", ["user_id"])
     .index("by_user_day", ["user_id", "day_id"])

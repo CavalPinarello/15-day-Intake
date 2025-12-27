@@ -235,10 +235,17 @@ struct UnifiedDebugPanel: View {
             HStack {
                 Label("Assessment", systemImage: "clipboard")
                 Spacer()
+                let currentDay = questionnaireManager.currentDay
+                let triggeredCount = questionnaireManager.gatewayStates.filter { $0.triggered }.count
+                let isExpansionDay = currentDay > 5
+                let hasNoAssessment = isExpansionDay && triggeredCount == 0
+
                 StatusBadge(
                     isComplete: questionnaireManager.journeyProgress?.assessmentCompleted == true,
                     completeText: "Done",
-                    pendingText: "Pending"
+                    pendingText: "Pending",
+                    isNotApplicable: hasNoAssessment,
+                    notApplicableText: "None (0 gateways)"
                 )
             }
 
@@ -1002,16 +1009,31 @@ struct StatusBadge: View {
     let isComplete: Bool
     let completeText: String
     let pendingText: String
+    var isNotApplicable: Bool = false
+    var notApplicableText: String = "None"
 
     var body: some View {
-        Text(isComplete ? completeText : pendingText)
-            .font(.caption)
-            .fontWeight(.medium)
-            .foregroundColor(isComplete ? .green : .orange)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background((isComplete ? Color.green : Color.orange).opacity(0.15))
-            .cornerRadius(4)
+        Group {
+            if isNotApplicable {
+                Text(notApplicableText)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color.gray.opacity(0.15))
+                    .cornerRadius(4)
+            } else {
+                Text(isComplete ? completeText : pendingText)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(isComplete ? .green : .orange)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background((isComplete ? Color.green : Color.orange).opacity(0.15))
+                    .cornerRadius(4)
+            }
+        }
     }
 }
 

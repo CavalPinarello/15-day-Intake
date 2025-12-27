@@ -461,6 +461,43 @@ export const getJourneyState = query({
       }
     }
 
+    // Check for same-day expansion pack availability (Days 1-5 only)
+    let hasExpansionPackToday = false;
+    let expansionPackCompleted = false;
+
+    if (user.current_day <= 5) {
+      // Get user's triggered gateways
+      const userGateways = await ctx.db
+        .query("user_gateway_states")
+        .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+        .collect();
+
+      const triggeredGatewayIds = new Set(
+        userGateways.filter((g) => g.triggered).map((g) => g.gateway_id)
+      );
+
+      // Same-day expansion gateways (these trigger immediate deep dives on Days 1-5)
+      const sameDayExpansionGateways = ["insomnia", "depression", "anxiety", "osa"];
+      hasExpansionPackToday = sameDayExpansionGateways.some((gw) => triggeredGatewayIds.has(gw));
+
+      // Check if expansion pack was completed today
+      if (hasExpansionPackToday) {
+        const currentProgress = progressEntries.find((p) => {
+          const dayId = p.day_id;
+          // We need to check if this is the current day's progress
+          return true; // Will check below
+        });
+
+        // Get current day's progress entry
+        const days = await ctx.db.query("days").collect();
+        const currentDayEntry = days.find((d) => d.day_number === user.current_day);
+        if (currentDayEntry) {
+          const currentDayProgress = progressEntries.find((p) => p.day_id === currentDayEntry._id);
+          expansionPackCompleted = currentDayProgress?.expansion_pack_completed ?? false;
+        }
+      }
+    }
+
     return {
       currentDay: user.current_day,
       completedDays: completedDays.sort((a, b) => a - b),
@@ -469,6 +506,9 @@ export const getJourneyState = query({
       // Section-level completion for current day
       sleepLogCompleted: currentDaySections.sleepLogCompleted,
       assessmentCompleted: currentDaySections.assessmentCompleted,
+      // Expansion pack status for current day (same-day deep dives on Days 1-5)
+      hasExpansionPackToday,
+      expansionPackCompleted,
       // Full section status for all days
       daySectionStatus,
       // Overdue expansion packs (for Watch to show reminder)

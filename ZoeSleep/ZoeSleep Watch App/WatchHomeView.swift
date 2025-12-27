@@ -169,7 +169,35 @@ struct WatchHomeView: View {
     private var accentColor: Color { themeManager.accentColor }
     private var sleepLogCompleted: Bool { convexService.sleepLogCompleted }
     private var assessmentCompleted: Bool { convexService.assessmentCompleted }
-    private var isDayComplete: Bool { sleepLogCompleted && assessmentCompleted }
+    private var hasExpansionPackToday: Bool { convexService.hasExpansionPackToday }
+    private var expansionPackCompleted: Bool { convexService.expansionPackCompleted }
+
+    private var isDayComplete: Bool {
+        // Base requirement: sleep log and assessment
+        let baseDone = sleepLogCompleted && assessmentCompleted
+        // If there's an expansion pack today, require that too
+        if hasExpansionPackToday {
+            return baseDone && expansionPackCompleted
+        }
+        return baseDone
+    }
+
+    /// Total tasks for today (1-3 based on what's available)
+    private var totalTaskCount: Int {
+        var count = 2 // Sleep Log + Assessment
+        if hasExpansionPackToday { count += 1 }
+        return count
+    }
+
+    /// Completed tasks for today
+    private var completedTaskCount: Int {
+        var count = 0
+        if sleepLogCompleted { count += 1 }
+        if assessmentCompleted { count += 1 }
+        if hasExpansionPackToday && expansionPackCompleted { count += 1 }
+        return count
+    }
+
     private var journeyComplete: Bool { currentDay >= 15 && isDayComplete }
 
     var body: some View {
@@ -437,6 +465,42 @@ struct WatchHomeView: View {
                     )
             )
             .opacity(assessmentCompleted ? 0.8 : 1.0)
+
+            // Expansion Pack (Deeper Dive) - Only shown if triggered, complete on iPhone
+            if hasExpansionPackToday {
+                HStack {
+                    Image(systemName: expansionPackCompleted ? "checkmark.circle.fill" : "sparkles")
+                        .font(.system(size: 18))
+                        .foregroundColor(expansionPackCompleted ? .green : .purple)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Deeper Dive")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(expansionPackCompleted ? "Completed" : "Complete on iPhone")
+                            .font(.system(size: 10))
+                            .foregroundColor(expansionPackCompleted ? .green.opacity(0.8) : palette.textSecondary)
+                    }
+
+                    Spacer()
+
+                    if !expansionPackCompleted {
+                        Image(systemName: "arrow.up.forward.square")
+                            .font(.system(size: 12))
+                            .foregroundColor(palette.textSecondary.opacity(0.5))
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(expansionPackCompleted ? Color.green.opacity(0.2) : Color.purple.opacity(0.25))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(expansionPackCompleted ? Color.green.opacity(0.5) : Color.purple.opacity(0.4), lineWidth: 1)
+                        )
+                )
+                .opacity(expansionPackCompleted ? 0.8 : 1.0)
+            }
 
             // Treatment tasks (if any pending after journey starts)
             if pendingTasksCount > 0 && !isDayComplete {

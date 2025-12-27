@@ -25,8 +25,9 @@ struct SplashScreenView: View {
     // Timer for loading dots animation
     private let loadingTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
-    // Brand teal color
-    private let brandTeal = Color(red: 0.22, green: 0.65, blue: 0.69)
+    // Brand colors - warm cream on dark background
+    private let logoColor = Color(red: 0.96, green: 0.90, blue: 0.83) // #F5E6D3 warm cream
+    private let accentColor = Color(red: 0.85, green: 0.65, blue: 0.45) // Warm amber accent
 
     var body: some View {
         ZStack {
@@ -52,7 +53,7 @@ struct SplashScreenView: View {
                     Circle()
                         .fill(
                             RadialGradient(
-                                colors: [brandTeal.opacity(0.4), Color.clear],
+                                colors: [logoColor.opacity(0.3), Color.clear],
                                 center: .center,
                                 startRadius: 20,
                                 endRadius: 100
@@ -64,7 +65,7 @@ struct SplashScreenView: View {
                         .blur(radius: 20)
 
                     // The Zoé spiral logo
-                    ZoeLogoAccurate(size: 100, tealColor: brandTeal)
+                    ZoeLogoSVG(size: 100, color: logoColor)
                         .scaleEffect(logoScale)
                         .opacity(logoOpacity)
                 }
@@ -77,7 +78,7 @@ struct SplashScreenView: View {
 
                     Text("Sleep Better, Live Longer")
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(brandTeal)
+                        .foregroundColor(accentColor)
                 }
                 .opacity(textOpacity)
 
@@ -145,13 +146,23 @@ struct SplashScreenView: View {
 
 /// Simplified splash for quick loads (no aurora animation)
 struct SimpleSplashView: View {
+    private let logoColor = Color(red: 0.96, green: 0.90, blue: 0.83) // #F5E6D3 warm cream
+
     var body: some View {
         ZStack {
-            Color(red: 0.02, green: 0.02, blue: 0.05)
-                .ignoresSafeArea()
+            // Dark warm background matching app icon
+            LinearGradient(
+                colors: [
+                    Color(red: 0.10, green: 0.08, blue: 0.07),
+                    Color(red: 0.05, green: 0.04, blue: 0.03)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
             VStack(spacing: 16) {
-                ZoeLogoAccurate(size: 80, tealColor: Color(red: 0.22, green: 0.65, blue: 0.69))
+                ZoeLogoSVG(size: 80, color: logoColor)
 
                 Text("Zoé Sleep")
                     .font(.system(size: 28, weight: .bold, design: .rounded))

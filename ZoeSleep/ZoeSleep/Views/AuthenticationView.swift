@@ -20,8 +20,8 @@ struct AuthenticationView: View {
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
-    // Brand teal color matching the logo
-    private let brandTeal = Color(red: 0.22, green: 0.65, blue: 0.69)
+    // Brand colors - warm cream on dark background
+    private let logoColor = Color(red: 0.96, green: 0.90, blue: 0.83) // #F5E6D3 warm cream
 
     var body: some View {
         NavigationView {
@@ -50,8 +50,8 @@ struct AuthenticationView: View {
                     // App Logo/Title
                     VStack(spacing: 12) {
                         // Spiral crescent moon logo with glow
-                        ZoeLogoAccurate(size: 80, tealColor: brandTeal)
-                            .shadow(color: brandTeal.opacity(0.6), radius: 20, x: 0, y: 0)
+                        ZoeLogoSVG(size: 80, color: logoColor)
+                            .shadow(color: logoColor.opacity(0.4), radius: 20, x: 0, y: 0)
 
                         Text("Zoé Sleep")
                             .font(.largeTitle)
