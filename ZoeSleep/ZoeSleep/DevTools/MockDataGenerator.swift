@@ -93,6 +93,9 @@ class MockDataGenerator {
         case .minutesScroll:
             return generateMinutesValue(for: question)
 
+        case .hoursMinutesScroll:
+            return generateHoursMinutesValue(for: question)
+
         case .numberScroll, .number:
             return generateNumberValue(for: question)
 
@@ -393,6 +396,19 @@ class MockDataGenerator {
         return (nil, Double(value), nil, nil)
     }
 
+    private func generateHoursMinutesValue(for question: Question) -> (String?, Double?, [String]?, String?) {
+        // Generate hours:minutes value (e.g., for sleep duration)
+        // Returns total minutes as the numeric value
+        let minHours = (question.minValue ?? 0) / 60
+        let maxHours = (question.maxValue ?? 720) / 60  // Default max 12 hours
+        let hours = Int.random(in: minHours...maxHours, using: &randomGenerator)
+        let minutes = [0, 15, 30, 45].randomElement(using: &randomGenerator) ?? 0
+        let totalMinutes = hours * 60 + minutes
+        // Return as formatted string "HH:MM" and total minutes as number
+        let formatted = String(format: "%d:%02d", hours, minutes)
+        return (formatted, Double(totalMinutes), nil, nil)
+    }
+
     private func generateNumberValue(for question: Question) -> (String?, Double?, [String]?, String?) {
         let min = question.minValue ?? 0
         let max = question.maxValue ?? 10
@@ -559,6 +575,7 @@ class MockDataGenerator {
         case .time: return "time_picker"
         case .date: return "date_picker"
         case .minutesScroll: return "minutes_scroll"
+        case .hoursMinutesScroll: return "hours_minutes_scroll"
         case .numberScroll, .number: return "number_scroll"
         case .scale: return "slider_scale"
         case .yesNo, .yesNoDontKnow: return "single_select_chips"

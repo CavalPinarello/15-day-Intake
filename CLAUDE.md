@@ -113,6 +113,16 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Expansion Pack Splash Screens:** Educational rationale screens for all 16 validated questionnaires (Dec 27, 2025)
+  - **Purpose:** When users encounter expansion packs (Days 6-14), they now see a splash screen explaining why they're being asked these questions
+  - **Content per questionnaire:** Full name, abbreviation, citation count, what it measures, why we're asking, scientific background (authors, year, journal, sensitivity/specificity, Cronbach's α)
+  - **16 validated instruments:** ISI (2,500+ citations), DBAS-16 (1,000+), SHI (500+), PSAS (800+), ESS (10,000+), FSS (7,000+), FOSQ-10 (500+), PHQ-9 (15,000+), GAD-7 (10,000+), DASS-21 (20,000+), PROMIS-Cog (2,000+), STOP-BANG (5,000+), Berlin (3,000+), BPI (6,300+), MEDAS (1,500+), MEQ (4,000+)
+  - **Single vs Multi-day:** Single questionnaire shows detailed view; multi-questionnaire days show summary list with stats
+  - **Triggered gateways:** Explains which gateway triggered the assessment (e.g., "Based on your responses about insomnia...")
+  - **Once per day:** Splash only shown once per day (tracked via UserDefaults)
+  - **Convex integration:** Added `modules` field to metadata in `watch.ts:getQuestionsForUserDay`
+  - **New file:** `ZoeSleep/ZoeSleep/Views/ExpansionQuestionnaireSplash.swift` (~700 lines)
+  - **Modified:** `QuestionnaireView.swift` (splash integration), `ConvexService.swift` (modules field)
 - **Physician Review Checklist UX Improvement:** Expandable review sections in analysis workflow (Dec 27, 2025)
   - **Problem:** Review Checklist only had checkboxes - physicians had to navigate away to see actual data
   - **Solution:** Click-to-expand sections that show data inline without leaving the workflow
