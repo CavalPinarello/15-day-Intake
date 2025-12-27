@@ -168,7 +168,12 @@ struct MinimalTasksView: View {
                     // Assessment Section (info only - must complete on iPhone)
                     assessmentCard
 
-                    // Expansion Pack Section (if any pending)
+                    // Today's Deeper Dive (expansion pack triggered today)
+                    if convexService.hasExpansionPackToday {
+                        deeperDiveCard
+                    }
+
+                    // Overdue Expansion Pack Section (if any pending from previous days)
                     if overdueExpansionsCount > 0 {
                         expansionPackCard
                     }
@@ -344,6 +349,107 @@ struct MinimalTasksView: View {
                 .fill(cardBackground.opacity(localTaskStatus.assessmentDone ? 0.5 : 1))
         )
         .opacity(localTaskStatus.assessmentDone ? 0.7 : 1)
+    }
+
+    // MARK: - Deeper Dive Card (Today's Expansion Pack)
+
+    /// Gateway descriptions for deeper dive explanation
+    private var deeperDiveDescription: String {
+        // Based on current day and triggered gateways, provide context
+        // This is a simplified version - ideally would fetch from Convex
+        switch convexService.currentDay {
+        case 1...5:
+            return "Understanding your sleep patterns"
+        default:
+            return "Personalized for you"
+        }
+    }
+
+    private var deeperDiveCard: some View {
+        let isCompleted = convexService.expansionPackCompleted
+
+        return VStack(spacing: 0) {
+            // Main card content
+            HStack(spacing: 10) {
+                // Icon - sparkles for deeper dive
+                ZStack {
+                    Circle()
+                        .fill(isCompleted ? Color.green.opacity(0.2) : Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.2))
+                        .frame(width: 36, height: 36)
+
+                    if isCompleted {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.green)
+                    } else {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Deeper Dive")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(isCompleted ? .white.opacity(0.6) : .white)
+
+                    Text(isCompleted ? "Completed" : deeperDiveDescription)
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                if !isCompleted {
+                    Image(systemName: "iphone")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+            }
+            .padding(10)
+
+            // Additional info (only show if not completed)
+            if !isCompleted {
+                VStack(alignment: .leading, spacing: 4) {
+                    // Divider
+                    Rectangle()
+                        .fill(Color.white.opacity(0.1))
+                        .frame(height: 1)
+                        .padding(.horizontal, 8)
+
+                    // Stats row
+                    HStack(spacing: 8) {
+                        // Time estimate
+                        HStack(spacing: 3) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 8))
+                            Text("~7 min")
+                                .font(.system(size: 9, weight: .medium))
+                        }
+                        .foregroundColor(.white.opacity(0.6))
+
+                        Spacer()
+
+                        // Badge
+                        Text("Triggered by your answers")
+                            .font(.system(size: 8))
+                            .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 8)
+                }
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(cardBackground.opacity(isCompleted ? 0.5 : 1))
+                .overlay(
+                    isCompleted ? nil : RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.3), lineWidth: 1)
+                )
+        )
+        .opacity(isCompleted ? 0.7 : 1)
     }
 
     // MARK: - Expansion Pack Card (Pending/Overdue Deep Dives)

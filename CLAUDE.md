@@ -113,6 +113,17 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Dynamic Nap Blocks & Conditional Medication Questions:** Structured nap/medication data collection (Dec 27, 2025)
+  - **Problem:** Nap question showed free-form text field; medication question was simple yes/no + text
+  - **New Nap Details UI:** Dynamic nap blocks based on nap count with time picker + duration quick-select buttons (15min, 30min, 45min, 1h, 1.5h, 2h+)
+  - **New Medication Select UI:** Multi-select chips for 6 medication categories (Melatonin, Prescription, OTC, CBD/THC, Herbal, Other) with conditional "Other" text field
+  - **New question types:** `napDetails` and `medicationSelect` in QuestionType enum
+  - **New models:** `NapEntry` struct (napNumber, startTime, durationMinutes), `MedicationCategory` struct with 6 predefined categories
+  - **Conditional logic enhancement:** Added `contains` operator to ConditionalLogic for array checking + compound conditions (`all`, `any`)
+  - **Convex queries:** `getPatientNapSummary` (days with naps, avg count, avg duration, common times), `getPatientMedicationSummary` (medication days, category counts, other medications)
+  - **Dashboard integration:** SleepDataReview.tsx now shows "Napping Patterns" and "Sleep Medications" sections
+  - **Backward compatible:** Legacy CSD_NAP_DURATION and CSD_MEDS_NAME still work for historical data
+  - **Files changed:** `QuestionModels.swift`, `QuestionComponents.swift`, `QuestionnaireView.swift`, `QuestionnaireManager.swift`, `convex/physician.ts`, `SleepDataReview.tsx`
 - **Comprehensive Questionnaire Scale Labels Fix:** Replaced all "Minimum/Maximum" slider labels with clinical descriptors (Dec 27, 2025)
   - **Problem:** Slider questions showed useless "Minimum/Maximum" labels instead of meaningful clinical descriptors
   - **Fixed 14+ questionnaire types** with proper labels from official publications:
