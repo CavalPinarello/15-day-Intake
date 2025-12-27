@@ -33,18 +33,12 @@ struct MinimalHomeView: View {
         CheckInWindow.current(hour: currentHour)
     }
 
-    // Create a darker gradient for status bar visibility
-    private var adjustedBackground: [Color] {
-        if palette.isDark {
-            return palette.background
-        } else {
-            // For light palettes, start with a darker top for status bar contrast
-            return [
-                Color(red: 0.15, green: 0.18, blue: 0.22),  // Dark top for status bar
-                palette.background[0],
-                palette.background.count > 1 ? palette.background[1] : palette.background[0]
-            ]
-        }
+    // Always use dark background for watchOS (OLED-friendly, better readability)
+    private var darkBackground: [Color] {
+        [
+            Color(red: 0.08, green: 0.08, blue: 0.10),
+            Color(red: 0.12, green: 0.12, blue: 0.14)
+        ]
     }
 
     var body: some View {
@@ -101,7 +95,7 @@ struct MinimalHomeView: View {
         }
         .background(
             LinearGradient(
-                colors: adjustedBackground,
+                colors: darkBackground,
                 startPoint: .top,
                 endPoint: .bottom
             )

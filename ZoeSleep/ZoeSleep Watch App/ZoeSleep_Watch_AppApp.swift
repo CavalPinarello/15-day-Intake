@@ -70,71 +70,23 @@ struct ZoeSleep_Watch_App: App {
 struct WatchContentView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var themeManager: WatchThemeManager
-    @State private var currentTab: WatchTab = .home
     @ObservedObject private var convexService = WatchConvexService.shared
 
-    enum WatchTab {
-        case home
-        case health
-        case settings
-    }
-
     var body: some View {
-        TabView(selection: $currentTab) {
-            // Home - Minimal garden-based check-in hub
-            MinimalHomeView()
-                .tag(WatchTab.home)
-                .tabItem {
-                    Image(systemName: "leaf.fill")
-                    Text("Garden")
-                }
-
-            // Health summary
-            HealthSummaryView()
-                .tag(WatchTab.health)
-                .tabItem {
-                    Image(systemName: "heart.fill")
-                    Text("Health")
-                }
-
-            // Settings
-            WatchSettingsView()
-                .tag(WatchTab.settings)
-                .tabItem {
-                    Image(systemName: "gear")
-                    Text("Settings")
-                }
-        }
-        .onAppear {
-            // Request latest data from iPhone
-            watchConnectivity.requestDataFromiPhone()
-            // Schedule check-in notifications
-            Task {
-                let granted = await WatchNotificationManager.shared.requestAuthorization()
-                if granted {
-                    WatchNotificationManager.shared.scheduleCheckInReminders()
-                    WatchNotificationManager.shared.registerNotificationCategories()
+        // Simple single-screen experience - no tabs
+        MinimalHomeView()
+            .onAppear {
+                // Request latest data from iPhone
+                watchConnectivity.requestDataFromiPhone()
+                // Schedule check-in notifications
+                Task {
+                    let granted = await WatchNotificationManager.shared.requestAuthorization()
+                    if granted {
+                        WatchNotificationManager.shared.scheduleCheckInReminders()
+                        WatchNotificationManager.shared.registerNotificationCategories()
+                    }
                 }
             }
-        }
-        .onChange(of: currentTab) { _, newTab in
-            // Refresh state from Convex when switching to home tab
-            if newTab == .home {
-                refreshFromConvex()
-            }
-        }
-    }
-
-    private func refreshFromConvex() {
-        Task {
-            guard convexService.isAuthenticated else { return }
-            do {
-                _ = try await convexService.fetchJourneyState()
-                print("[Watch] Tab switch refresh: Day \(convexService.currentDay)")
-            } catch {
-                print("[Watch] Tab switch refresh failed: \(error.localizedDescription)")
-            }
-        }
     }
 }
 

@@ -113,6 +113,17 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Dynamic Task Counter & Expansion Pack Integration:** Complete task tracking system for iOS and Watch (Dec 27, 2025)
+  - **Problem:** Task count was static "1 of 2" even when expansion packs triggered; no-gateway days showed misleading "Assessment: Pending"
+  - **Dynamic task count:** Now shows "1 of 1" (no assessment), "2 of 2" (with assessment), or "2 of 3" (with expansion pack)
+  - **iOS ContentView.swift:** Updated `totalTaskCount`, `completedTaskCount`, and `isDayComplete` to include expansion packs
+  - **No-gateway UX:** New `NoAssessmentTodayView` component shows "You're on track!" message when no assessment needed
+  - **Debug Tools fix:** `UnifiedDebugPanel.swift` now shows "None (0 gateways)" instead of misleading "Pending"
+  - **Countdown timer:** Now displays correctly when day is complete (was blocked by incorrect `isDayComplete` logic)
+  - **Watch app sync:** `WatchHomeView.swift` shows same task count as iPhone; new "Deeper Dive" task row with purple sparkles
+  - **Backend update:** `watch.ts:getJourneyState` now returns `hasExpansionPackToday` and `expansionPackCompleted`
+  - **Schema update:** Added `expansion_pack_completed` field to `user_progress` table
+  - **Files changed:** `ContentView.swift`, `UnifiedDebugPanel.swift`, `WatchHomeView.swift`, `WatchConvexService.swift`, `watch.ts`, `schema.ts`
 - **New Zoe Logo & App Icons:** Updated all app icons with new spiral crescent moon logo from official brand SVG (Dec 27, 2025)
   - **Logo source:** Frame 3.svg - spiral crescent moon design
   - **Color scheme:** Warm cream (#F5E6D3) on dark warm brown gradient (#1a1512 to #0d0a08)
