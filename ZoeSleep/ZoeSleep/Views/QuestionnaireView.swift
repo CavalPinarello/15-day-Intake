@@ -962,19 +962,44 @@ struct QuestionnaireView: View {
     /// Convert a ConvexQuestion to the iOS Question type
     private func convertConvexQuestion(_ cq: ConvexQuestion, isSleepLog: Bool) -> Question {
         // Map Convex question type to iOS QuestionType
+        // NOTE: Convex watch.ts mapAnswerFormatToType() must match these mappings!
         let questionType: QuestionType
         switch cq.type {
+        // Time inputs
         case "time": questionType = .time
+
+        // Scale/slider inputs
         case "scale": questionType = .scale
+
+        // Number inputs
         case "number": questionType = .number
+        case "numberScroll": questionType = .numberScroll
+
+        // Scroll pickers (specialized)
+        case "minutesScroll": questionType = .minutesScroll
+        case "hoursMinutesScroll": questionType = .hoursMinutesScroll
+
+        // Yes/No
         case "yesNo": questionType = .yesNo
+
+        // Selection inputs
         case "singleSelect": questionType = .singleSelect
         case "multiSelect": questionType = .multiSelect
+
+        // Text inputs
         case "text": questionType = .text
+
+        // Date inputs
+        case "date": questionType = .date
+
+        // Specialized inputs
         case "info": questionType = .info
         case "napDetails": questionType = .napDetails
         case "medicationSelect": questionType = .medicationSelect
-        default: questionType = .text
+
+        default:
+            print("[iOS] WARNING: Unknown question type '\(cq.type)' for question \(cq.id), defaulting to text")
+            questionType = .text
         }
 
         // Extract scale config from formatConfig if available

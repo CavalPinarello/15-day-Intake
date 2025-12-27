@@ -1974,34 +1974,51 @@ export const getQuestionsForUserDay = query({
  */
 function mapAnswerFormatToType(answerFormat: string): string {
   const mapping: Record<string, string> = {
+    // Time inputs
     time: "time",
     time_picker: "time",
+
+    // Scale/slider inputs
     scale: "scale",
+    likert_5: "scale",
+    likert_7: "scale",
+    slider_scale: "scale",
+
+    // Number inputs (generic)
     number: "number",
     number_input: "number",
-    number_scroll: "number",
+    percentage: "number",
+
+    // Scroll pickers (specialized - must map correctly!)
+    number_scroll: "numberScroll",
+    minutes_scroll: "minutesScroll",
+    duration_minutes: "minutesScroll",
+    hours_minutes_scroll: "hoursMinutesScroll",
+
+    // Yes/No
     yes_no: "yesNo",
     yes_no_chips: "yesNo",
+
+    // Selection inputs
     single_select: "singleSelect",
     single_select_chips: "singleSelect",
     multi_select: "multiSelect",
     multi_select_chips: "multiSelect",
+
+    // Text inputs
     text: "text",
     text_short: "text",
     text_long: "text",
-    likert_5: "scale",
-    likert_7: "scale",
-    slider_scale: "scale",
-    duration_minutes: "number",
-    minutes_scroll: "number",
-    percentage: "number",
-    // Date types - use year picker for birth dates
-    date: "year",
-    date_picker: "year",
-    date_auto: "text",  // Auto-fill dates shown as text
+
+    // Date types
+    date: "date",
+    date_picker: "date",
+    date_auto: "text",
+
     // Specialized input types
     nap_details: "napDetails",
     medication_select: "medicationSelect",
+    info: "info",
   };
   return mapping[answerFormat] || "text";
 }
