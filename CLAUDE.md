@@ -113,9 +113,28 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
-- **Smart Question Derivation & Scale Labels Fix:** Reduce user burden by deriving redundant questions from Sleep Log (Dec 27, 2025)
-  - **Problem 1:** Questions 12A (# awakenings), 12C (time to fall back asleep) asked in Assessment despite same data being in Sleep Log
-  - **Problem 2:** Scale questions showed bare numbers (0, 1, 2, 3) instead of meaningful labels
+- **Comprehensive Questionnaire Scale Labels Fix:** Replaced all "Minimum/Maximum" slider labels with clinical descriptors (Dec 27, 2025)
+  - **Problem:** Slider questions showed useless "Minimum/Maximum" labels instead of meaningful clinical descriptors
+  - **Fixed 14+ questionnaire types** with proper labels from official publications:
+    | Questionnaire | Scale | Labels |
+    |--------------|-------|--------|
+    | ISI | 0-4 | None → Mild → Moderate → Severe → Very Severe |
+    | DBAS-16 | 0-10 | Strongly Disagree → Strongly Agree |
+    | Sleep Hygiene | 1-5 | Never → Rarely → Sometimes → Frequently → Always |
+    | PSAS | 1-5 | Not at all → Slightly → Moderately → A lot → Extremely |
+    | PHQ-9/GAD-7 | 0-3 | Not at all → Several days → More than half → Nearly every day |
+    | DASS-21 | 0-3 | Not at all → Sometimes → Often → Almost always |
+    | ESS | 0-3 | No chance → Slight → Moderate → High chance |
+    | FSS | 1-7 | Strongly Disagree → Strongly Agree |
+    | FOSQ | 1-4 | No difficulty → Mild → Moderate → Extreme difficulty |
+    | PROMIS Cognitive | 1-5 | Never → Rarely → Sometimes → Often → Very often |
+    | Berlin | 1-5 | Never → Nearly every day (frequency) |
+    | BPI | 0-10 | No pain → Worst pain imaginable |
+    | MEQ | 1-4 | Chronotype-specific labels (e.g., Very tired → Very refreshed) |
+  - **File changed:** `data/converted/assessment_questions_converted.json`
+  - **IMPORTANT:** After modifying JSON, run `npx convex run seedQuestions:seedAll` to update database
+- **Smart Question Derivation:** Reduce user burden by deriving redundant questions from Sleep Log (Dec 27, 2025)
+  - **Problem:** Questions 12A (# awakenings), 12C (time to fall back asleep) asked in Assessment despite same data being in Sleep Log
   - **Derivation System:** Added 12A and 12C to `derivableFromSleepLog` set in QuestionnaireManager.swift
   - **New functions:** `derive12AFromSleepLog()` gets awakenings from `CSD_AWAKENINGS`, `derive12CFromSleepLog()` calculates avg time = `CSD_WASO / CSD_AWAKENINGS`
   - **Conditional logic:** 12B (reason for waking) now only shows if user reported awakenings > 0
