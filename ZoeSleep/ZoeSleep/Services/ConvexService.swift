@@ -168,6 +168,9 @@ struct JourneyProgress: Codable {
     // Section completion status for current day
     let sleepLogCompleted: Bool?
     let assessmentCompleted: Bool?
+    // Expansion pack completion for current day (same-day deep dives on Days 1-5)
+    let hasExpansionPackToday: Bool?
+    let expansionPackCompleted: Bool?
 }
 
 struct SleepDataRecord: Codable {

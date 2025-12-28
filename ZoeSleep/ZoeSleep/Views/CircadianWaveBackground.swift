@@ -809,15 +809,12 @@ struct FlowingWave: Shape {
         let segmentWidth = width / CGFloat(segments)
 
         for i in 0..<segments {
-            let x1 = segmentWidth * CGFloat(i)
             let x2 = segmentWidth * CGFloat(i + 1)
-            let midX = (x1 + x2) / 2
+            let midX = segmentWidth * (CGFloat(i) + 0.5)
 
-            let progress1 = x1 / width
             let progressMid = midX / width
             let progress2 = x2 / width
 
-            let y1 = baseY + sin(progress1 * frequency * .pi * 2 + phase) * amplitude
             let yMid = baseY + sin(progressMid * frequency * .pi * 2 + phase) * amplitude
             let y2 = baseY + sin(progress2 * frequency * .pi * 2 + phase) * amplitude
 

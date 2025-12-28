@@ -83,27 +83,42 @@ struct ZoeLogo: View {
 }
 
 /// Precise SVG path-based logo recreation
-/// Uses the exact SVG path data from Frame 3.svg
+/// Uses the exact SVG path data from Frame 3.svg, properly centered
 struct ZoeLogoSVG: View {
     var size: CGFloat = 100
     var color: Color = Color(red: 0.96, green: 0.90, blue: 0.83) // #F5E6D3 warm cream
 
+    // SVG content bounds (calculated from path coordinates)
+    // X: 8.89 to 1431.33, Y: 8.89 to 1435.92
+    // Content width: ~1422, height: ~1427, centered at (~720, ~722)
+    private let contentWidth: CGFloat = 1422.44
+    private let contentHeight: CGFloat = 1427.03
+    private let contentCenterX: CGFloat = 720.11  // (8.89 + 1431.33) / 2
+    private let contentCenterY: CGFloat = 722.405 // (8.89 + 1435.92) / 2
+
     var body: some View {
-        GeometryReader { geometry in
-            let scale = min(geometry.size.width, geometry.size.height) / 1449 // Match SVG height
+        Canvas { context, canvasSize in
+            let targetSize = min(canvasSize.width, canvasSize.height)
+            let scale = targetSize / max(contentWidth, contentHeight)
 
-            ZStack {
-                // Outer crescent shape
-                OuterCrescentShape()
-                    .fill(color)
-                    .scaleEffect(scale)
+            // Calculate offset to center the content
+            let offsetX = (canvasSize.width / 2) - (contentCenterX * scale)
+            let offsetY = (canvasSize.height / 2) - (contentCenterY * scale)
 
-                // Inner crescent shape (spiral)
-                InnerCrescentShape()
-                    .fill(color)
-                    .scaleEffect(scale)
-            }
-            .frame(width: geometry.size.width, height: geometry.size.height)
+            // Apply transform: translate to center, then scale
+            var transform = CGAffineTransform.identity
+            transform = transform.translatedBy(x: offsetX, y: offsetY)
+            transform = transform.scaledBy(x: scale, y: scale)
+
+            // Draw outer crescent
+            var outerPath = OuterCrescentShape().path(in: .infinite)
+            outerPath = outerPath.applying(transform)
+            context.fill(outerPath, with: .color(color))
+
+            // Draw inner crescent
+            var innerPath = InnerCrescentShape().path(in: .infinite)
+            innerPath = innerPath.applying(transform)
+            context.fill(innerPath, with: .color(color))
         }
         .frame(width: size, height: size)
     }

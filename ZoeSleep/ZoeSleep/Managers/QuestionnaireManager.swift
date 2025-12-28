@@ -999,8 +999,10 @@ class QuestionnaireManager: ObservableObject {
     /// Question IDs that can be derived from sleep log data
     /// Includes both PSQI questions and general assessment questions
     private static let derivableFromSleepLog: Set<String> = [
+        "PSQI_1",  // Usual bedtime (from CSD_TRY_SLEEP)
         "PSQI_2",  // Sleep latency (from CSD_LATENCY)
         "PSQI_4",  // Hours of actual sleep (from CSD times)
+        "41",      // "When have you usually gone to bed at night?" (from CSD_TRY_SLEEP) - same as PSQI_1
         "6",       // "How long does it take you to fall asleep?" (from CSD_LATENCY)
         "12A",     // "How many times do you typically wake up during the night?" (from CSD_AWAKENINGS)
         "12C"      // "How long does it typically take you to fall back asleep?" (from CSD_WASO / CSD_AWAKENINGS)
@@ -1017,6 +1019,22 @@ class QuestionnaireManager: ObservableObject {
         let hasAwakenings = responses["CSD_AWAKENINGS"] != nil
 
         return hasLatency && hasTrySleep && hasFinalWake && hasWASO && hasAwakenings
+    }
+
+    /// Derive PSQI_1 / Question 41 (usual bedtime) from sleep log CSD_TRY_SLEEP
+    /// Returns the bedtime as a time string (e.g., "22:30")
+    func deriveBedtimeFromSleepLog() -> String? {
+        // First try CSD_TRY_SLEEP (time tried to go to sleep)
+        if let trySleepResponse = responses["CSD_TRY_SLEEP"],
+           let timeStr = trySleepResponse.stringValue {
+            return timeStr
+        }
+        // Fallback to CSD_INTO_BED (time got into bed) if available
+        if let intoBedResponse = responses["CSD_INTO_BED"],
+           let timeStr = intoBedResponse.stringValue {
+            return timeStr
+        }
+        return nil
     }
 
     /// Derive PSQI_2 (sleep latency) from sleep log CSD_LATENCY
@@ -1091,6 +1109,29 @@ class QuestionnaireManager: ObservableObject {
     /// Call this after sleep log is completed to auto-fill derivable questions
     func generateDerivedPSQIResponses(forDay dayNumber: Int) {
         guard canDerivePSQIFromSleepLog() else { return }
+
+        // Derive bedtime questions (PSQI_1 and question 41)
+        if let bedtimeStr = deriveBedtimeFromSleepLog() {
+            // PSQI_1 ("When have you usually gone to bed at night?")
+            let psqi1Response = QuestionResponse(
+                questionId: "PSQI_1",
+                dayNumber: dayNumber,
+                stringValue: bedtimeStr,
+                isDerived: true
+            )
+            responses["PSQI_1"] = psqi1Response
+            saveResponse(psqi1Response)
+
+            // Question 41 ("When have you usually gone to bed at night?") - same question
+            let q41Response = QuestionResponse(
+                questionId: "41",
+                dayNumber: dayNumber,
+                stringValue: bedtimeStr,
+                isDerived: true
+            )
+            responses["41"] = q41Response
+            saveResponse(q41Response)
+        }
 
         // Derive sleep latency questions (PSQI_2 and question 6)
         if let latencyMinutes = derivePSQI2FromSleepLog() {
@@ -2295,17 +2336,19 @@ class QuestionnaireManager: ObservableObject {
                 startedAt: startDate,
                 gatewayStates: gatewayStates,
                 sleepLogCompleted: progress.sleepLogCompleted ?? false,
-                assessmentCompleted: progress.assessmentCompleted ?? false
+                assessmentCompleted: progress.assessmentCompleted ?? false,
+                expansionPackCompleted: progress.expansionPackCompleted ?? false
             )
 
             // Check if anything changed to notify observers
             let progressChanged = journeyProgress?.sleepLogCompleted != newProgress.sleepLogCompleted ||
                                   journeyProgress?.assessmentCompleted != newProgress.assessmentCompleted ||
+                                  journeyProgress?.expansionPackCompleted != newProgress.expansionPackCompleted ||
                                   journeyProgress?.currentDay != newProgress.currentDay
 
             journeyProgress = newProgress
             isLoading = false
-            print("[iOS] Loaded progress: Day \(progress.currentDay), sleepLog=\(progress.sleepLogCompleted ?? false), assessment=\(progress.assessmentCompleted ?? false)")
+            print("[iOS] Loaded progress: Day \(progress.currentDay), sleepLog=\(progress.sleepLogCompleted ?? false), assessment=\(progress.assessmentCompleted ?? false), expansion=\(progress.expansionPackCompleted ?? false)")
 
             // Post notification if progress changed
             if progressChanged {

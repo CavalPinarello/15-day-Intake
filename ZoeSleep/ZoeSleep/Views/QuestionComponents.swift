@@ -165,7 +165,13 @@ struct ScaleInput: View {
     }
 
     /// Get standardized label for current value
+    /// Uses question-specific labels when available (e.g., ISI has different labels per question)
     private var currentValueLabel: String? {
+        // First try question-specific labels
+        if let labels = StandardizedAnswerLabels.labels(forQuestion: question.id) {
+            return labels[Int(value)]
+        }
+        // Fall back to questionnaire-level labels
         guard let questionnaire = detectedQuestionnaire else { return nil }
         guard let labels = StandardizedAnswerLabels.labels(for: questionnaire) else { return nil }
         return labels[Int(value)]
@@ -317,7 +323,13 @@ struct DiscreteScaleInput: View {
     }
 
     /// Get all labels for the scale from standardized system
+    /// Uses question-specific labels when available (e.g., ISI has different labels per question)
     private var scaleLabels: [Int: String] {
+        // First try question-specific labels (e.g., ISI_1 vs ISI_4 have different labels)
+        if let labels = StandardizedAnswerLabels.labels(forQuestion: question.id) {
+            return labels
+        }
+        // Fall back to questionnaire-level labels
         guard let questionnaire = detectedQuestionnaire,
               let labels = StandardizedAnswerLabels.labels(for: questionnaire) else {
             return [:]

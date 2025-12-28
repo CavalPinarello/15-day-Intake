@@ -149,7 +149,10 @@ struct QuestionnaireView: View {
                     completedSection: sectionOnly ? completedSectionAtFinish : nil,
                     onProceedToNextSection: sectionOnly && completedSectionAtFinish == .sleepLog ? {
                         proceedToAssessment()
-                    } : nil
+                    } : nil,
+                    // Pass actual completion status from backend to correctly show checkmarks
+                    completedSleepLog: questionnaireManager.journeyProgress?.sleepLogCompleted ?? false,
+                    completedAssessment: questionnaireManager.journeyProgress?.assessmentCompleted ?? false
                 )
             } else if showingRewardCard, let fact = rewardManager.currentFact {
                 // Reward moment with sleep fact
@@ -1795,7 +1798,7 @@ struct QuestionnaireView: View {
                         .filter { $0.triggered }
                         .map { $0.gatewayType.rawValue }
 
-                    await GamificationManager.shared.recordDayComplete(
+                    _ = await GamificationManager.shared.recordDayComplete(
                         dayNumber: currentDay,
                         completedSleepLog: section == .sleepLog || result.sleepLogCompleted,
                         completedAssessment: section == .assessment || result.assessmentCompleted,
@@ -1821,7 +1824,7 @@ struct QuestionnaireView: View {
                         .filter { $0.triggered }
                         .map { $0.gatewayType.rawValue }
 
-                    await GamificationManager.shared.recordDayComplete(
+                    _ = await GamificationManager.shared.recordDayComplete(
                         dayNumber: currentDay,
                         completedSleepLog: true,
                         completedAssessment: true,
@@ -2230,8 +2233,7 @@ struct QuestionnaireView: View {
 
             // Convert time strings back to Date
             if let timeString = value as? String,
-               let question = sleepLogQuestions.first(where: { $0.id == questionId }),
-               question.questionType == .time {
+               sleepLogQuestions.first(where: { $0.id == questionId })?.questionType == .time {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "HH:mm"
                 if let date = formatter.date(from: timeString) {

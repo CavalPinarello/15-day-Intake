@@ -411,13 +411,56 @@ struct DuplicateQuestionMapping {
 struct StandardizedAnswerLabels {
 
     /// ISI (Insomnia Severity Index) - 0-4 scale
-    static let isi: [Int: String] = [
+    /// Original publication: Morin et al., 2011 - Sleep 34(5):601-8
+    /// Note: ISI has question-specific labels per the validated instrument
+
+    /// ISI Items 1-3 (Severity of sleep onset, maintenance, and early awakening problems)
+    static let isiSeverity: [Int: String] = [
         0: "None",
         1: "Mild",
         2: "Moderate",
         3: "Severe",
         4: "Very Severe"
     ]
+
+    /// ISI Item 4 (Satisfaction with sleep pattern)
+    static let isiSatisfaction: [Int: String] = [
+        0: "Very Satisfied",
+        1: "Satisfied",
+        2: "Moderately Satisfied",
+        3: "Dissatisfied",
+        4: "Very Dissatisfied"
+    ]
+
+    /// ISI Item 5 (Interference with daily functioning)
+    static let isiInterference: [Int: String] = [
+        0: "Not at all interfering",
+        1: "A little",
+        2: "Somewhat",
+        3: "Much",
+        4: "Very much interfering"
+    ]
+
+    /// ISI Item 6 (How noticeable to others)
+    static let isiNoticeable: [Int: String] = [
+        0: "Not at all noticeable",
+        1: "A little",
+        2: "Somewhat",
+        3: "Much",
+        4: "Very much noticeable"
+    ]
+
+    /// ISI Item 7 (Worry/distress about sleep problem)
+    static let isiWorried: [Int: String] = [
+        0: "Not at all worried",
+        1: "A little",
+        2: "Somewhat",
+        3: "Much",
+        4: "Very much worried"
+    ]
+
+    /// Default ISI labels (for backward compatibility - uses severity scale)
+    static let isi: [Int: String] = isiSeverity
 
     /// DBAS-16 (Dysfunctional Beliefs) - 0-10 scale
     static let dbas16: [Int: String] = [
@@ -538,6 +581,52 @@ struct StandardizedAnswerLabels {
         case "MEQ": return meqType
         default: return nil
         }
+    }
+
+    /// Get labels for a specific question ID (supports question-specific labels like ISI)
+    /// Returns question-specific labels if available, otherwise falls back to questionnaire-level labels
+    static func labels(forQuestion questionId: String) -> [Int: String]? {
+        let id = questionId.uppercased()
+
+        // ISI has question-specific labels per the original validated instrument
+        if id.hasPrefix("ISI_") || id.hasPrefix("ISI-") {
+            // Extract question number (ISI_1, ISI_2, etc.)
+            let numberPart = id.replacingOccurrences(of: "ISI_", with: "")
+                              .replacingOccurrences(of: "ISI-", with: "")
+            if let questionNumber = Int(numberPart) {
+                switch questionNumber {
+                case 1, 2, 3:
+                    return isiSeverity  // Difficulty falling asleep, staying asleep, waking too early
+                case 4:
+                    return isiSatisfaction  // How satisfied with sleep pattern
+                case 5:
+                    return isiInterference  // How much interferes with daily functioning
+                case 6:
+                    return isiNoticeable  // How noticeable to others
+                case 7:
+                    return isiWorried  // How worried/distressed
+                default:
+                    return isiSeverity  // Fallback to severity scale
+                }
+            }
+        }
+
+        // For other questionnaires, use questionnaire-level labels
+        if id.hasPrefix("ISI") { return isi }
+        if id.hasPrefix("DBAS") { return dbas16 }
+        if id.hasPrefix("ESS") { return ess }
+        if id.hasPrefix("FSS") { return fss }
+        if id.hasPrefix("PHQ") { return phqGad }
+        if id.hasPrefix("GAD") { return phqGad }
+        if id.hasPrefix("DASS") { return dass21 }
+        if id.hasPrefix("PSAS") { return psas }
+        if id.hasPrefix("SHI") { return shi }
+        if id.hasPrefix("FOSQ") { return fosq10 }
+        if id.hasPrefix("BPI") { return bpiPain }
+        if id.hasPrefix("PSQI") { return psqi }
+        if id.hasPrefix("MEQ") { return meqType }
+
+        return nil
     }
 
     /// Get min/max labels for display

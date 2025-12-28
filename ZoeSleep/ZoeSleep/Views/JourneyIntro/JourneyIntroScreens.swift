@@ -2,57 +2,49 @@
 //  JourneyIntroScreens.swift
 //  Zoe Sleep - Sleep Better, Live Longer
 //
-//  Individual screen components for the Journey Introduction sequence
-//  Each screen explains a different aspect of the 14-day sleep assessment
+//  Journey introduction screens - big text, concise messaging
+//  Explains the 14-day assessment → expert review → maintenance transition
 //
 
 import SwiftUI
 
-// MARK: - Screen 1: Welcome to Your Journey
+// MARK: - Screen 1: 360° Sleep Understanding
 
 struct JourneyIntroScreen1: View {
     let screenHeight: CGFloat
 
-    @State private var iconScale: CGFloat = 0.3
+    @State private var iconScale: CGFloat = 0.5
     @State private var iconOpacity: Double = 0
     @State private var textOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
 
     var body: some View {
-        VStack(spacing: isCompact ? 20 : 28) {
-            Spacer(minLength: isCompact ? 40 : 60)
+        VStack(spacing: isCompact ? 24 : 32) {
+            Spacer()
 
-            // Animated icon
+            // Icon
             JourneyIntroMoonIcon()
-                .frame(width: isCompact ? 100 : 120, height: isCompact ? 100 : 120)
+                .frame(width: isCompact ? 110 : 130, height: isCompact ? 110 : 130)
                 .scaleEffect(iconScale)
                 .opacity(iconOpacity)
 
-            // Title
-            Text("Your 14-Day Sleep Journey")
-                .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
+            // Title - BIG
+            Text("14 Days to\n360° Sleep Understanding")
+                .font(.system(size: isCompact ? 28 : 32, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
+                .lineSpacing(4)
                 .opacity(textOpacity)
 
-            // Description
-            VStack(spacing: isCompact ? 12 : 16) {
-                JourneyIntroParagraph(
-                    "Over the next two weeks, we'll build a complete picture of your sleep.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "Plan for 10-15 minutes daily — this investment helps us calibrate your subjective experience and see the complete picture.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "It's time well spent for truly personalized care.",
-                    isCompact: isCompact
-                )
-            }
-            .padding(.horizontal, isCompact ? 24 : 32)
-            .opacity(textOpacity)
+            // Description - SHORT
+            Text("A complete picture of your sleep.\n10 minutes daily. Worth every second.")
+                .font(.system(size: isCompact ? 18 : 20, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .lineSpacing(6)
+                .padding(.horizontal, 32)
+                .opacity(textOpacity)
 
             Spacer()
             Spacer()
@@ -71,51 +63,43 @@ struct JourneyIntroScreen1: View {
     }
 }
 
-// MARK: - Screen 2: Daily Sleep Log
+// MARK: - Screen 2: Daily Routine
 
 struct JourneyIntroScreen2: View {
     let screenHeight: CGFloat
 
-    @State private var iconScale: CGFloat = 0.3
+    @State private var iconScale: CGFloat = 0.5
     @State private var iconOpacity: Double = 0
     @State private var textOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
 
     var body: some View {
-        VStack(spacing: isCompact ? 20 : 28) {
-            Spacer(minLength: isCompact ? 40 : 60)
+        VStack(spacing: isCompact ? 24 : 32) {
+            Spacer()
 
-            // Animated icon
+            // Icon
             JourneyIntroClipboardIcon()
-                .frame(width: isCompact ? 100 : 120, height: isCompact ? 100 : 120)
+                .frame(width: isCompact ? 110 : 130, height: isCompact ? 110 : 130)
                 .scaleEffect(iconScale)
                 .opacity(iconOpacity)
 
-            // Title
-            Text("Daily Sleep Log")
-                .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
+            // Title - BIG
+            Text("Morning Check-In +\nPersonalized Deep Dives")
+                .font(.system(size: isCompact ? 28 : 32, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
+                .lineSpacing(4)
                 .opacity(textOpacity)
 
-            // Description
-            VStack(spacing: isCompact ? 12 : 16) {
-                JourneyIntroParagraph(
-                    "Every morning, 10 questions from the Stanford Consensus Sleep Diary — repeated for all 14 days.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "These capture how you felt — your subjective sleep experience.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "Consistency helps us identify true patterns and calibrate your perception.",
-                    isCompact: isCompact
-                )
-            }
-            .padding(.horizontal, isCompact ? 24 : 32)
-            .opacity(textOpacity)
+            // Description - SHORT
+            Text("Quick daily log. Deeper assessments\nunlock based on your answers.")
+                .font(.system(size: isCompact ? 18 : 20, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .lineSpacing(6)
+                .padding(.horizontal, 32)
+                .opacity(textOpacity)
 
             Spacer()
             Spacer()
@@ -134,51 +118,43 @@ struct JourneyIntroScreen2: View {
     }
 }
 
-// MARK: - Screen 3: Core Assessment
+// MARK: - Screen 3: Expert Review
 
 struct JourneyIntroScreen3: View {
     let screenHeight: CGFloat
 
-    @State private var iconScale: CGFloat = 0.3
+    @State private var iconScale: CGFloat = 0.5
     @State private var iconOpacity: Double = 0
     @State private var textOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
 
     var body: some View {
-        VStack(spacing: isCompact ? 20 : 28) {
-            Spacer(minLength: isCompact ? 40 : 60)
+        VStack(spacing: isCompact ? 24 : 32) {
+            Spacer()
 
-            // Animated icon
-            JourneyIntroBrainIcon()
-                .frame(width: isCompact ? 100 : 120, height: isCompact ? 100 : 120)
+            // Icon
+            JourneyIntroClinicianIcon()
+                .frame(width: isCompact ? 110 : 130, height: isCompact ? 110 : 130)
                 .scaleEffect(iconScale)
                 .opacity(iconOpacity)
 
-            // Title
-            Text("Understanding Your Sleep")
-                .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
+            // Title - BIG
+            Text("Expert Medical Review\nHuman-in-the-Loop")
+                .font(.system(size: isCompact ? 28 : 32, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
+                .lineSpacing(4)
                 .opacity(textOpacity)
 
-            // Description
-            VStack(spacing: isCompact ? 12 : 16) {
-                JourneyIntroParagraph(
-                    "Across all 14 days, we explore multiple facets of your sleep health.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "From environment to lifestyle to mental health — we examine the complete picture.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "Questions are balanced daily so you're never overwhelmed.",
-                    isCompact: isCompact
-                )
-            }
-            .padding(.horizontal, isCompact ? 24 : 32)
-            .opacity(textOpacity)
+            // Description - SHORT
+            Text("After 14 days, a sleep specialist reviews\nyour data and prescribes personalized\nsleep interventions.")
+                .font(.system(size: isCompact ? 18 : 20, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .lineSpacing(6)
+                .padding(.horizontal, 28)
+                .opacity(textOpacity)
 
             Spacer()
             Spacer()
@@ -197,139 +173,13 @@ struct JourneyIntroScreen3: View {
     }
 }
 
-// MARK: - Screen 4: Gateway System
+// MARK: - Screen 4: Your Future (Final Screen with CTA)
 
 struct JourneyIntroScreen4: View {
     let screenHeight: CGFloat
-
-    @State private var iconScale: CGFloat = 0.3
-    @State private var iconOpacity: Double = 0
-    @State private var textOpacity: Double = 0
-
-    private var isCompact: Bool { screenHeight < 700 }
-
-    var body: some View {
-        VStack(spacing: isCompact ? 20 : 28) {
-            Spacer(minLength: isCompact ? 40 : 60)
-
-            // Animated icon
-            JourneyIntroPathIcon()
-                .frame(width: isCompact ? 100 : 120, height: isCompact ? 100 : 120)
-                .scaleEffect(iconScale)
-                .opacity(iconOpacity)
-
-            // Title
-            Text("Personalized Deep Dives")
-                .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
-                .opacity(textOpacity)
-
-            // Description
-            VStack(spacing: isCompact ? 12 : 16) {
-                JourneyIntroParagraph(
-                    "Your answers may unlock 'gateway' assessments for deeper investigation.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "These include validated clinical tools: ISI, PHQ-9, STOP-BANG, and more.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "Only assessments relevant to YOU — no wasted time.",
-                    isCompact: isCompact
-                )
-            }
-            .padding(.horizontal, isCompact ? 24 : 32)
-            .opacity(textOpacity)
-
-            Spacer()
-            Spacer()
-        }
-        .onAppear(perform: animateIn)
-    }
-
-    private func animateIn() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.1)) {
-            iconScale = 1.0
-            iconOpacity = 1.0
-        }
-        withAnimation(.easeOut(duration: 0.4).delay(0.3)) {
-            textOpacity = 1.0
-        }
-    }
-}
-
-// MARK: - Screen 5: Wearable Integration
-
-struct JourneyIntroScreen5: View {
-    let screenHeight: CGFloat
-
-    @State private var iconScale: CGFloat = 0.3
-    @State private var iconOpacity: Double = 0
-    @State private var textOpacity: Double = 0
-
-    private var isCompact: Bool { screenHeight < 700 }
-
-    var body: some View {
-        VStack(spacing: isCompact ? 20 : 28) {
-            Spacer(minLength: isCompact ? 40 : 60)
-
-            // Animated icon
-            JourneyIntroWatchIcon()
-                .frame(width: isCompact ? 100 : 120, height: isCompact ? 100 : 120)
-                .scaleEffect(iconScale)
-                .opacity(iconOpacity)
-
-            // Title
-            Text("Objective Data")
-                .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
-                .opacity(textOpacity)
-
-            // Description
-            VStack(spacing: isCompact ? 12 : 16) {
-                JourneyIntroParagraph(
-                    "Your wearable captures what actually happened while you slept.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "We correlate your subjective feelings with objective measurements.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "Two weeks reveals true patterns — wearable accuracy improves over time.",
-                    isCompact: isCompact
-                )
-            }
-            .padding(.horizontal, isCompact ? 24 : 32)
-            .opacity(textOpacity)
-
-            Spacer()
-            Spacer()
-        }
-        .onAppear(perform: animateIn)
-    }
-
-    private func animateIn() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.1)) {
-            iconScale = 1.0
-            iconOpacity = 1.0
-        }
-        withAnimation(.easeOut(duration: 0.4).delay(0.3)) {
-            textOpacity = 1.0
-        }
-    }
-}
-
-// MARK: - Screen 6: Human Review
-
-struct JourneyIntroScreen6: View {
-    let screenHeight: CGFloat
     let onComplete: () -> Void
 
-    @State private var iconScale: CGFloat = 0.3
+    @State private var iconScale: CGFloat = 0.5
     @State private var iconOpacity: Double = 0
     @State private var textOpacity: Double = 0
     @State private var buttonOpacity: Double = 0
@@ -341,38 +191,35 @@ struct JourneyIntroScreen6: View {
     private let auroraSecondary = Color(red: 0.0, green: 0.8, blue: 0.9)
 
     var body: some View {
-        VStack(spacing: isCompact ? 20 : 28) {
-            Spacer(minLength: isCompact ? 40 : 60)
+        VStack(spacing: isCompact ? 24 : 32) {
+            Spacer()
 
-            // Animated icon
-            JourneyIntroClinicianIcon()
-                .frame(width: isCompact ? 100 : 120, height: isCompact ? 100 : 120)
+            // Icon - sunrise/energy
+            JourneyIntroSunriseIcon()
+                .frame(width: isCompact ? 110 : 130, height: isCompact ? 110 : 130)
                 .scaleEffect(iconScale)
                 .opacity(iconOpacity)
 
-            // Title
-            Text("Expert Review & Your Plan")
-                .font(.system(size: isCompact ? 24 : 28, weight: .bold, design: .rounded))
+            // Title - BIG
+            Text("Optimal Sleep for Life")
+                .font(.system(size: isCompact ? 28 : 32, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .opacity(textOpacity)
 
-            // Description
-            VStack(spacing: isCompact ? 12 : 16) {
-                JourneyIntroParagraph(
-                    "A real clinician reviews your complete profile.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "You'll receive personalized interventions from our evidence-based library.",
-                    isCompact: isCompact
-                )
-                JourneyIntroParagraph(
-                    "Human-in-the-loop ensures nothing is missed.",
-                    isCompact: isCompact
-                )
+            // Description - SHORT & POWERFUL
+            VStack(spacing: isCompact ? 8 : 12) {
+                Text("Maximum focus. Peak energy.")
+                    .font(.system(size: isCompact ? 18 : 20, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.9))
+
+                Text("Your app becomes a lifelong companion\nfor healthy sleep and extended healthspan.")
+                    .font(.system(size: isCompact ? 17 : 19, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(5)
             }
-            .padding(.horizontal, isCompact ? 24 : 32)
+            .padding(.horizontal, 28)
             .opacity(textOpacity)
 
             Spacer()
@@ -380,12 +227,12 @@ struct JourneyIntroScreen6: View {
             // CTA Button
             Button(action: onComplete) {
                 Text("Begin My Journey")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, isCompact ? 14 : 16)
+                    .padding(.vertical, isCompact ? 16 : 18)
                     .background(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 16)
                             .fill(
                                 LinearGradient(
                                     colors: [auroraAccent, auroraSecondary],
@@ -394,10 +241,10 @@ struct JourneyIntroScreen6: View {
                                 )
                             )
                     )
-                    .shadow(color: auroraAccent.opacity(0.4), radius: 12, y: 4)
+                    .shadow(color: auroraAccent.opacity(0.5), radius: 15, y: 5)
             }
-            .padding(.horizontal, isCompact ? 24 : 32)
-            .padding(.bottom, isCompact ? 16 : 24)
+            .padding(.horizontal, 32)
+            .padding(.bottom, isCompact ? 20 : 30)
             .opacity(buttonOpacity)
         }
         .onAppear(perform: animateIn)
@@ -417,7 +264,101 @@ struct JourneyIntroScreen6: View {
     }
 }
 
-// MARK: - Reusable Paragraph Component
+// MARK: - Legacy Screen Aliases (for backward compatibility)
+
+struct JourneyIntroScreen5: View {
+    let screenHeight: CGFloat
+
+    var body: some View {
+        // Redirect to screen 3
+        JourneyIntroScreen3(screenHeight: screenHeight)
+    }
+}
+
+struct JourneyIntroScreen6: View {
+    let screenHeight: CGFloat
+    let onComplete: () -> Void
+
+    var body: some View {
+        // Redirect to screen 4
+        JourneyIntroScreen4(screenHeight: screenHeight, onComplete: onComplete)
+    }
+}
+
+// MARK: - Sunrise Icon (new for screen 4)
+
+struct JourneyIntroSunriseIcon: View {
+    @State private var rayRotation: Double = 0
+    @State private var glowScale: CGFloat = 1.0
+
+    private let sunColor = Color(red: 1.0, green: 0.85, blue: 0.4)
+    private let warmOrange = Color(red: 1.0, green: 0.6, blue: 0.3)
+
+    var body: some View {
+        GeometryReader { geometry in
+            let size = min(geometry.size.width, geometry.size.height)
+            let center = size / 2
+
+            ZStack {
+                // Glow
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                sunColor.opacity(0.4),
+                                warmOrange.opacity(0.2),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: size * 0.15,
+                            endRadius: size * 0.5
+                        )
+                    )
+                    .scaleEffect(glowScale)
+                    .blur(radius: 8)
+
+                // Rays
+                ForEach(0..<8) { i in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(sunColor.opacity(0.6))
+                        .frame(width: 3, height: size * 0.18)
+                        .offset(y: -size * 0.32)
+                        .rotationEffect(.degrees(Double(i) * 45 + rayRotation))
+                }
+
+                // Sun circle
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [sunColor, warmOrange],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: size * 0.4, height: size * 0.4)
+                    .shadow(color: sunColor.opacity(0.5), radius: 15)
+
+                // Horizon line
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.white.opacity(0.4))
+                    .frame(width: size * 0.7, height: 4)
+                    .offset(y: size * 0.2)
+            }
+            .frame(width: size, height: size)
+            .position(x: center, y: center)
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
+                rayRotation = 360
+            }
+            withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
+                glowScale = 1.15
+            }
+        }
+    }
+}
+
+// MARK: - Reusable Paragraph Component (kept for any legacy usage)
 
 struct JourneyIntroParagraph: View {
     let text: String
@@ -430,10 +371,10 @@ struct JourneyIntroParagraph: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: isCompact ? 15 : 16, weight: .regular, design: .rounded))
+            .font(.system(size: isCompact ? 16 : 18, weight: .regular, design: .rounded))
             .foregroundColor(.white.opacity(0.85))
             .multilineTextAlignment(.center)
-            .lineSpacing(4)
+            .lineSpacing(5)
     }
 }
 
@@ -446,9 +387,23 @@ struct JourneyIntroParagraph: View {
     }
 }
 
-#Preview("Screen 6") {
+#Preview("Screen 2") {
     ZStack {
         AuroraBorealisView()
-        JourneyIntroScreen6(screenHeight: 844, onComplete: {})
+        JourneyIntroScreen2(screenHeight: 844)
+    }
+}
+
+#Preview("Screen 3") {
+    ZStack {
+        AuroraBorealisView()
+        JourneyIntroScreen3(screenHeight: 844)
+    }
+}
+
+#Preview("Screen 4") {
+    ZStack {
+        AuroraBorealisView()
+        JourneyIntroScreen4(screenHeight: 844, onComplete: {})
     }
 }
