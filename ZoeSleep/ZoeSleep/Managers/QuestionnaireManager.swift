@@ -314,13 +314,19 @@ class QuestionnaireManager: ObservableObject {
         // Caffeine
         Question(
             id: "CSD_CAFFEINE",
-            text: "How many caffeinated drinks did you have yesterday?",
+            text: "Did you have any caffeine yesterday?",
             pillar: .sleepLog,
-            questionType: .numberScroll,
-            minValue: 0,
-            maxValue: 10,
-            defaultValue: 0,
+            questionType: .yesNo,
             helpText: "Coffee, tea, energy drinks, soda",
+            group: "sleep_context"
+        ),
+        Question(
+            id: "CSD_CAFFEINE_TYPES",
+            text: "What caffeinated drinks did you have?",
+            pillar: .sleepLog,
+            questionType: .caffeineSelect,
+            helpText: "Tap each type and set the quantity",
+            conditionalLogic: ConditionalLogic(questionId: "CSD_CAFFEINE", equals: "Yes"),
             group: "sleep_context"
         ),
         Question(
@@ -328,7 +334,7 @@ class QuestionnaireManager: ObservableObject {
             text: "What time was your last caffeinated drink?",
             pillar: .sleepLog,
             questionType: .time,
-            conditionalLogic: ConditionalLogic(questionId: "CSD_CAFFEINE", greaterThan: 0),
+            conditionalLogic: ConditionalLogic(questionId: "CSD_CAFFEINE", equals: "Yes"),
             group: "sleep_context"
         ),
 

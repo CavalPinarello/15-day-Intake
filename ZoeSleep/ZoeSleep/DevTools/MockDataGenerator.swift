@@ -133,6 +133,10 @@ class MockDataGenerator {
         case .medicationSelect:
             // Generate mock medication selection (usually none or minimal)
             return (nil, nil, ["None"], nil)
+
+        case .caffeineSelect:
+            // Generate mock caffeine data (empty by default, let sleep log handle it)
+            return (nil, nil, nil, "[]")
         }
     }
 
@@ -593,6 +597,7 @@ class MockDataGenerator {
         case .info: return "info"
         case .repeatingGroup: return "repeating_group"
         case .napDetails: return "nap_details"
+        case .caffeineSelect: return "caffeine_select"
         }
     }
 }

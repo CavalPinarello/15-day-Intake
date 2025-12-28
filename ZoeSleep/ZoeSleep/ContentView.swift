@@ -413,7 +413,7 @@ struct MainDashboardView: View {
             }
 
             // Interactive progress dots - tap completed days to view history
-            // In debug mode: can tap any future day to jump directly to it
+            // In debug mode: can tap any future day to jump directly to it (reads debugMode from ThemeManager)
             InteractiveProgressDots(
                 current: currentDay,
                 total: 14,
@@ -422,7 +422,6 @@ struct MainDashboardView: View {
                     sleepDiarySelectedDay = day
                     navigateToSleepDiary = true
                 },
-                debugMode: themeManager.debugMode,
                 onDebugJumpToDay: { targetDay in
                     jumpToDay(targetDay)
                 }
@@ -796,35 +795,43 @@ struct MainDashboardView: View {
     /// Jump directly to any day (DEBUG MODE ONLY)
     /// Does NOT require completing previous days - purely for testing specific day questionnaires
     private func jumpToDay(_ targetDay: Int) {
+        print("[iOS Debug] jumpToDay called with targetDay: \(targetDay), current debugMode: \(themeManager.debugMode)")
+
         guard themeManager.debugMode else {
-            print("[iOS] jumpToDay called but debug mode not enabled")
+            print("[iOS Debug] jumpToDay blocked - debug mode not enabled")
             return
         }
         guard targetDay >= 1 && targetDay <= 14 else {
-            print("[iOS] Invalid target day: \(targetDay)")
+            print("[iOS Debug] Invalid target day: \(targetDay)")
             return
         }
 
+        print("[iOS Debug] Attempting to jump to day \(targetDay)...")
+
         Task {
             do {
+                print("[iOS Debug] Calling ConvexService.shared.jumpToDay(\(targetDay))...")
                 let response = try await ConvexService.shared.jumpToDay(targetDay)
+                print("[iOS Debug] Response received: success=\(response.success), newDay=\(response.newDay ?? -1)")
 
                 if response.success {
                     await questionnaireManager.loadJourneyProgress()
                     await MainActor.run {
                         if let newDay = response.newDay {
+                            print("[iOS Debug] Updating UI to day \(newDay)")
                             withAnimation {
                                 currentDay = newDay
                             }
                         }
                         NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
                     }
-                    print("[iOS Debug] Jumped from Day \(response.previousDay ?? currentDay) to Day \(response.newDay ?? targetDay)")
+                    print("[iOS Debug] Successfully jumped from Day \(response.previousDay ?? 0) to Day \(response.newDay ?? targetDay)")
                 } else {
-                    print("[iOS Debug] Failed to jump to day \(targetDay)")
+                    print("[iOS Debug] Server returned success=false for jump to day \(targetDay)")
                 }
             } catch {
-                print("[iOS Debug] Error jumping to day: \(error)")
+                print("[iOS Debug] ERROR jumping to day: \(error)")
+                print("[iOS Debug] Error details: \(String(describing: error))")
             }
         }
     }

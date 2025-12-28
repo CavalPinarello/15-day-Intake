@@ -1783,6 +1783,200 @@ struct MedicationSelectInput: View {
     }
 }
 
+// MARK: - Caffeine Select Input
+
+/// Multi-select caffeine type component with quantity tracking and estimated mg calculation
+struct CaffeineSelectInput: View {
+    let question: Question
+    @Binding var entries: [CaffeineEntry]
+    var theme: ColorTheme = ColorTheme.shared
+
+    // Circadian-aware check
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var pillarColor: Color { question.pillar.themeColor }
+
+    // Compute total caffeine
+    private var totalCaffeineMg: Int {
+        entries.reduce(0) { $0 + $1.estimatedMg }
+    }
+
+    // Helper to check if a type is selected
+    private func isSelected(_ typeId: String) -> Bool {
+        entries.contains { $0.typeId == typeId }
+    }
+
+    // Get count for a type
+    private func getCount(for typeId: String) -> Int {
+        entries.first { $0.typeId == typeId }?.count ?? 0
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Total caffeine display
+            if totalCaffeineMg > 0 {
+                HStack {
+                    Image(systemName: "bolt.fill")
+                        .foregroundColor(.orange)
+                    Text("Total: ~\(totalCaffeineMg)mg caffeine")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(CircadianColors.primary)
+
+                    Spacer()
+
+                    // Warning if over 400mg (FDA daily limit)
+                    if totalCaffeineMg > 400 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                            Text("High")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.orange.opacity(0.2))
+                        .cornerRadius(6)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(pillarColor.opacity(0.1))
+                .cornerRadius(10)
+            }
+
+            // Caffeine type grid
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                ForEach(CaffeineType.allTypes) { caffeineType in
+                    CaffeineTypeCard(
+                        caffeineType: caffeineType,
+                        isSelected: isSelected(caffeineType.id),
+                        count: getCount(for: caffeineType.id),
+                        pillarColor: pillarColor,
+                        isEvening: isEvening,
+                        onTap: { toggleType(caffeineType.id) },
+                        onCountChange: { newCount in
+                            updateCount(for: caffeineType.id, count: newCount)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func toggleType(_ typeId: String) {
+        if let index = entries.firstIndex(where: { $0.typeId == typeId }) {
+            entries.remove(at: index)
+        } else {
+            entries.append(CaffeineEntry(typeId: typeId, count: 1))
+        }
+    }
+
+    private func updateCount(for typeId: String, count: Int) {
+        if count <= 0 {
+            entries.removeAll { $0.typeId == typeId }
+        } else if let index = entries.firstIndex(where: { $0.typeId == typeId }) {
+            entries[index] = CaffeineEntry(typeId: typeId, count: count)
+        }
+    }
+}
+
+/// Card for a single caffeine type with quantity stepper
+struct CaffeineTypeCard: View {
+    let caffeineType: CaffeineType
+    let isSelected: Bool
+    let count: Int
+    let pillarColor: Color
+    let isEvening: Bool
+    let onTap: () -> Void
+    let onCountChange: (Int) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Main card button
+            Button(action: onTap) {
+                VStack(spacing: 6) {
+                    Image(systemName: caffeineType.icon)
+                        .font(.title3)
+                        .foregroundColor(isSelected ? pillarColor : CircadianColors.secondary)
+
+                    Text(caffeineType.name)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(CircadianColors.primary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+
+                    // Caffeine content per serving
+                    Text("\(caffeineType.mgPerServing)mg")
+                        .font(.caption2)
+                        .foregroundColor(CircadianColors.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 8)
+                .background(
+                    isSelected
+                        ? pillarColor.opacity(0.15)
+                        : CircadianColors.secondaryBackground.opacity(0.5)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: isSelected ? 0 : 10)
+                        .stroke(
+                            isSelected ? pillarColor : CircadianColors.border.opacity(0.5),
+                            lineWidth: isSelected ? 2 : 1
+                        )
+                )
+                .cornerRadius(isSelected ? 0 : 10)
+                .clipShape(
+                    RoundedCorner(radius: 10, corners: isSelected ? [.topLeft, .topRight] : .allCorners)
+                )
+            }
+            .buttonStyle(.plain)
+
+            // Quantity stepper (shows when selected)
+            if isSelected {
+                HStack {
+                    Button(action: { onCountChange(max(0, count - 1)) }) {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(count > 1 ? pillarColor : .gray)
+                    }
+                    .disabled(count <= 1)
+
+                    Text("\(count)")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(CircadianColors.primary)
+                        .frame(minWidth: 30)
+
+                    Button(action: { onCountChange(count + 1) }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(pillarColor)
+                    }
+                }
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(pillarColor.opacity(0.05))
+                .overlay(
+                    Rectangle()
+                        .stroke(pillarColor, lineWidth: 2)
+                )
+                .clipShape(
+                    RoundedCorner(radius: 10, corners: [.bottomLeft, .bottomRight])
+                )
+            }
+        }
+    }
+}
+
 // MARK: - Rounded Corner Helper
 
 struct RoundedCorner: Shape {

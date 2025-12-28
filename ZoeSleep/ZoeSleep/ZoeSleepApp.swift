@@ -64,37 +64,55 @@ struct ZoeSleepApp: App {
     }
 }
 
-/// App root that handles: Splash → Auth → JourneyIntro → Onboarding → Content
-/// Flow: Splash seamlessly transitions to JourneyIntro for new users
+/// App root that handles: Splash → JourneyIntro → Auth → Onboarding → Content
+/// Flow: Splash seamlessly transitions to JourneyIntro for ALL first-time users
 struct AppRootView: View {
     @State private var showSplash = true
     @State private var splashOpacity: Double = 1.0
     @State private var minSplashTimeElapsed = false
     @State private var showJourneyIntro = false
+    @State private var splashTransitioning = false
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var onboardingManager: OnboardingManager
 
+    // Track if this is a fresh install (no install marker in UserDefaults)
+    private static let installMarkerKey = "app_install_marker_v1"
+
     // Splash should stay until:
-    // 1. Minimum time elapsed (2.5s for animation)
+    // 1. Minimum time elapsed (3.5s to appreciate the logo)
     // 2. Session check is complete (isCheckingSession == false)
     private var shouldHideSplash: Bool {
         minSplashTimeElapsed && !authManager.isCheckingSession
     }
 
-    // Show journey intro for new users (after auth, before onboarding)
+    // Show journey intro for first-time app users (BEFORE auth)
+    // This explains the app before asking them to sign up
     private var shouldShowJourneyIntro: Bool {
-        authManager.isAuthenticated &&
-        !onboardingManager.hasSeenJourneyIntro &&
-        !onboardingManager.hasCompletedOnboarding
+        let shouldShow = !onboardingManager.hasSeenJourneyIntro
+        print("[AppRoot] shouldShowJourneyIntro: \(shouldShow) (hasSeenJourneyIntro: \(onboardingManager.hasSeenJourneyIntro))")
+        return shouldShow
+    }
+
+    /// Check if this is a fresh install and reset journey intro if so
+    private func checkFreshInstall() {
+        let hasInstallMarker = UserDefaults.standard.bool(forKey: Self.installMarkerKey)
+        print("[AppRoot] Fresh install check: hasInstallMarker=\(hasInstallMarker)")
+
+        if !hasInstallMarker {
+            // Fresh install - reset journey intro to ensure it shows
+            print("[AppRoot] Fresh install detected - resetting journey intro flag")
+            onboardingManager.resetJourneyIntro()
+            UserDefaults.standard.set(true, forKey: Self.installMarkerKey)
+        }
     }
 
     var body: some View {
         ZStack {
             // Main content (underneath splash/intro)
             mainContent
-                .opacity(showSplash ? 0 : 1)
+                .opacity(showSplash || showJourneyIntro ? 0 : 1)
 
-            // Journey intro - shows right after splash for new users
+            // Journey intro - shows right after splash for first-time users
             // Uses same aurora background for seamless transition
             if showJourneyIntro {
                 JourneyIntroView(isPresented: $showJourneyIntro)
@@ -109,41 +127,46 @@ struct AppRootView: View {
                         // Mark minimum time elapsed
                         minSplashTimeElapsed = true
                     },
-                    duration: 2.5,  // Duration for aurora animation
+                    duration: 3.5,  // Longer duration to appreciate the logo
                     isLoading: authManager.isCheckingSession,
-                    loadingMessage: "Signing in"
+                    loadingMessage: "Signing in",
+                    isTransitioning: $splashTransitioning
                 )
                 .opacity(splashOpacity)
             }
         }
+        .onAppear {
+            // Check for fresh install and reset journey intro if needed
+            checkFreshInstall()
+        }
         .onChange(of: shouldHideSplash) { _, shouldHide in
             if shouldHide {
+                print("[AppRoot] Splash hiding - shouldShowJourneyIntro: \(shouldShowJourneyIntro)")
                 // Check if we should show journey intro (seamless transition)
                 if shouldShowJourneyIntro {
-                    // Seamless transition: fade splash, show intro
-                    withAnimation(.easeInOut(duration: 0.4)) {
-                        splashOpacity = 0
-                        showJourneyIntro = true
+                    // Step 1: Start logo moving up animation
+                    splashTransitioning = true
+
+                    // Step 2: After logo moves, fade splash and show intro
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            splashOpacity = 0
+                            showJourneyIntro = true
+                        }
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+
+                    // Step 3: Remove splash from view hierarchy
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         showSplash = false
                     }
                 } else {
                     // Normal fade out to main content
-                    withAnimation(.easeOut(duration: 0.2)) {
+                    withAnimation(.easeOut(duration: 0.3)) {
                         splashOpacity = 0
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         showSplash = false
                     }
-                }
-            }
-        }
-        // Also show journey intro when user just authenticated (e.g., after registration)
-        .onChange(of: authManager.isAuthenticated) { wasAuthenticated, isNowAuthenticated in
-            if !wasAuthenticated && isNowAuthenticated && shouldShowJourneyIntro && !showSplash {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    showJourneyIntro = true
                 }
             }
         }

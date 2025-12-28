@@ -672,27 +672,35 @@ struct UnifiedDebugPanel: View {
     }
 
     private func jumpToDay() {
+        print("[Debug Panel] jumpToDay called, targetDay: \(jumpTargetDay)")
         isJumpingToDay = true
         statusMessage = nil
 
         Task {
             do {
+                print("[Debug Panel] Calling ConvexService.shared.jumpToDay(\(jumpTargetDay))...")
                 let response = try await ConvexService.shared.jumpToDay(jumpTargetDay)
+                print("[Debug Panel] Response: success=\(response.success), previousDay=\(response.previousDay ?? -1), newDay=\(response.newDay ?? -1)")
+
                 await MainActor.run {
                     if response.success {
                         questionnaireManager.currentDay = response.newDay ?? jumpTargetDay
                         statusMessage = "Jumped to Day \(response.newDay ?? jumpTargetDay)"
                         statusIsError = false
+                        print("[Debug Panel] Successfully jumped to Day \(response.newDay ?? jumpTargetDay)")
                     } else {
                         statusMessage = "Failed to jump to day"
                         statusIsError = true
+                        print("[Debug Panel] Server returned success=false")
                     }
                     isJumpingToDay = false
                 }
                 await questionnaireManager.loadJourneyProgress()
             } catch {
+                print("[Debug Panel] ERROR: \(error)")
+                print("[Debug Panel] Error details: \(String(describing: error))")
                 await MainActor.run {
-                    statusMessage = error.localizedDescription
+                    statusMessage = "Error: \(error.localizedDescription)"
                     statusIsError = true
                     isJumpingToDay = false
                 }
@@ -756,6 +764,14 @@ struct UnifiedDebugPanel: View {
                     .foregroundColor(.indigo)
             }
 
+            // Reset Journey Intro
+            Button {
+                resetJourneyIntro()
+            } label: {
+                Label("Reset Journey Intro", systemImage: "arrow.counterclockwise.circle")
+                    .foregroundColor(.purple)
+            }
+
             // Status message
             if let message = statusMessage {
                 HStack {
@@ -769,7 +785,7 @@ struct UnifiedDebugPanel: View {
         } header: {
             Label("Repair & Diagnostics", systemImage: "wrench.adjustable")
         } footer: {
-            Text("Verify HealthKit to check wearable data connectivity. Repair tools fix data issues without regenerating.")
+            Text("Verify HealthKit to check wearable data connectivity. Reset Journey Intro to test the intro screens again (restart app after).")
         }
     }
 
@@ -938,7 +954,16 @@ struct UnifiedDebugPanel: View {
         }
         // Also clear journey intro shown flag
         UserDefaults.standard.removeObject(forKey: "hasSeenJourneyIntro")
+        OnboardingManager.shared.resetJourneyIntro()
         print("[Debug] Cleared all splash screen tracking UserDefaults")
+    }
+
+    /// Reset just the journey intro flag so it shows again on next app launch
+    private func resetJourneyIntro() {
+        OnboardingManager.shared.resetJourneyIntro()
+        statusMessage = "Journey intro reset - restart app to see it"
+        statusIsError = false
+        print("[Debug] Journey intro reset - will show on next app launch")
     }
 
     private func refreshFromServer() {

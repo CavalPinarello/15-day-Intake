@@ -3295,6 +3295,156 @@ export const getPatientMedicationSummary = query({
   },
 });
 
+// CaffeineEntry type (matches iOS struct)
+interface CaffeineEntry {
+  typeId: string;
+  count: number;
+}
+
+// Caffeine type info for display
+const CAFFEINE_TYPE_INFO: Record<string, { name: string; mgPerServing: number }> = {
+  drip_coffee: { name: "Drip Coffee", mgPerServing: 95 },
+  espresso: { name: "Espresso", mgPerServing: 63 },
+  latte_cappuccino: { name: "Latte/Cappuccino", mgPerServing: 75 },
+  cold_brew: { name: "Cold Brew", mgPerServing: 200 },
+  black_tea: { name: "Black Tea", mgPerServing: 47 },
+  green_tea: { name: "Green Tea", mgPerServing: 28 },
+  matcha: { name: "Matcha", mgPerServing: 70 },
+  energy_drink: { name: "Energy Drink", mgPerServing: 80 },
+  energy_drink_large: { name: "Energy Drink (Large)", mgPerServing: 160 },
+  soda: { name: "Cola/Soda", mgPerServing: 34 },
+  diet_soda: { name: "Diet Cola", mgPerServing: 46 },
+  preworkout: { name: "Pre-Workout", mgPerServing: 200 },
+  chocolate: { name: "Dark Chocolate", mgPerServing: 12 },
+};
+
+/**
+ * Get aggregated caffeine summary for a patient
+ * Returns: days with caffeine, total mg stats, type breakdown
+ */
+export const getPatientCaffeineSummary = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get all caffeine-related responses
+    const caffeineResponses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("question_id"), "CSD_CAFFEINE"),
+          q.eq(q.field("question_id"), "CSD_CAFFEINE_TYPES"),
+          q.eq(q.field("question_id"), "CSD_CAFFEINE_LAST")
+        )
+      )
+      .collect();
+
+    // Group by day
+    const dayData: Record<number, {
+      hadCaffeine: boolean;
+      entries: CaffeineEntry[];
+      lastCaffeineTime?: string;
+      legacyCount?: number;
+    }> = {};
+
+    for (const response of caffeineResponses) {
+      const day = response.day_number ?? 1;
+      if (!dayData[day]) {
+        dayData[day] = { hadCaffeine: false, entries: [] };
+      }
+
+      switch (response.question_id) {
+        case "CSD_CAFFEINE":
+          // Can be Yes/No (new) or number (legacy)
+          if (response.response_value?.toLowerCase() === "yes") {
+            dayData[day].hadCaffeine = true;
+          } else if (response.response_value?.toLowerCase() === "no") {
+            dayData[day].hadCaffeine = false;
+          } else {
+            // Legacy: it's a number
+            const count = parseInt(response.response_value || "0");
+            dayData[day].hadCaffeine = count > 0;
+            dayData[day].legacyCount = count;
+          }
+          break;
+        case "CSD_CAFFEINE_TYPES":
+          if (response.response_array) {
+            try {
+              dayData[day].entries = JSON.parse(response.response_array) as CaffeineEntry[];
+            } catch {
+              // Invalid JSON, ignore
+            }
+          }
+          break;
+        case "CSD_CAFFEINE_LAST":
+          dayData[day].lastCaffeineTime = response.response_value || undefined;
+          break;
+      }
+    }
+
+    // Calculate summaries
+    const daysWithCaffeine = Object.values(dayData).filter((d) => d.hadCaffeine).length;
+    const totalDays = Object.keys(dayData).length;
+
+    // Aggregate type counts and total mg
+    const typeCounts: Record<string, { count: number; totalServings: number; totalMg: number }> = {};
+    let totalMgAllDays = 0;
+    let totalServingsAllDays = 0;
+    let daysWithDetailedData = 0;
+
+    for (const data of Object.values(dayData)) {
+      if (data.hadCaffeine) {
+        if (data.entries.length > 0) {
+          daysWithDetailedData++;
+          for (const entry of data.entries) {
+            const typeInfo = CAFFEINE_TYPE_INFO[entry.typeId];
+            if (!typeCounts[entry.typeId]) {
+              typeCounts[entry.typeId] = { count: 0, totalServings: 0, totalMg: 0 };
+            }
+            typeCounts[entry.typeId].count++;
+            typeCounts[entry.typeId].totalServings += entry.count;
+            const mg = (typeInfo?.mgPerServing || 0) * entry.count;
+            typeCounts[entry.typeId].totalMg += mg;
+            totalMgAllDays += mg;
+            totalServingsAllDays += entry.count;
+          }
+        } else if (data.legacyCount) {
+          // Legacy data - assume drip coffee at 95mg per serving
+          totalMgAllDays += data.legacyCount * 95;
+          totalServingsAllDays += data.legacyCount;
+        }
+      }
+    }
+
+    // Build type summary
+    const typeBreakdown = Object.entries(typeCounts)
+      .map(([id, data]) => ({
+        id,
+        name: CAFFEINE_TYPE_INFO[id]?.name || id,
+        mgPerServing: CAFFEINE_TYPE_INFO[id]?.mgPerServing || 0,
+        daysUsed: data.count,
+        totalServings: data.totalServings,
+        totalMg: data.totalMg,
+      }))
+      .sort((a, b) => b.totalMg - a.totalMg);
+
+    // Calculate averages
+    const avgMgPerDay = daysWithCaffeine > 0 ? Math.round(totalMgAllDays / daysWithCaffeine) : 0;
+    const avgServingsPerDay = daysWithCaffeine > 0 ? (totalServingsAllDays / daysWithCaffeine).toFixed(1) : "0";
+
+    return {
+      caffeineDays: daysWithCaffeine,
+      totalDays,
+      avgMgPerDay,
+      avgServingsPerDay,
+      totalMgAllDays,
+      typeBreakdown,
+      hasDetailedData: daysWithDetailedData > 0,
+    };
+  },
+});
+
 // ============================================
 // Day Type Analysis (Workday vs Weekend Patterns)
 // ============================================

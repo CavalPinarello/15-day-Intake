@@ -833,7 +833,8 @@ enum QuestionType: String, Codable, CaseIterable {
     case repeatingGroup = "RepeatingGroup"
     case info = "Info"
     case napDetails = "NapDetails"  // Dynamic nap blocks with start time + duration
-    case medicationSelect = "MedicationSelect"  // Multi-select medication categories
+    case medicationSelect = "MedicationSelect"  // Multi-select medication categories with doses
+    case caffeineSelect = "CaffeineSelect"  // Multi-select caffeine types with quantity and mg tracking
 }
 
 // MARK: - Nap Entry Model
@@ -973,6 +974,158 @@ struct MedicationSelection: Codable, Equatable {
         }
 
         return parts.joined(separator: " ")
+    }
+}
+
+// MARK: - Caffeine Tracking
+
+/// Represents a type of caffeinated drink with estimated caffeine content
+struct CaffeineType: Identifiable {
+    let id: String
+    let name: String
+    let subtitle: String?
+    let icon: String
+    let mgPerServing: Int  // Estimated mg caffeine per standard serving
+    let servingSize: String  // e.g., "8 oz cup", "1 shot", "12 oz can"
+
+    init(id: String, name: String, subtitle: String? = nil, icon: String, mgPerServing: Int, servingSize: String) {
+        self.id = id
+        self.name = name
+        self.subtitle = subtitle
+        self.icon = icon
+        self.mgPerServing = mgPerServing
+        self.servingSize = servingSize
+    }
+
+    static let allTypes: [CaffeineType] = [
+        CaffeineType(
+            id: "drip_coffee",
+            name: "Drip Coffee",
+            subtitle: "Regular brewed",
+            icon: "cup.and.saucer.fill",
+            mgPerServing: 95,
+            servingSize: "8 oz cup"
+        ),
+        CaffeineType(
+            id: "espresso",
+            name: "Espresso",
+            subtitle: "Single or double shot",
+            icon: "cup.and.saucer.fill",
+            mgPerServing: 63,
+            servingSize: "1 oz shot"
+        ),
+        CaffeineType(
+            id: "latte_cappuccino",
+            name: "Latte / Cappuccino",
+            subtitle: "Espresso-based drinks",
+            icon: "cup.and.saucer.fill",
+            mgPerServing: 75,
+            servingSize: "12 oz"
+        ),
+        CaffeineType(
+            id: "cold_brew",
+            name: "Cold Brew",
+            subtitle: "Concentrated",
+            icon: "mug.fill",
+            mgPerServing: 200,
+            servingSize: "12 oz"
+        ),
+        CaffeineType(
+            id: "black_tea",
+            name: "Black Tea",
+            icon: "leaf.fill",
+            mgPerServing: 47,
+            servingSize: "8 oz cup"
+        ),
+        CaffeineType(
+            id: "green_tea",
+            name: "Green Tea",
+            icon: "leaf.fill",
+            mgPerServing: 28,
+            servingSize: "8 oz cup"
+        ),
+        CaffeineType(
+            id: "matcha",
+            name: "Matcha",
+            subtitle: "Powdered green tea",
+            icon: "leaf.fill",
+            mgPerServing: 70,
+            servingSize: "1 tsp serving"
+        ),
+        CaffeineType(
+            id: "energy_drink",
+            name: "Energy Drink",
+            subtitle: "Red Bull, Monster, etc.",
+            icon: "bolt.fill",
+            mgPerServing: 80,
+            servingSize: "8.4 oz can"
+        ),
+        CaffeineType(
+            id: "energy_drink_large",
+            name: "Energy Drink (Large)",
+            subtitle: "16oz cans",
+            icon: "bolt.fill",
+            mgPerServing: 160,
+            servingSize: "16 oz can"
+        ),
+        CaffeineType(
+            id: "soda",
+            name: "Cola / Soda",
+            subtitle: "Coca-Cola, Pepsi, etc.",
+            icon: "takeoutbag.and.cup.and.straw.fill",
+            mgPerServing: 34,
+            servingSize: "12 oz can"
+        ),
+        CaffeineType(
+            id: "diet_soda",
+            name: "Diet Cola",
+            subtitle: "Diet Coke, Coke Zero, etc.",
+            icon: "takeoutbag.and.cup.and.straw.fill",
+            mgPerServing: 46,
+            servingSize: "12 oz can"
+        ),
+        CaffeineType(
+            id: "preworkout",
+            name: "Pre-Workout",
+            subtitle: "Fitness supplements",
+            icon: "dumbbell.fill",
+            mgPerServing: 200,
+            servingSize: "1 scoop"
+        ),
+        CaffeineType(
+            id: "chocolate",
+            name: "Dark Chocolate",
+            icon: "square.fill",
+            mgPerServing: 12,
+            servingSize: "1 oz"
+        )
+    ]
+}
+
+/// Represents a caffeine entry with type and quantity
+struct CaffeineEntry: Codable, Equatable {
+    let typeId: String
+    var count: Int  // Number of servings
+
+    init(typeId: String, count: Int = 1) {
+        self.typeId = typeId
+        self.count = count
+    }
+
+    /// Estimated total caffeine in mg
+    var estimatedMg: Int {
+        guard let caffeineType = CaffeineType.allTypes.first(where: { $0.id == typeId }) else {
+            return 0
+        }
+        return caffeineType.mgPerServing * count
+    }
+
+    /// Display string for the entry
+    var displayString: String {
+        guard let caffeineType = CaffeineType.allTypes.first(where: { $0.id == typeId }) else {
+            return "\(count)x Unknown"
+        }
+        return "\(count)x \(caffeineType.name) (~\(estimatedMg)mg)"
     }
 }
 

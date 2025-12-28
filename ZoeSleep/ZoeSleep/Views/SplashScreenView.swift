@@ -14,11 +14,16 @@ struct SplashScreenView: View {
     @State private var textOpacity: Double = 0
     @State private var glowPulse: CGFloat = 1.0
     @State private var auroraVisible: Bool = false
+    @State private var logoOffset: CGFloat = 0
+    @State private var taglineOpacity: Double = 1.0
 
     var onComplete: (() -> Void)?
-    var duration: Double = 2.5
+    var duration: Double = 3.5  // Longer to appreciate the logo
     var isLoading: Bool = false
     var loadingMessage: String = "Signing in"
+
+    // Binding to trigger transition animation (logo moves up)
+    @Binding var isTransitioning: Bool
 
     // Brand colors
     private let logoColor = Color(red: 0.96, green: 0.90, blue: 0.83) // Warm cream
@@ -44,7 +49,7 @@ struct SplashScreenView: View {
                 VStack(spacing: 28) {
                     Spacer()
 
-                    // Logo with glowing effect
+                    // Logo with glowing effect - animates up during transition
                     ZStack {
                         // Pulsing glow behind logo
                         Circle()
@@ -118,6 +123,7 @@ struct SplashScreenView: View {
                     }
                     .scaleEffect(logoScale)
                     .opacity(logoOpacity)
+                    .offset(y: logoOffset)
 
                     // App name and tagline
                     VStack(spacing: 8) {
@@ -129,8 +135,10 @@ struct SplashScreenView: View {
                         Text("Sleep Better, Live Longer")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(logoColor.opacity(0.9))
+                            .opacity(taglineOpacity)
                     }
                     .opacity(textOpacity)
+                    .offset(y: logoOffset)
 
                     Spacer()
 
@@ -153,6 +161,30 @@ struct SplashScreenView: View {
         .onAppear {
             startAnimation()
         }
+        .onChange(of: isTransitioning) { _, transitioning in
+            if transitioning {
+                // Animate logo moving up to make room for intro content
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    logoOffset = -80
+                    taglineOpacity = 0
+                }
+            }
+        }
+    }
+
+    // Default initializer for previews and non-transitioning use
+    init(
+        onComplete: (() -> Void)? = nil,
+        duration: Double = 3.5,
+        isLoading: Bool = false,
+        loadingMessage: String = "Signing in",
+        isTransitioning: Binding<Bool> = .constant(false)
+    ) {
+        self.onComplete = onComplete
+        self.duration = duration
+        self.isLoading = isLoading
+        self.loadingMessage = loadingMessage
+        self._isTransitioning = isTransitioning
     }
 
     private func startAnimation() {

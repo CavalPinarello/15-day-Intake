@@ -21,6 +21,7 @@ import {
   Palmtree,
   AlertCircle,
   Info,
+  Bolt,
 } from "lucide-react";
 import { ReviewSection } from "./ReviewSection";
 
@@ -51,6 +52,7 @@ export function SleepDataReview({
   const sleepMetrics = useQuery(api.healthkit.getPatientHealthSummary, { userId });
   const napSummary = useQuery(api.physician.getPatientNapSummary, { userId });
   const medSummary = useQuery(api.physician.getPatientMedicationSummary, { userId });
+  const caffeineSummary = useQuery(api.physician.getPatientCaffeineSummary, { userId });
   const dayTypeAnalysis = useQuery(api.physician.getPatientDayTypeAnalysis, { userId });
 
   // Process sleep data from questionnaire responses
@@ -420,6 +422,75 @@ export function SleepDataReview({
                   <div className="text-xs text-gray-400">
                     <span className="text-gray-500">Other: </span>
                     {medSummary.otherMedications.join(", ")}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Caffeine Consumption */}
+          {caffeineSummary && caffeineSummary.caffeineDays > 0 && (
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <div className="flex items-center gap-2 text-gray-400 mb-3">
+                <Coffee className="w-4 h-4" />
+                <h4 className="text-xs font-medium uppercase">Caffeine Consumption</h4>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Days with caffeine:</span>
+                    <span className="text-white font-medium">
+                      {caffeineSummary.caffeineDays}/{caffeineSummary.totalDays}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Avg per day:</span>
+                    <span className="text-white font-medium">
+                      ~{caffeineSummary.avgMgPerDay}mg
+                    </span>
+                  </div>
+                </div>
+
+                {/* Warning for high caffeine */}
+                {caffeineSummary.avgMgPerDay > 400 && (
+                  <div className="flex items-center gap-2 p-2 bg-orange-500/20 border border-orange-500/30 rounded text-xs text-orange-300">
+                    <Bolt className="w-4 h-4" />
+                    <span>Average exceeds FDA recommended 400mg daily limit</span>
+                  </div>
+                )}
+
+                {/* Type breakdown */}
+                {caffeineSummary.hasDetailedData && caffeineSummary.typeBreakdown.length > 0 && (
+                  <div className="space-y-2">
+                    {caffeineSummary.typeBreakdown.map((type: {
+                      id: string;
+                      name: string;
+                      mgPerServing: number;
+                      daysUsed: number;
+                      totalServings: number;
+                      totalMg: number;
+                    }) => (
+                      <div
+                        key={type.id}
+                        className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-amber-300 font-medium text-sm">
+                            {type.name}
+                          </span>
+                          <span className="text-gray-400 text-xs">
+                            {type.daysUsed} {type.daysUsed === 1 ? "day" : "days"}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-xs text-gray-400">
+                          <span>{type.totalServings} servings total</span>
+                          <span>•</span>
+                          <span>~{type.totalMg}mg total</span>
+                          <span>•</span>
+                          <span>{type.mgPerServing}mg/serving</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

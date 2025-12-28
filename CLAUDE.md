@@ -113,6 +113,23 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Journey Intro Flow & Fresh Install Detection:** Seamless splash-to-intro transition for new users (Dec 28, 2025)
+  - **New app flow:** Splash → JourneyIntro → Auth → Onboarding → Content (journey intro now shows BEFORE auth)
+  - **Fresh install detection:** New `app_install_marker_v1` in UserDefaults ensures journey intro shows on every fresh install
+    - Keychain persists across app deletions, but this marker resets the journey intro flag
+  - **Splash screen improvements:**
+    - Duration increased to 3.5s so logo lingers longer
+    - Logo animates up (`logoOffset`) when transitioning to intro
+    - Tagline fades out during transition for seamless effect
+    - Added `isTransitioning` binding to coordinate animation
+  - **ZoeLogo centering fix:** Logo SVG paths now mathematically centered using actual content bounds
+  - **Journey intro screens rewritten:** 4 screens with warm, human-friendly messaging:
+    - Screen 1: "Finally Understand Your Sleep" - conversational welcome
+    - Screen 2: "The Best Tools, Tailored to You" - trusted questionnaires + wearable data reinterpreted with unique profile
+    - Screen 3: "A Real Expert Reviews Everything" - human-in-the-loop, sleep fingerprint
+    - Screen 4: "Wake Up to Your Best Life" - energy, focus, mood, healthspan + "Let's Get Started" CTA
+  - **Debug panel update:** New "Reset Journey Intro" button in Repair & Diagnostics section
+  - **Files changed:** `ZoeSleepApp.swift`, `SplashScreenView.swift`, `JourneyIntroScreens.swift`, `JourneyIntroView.swift`, `ZoeLogo.swift`, `ContentView.swift`, `UnifiedDebugPanel.swift`
 - **Dashboard UX Redesign & Expansion Pack Sync Fix:** Improved task layout and cross-device sync (Dec 28, 2025)
   - **TaskRowView redesign:** Fixed truncated subtitle text by moving duration badge below subtitle
     - Title row now has chevron on right side

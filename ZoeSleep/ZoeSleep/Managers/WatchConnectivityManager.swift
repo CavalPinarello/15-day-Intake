@@ -278,7 +278,7 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             return "radio"
         case .singleSelect:
             return "radio"
-        case .multiSelect, .medicationSelect:
+        case .multiSelect, .medicationSelect, .caffeineSelect:
             return "checkbox"
         case .text, .email:
             return "text"

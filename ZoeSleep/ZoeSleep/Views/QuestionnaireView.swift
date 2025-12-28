@@ -413,6 +413,13 @@ struct QuestionnaireView: View {
                     medications: medicationsBinding(for: question.id),
                     theme: theme
                 )
+
+            case .caffeineSelect:
+                CaffeineSelectInput(
+                    question: question,
+                    entries: caffeineEntriesBinding(for: question.id),
+                    theme: theme
+                )
             }
         }
     }
@@ -662,6 +669,45 @@ struct QuestionnaireView: View {
         )
     }
 
+    /// Binding for caffeine entries (stored as JSON array with type and count)
+    private func caffeineEntriesBinding(for questionId: String) -> Binding<[CaffeineEntry]> {
+        Binding(
+            get: {
+                // Try to get existing caffeine entries from responses
+                if currentSection == .sleepLog {
+                    if let entries = sleepLogResponses[questionId] as? [CaffeineEntry] {
+                        return entries
+                    }
+                    // Try to decode from JSON string
+                    if let jsonString = sleepLogResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let entries = try? JSONDecoder().decode([CaffeineEntry].self, from: data) {
+                        return entries
+                    }
+                } else {
+                    if let entries = assessmentResponses[questionId] as? [CaffeineEntry] {
+                        return entries
+                    }
+                    if let jsonString = assessmentResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let entries = try? JSONDecoder().decode([CaffeineEntry].self, from: data) {
+                        return entries
+                    }
+                }
+                return []
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
+                } else {
+                    assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
+                }
+            }
+        )
+    }
+
     /// Gets the nap count from SD_NAPS_COUNT or CSD_NAP_COUNT response
     private func getNapCount() -> Int {
         // Question IDs to check (SD_ is current format, CSD_ is legacy)
@@ -892,6 +938,13 @@ struct QuestionnaireView: View {
             }
             // Legacy support for old [String] format
             return !(response as? [String] ?? []).isEmpty
+        case .caffeineSelect:
+            // Caffeine select requires at least one entry
+            guard let response = responses[question.id] else { return false }
+            if let entries = response as? [CaffeineEntry] {
+                return !entries.isEmpty
+            }
+            return false
         default:
             // For other types, check if user interacted OR if response exists
             return userInteracted.contains(question.id) || responses[question.id] != nil
@@ -1050,6 +1103,7 @@ struct QuestionnaireView: View {
         case "info": questionType = .info
         case "napDetails": questionType = .napDetails
         case "medicationSelect": questionType = .medicationSelect
+        case "caffeineSelect": questionType = .caffeineSelect
 
         default:
             print("[iOS] WARNING: Unknown question type '\(cq.type)' for question \(cq.id), defaulting to text")

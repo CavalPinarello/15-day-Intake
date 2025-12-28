@@ -647,12 +647,14 @@ struct InteractiveProgressDots: View {
     let completedDays: [Int]
     let onDayTapped: (Int) -> Void
 
-    // Debug mode support - when enabled, all dots are tappable for jumping
-    var debugMode: Bool = false
+    // Debug mode support - callback for jumping to future days
     var onDebugJumpToDay: ((Int) -> Void)? = nil
 
     @ObservedObject private var themeManager = ThemeManager.shared
     private var theme: ColorTheme { themeManager.currentTheme }
+
+    // Read debug mode directly from themeManager for reliable updates
+    private var isDebugMode: Bool { themeManager.debugMode }
 
     private var isEveningOrNight: Bool {
         let period = themeManager.currentTimePeriod
@@ -666,35 +668,45 @@ struct InteractiveProgressDots: View {
                 let isCompleted = completedDays.contains(day)
                 let isCurrent = day == current
                 let isFuture = day > current
-                let isDebugTappable = debugMode && isFuture
+                let isDebugTappable = isDebugMode && isFuture
 
-                Circle()
-                    .fill(dotColor(for: index))
-                    .frame(width: isCurrent ? 10 : 8, height: isCurrent ? 10 : 8)
-                    .overlay(
-                        // Visual indicator for tappable dots
-                        Circle()
-                            .stroke(strokeColor(isCompleted: isCompleted, isDebugTappable: isDebugTappable), lineWidth: isDebugTappable ? 2 : 1)
-                            .frame(width: isCurrent ? 14 : 12, height: isCurrent ? 14 : 12)
-                    )
-                    .animation(.spring(response: 0.3), value: current)
-                    .onTapGesture {
-                        if isDebugTappable {
-                            // Debug mode: Jump to future day
-                            onDebugJumpToDay?(day)
-                        } else if isCompleted {
-                            // Normal mode: View completed day's diary
-                            onDayTapped(day)
-                        }
+                ZStack {
+                    // Invisible tap target (larger area)
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(width: 20, height: 20)
+
+                    // Visual dot
+                    Circle()
+                        .fill(dotColor(for: index))
+                        .frame(width: isCurrent ? 10 : 8, height: isCurrent ? 10 : 8)
+                        .overlay(
+                            // Visual indicator for tappable dots
+                            Circle()
+                                .stroke(strokeColor(isCompleted: isCompleted, isDebugTappable: isDebugTappable), lineWidth: isDebugTappable ? 2 : 1)
+                                .frame(width: isCurrent ? 14 : 12, height: isCurrent ? 14 : 12)
+                        )
+                }
+                .animation(.spring(response: 0.3), value: current)
+                .contentShape(Rectangle())  // Entire ZStack is tappable
+                .onTapGesture {
+                    print("[InteractiveProgressDots] Tap on day \(day), isDebugTappable=\(isDebugTappable), isDebugMode=\(isDebugMode), isFuture=\(isFuture)")
+                    if isDebugTappable {
+                        // Debug mode: Jump to future day
+                        print("[InteractiveProgressDots] Calling onDebugJumpToDay for day \(day)")
+                        onDebugJumpToDay?(day)
+                    } else if isCompleted {
+                        // Normal mode: View completed day's diary
+                        onDayTapped(day)
                     }
-                    .contentShape(Rectangle().size(width: 20, height: 20))  // Larger tap target
+                }
             }
         }
     }
 
     private func strokeColor(isCompleted: Bool, isDebugTappable: Bool) -> Color {
         if isDebugTappable {
-            return Color.purple.opacity(0.8)  // Purple border for debug-tappable future days
+            return Color.purple  // Purple border for debug-tappable future days
         } else if isCompleted {
             return theme.primary.opacity(0.5)
         } else {
