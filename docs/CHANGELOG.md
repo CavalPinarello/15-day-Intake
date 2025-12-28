@@ -1,0 +1,365 @@
+# Changelog - Zoe Sleep V1
+
+> Complete development history. For quick reference, see [CLAUDE.md](../CLAUDE.md).
+
+## December 2025
+
+### Dec 28, 2025
+
+#### Expansion Pack Slider UX Fix
+Fixed issue where users couldn't tap Next on slider questions without moving the slider.
+
+- **Bug:** In "Deeper Dive" (expansion pack questionnaire), scale questions required user interaction before Next button became enabled, even when default value was acceptable
+- **Root cause:** `ContentView.swift` had different validation logic than `QuestionnaireView.swift` - expansion pack required `userInteracted.contains()` for scale questions
+- **Fix 1:** Updated `canProceed` to return `true` for `.scale`, `.number`, `.numberScroll`, `.time`, `.date`, `.minutesScroll`, `.hoursMinutesScroll` types
+- **Fix 2:** Added logic in `nextQuestion()` to save default value when user accepts without interacting
+- **Files changed:** `ContentView.swift` (ExpansionPackQuestionnaireView)
+
+#### Journey Intro Flow & Fresh Install Detection
+Seamless splash-to-intro transition for new users.
+
+- **New app flow:** Splash → JourneyIntro → Auth → Onboarding → Content (journey intro now shows BEFORE auth)
+- **Fresh install detection:** New `app_install_marker_v1` in UserDefaults ensures journey intro shows on every fresh install
+  - Keychain persists across app deletions, but this marker resets the journey intro flag
+- **Splash screen improvements:**
+  - Duration increased to 3.5s so logo lingers longer
+  - Logo animates up (`logoOffset`) when transitioning to intro
+  - Tagline fades out during transition for seamless effect
+  - Added `isTransitioning` binding to coordinate animation
+- **ZoeLogo centering fix:** Logo SVG paths now mathematically centered using actual content bounds
+- **Journey intro screens rewritten:** 4 screens with warm, human-friendly messaging:
+  - Screen 1: "Finally Understand Your Sleep" - conversational welcome
+  - Screen 2: "The Best Tools, Tailored to You" - trusted questionnaires + wearable data reinterpreted with unique profile
+  - Screen 3: "A Real Expert Reviews Everything" - human-in-the-loop, sleep fingerprint
+  - Screen 4: "Wake Up to Your Best Life" - energy, focus, mood, healthspan + "Let's Get Started" CTA
+- **Debug panel update:** New "Reset Journey Intro" button in Repair & Diagnostics section
+- **Files changed:** `ZoeSleepApp.swift`, `SplashScreenView.swift`, `JourneyIntroScreens.swift`, `JourneyIntroView.swift`, `ZoeLogo.swift`, `ContentView.swift`, `UnifiedDebugPanel.swift`
+
+#### Dashboard UX Redesign & Expansion Pack Sync Fix
+Improved task layout and cross-device sync.
+
+- **TaskRowView redesign:** Fixed truncated subtitle text by moving duration badge below subtitle
+  - Title row now has chevron on right side
+  - Subtitle gets full width with 3-line limit
+  - Duration shown as capsule badge below subtitle
+- **Day descriptions shortened:** More concise descriptions (e.g., "About you and your sleep habits" instead of long technical text)
+- **Assessment Phase badge:** New badge in progress card explains this is the assessment phase
+- **Expert review messaging:** Added "Personalized treatment follows expert review" text
+- **Progress messages updated:** Context-aware messages (e.g., "Let's understand your sleep", "Almost ready for expert review")
+- **Expansion pack sync fix:** Same-day expansions (Days 1-5) now sync to Convex via `ios:markExpansionPackCompleted`
+  - Previously only stored locally - Watch couldn't see completion
+  - New mutation updates `user_progress.expansion_pack_completed` in database
+- **Watch app visibility:** "Deeper Dive" task now properly shows on Watch when triggered
+- **Debug reset fix:** `resetProgress()` now clears UserDefaults splash keys so splashes show again after reset
+- **Jump to Day feature:** New debug feature to instantly jump to any day 1-14 for testing
+- **Files changed:** `ContentView.swift`, `QuestionnaireManager.swift`, `ConvexService.swift`, `UnifiedDebugPanel.swift`, `ios.ts`, `watch.ts`
+
+#### Enhanced Splash Screen Aurora & ISI Labels
+Visual polish and validated questionnaire labels.
+
+- **EnhancedAuroraBorealisView:** New dramatic aurora with vertical flowing curtains, multiple layers, pulsing central glow
+- **SplashScreenView refactor:** Smoother animations, better timing, more elegant logo reveal
+- **ISI question-specific labels:** Per the validated Morin et al. 2011 instrument:
+  - Items 1-3 (Severity): None → Mild → Moderate → Severe → Very Severe
+  - Item 4 (Satisfaction): Very Satisfied → Very Dissatisfied
+  - Item 5 (Interference): Not at all interfering → Very much interfering
+  - Item 6 (Noticeable): Not at all noticeable → Very much noticeable
+  - Item 7 (Worried): Not at all worried → Very much worried
+- **Files changed:** `AuroraBorealisView.swift`, `SplashScreenView.swift`, `AnswerDerivationSystem.swift`, `JourneyIntroScreens.swift`
+
+### Dec 27, 2025
+
+#### Workday vs Weekend Day Type Analysis
+Complete day type tracking and clinical pattern detection.
+
+- **Schema enrichment:** Added to `user_sleep_data` table: `day_number`, `day_type`, `naps_taken`, `nap_count`, `nap_total_mins`, `nap_details_json`, `medications_taken`, `medication_time`, `medication_categories_json`, `subjective_quality`
+- **Day types tracked:** Workday, School Day, Day Off, Vacation, Holiday, Weekend
+- **Backend extraction:** `healthkit.ts:computeSleepMetricsFromResponses` now extracts day_type, naps, medications from both CSD_ and SD_ question prefixes
+- **Day type analysis query:** New `physician.ts:getPatientDayTypeAnalysis` compares workday vs weekend stats
+- **Clinical flags generated:**
+  - `social_jet_lag` - >60 min sleep duration difference between workday/weekend
+  - `compensatory_sleep` - Weekend catch-up sleep suggests weekday sleep debt
+  - `weekend_napping` - Higher nap rate on weekends indicates weekday sleep deficit
+  - `medication_pattern` - Different medication use between workday/weekend
+- **Dashboard integration:** `SleepDataReview.tsx` now shows comparison grid with severity-styled clinical flags
+- **Files changed:** `convex/schema.ts`, `convex/healthkit.ts`, `convex/physician.ts`, `SleepDataReview.tsx`
+
+#### Dynamic Nap Blocks & Conditional Medication Questions
+Structured nap/medication data collection.
+
+- **New Nap Details UI:** Dynamic nap blocks based on nap count with time picker + duration quick-select buttons
+- **New Medication Select UI:** Multi-select chips for 6 medication categories with conditional "Other" text field
+- **New question types:** `napDetails` and `medicationSelect` in QuestionType enum
+- **New models:** `NapEntry` struct, `MedicationCategory` struct with 6 predefined categories
+- **Conditional logic enhancement:** Added `contains` operator and compound conditions (`all`, `any`)
+- **Convex queries:** `getPatientNapSummary`, `getPatientMedicationSummary`
+- **Files changed:** `QuestionModels.swift`, `QuestionComponents.swift`, `QuestionnaireView.swift`, `QuestionnaireManager.swift`, `convex/physician.ts`, `SleepDataReview.tsx`
+
+#### Comprehensive Questionnaire Scale Labels Fix
+Replaced all "Minimum/Maximum" slider labels with clinical descriptors.
+
+| Questionnaire | Scale | Labels |
+|--------------|-------|--------|
+| ISI | 0-4 | None → Mild → Moderate → Severe → Very Severe |
+| DBAS-16 | 0-10 | Strongly Disagree → Strongly Agree |
+| Sleep Hygiene | 1-5 | Never → Rarely → Sometimes → Frequently → Always |
+| PSAS | 1-5 | Not at all → Slightly → Moderately → A lot → Extremely |
+| PHQ-9/GAD-7 | 0-3 | Not at all → Several days → More than half → Nearly every day |
+| DASS-21 | 0-3 | Not at all → Sometimes → Often → Almost always |
+| ESS | 0-3 | No chance → Slight → Moderate → High chance |
+| FSS | 1-7 | Strongly Disagree → Strongly Agree |
+| FOSQ | 1-4 | No difficulty → Mild → Moderate → Extreme difficulty |
+| PROMIS Cognitive | 1-5 | Never → Rarely → Sometimes → Often → Very often |
+| Berlin | 1-5 | Never → Nearly every day (frequency) |
+| BPI | 0-10 | No pain → Worst pain imaginable |
+| MEQ | 1-4 | Chronotype-specific labels |
+
+- **File changed:** `data/converted/assessment_questions_converted.json`
+- **IMPORTANT:** After modifying JSON, run `npx convex run seedQuestions:seedAll` to update database
+
+#### Smart Question Derivation
+Reduce user burden by deriving redundant questions from Sleep Log.
+
+- **Derivation System:** Added 12A and 12C to `derivableFromSleepLog` set
+- **New functions:** `derive12AFromSleepLog()`, `derive12CFromSleepLog()`
+- **Conditional logic:** 12B (reason for waking) now only shows if user reported awakenings > 0
+- **Scale labels fix:** `convertConvexQuestion()` now extracts `scaleMin`/`scaleMax`/`labels` from Convex format
+- **Files changed:** `QuestionnaireManager.swift`, `QuestionnaireView.swift`
+
+#### Dynamic Task Counter & Expansion Pack Integration
+Complete task tracking system for iOS and Watch.
+
+- **Dynamic task count:** Now shows "1 of 1", "2 of 2", or "2 of 3" based on actual tasks
+- **No-gateway UX:** New `NoAssessmentTodayView` component shows "You're on track!" message
+- **Watch app sync:** `WatchHomeView.swift` shows same task count as iPhone
+- **Backend update:** `watch.ts:getJourneyState` now returns expansion pack status
+- **Schema update:** Added `expansion_pack_completed` field to `user_progress` table
+- **Files changed:** `ContentView.swift`, `UnifiedDebugPanel.swift`, `WatchHomeView.swift`, `WatchConvexService.swift`, `watch.ts`, `schema.ts`
+
+#### New Zoe Logo & App Icons
+Updated all app icons with new spiral crescent moon logo.
+
+- **Logo source:** Frame 3.svg - spiral crescent moon design
+- **Color scheme:** Warm cream (#F5E6D3) on dark warm brown gradient (#1a1512 to #0d0a08)
+- **iOS icons:** 15 icons regenerated (20x20 to 1024x1024) - RGB, no alpha channel
+- **Watch icons:** 17 icons regenerated (24x24@2x to 1024x1024) - RGB, no alpha channel
+- **ZoeLogo.swift:** Complete rewrite with exact SVG path recreation
+- **Icon generation script:** `scripts/generate-icons.sh`
+
+#### Expansion Pack Splash Screens
+Educational rationale screens for all 16 validated questionnaires.
+
+- **16 validated instruments:** ISI (2,500+ citations), DBAS-16 (1,000+), SHI (500+), PSAS (800+), ESS (10,000+), FSS (7,000+), FOSQ-10 (500+), PHQ-9 (15,000+), GAD-7 (10,000+), DASS-21 (20,000+), PROMIS-Cog (2,000+), STOP-BANG (5,000+), Berlin (3,000+), BPI (6,300+), MEDAS (1,500+), MEQ (4,000+)
+- **Content per questionnaire:** Full name, abbreviation, citation count, what it measures, scientific background
+- **New file:** `ZoeSleep/ZoeSleep/Views/ExpansionQuestionnaireSplash.swift` (~700 lines)
+
+#### Physician Review Checklist UX Improvement
+Expandable review sections in analysis workflow.
+
+- **SleepDataReview:** Shows avg duration, quality, awakenings, efficiency + day-by-day breakdown
+- **QuestionnaireScoresReview:** All 18 questionnaire scores with severity indicators
+- **GatewayTriggersReview:** Shows 6 gateways with triggered/not triggered status
+- **Auto-mark reviewed:** Items auto-check after 2 seconds of viewing expanded content
+- **New files:** `ReviewSection.tsx`, `SleepDataReview.tsx`, `QuestionnaireScoresReview.tsx`, `GatewayTriggersReview.tsx`
+
+### Dec 24, 2025
+
+#### Overdue Expansion Pack Tracking
+Full tracking for incomplete expansion packs from previous days.
+
+- **Backend:** `ios.ts:getDailyCompletionStatus` now returns `overdueExpansions[]`
+- **iOS Dashboard:** Purple "Overdue Deep Dives" card shows incomplete expansion packs
+- **Watch App:** Purple reminder card shows count of overdue packs
+- **Files changed:** `convex/ios.ts`, `convex/watch.ts`, `ContentView.swift`
+
+#### Next Button UX Fix
+Questions with default values no longer require interaction to proceed.
+
+- **Fix:** `canProceed` now returns `true` for `.number` and `.numberScroll` types
+- **Smart default saving:** When user taps Next without interacting, visible default is saved automatically
+- **Files changed:** `QuestionnaireView.swift` (iOS), `QuestionnaireView.swift` (Watch)
+
+#### Sleep Log Completion Persistence
+Section completion now saves immediately when showing completion screen.
+
+- **Fix:** Added `completeSectionInBackground()` that syncs responses immediately
+- **Files changed:** `QuestionnaireView.swift`
+
+### Dec 23, 2025
+
+#### AI Analysis Configuration System
+Complete LLM settings management for physician dashboard.
+
+- **Model Selection:** Primary + fallback model configuration (Claude Opus 4.5, Sonnet 4.5, GPT-5.2, etc.)
+- **API Key Management:** Secure storage with masked display
+- **Preview Analysis Prompt:** Button to see full system/user prompt before running analysis
+- **Backend files:** `convex/systemSettings.ts`, `convex/llm.ts`
+- **UI location:** `/physician-dashboard/settings` - AI Configuration section
+
+#### HealthKit Authorization Fix
+Fixed misleading "Connected" status in onboarding.
+
+- **Root cause:** iOS `requestAuthorization()` returns `success=true` when dialog is SHOWN, not when user GRANTS
+- **Fix:** Added `verifyDataAccess()` that attempts actual data read to verify true access
+- **New status states:** `notConnected`, `connecting`, `connected`, `denied`, `unavailable`
+- **Files changed:** `HealthKitManager.swift`, `OnboardingView.swift`, `HealthKitIntegrationView.swift`
+
+### Dec 22, 2025
+
+#### Admin Tools Dashboard
+Comprehensive admin toolkit for physician dashboard.
+
+- **New page:** `/physician-dashboard/admin` - Full user management interface
+- **User operations:** Delete users, reset passwords, reset progress, change roles, toggle dev mode
+- **Bulk actions:** Select multiple users, bulk delete, purge by pattern
+- **Backend functions:** `convex/admin.ts`
+
+#### Email-Only Registration
+Simplified sign-up to email + password only.
+
+- **Auto-generated username:** Created from email prefix
+- **Files changed:** AuthenticationView.swift, AuthenticationManager.swift, ConvexService.swift, ios.ts
+
+#### CRITICAL: Circadian Text Contrast Fix
+Permanent fix for dark text on dark background issue.
+
+- **Root cause:** `ColorTheme` text colors checked `accentColorOption` but backgrounds ALWAYS use circadian colors
+- **Fix:** All text color properties now check `CircadianPalette.current.isDark` FIRST
+- **Files changed:** `QuestionModels.swift` (ColorTheme struct)
+
+#### 8-Phase Circadian Color System
+Complete redesign for smooth day-to-night transitions.
+
+- **CircadianPalette:** New struct with 8 phases (pre-dawn → dawn → morning → midday → afternoon → dusk → evening → night)
+- **Smooth interpolation:** Colors blend gradually using Hermite interpolation
+- **Seasonal awareness:** Sunrise/sunset times adjust based on day of year
+- **Files changed:** `QuestionModels.swift`, `ThemeManager.swift`, `AnalysisPendingView.swift`
+
+#### Unified Debug Panel
+Consolidated all developer tools into single panel.
+
+- **4 generation modes:** Full Journey, Max Load, Selective, Quick Test
+- **Gateway selection:** Toggle individual gateways with icons and descriptions
+- **New file:** `DevTools/UnifiedDebugPanel.swift`
+
+#### Bug Fixes
+- **Fixed 93% Completion Bug:** Day 14 completion now shows 100%
+- **Fixed Sleep Log Refresh Issue:** Today's Focus now updates immediately after completion
+- **Sleep Diary Layout Fix:** Fixed content cropping on left edge
+- **GatewayType Extensions:** Added UI properties (icon, color, triggerDescription)
+
+### Dec 21, 2025
+
+#### 14-Day Journey Standardization
+Updated entire codebase from 15 to 14 days.
+
+- **Merged Day 14 & 15:** Final day now includes DASS-21, STOP-BANG, Berlin, BPI, MEDAS, MEQ
+- **All progress indicators:** Now show "Day X of 14" consistently
+
+#### Enhanced Readability Mode for Elderly Users
+Instant accessibility system.
+
+- **Floating magnifying glass button:** Visible from splash screen, login, onboarding, and intro
+- **One-tap activation:** Single toggle enables 1.5x text, large icons, high contrast, reduced motion
+- **Files:** `EnhancedReadabilityOverlay.swift`, `ThemeManager.swift`
+
+#### Journey Introduction Sequence
+6-screen Aurora-animated intro for new users.
+
+- Full-screen modal on first MainDashboard visit with swipeable pages
+- Aurora borealis background matching splash screen aesthetic
+- **Files:** `JourneyIntroView.swift`, `JourneyIntroScreens.swift`, `JourneyIntroIcons.swift`
+
+#### Other Fixes
+- **App Icon Alpha Channel Fix:** Removed transparency from all iOS app icons
+- **PSQI Core Assessment Fix:** PSQI now always generates as core (Days 1-2)
+- **Dashboard Progress Indicator Fix:** Fixed 3 bugs in journey progress card
+- **Build Fixes:** Resolved multiple compilation errors
+
+### Dec 20, 2025
+
+#### "From Gamification to Indispensability" System
+Complete personalization engine.
+
+- **Micro-Cohorts:** Dynamic peer groups based on 8 dimensions
+- **Sleep Fingerprint:** 9 phenotypes with 8 pattern detectors
+- **Personalized Insights:** 100+ evidence-based messages
+- **Anticipation Engine:** Predictive sleep forecasting
+- **Files:** `convex/microCohorts.ts`, `convex/sleepPhenotype.ts`, `convex/insightLibrary.ts`, `convex/anticipationEngine.ts`
+
+#### Post-Intake Experience
+Complete treatment journey implementation.
+
+- **Journey Phases:** intake → analysis → treatment_pending → treatment_active
+- **Analysis Pending View:** 4-stage timeline
+- **Treatment Dashboard:** Session-based cards (Morning/Afternoon/Evening/Night)
+- **Files:** `convex/journey.ts`, `convex/insights.ts`, `JourneyPhaseManager.swift`, `AnalysisPendingView.swift`, `TreatmentDashboardView.swift`
+
+#### Measurement System & Body Metrics Overhaul
+- **Measurement system from locale:** Auto-detects Metric/Imperial
+- **Height/weight now optional:** Shows "Not set" in Profile if never provided
+- **HealthKit integration:** Auto-fill from Apple Health
+
+### Dec 19, 2025
+
+#### Developer Mode for Testers
+Physician dashboard toggle for fast-track testing.
+
+- Toggle developer mode on/off per patient
+- Jump to any day (1-14) instantly
+- **Mutations:** `toggleDeveloperMode`, `setPatientDay`, `getDeveloperModeStatus`
+
+#### Gamification System (Schema)
+"Strava for Sleep" tables added.
+
+- User streaks, badges, XP/levels, and challenges
+- Evidence-based encouragement message library
+
+### Dec 18, 2025
+
+#### Dashboard 360° View Data Pipeline
+Complete data flow from iOS mock generator to dashboard.
+
+- `healthkit:computeSleepMetricsFromResponses`
+- `physician:persistCalculatedScores`
+- `physician:getQuestionnaireResponses`
+
+#### New Branding and Logo
+Spiral crescent moon logo implementation.
+
+- iOS: `ZoeLogo.swift`, Web: `ZoeLogo.tsx`
+- Animated aurora borealis splash screen
+
+#### Intervention Library System
+Physician dashboard can assign interventions to patients.
+
+- 39 evidence-based interventions across 12 categories
+- 7 treatment bundles
+- **Seed:** `npx convex run seedInterventionLibrary:seedAll`
+
+### Dec 13, 2025
+
+- **Question Manager enhancements:** Full question preview in physician dashboard
+- **iOS smart task visibility:** Assessment task only shows if content exists
+- **Day-aware response storage:** Repeating questions now stored per day
+- **Consensus Sleep Diary (CSD):** Full iOS sleep log integration
+- **Questionnaire day rebalance:** Split large modules across all days
+
+### Dec 12, 2025
+
+- Fixed questionnaire navigation: Back button now properly respects section boundaries
+- Added save error handling: Retry dialogs for failed Convex syncs
+- Circadian picker styling: Time/date pickers now use warm amber colors at night
+- **Fixed pre-fill/fast-forward bug:** Questionnaire no longer auto-fills answers on fresh start
+- **Smart defaults are scale-relative:** Default values now adapt to actual question scale range
+
+### Dec 11, 2025
+
+- Repository renamed: `15-day-Intake` → `Zoe-Sleep-V1`
+- Onboarding: 8 steps, account-aware, circadian colors
+- Cross-device sync: Question-by-question resume
+- Day unlock: 4 AM (was 5 AM)
+
+---
+
+*For quick reference, see [CLAUDE.md](../CLAUDE.md)*

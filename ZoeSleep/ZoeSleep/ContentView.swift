@@ -442,7 +442,7 @@ struct MainDashboardView: View {
             // Hint text for interactive dots
             if themeManager.debugMode {
                 // Debug mode hint - show purple text to match purple dot borders
-                Text("Debug: Tap any day to jump (purple = tappable)")
+                Text("Debug: Tap any purple dot to jump (↔ forward or back)")
                     .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
                     .foregroundColor(.purple)
             } else if currentDay > 1 {
@@ -3432,8 +3432,10 @@ struct ExpansionPackQuestionnaireView: View {
         if !question.required { return true }
 
         switch question.questionType {
-        case .scale:
-            return userInteracted.contains(question.id)
+        case .scale, .number, .numberScroll, .time, .date, .minutesScroll, .hoursMinutesScroll:
+            // Scale sliders, number inputs, and time/date pickers show a visible default
+            // that user can accept by tapping Next without interaction
+            return true
         case .singleSelect, .yesNo, .yesNoDontKnow:
             guard let response = responses[question.id] else { return false }
             return !(response as? String ?? "").isEmpty
@@ -3452,6 +3454,14 @@ struct ExpansionPackQuestionnaireView: View {
     }
 
     private func nextQuestion() {
+        // Save default value for scale questions if user accepts without interacting
+        let question = questions[currentIndex]
+        if question.questionType == .scale && !userInteracted.contains(question.id) {
+            let defaultValue = ScaleInput.smartDefault(for: question)
+            responses[question.id] = defaultValue
+            userInteracted.insert(question.id)
+        }
+
         if currentIndex < questions.count - 1 {
             currentIndex += 1
         } else {
