@@ -63,7 +63,7 @@ struct JourneyIntroScreen1: View {
     }
 }
 
-// MARK: - Screen 2: Daily Routine
+// MARK: - Screen 2: Validated Clinical Tools
 
 struct JourneyIntroScreen2: View {
     let screenHeight: CGFloat
@@ -85,7 +85,7 @@ struct JourneyIntroScreen2: View {
                 .opacity(iconOpacity)
 
             // Title - BIG
-            Text("Morning Check-In +\nPersonalized Deep Dives")
+            Text("Best-in-Class\nClinical Questionnaires")
                 .font(.system(size: isCompact ? 28 : 32, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
@@ -93,13 +93,19 @@ struct JourneyIntroScreen2: View {
                 .opacity(textOpacity)
 
             // Description - SHORT
-            Text("Quick daily log. Deeper assessments\nunlock based on your answers.")
-                .font(.system(size: isCompact ? 18 : 20, weight: .medium, design: .rounded))
-                .foregroundColor(.white.opacity(0.85))
-                .multilineTextAlignment(.center)
-                .lineSpacing(6)
-                .padding(.horizontal, 32)
-                .opacity(textOpacity)
+            VStack(spacing: isCompact ? 8 : 12) {
+                Text("Industry-standardized, validated tools.")
+                    .font(.system(size: isCompact ? 18 : 20, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.9))
+
+                Text("Stanford Sleep Diary, ISI, PHQ-9,\nSTOP-BANG, and more — personalized to you.")
+                    .font(.system(size: isCompact ? 17 : 19, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(5)
+            }
+            .padding(.horizontal, 28)
+            .opacity(textOpacity)
 
             Spacer()
             Spacer()

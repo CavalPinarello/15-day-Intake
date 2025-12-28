@@ -640,11 +640,16 @@ struct ProgressDots: View {
 }
 
 /// Interactive progress dots - tap completed days to navigate to Sleep Diary
+/// In debug mode, can tap ANY day (including future) to jump directly to it
 struct InteractiveProgressDots: View {
     let current: Int
     let total: Int
     let completedDays: [Int]
     let onDayTapped: (Int) -> Void
+
+    // Debug mode support - when enabled, all dots are tappable for jumping
+    var debugMode: Bool = false
+    var onDebugJumpToDay: ((Int) -> Void)? = nil
 
     @ObservedObject private var themeManager = ThemeManager.shared
     private var theme: ColorTheme { themeManager.currentTheme }
@@ -660,24 +665,40 @@ struct InteractiveProgressDots: View {
                 let day = index + 1
                 let isCompleted = completedDays.contains(day)
                 let isCurrent = day == current
+                let isFuture = day > current
+                let isDebugTappable = debugMode && isFuture
 
                 Circle()
                     .fill(dotColor(for: index))
                     .frame(width: isCurrent ? 10 : 8, height: isCurrent ? 10 : 8)
                     .overlay(
-                        // Subtle indicator for tappable dots
+                        // Visual indicator for tappable dots
                         Circle()
-                            .stroke(isCompleted ? theme.primary.opacity(0.5) : Color.clear, lineWidth: 1)
+                            .stroke(strokeColor(isCompleted: isCompleted, isDebugTappable: isDebugTappable), lineWidth: isDebugTappable ? 2 : 1)
                             .frame(width: isCurrent ? 14 : 12, height: isCurrent ? 14 : 12)
                     )
                     .animation(.spring(response: 0.3), value: current)
                     .onTapGesture {
-                        if isCompleted {
+                        if isDebugTappable {
+                            // Debug mode: Jump to future day
+                            onDebugJumpToDay?(day)
+                        } else if isCompleted {
+                            // Normal mode: View completed day's diary
                             onDayTapped(day)
                         }
                     }
                     .contentShape(Rectangle().size(width: 20, height: 20))  // Larger tap target
             }
+        }
+    }
+
+    private func strokeColor(isCompleted: Bool, isDebugTappable: Bool) -> Color {
+        if isDebugTappable {
+            return Color.purple.opacity(0.8)  // Purple border for debug-tappable future days
+        } else if isCompleted {
+            return theme.primary.opacity(0.5)
+        } else {
+            return Color.clear
         }
     }
 

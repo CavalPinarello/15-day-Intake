@@ -1462,11 +1462,10 @@ struct NapDetailsInput: View {
 
 // MARK: - Medication Select Input
 
-/// Multi-select medication category component with "Other" text field option
+/// Multi-select medication category component with dose tracking for each selected medication
 struct MedicationSelectInput: View {
     let question: Question
-    @Binding var selectedCategories: [String]
-    @Binding var otherText: String
+    @Binding var medications: [MedicationSelection]
     var theme: ColorTheme = ColorTheme.shared
 
     // Circadian-aware check
@@ -1476,74 +1475,113 @@ struct MedicationSelectInput: View {
 
     private var pillarColor: Color { question.pillar.themeColor }
 
+    // Helper to check if a category is selected
+    private func isSelected(_ categoryId: String) -> Bool {
+        medications.contains { $0.categoryId == categoryId }
+    }
+
+    // Get the selection for a category
+    private func selectionFor(_ categoryId: String) -> MedicationSelection? {
+        medications.first { $0.categoryId == categoryId }
+    }
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             // Medication category chips
             ForEach(MedicationCategory.allCategories) { category in
-                Button(action: {
-                    toggleCategory(category.id)
-                }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: category.icon)
-                            .font(.system(size: 18))
-                            .frame(width: 24)
-                            .foregroundColor(
-                                selectedCategories.contains(category.id)
-                                    ? pillarColor
-                                    : CircadianColors.secondary
-                            )
+                VStack(spacing: 0) {
+                    // Category toggle button
+                    Button(action: {
+                        toggleCategory(category.id)
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: category.icon)
+                                .font(.system(size: 18))
+                                .frame(width: 24)
+                                .foregroundColor(
+                                    isSelected(category.id)
+                                        ? pillarColor
+                                        : CircadianColors.secondary
+                                )
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(category.name)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(CircadianColors.primary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(category.name)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(CircadianColors.primary)
 
-                            if let subtitle = category.subtitle {
-                                Text(subtitle)
-                                    .font(.caption)
-                                    .foregroundColor(CircadianColors.muted)
+                                if let subtitle = category.subtitle {
+                                    Text(subtitle)
+                                        .font(.caption)
+                                        .foregroundColor(CircadianColors.muted)
+                                }
                             }
+
+                            Spacer()
+
+                            // Show selected dose if available
+                            if let selection = selectionFor(category.id), let dose = selection.dose, !dose.isEmpty {
+                                Text("\(dose) \(category.doseUnit)")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(pillarColor)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(pillarColor.opacity(0.15))
+                                    .cornerRadius(4)
+                            }
+
+                            Image(systemName: isSelected(category.id) ? "checkmark.square.fill" : "square")
+                                .foregroundColor(
+                                    isSelected(category.id)
+                                        ? pillarColor
+                                        : CircadianColors.secondary
+                                )
                         }
-
-                        Spacer()
-
-                        Image(systemName: selectedCategories.contains(category.id) ? "checkmark.square.fill" : "square")
-                            .foregroundColor(
-                                selectedCategories.contains(category.id)
-                                    ? pillarColor
-                                    : CircadianColors.secondary
-                            )
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                        .background(
+                            isSelected(category.id)
+                                ? pillarColor.opacity(0.1)
+                                : CircadianColors.secondaryBackground
+                        )
+                        .cornerRadius(isSelected(category.id) ? 8 : 8)
+                        .cornerRadius(8, corners: isSelected(category.id) ? [.topLeft, .topRight] : .allCorners)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(
+                                    isSelected(category.id)
+                                        ? pillarColor
+                                        : CircadianColors.border,
+                                    lineWidth: isSelected(category.id) ? 2 : 1
+                                )
+                        )
                     }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 16)
-                    .background(
-                        selectedCategories.contains(category.id)
-                            ? pillarColor.opacity(0.1)
-                            : CircadianColors.secondaryBackground
-                    )
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(
-                                selectedCategories.contains(category.id)
-                                    ? pillarColor
-                                    : CircadianColors.border,
-                                lineWidth: selectedCategories.contains(category.id) ? 2 : 1
-                            )
-                    )
-                }
-                .buttonStyle(.plain)
-            }
+                    .buttonStyle(.plain)
 
-            // "Other" text field (shown when "other" is selected)
-            if selectedCategories.contains("other") {
+                    // Dose picker (shown when category is selected)
+                    if isSelected(category.id) {
+                        dosePickerView(for: category)
+                            .padding(.top, -1)  // Overlap with parent border
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Dose Picker View
+
+    @ViewBuilder
+    private func dosePickerView(for category: MedicationCategory) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Medication name field (for prescription, OTC, herbal, other)
+            if category.requiresName {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Please specify:")
+                    Text("Medication name")
                         .font(.caption)
                         .foregroundColor(CircadianColors.secondary)
 
-                    TextField("Medication name", text: $otherText)
+                    TextField("e.g., \(category.subtitle?.components(separatedBy: ", ").first ?? "Enter name")", text: medicationNameBinding(for: category.id))
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
@@ -1558,21 +1596,212 @@ struct MedicationSelectInput: View {
                                 .stroke(CircadianColors.border, lineWidth: 1)
                         )
                 }
-                .padding(.top, 8)
             }
+
+            // Dose selection
+            if !category.commonDoses.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Dose (\(category.doseUnit))")
+                        .font(.caption)
+                        .foregroundColor(CircadianColors.secondary)
+
+                    // Quick-select dose buttons
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: 8) {
+                        ForEach(category.commonDoses, id: \.self) { dose in
+                            Button(action: {
+                                setDose(dose, for: category.id)
+                            }) {
+                                Text("\(dose)")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        getDose(for: category.id) == dose
+                                            ? pillarColor.opacity(0.2)
+                                            : CircadianColors.secondaryBackground.opacity(0.5)
+                                    )
+                                    .foregroundColor(
+                                        getDose(for: category.id) == dose
+                                            ? pillarColor
+                                            : CircadianColors.primary
+                                    )
+                                    .cornerRadius(6)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(
+                                                getDose(for: category.id) == dose
+                                                    ? pillarColor
+                                                    : CircadianColors.border.opacity(0.5),
+                                                lineWidth: getDose(for: category.id) == dose ? 2 : 1
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        // Custom dose option
+                        Button(action: {
+                            // Toggle custom dose mode
+                            if getDose(for: category.id) == "custom" {
+                                setDose(nil, for: category.id)
+                            } else {
+                                setDose("custom", for: category.id)
+                            }
+                        }) {
+                            Text("Other")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(
+                                    getDose(for: category.id) == "custom"
+                                        ? pillarColor.opacity(0.2)
+                                        : CircadianColors.secondaryBackground.opacity(0.5)
+                                )
+                                .foregroundColor(
+                                    getDose(for: category.id) == "custom"
+                                        ? pillarColor
+                                        : CircadianColors.primary
+                                )
+                                .cornerRadius(6)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(
+                                            getDose(for: category.id) == "custom"
+                                                ? pillarColor
+                                                : CircadianColors.border.opacity(0.5),
+                                            lineWidth: getDose(for: category.id) == "custom" ? 2 : 1
+                                        )
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Custom dose text field
+                    if getDose(for: category.id) == "custom" {
+                        TextField("Enter dose in \(category.doseUnit)", text: customDoseBinding(for: category.id))
+                            .keyboardType(.decimalPad)
+                            .foregroundColor(CircadianColors.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                isEvening
+                                    ? Color(red: 0.2, green: 0.12, blue: 0.08)
+                                    : Color(.systemBackground)
+                            )
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(CircadianColors.border, lineWidth: 1)
+                            )
+                    }
+                }
+            } else {
+                // No common doses - show free-form dose entry
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Dose (optional)")
+                        .font(.caption)
+                        .foregroundColor(CircadianColors.secondary)
+
+                    TextField("e.g., 10 mg", text: customDoseBinding(for: category.id))
+                        .foregroundColor(CircadianColors.primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            isEvening
+                                ? Color(red: 0.2, green: 0.12, blue: 0.08)
+                                : Color(.systemBackground)
+                        )
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(CircadianColors.border, lineWidth: 1)
+                        )
+                }
+            }
+        }
+        .padding(12)
+        .background(pillarColor.opacity(0.05))
+        .overlay(
+            Rectangle()
+                .stroke(pillarColor, lineWidth: 2)
+        )
+        .cornerRadius(0)
+        .clipShape(
+            RoundedCorner(radius: 8, corners: [.bottomLeft, .bottomRight])
+        )
+    }
+
+    // MARK: - Actions & Bindings
+
+    private func toggleCategory(_ categoryId: String) {
+        if let index = medications.firstIndex(where: { $0.categoryId == categoryId }) {
+            medications.remove(at: index)
+        } else {
+            medications.append(MedicationSelection(categoryId: categoryId))
         }
     }
 
-    private func toggleCategory(_ categoryId: String) {
-        if let index = selectedCategories.firstIndex(of: categoryId) {
-            selectedCategories.remove(at: index)
-            // Clear other text if "other" was deselected
-            if categoryId == "other" {
-                otherText = ""
-            }
-        } else {
-            selectedCategories.append(categoryId)
+    private func getDose(for categoryId: String) -> String? {
+        medications.first { $0.categoryId == categoryId }?.dose
+    }
+
+    private func setDose(_ dose: String?, for categoryId: String) {
+        if let index = medications.firstIndex(where: { $0.categoryId == categoryId }) {
+            medications[index].dose = dose
         }
+    }
+
+    private func medicationNameBinding(for categoryId: String) -> Binding<String> {
+        Binding(
+            get: {
+                medications.first { $0.categoryId == categoryId }?.medicationName ?? ""
+            },
+            set: { newValue in
+                if let index = medications.firstIndex(where: { $0.categoryId == categoryId }) {
+                    medications[index].medicationName = newValue
+                }
+            }
+        )
+    }
+
+    private func customDoseBinding(for categoryId: String) -> Binding<String> {
+        Binding(
+            get: {
+                let dose = medications.first { $0.categoryId == categoryId }?.dose ?? ""
+                // If it's "custom", return empty for the text field
+                return dose == "custom" ? "" : dose
+            },
+            set: { newValue in
+                if let index = medications.firstIndex(where: { $0.categoryId == categoryId }) {
+                    // Store the custom value
+                    medications[index].dose = newValue.isEmpty ? "custom" : newValue
+                }
+            }
+        )
+    }
+}
+
+// MARK: - Rounded Corner Helper
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
+
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
     }
 }
 

@@ -3141,9 +3141,16 @@ export const getPatientNapSummary = query({
   },
 });
 
+// MedicationSelection type (matches iOS struct)
+interface MedicationSelection {
+  categoryId: string;
+  dose?: string | null;
+  medicationName?: string | null;
+}
+
 /**
  * Get aggregated medication summary for a patient
- * Returns: days with meds, category counts, other medications
+ * Returns: days with meds, category counts with doses, other medications
  */
 export const getPatientMedicationSummary = query({
   args: {
@@ -3165,12 +3172,18 @@ export const getPatientMedicationSummary = query({
       .collect();
 
     // Group by day
-    const dayData: Record<number, { tookMeds: boolean; categories: string[]; otherText?: string; legacyName?: string }> = {};
+    const dayData: Record<number, {
+      tookMeds: boolean;
+      medications: MedicationSelection[];
+      legacyCategories: string[];
+      otherText?: string;
+      legacyName?: string;
+    }> = {};
 
     for (const response of medResponses) {
       const day = response.day_number ?? 1;
       if (!dayData[day]) {
-        dayData[day] = { tookMeds: false, categories: [] };
+        dayData[day] = { tookMeds: false, medications: [], legacyCategories: [] };
       }
 
       switch (response.question_id) {
@@ -3180,7 +3193,17 @@ export const getPatientMedicationSummary = query({
         case "CSD_MEDS_LIST":
           if (response.response_array) {
             try {
-              dayData[day].categories = JSON.parse(response.response_array);
+              const parsed = JSON.parse(response.response_array);
+              // Check if it's the new MedicationSelection format or legacy string array
+              if (parsed.length > 0) {
+                if (typeof parsed[0] === "object" && parsed[0].categoryId) {
+                  // New format: array of MedicationSelection objects
+                  dayData[day].medications = parsed as MedicationSelection[];
+                } else if (typeof parsed[0] === "string") {
+                  // Legacy format: array of category strings
+                  dayData[day].legacyCategories = parsed as string[];
+                }
+              }
             } catch {
               // Invalid JSON, ignore
             }
@@ -3200,15 +3223,33 @@ export const getPatientMedicationSummary = query({
     const daysWithMeds = Object.values(dayData).filter((d) => d.tookMeds).length;
     const totalDays = Object.keys(dayData).length;
 
-    // Aggregate category counts
-    const categoryCounts: Record<string, number> = {};
+    // Aggregate category counts with dose info
+    const categoryCounts: Record<string, { count: number; doses: string[]; medicationNames: string[] }> = {};
     const otherMedications: string[] = [];
 
     for (const data of Object.values(dayData)) {
       if (data.tookMeds) {
-        // New format: categories array
-        for (const cat of data.categories) {
-          categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+        // New format: MedicationSelection objects with doses
+        for (const med of data.medications) {
+          const catId = med.categoryId;
+          if (!categoryCounts[catId]) {
+            categoryCounts[catId] = { count: 0, doses: [], medicationNames: [] };
+          }
+          categoryCounts[catId].count++;
+          if (med.dose && !categoryCounts[catId].doses.includes(med.dose)) {
+            categoryCounts[catId].doses.push(med.dose);
+          }
+          if (med.medicationName && !categoryCounts[catId].medicationNames.includes(med.medicationName)) {
+            categoryCounts[catId].medicationNames.push(med.medicationName);
+          }
+        }
+
+        // Legacy format: string categories (no dose info)
+        for (const cat of data.legacyCategories) {
+          if (!categoryCounts[cat]) {
+            categoryCounts[cat] = { count: 0, doses: [], medicationNames: [] };
+          }
+          categoryCounts[cat].count++;
         }
 
         // Other text (new format)
@@ -3223,21 +3264,25 @@ export const getPatientMedicationSummary = query({
       }
     }
 
-    // Category display names
-    const categoryNames: Record<string, string> = {
-      melatonin: "Melatonin",
-      prescription: "Prescription",
-      otc: "OTC Sleep Aid",
-      cbd_thc: "CBD/THC",
-      herbal: "Herbal/Natural",
-      other: "Other",
+    // Category display names and dose units
+    const categoryInfo: Record<string, { name: string; unit: string }> = {
+      melatonin: { name: "Melatonin", unit: "mg" },
+      prescription: { name: "Prescription", unit: "mg" },
+      otc: { name: "OTC Sleep Aid", unit: "mg" },
+      cbd_thc: { name: "CBD/THC", unit: "mg" },
+      magnesium: { name: "Magnesium", unit: "mg" },
+      herbal: { name: "Herbal/Natural", unit: "mg" },
+      other: { name: "Other", unit: "mg" },
     };
 
     const categories = Object.entries(categoryCounts)
-      .map(([id, count]) => ({
+      .map(([id, data]) => ({
         id,
-        name: categoryNames[id] || id,
-        count,
+        name: categoryInfo[id]?.name || id,
+        count: data.count,
+        unit: categoryInfo[id]?.unit || "mg",
+        commonDoses: data.doses.sort((a, b) => parseFloat(a) - parseFloat(b)),
+        medications: data.medicationNames,
       }))
       .sort((a, b) => b.count - a.count);
 

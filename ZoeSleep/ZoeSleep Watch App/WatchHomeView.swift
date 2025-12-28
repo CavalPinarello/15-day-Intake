@@ -479,6 +479,7 @@ struct WatchHomeView: View {
 
             // Expansion Pack (Deeper Dive) - Only shown if triggered, complete on iPhone
             if hasExpansionPackToday {
+                let questionCount = convexService.expansionQuestionCount
                 HStack {
                     Image(systemName: expansionPackCompleted ? "checkmark.circle.fill" : "sparkles")
                         .font(.system(size: 18))
@@ -487,9 +488,15 @@ struct WatchHomeView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Deeper Dive")
                             .font(.system(size: 14, weight: .semibold))
-                        Text(expansionPackCompleted ? "Completed" : "Complete on iPhone")
-                            .font(.system(size: 10))
-                            .foregroundColor(expansionPackCompleted ? .green.opacity(0.8) : palette.textSecondary)
+                        if expansionPackCompleted {
+                            Text("Completed")
+                                .font(.system(size: 10))
+                                .foregroundColor(.green.opacity(0.8))
+                        } else {
+                            Text("\(questionCount > 0 ? "\(questionCount) questions • " : "")Complete on iPhone")
+                                .font(.system(size: 10))
+                                .foregroundColor(palette.textSecondary)
+                        }
                     }
 
                     Spacer()

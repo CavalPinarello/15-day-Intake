@@ -71,9 +71,6 @@ struct MainDashboardView: View {
     @State private var navigateToSleepDiary = false
     @State private var sleepDiarySelectedDay: Int? = nil
 
-    // Journey introduction for first-time users
-    @State private var showJourneyIntro = false
-
     // Motivational message - stored to prevent flickering on re-renders
     @State private var motivationalMessage: String = ""
 
@@ -136,11 +133,6 @@ struct MainDashboardView: View {
             JourneyOverviewView(currentDay: $currentDay)
                 .environmentObject(themeManager)
         }
-        // Journey Introduction for first-time users
-        .fullScreenCover(isPresented: $showJourneyIntro) {
-            JourneyIntroView(isPresented: $showJourneyIntro)
-                .environmentObject(themeManager)
-        }
         // Hidden NavigationLink for programmatic navigation to Sleep Diary
         .background(
             NavigationLink(
@@ -159,14 +151,6 @@ struct MainDashboardView: View {
             // Set motivational message once to prevent flickering
             if motivationalMessage.isEmpty {
                 motivationalMessage = FriendlyCopy.randomDayMessage()
-            }
-
-            // Show journey introduction for first-time users
-            if !OnboardingManager.shared.hasSeenJourneyIntro {
-                // Small delay to ensure dashboard is visible first
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    showJourneyIntro = true
-                }
             }
         }
         .onDisappear {
@@ -429,14 +413,20 @@ struct MainDashboardView: View {
             }
 
             // Interactive progress dots - tap completed days to view history
+            // In debug mode: can tap any future day to jump directly to it
             InteractiveProgressDots(
                 current: currentDay,
                 total: 14,
-                completedDays: validatedCompletedDays
-            ) { day in
-                sleepDiarySelectedDay = day
-                navigateToSleepDiary = true
-            }
+                completedDays: validatedCompletedDays,
+                onDayTapped: { day in
+                    sleepDiarySelectedDay = day
+                    navigateToSleepDiary = true
+                },
+                debugMode: themeManager.debugMode,
+                onDebugJumpToDay: { targetDay in
+                    jumpToDay(targetDay)
+                }
+            )
 
             // Two-line explanation
             VStack(spacing: 4) {
@@ -451,7 +441,12 @@ struct MainDashboardView: View {
             .multilineTextAlignment(.center)
 
             // Hint text for interactive dots
-            if currentDay > 1 {
+            if themeManager.debugMode {
+                // Debug mode hint - show purple text to match purple dot borders
+                Text("Debug: Tap any day to jump (purple = tappable)")
+                    .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                    .foregroundColor(.purple)
+            } else if currentDay > 1 {
                 Text("Tap a completed day to view details")
                     .font(.system(size: Typography.caption, design: .rounded))
                     .foregroundColor(theme.textOnCardMuted)
@@ -794,6 +789,42 @@ struct MainDashboardView: View {
                 }
             } catch {
                 print("[iOS] Error advancing day: \(error)")
+            }
+        }
+    }
+
+    /// Jump directly to any day (DEBUG MODE ONLY)
+    /// Does NOT require completing previous days - purely for testing specific day questionnaires
+    private func jumpToDay(_ targetDay: Int) {
+        guard themeManager.debugMode else {
+            print("[iOS] jumpToDay called but debug mode not enabled")
+            return
+        }
+        guard targetDay >= 1 && targetDay <= 14 else {
+            print("[iOS] Invalid target day: \(targetDay)")
+            return
+        }
+
+        Task {
+            do {
+                let response = try await ConvexService.shared.jumpToDay(targetDay)
+
+                if response.success {
+                    await questionnaireManager.loadJourneyProgress()
+                    await MainActor.run {
+                        if let newDay = response.newDay {
+                            withAnimation {
+                                currentDay = newDay
+                            }
+                        }
+                        NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+                    }
+                    print("[iOS Debug] Jumped from Day \(response.previousDay ?? currentDay) to Day \(response.newDay ?? targetDay)")
+                } else {
+                    print("[iOS Debug] Failed to jump to day \(targetDay)")
+                }
+            } catch {
+                print("[iOS Debug] Error jumping to day: \(error)")
             }
         }
     }

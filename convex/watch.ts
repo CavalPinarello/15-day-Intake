@@ -457,28 +457,38 @@ export const getJourneyState = query({
       assessmentCompleted: false,
     };
 
-    // Check for overdue expansion packs from previous days
+    // Check for expansion packs from user_expansion_schedules
     const expansionSchedule = await ctx.db
       .query("user_expansion_schedules")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .first();
 
     let overdueExpansionsCount = 0;
+    let hasExpansionPackToday = false;
+    let expansionPackCompleted = false;
+    let todaysExpansionQuestionCount = 0;
+    let todaysExpansionModules: string[] = [];
+
     if (expansionSchedule && expansionSchedule.day_assignments) {
       for (const assignment of expansionSchedule.day_assignments) {
-        // Count days before current day that have incomplete expansion packs
+        // Check for overdue expansion packs (days before current day, not completed)
         if (assignment.day_number < user.current_day && assignment.completed !== true && assignment.question_count > 0) {
           overdueExpansionsCount++;
+        }
+
+        // Check for expansion pack TODAY (scheduled for current day)
+        if (assignment.day_number === user.current_day && assignment.question_count > 0) {
+          hasExpansionPackToday = true;
+          expansionPackCompleted = assignment.completed === true;
+          todaysExpansionQuestionCount = assignment.question_count;
+          todaysExpansionModules = assignment.module_ids || [];
         }
       }
     }
 
-    // Check for same-day expansion pack availability (Days 1-5 only)
-    let hasExpansionPackToday = false;
-    let expansionPackCompleted = false;
-
-    if (user.current_day <= 5) {
-      // Get user's triggered gateways
+    // If no scheduled expansion for today, check for same-day triggered gateways (Days 1-5 only)
+    // These are immediate deep dives triggered by critical gateways during core assessment
+    if (!hasExpansionPackToday && user.current_day <= 5) {
       const userGateways = await ctx.db
         .query("user_gateway_states")
         .withIndex("by_user", (q) => q.eq("user_id", args.userId))
@@ -492,15 +502,8 @@ export const getJourneyState = query({
       const sameDayExpansionGateways = ["insomnia", "depression", "anxiety", "osa"];
       hasExpansionPackToday = sameDayExpansionGateways.some((gw) => triggeredGatewayIds.has(gw));
 
-      // Check if expansion pack was completed today
+      // Check if expansion pack was completed today (from user_progress)
       if (hasExpansionPackToday) {
-        const currentProgress = progressEntries.find((p) => {
-          const dayId = p.day_id;
-          // We need to check if this is the current day's progress
-          return true; // Will check below
-        });
-
-        // Get current day's progress entry
         const days = await ctx.db.query("days").collect();
         const currentDayEntry = days.find((d) => d.day_number === user.current_day);
         if (currentDayEntry) {
@@ -518,9 +521,11 @@ export const getJourneyState = query({
       // Section-level completion for current day
       sleepLogCompleted: currentDaySections.sleepLogCompleted,
       assessmentCompleted: currentDaySections.assessmentCompleted,
-      // Expansion pack status for current day (same-day deep dives on Days 1-5)
+      // Expansion pack status for current day (scheduled Days 6-14 OR same-day triggered Days 1-5)
       hasExpansionPackToday,
       expansionPackCompleted,
+      expansionQuestionCount: todaysExpansionQuestionCount,
+      expansionModules: todaysExpansionModules,
       // Full section status for all days
       daySectionStatus,
       // Overdue expansion packs (for Watch to show reminder)

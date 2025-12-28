@@ -113,6 +113,22 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Dashboard UX Redesign & Expansion Pack Sync Fix:** Improved task layout and cross-device sync (Dec 28, 2025)
+  - **TaskRowView redesign:** Fixed truncated subtitle text by moving duration badge below subtitle
+    - Title row now has chevron on right side
+    - Subtitle gets full width with 3-line limit
+    - Duration shown as capsule badge below subtitle
+  - **Day descriptions shortened:** More concise descriptions (e.g., "About you and your sleep habits" instead of long technical text)
+  - **Assessment Phase badge:** New badge in progress card explains this is the assessment phase
+  - **Expert review messaging:** Added "Personalized treatment follows expert review" text
+  - **Progress messages updated:** Context-aware messages (e.g., "Let's understand your sleep", "Almost ready for expert review")
+  - **Expansion pack sync fix:** Same-day expansions (Days 1-5) now sync to Convex via `ios:markExpansionPackCompleted`
+    - Previously only stored locally - Watch couldn't see completion
+    - New mutation updates `user_progress.expansion_pack_completed` in database
+  - **Watch app visibility:** "Deeper Dive" task now properly shows on Watch when triggered
+  - **Debug reset fix:** `resetProgress()` now clears UserDefaults splash keys so splashes show again after reset
+  - **Jump to Day feature:** New debug feature to instantly jump to any day 1-14 for testing
+  - **Files changed:** `ContentView.swift`, `QuestionnaireManager.swift`, `ConvexService.swift`, `UnifiedDebugPanel.swift`, `ios.ts`, `watch.ts`
 - **Enhanced Splash Screen Aurora & ISI Labels:** Visual polish and validated questionnaire labels (Dec 28, 2025)
   - **EnhancedAuroraBorealisView:** New dramatic aurora with vertical flowing curtains, multiple layers, pulsing central glow
   - **SplashScreenView refactor:** Smoother animations, better timing, more elegant logo reveal

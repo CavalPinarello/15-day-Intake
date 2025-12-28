@@ -867,23 +867,113 @@ struct MedicationCategory: Identifiable {
     let name: String
     let subtitle: String?
     let icon: String
+    let doseUnit: String  // mg, IU, drops, etc.
+    let commonDoses: [String]  // Quick-select dose options
+    let requiresName: Bool  // Whether to show "specify medication" field
 
-    init(id: String, name: String, subtitle: String? = nil, icon: String) {
+    init(id: String, name: String, subtitle: String? = nil, icon: String, doseUnit: String = "mg", commonDoses: [String] = [], requiresName: Bool = false) {
         self.id = id
         self.name = name
         self.subtitle = subtitle
         self.icon = icon
+        self.doseUnit = doseUnit
+        self.commonDoses = commonDoses
+        self.requiresName = requiresName
     }
 
-    /// All available medication categories
+    /// All available medication categories with dose options
     static let allCategories: [MedicationCategory] = [
-        MedicationCategory(id: "melatonin", name: "Melatonin", icon: "moon.stars"),
-        MedicationCategory(id: "prescription", name: "Prescription", subtitle: "Ambien, Lunesta, Trazodone", icon: "pills"),
-        MedicationCategory(id: "otc", name: "OTC Sleep Aid", subtitle: "ZzzQuil, Unisom, Benadryl", icon: "cross.case"),
-        MedicationCategory(id: "cbd_thc", name: "CBD/THC", icon: "leaf"),
-        MedicationCategory(id: "herbal", name: "Herbal/Natural", subtitle: "Valerian, Magnesium, L-Theanine", icon: "leaf.circle"),
-        MedicationCategory(id: "other", name: "Other", icon: "ellipsis.circle")
+        MedicationCategory(
+            id: "melatonin",
+            name: "Melatonin",
+            icon: "moon.stars",
+            doseUnit: "mg",
+            commonDoses: ["0.5", "1", "2", "3", "5", "10"]
+        ),
+        MedicationCategory(
+            id: "prescription",
+            name: "Prescription",
+            subtitle: "Ambien, Lunesta, Trazodone",
+            icon: "pills",
+            doseUnit: "mg",
+            commonDoses: ["5", "10", "25", "50", "100"],
+            requiresName: true
+        ),
+        MedicationCategory(
+            id: "otc",
+            name: "OTC Sleep Aid",
+            subtitle: "ZzzQuil, Unisom, Benadryl",
+            icon: "cross.case",
+            doseUnit: "mg",
+            commonDoses: ["25", "50"],
+            requiresName: true
+        ),
+        MedicationCategory(
+            id: "cbd_thc",
+            name: "CBD/THC",
+            icon: "leaf",
+            doseUnit: "mg",
+            commonDoses: ["5", "10", "15", "20", "25", "50"]
+        ),
+        MedicationCategory(
+            id: "magnesium",
+            name: "Magnesium",
+            subtitle: "Glycinate, Citrate, Oxide",
+            icon: "bolt.circle",
+            doseUnit: "mg",
+            commonDoses: ["200", "300", "400", "500"]
+        ),
+        MedicationCategory(
+            id: "herbal",
+            name: "Herbal/Natural",
+            subtitle: "Valerian, L-Theanine, GABA",
+            icon: "leaf.circle",
+            doseUnit: "mg",
+            commonDoses: ["100", "200", "300", "500"],
+            requiresName: true
+        ),
+        MedicationCategory(
+            id: "other",
+            name: "Other",
+            icon: "ellipsis.circle",
+            doseUnit: "mg",
+            commonDoses: [],
+            requiresName: true
+        )
     ]
+}
+
+// MARK: - Medication Selection (with dose)
+
+/// Represents a selected medication with its dose
+struct MedicationSelection: Codable, Equatable {
+    let categoryId: String
+    var dose: String?  // e.g., "5", "10", "25"
+    var medicationName: String?  // For categories that require specifying the medication
+
+    init(categoryId: String, dose: String? = nil, medicationName: String? = nil) {
+        self.categoryId = categoryId
+        self.dose = dose
+        self.medicationName = medicationName
+    }
+
+    /// Display string for the selection
+    var displayString: String {
+        let category = MedicationCategory.allCategories.first { $0.id == categoryId }
+        var parts: [String] = []
+
+        if let name = medicationName, !name.isEmpty {
+            parts.append(name)
+        } else if let cat = category {
+            parts.append(cat.name)
+        }
+
+        if let dose = dose, !dose.isEmpty, let cat = category {
+            parts.append("\(dose) \(cat.doseUnit)")
+        }
+
+        return parts.joined(separator: " ")
+    }
 }
 
 enum Pillar: String, Codable, CaseIterable {

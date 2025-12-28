@@ -984,6 +984,25 @@ class ConvexService {
         return try await client.mutation("watch:resetProgress", args: ["userId": userId])
     }
 
+    struct JumpToDayResponse: Codable {
+        let success: Bool
+        let previousDay: Int?
+        let newDay: Int?
+    }
+
+    /// Jump directly to any day 1-14 (Debug Mode only)
+    /// Does NOT require completing previous days - purely for testing
+    func jumpToDay(_ targetDay: Int) async throws -> JumpToDayResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:jumpToDay", args: [
+            "userId": userId,
+            "targetDay": targetDay
+        ])
+    }
+
     /// Get debug information about the user's journey
     func getJourneyDebugInfo() async throws -> JourneyDebugInfo {
         guard let userId = currentUserId else {

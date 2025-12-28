@@ -64,27 +64,43 @@ struct ZoeSleepApp: App {
     }
 }
 
-/// App root that handles: Splash → Auth → Onboarding → Content
-/// IMPORTANT: Onboarding only happens AFTER authentication
+/// App root that handles: Splash → Auth → JourneyIntro → Onboarding → Content
+/// Flow: Splash seamlessly transitions to JourneyIntro for new users
 struct AppRootView: View {
     @State private var showSplash = true
     @State private var splashOpacity: Double = 1.0
     @State private var minSplashTimeElapsed = false
+    @State private var showJourneyIntro = false
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var onboardingManager: OnboardingManager
 
     // Splash should stay until:
-    // 1. Minimum time elapsed (0.6s for animation)
+    // 1. Minimum time elapsed (2.5s for animation)
     // 2. Session check is complete (isCheckingSession == false)
     private var shouldHideSplash: Bool {
         minSplashTimeElapsed && !authManager.isCheckingSession
     }
 
+    // Show journey intro for new users (after auth, before onboarding)
+    private var shouldShowJourneyIntro: Bool {
+        authManager.isAuthenticated &&
+        !onboardingManager.hasSeenJourneyIntro &&
+        !onboardingManager.hasCompletedOnboarding
+    }
+
     var body: some View {
         ZStack {
-            // Main content (underneath splash)
+            // Main content (underneath splash/intro)
             mainContent
                 .opacity(showSplash ? 0 : 1)
+
+            // Journey intro - shows right after splash for new users
+            // Uses same aurora background for seamless transition
+            if showJourneyIntro {
+                JourneyIntroView(isPresented: $showJourneyIntro)
+                    .environmentObject(ThemeManager.shared)
+                    .transition(.opacity)
+            }
 
             // Splash screen - shows loading indicator while checking session
             if showSplash {
@@ -93,7 +109,7 @@ struct AppRootView: View {
                         // Mark minimum time elapsed
                         minSplashTimeElapsed = true
                     },
-                    duration: 2.5,  // Longer duration to appreciate the aurora animation
+                    duration: 2.5,  // Duration for aurora animation
                     isLoading: authManager.isCheckingSession,
                     loadingMessage: "Signing in"
                 )
@@ -102,13 +118,32 @@ struct AppRootView: View {
         }
         .onChange(of: shouldHideSplash) { _, shouldHide in
             if shouldHide {
-                // Quick fade out
-                withAnimation(.easeOut(duration: 0.2)) {
-                    splashOpacity = 0
+                // Check if we should show journey intro (seamless transition)
+                if shouldShowJourneyIntro {
+                    // Seamless transition: fade splash, show intro
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        splashOpacity = 0
+                        showJourneyIntro = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        showSplash = false
+                    }
+                } else {
+                    // Normal fade out to main content
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        splashOpacity = 0
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        showSplash = false
+                    }
                 }
-                // Remove splash
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    showSplash = false
+            }
+        }
+        // Also show journey intro when user just authenticated (e.g., after registration)
+        .onChange(of: authManager.isAuthenticated) { wasAuthenticated, isNowAuthenticated in
+            if !wasAuthenticated && isNowAuthenticated && shouldShowJourneyIntro && !showSplash {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showJourneyIntro = true
                 }
             }
         }
@@ -121,7 +156,7 @@ struct AppRootView: View {
             // Not logged in → Show login/signup
             AuthenticationView()
         }
-        // Step 2: Check onboarding (only after authenticated)
+        // Step 2: Check onboarding (after auth AND after journey intro)
         else if !onboardingManager.hasCompletedOnboarding {
             // Logged in but needs onboarding → Show onboarding
             OnboardingView(onboardingManager: onboardingManager)

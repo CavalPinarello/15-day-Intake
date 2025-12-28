@@ -410,8 +410,7 @@ struct QuestionnaireView: View {
             case .medicationSelect:
                 MedicationSelectInput(
                     question: question,
-                    selectedCategories: arrayBinding(for: question.id),
-                    otherText: stringBinding(for: "CSD_MEDS_OTHER"),
+                    medications: medicationsBinding(for: question.id),
                     theme: theme
                 )
             }
@@ -602,6 +601,53 @@ struct QuestionnaireView: View {
                     }
                 }
                 // Return empty array - will be populated by NapDetailsInput on appear
+                return []
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
+                } else {
+                    assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
+                }
+            }
+        )
+    }
+
+    /// Binding for medication selections (stored as JSON array with dose info)
+    private func medicationsBinding(for questionId: String) -> Binding<[MedicationSelection]> {
+        Binding(
+            get: {
+                // Try to get existing medication selections from responses
+                if currentSection == .sleepLog {
+                    if let selections = sleepLogResponses[questionId] as? [MedicationSelection] {
+                        return selections
+                    }
+                    // Try to decode from JSON string
+                    if let jsonString = sleepLogResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let selections = try? JSONDecoder().decode([MedicationSelection].self, from: data) {
+                        return selections
+                    }
+                    // Legacy support: convert old [String] format to [MedicationSelection]
+                    if let oldCategories = sleepLogResponses[questionId] as? [String] {
+                        return oldCategories.map { MedicationSelection(categoryId: $0, dose: nil, medicationName: nil) }
+                    }
+                } else {
+                    if let selections = assessmentResponses[questionId] as? [MedicationSelection] {
+                        return selections
+                    }
+                    if let jsonString = assessmentResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let selections = try? JSONDecoder().decode([MedicationSelection].self, from: data) {
+                        return selections
+                    }
+                    // Legacy support: convert old [String] format to [MedicationSelection]
+                    if let oldCategories = assessmentResponses[questionId] as? [String] {
+                        return oldCategories.map { MedicationSelection(categoryId: $0, dose: nil, medicationName: nil) }
+                    }
+                }
                 return []
             },
             set: { newValue in
@@ -840,6 +886,11 @@ struct QuestionnaireView: View {
         case .medicationSelect:
             // Medication select requires at least one selection
             guard let response = responses[question.id] else { return false }
+            // Check for new MedicationSelection format
+            if let selections = response as? [MedicationSelection] {
+                return !selections.isEmpty
+            }
+            // Legacy support for old [String] format
             return !(response as? [String] ?? []).isEmpty
         default:
             // For other types, check if user interacted OR if response exists

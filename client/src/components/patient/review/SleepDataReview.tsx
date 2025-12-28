@@ -360,7 +360,7 @@ export function SleepDataReview({
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-2 text-gray-400 mb-3">
                 <Pill className="w-4 h-4" />
-                <h4 className="text-xs font-medium uppercase">Sleep Medications</h4>
+                <h4 className="text-xs font-medium uppercase">Sleep Medications & Supplements</h4>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
@@ -370,14 +370,49 @@ export function SleepDataReview({
                   </span>
                 </div>
                 {medSummary.categories.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {medSummary.categories.map((cat: NonNullable<typeof medSummary>["categories"][number]) => (
-                      <span
+                  <div className="space-y-2">
+                    {medSummary.categories.map((cat: {
+                      id: string;
+                      name: string;
+                      count: number;
+                      unit?: string;
+                      commonDoses?: string[];
+                      medications?: string[];
+                    }) => (
+                      <div
                         key={cat.id}
-                        className="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs"
+                        className="p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg"
                       >
-                        {cat.name} ({cat.count})
-                      </span>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-purple-300 font-medium text-sm">
+                            {cat.name}
+                          </span>
+                          <span className="text-gray-400 text-xs">
+                            {cat.count} {cat.count === 1 ? "day" : "days"}
+                          </span>
+                        </div>
+                        {/* Show doses if available */}
+                        {cat.commonDoses && cat.commonDoses.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <span className="text-gray-500 text-xs">Doses:</span>
+                            {cat.commonDoses.map((dose: string, idx: number) => (
+                              <span
+                                key={idx}
+                                className="px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded text-xs"
+                              >
+                                {dose}{cat.unit || "mg"}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {/* Show specific medication names if available */}
+                        {cat.medications && cat.medications.length > 0 && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            <span className="text-gray-500">Medications: </span>
+                            {cat.medications.join(", ")}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}

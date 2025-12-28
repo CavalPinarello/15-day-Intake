@@ -355,8 +355,11 @@ struct MinimalTasksView: View {
 
     /// Gateway descriptions for deeper dive explanation
     private var deeperDiveDescription: String {
-        // Based on current day and triggered gateways, provide context
-        // This is a simplified version - ideally would fetch from Convex
+        let questionCount = convexService.expansionQuestionCount
+        if questionCount > 0 {
+            return "\(questionCount) questions • Complete on iPhone"
+        }
+        // Fallback based on current day
         switch convexService.currentDay {
         case 1...5:
             return "Understanding your sleep patterns"

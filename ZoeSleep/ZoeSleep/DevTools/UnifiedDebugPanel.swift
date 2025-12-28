@@ -587,9 +587,41 @@ struct UnifiedDebugPanel: View {
 
     // MARK: - Journey Controls Section
 
+    @State private var jumpTargetDay: Int = 1
+    @State private var isJumpingToDay = false
+
     private var journeyControlsSection: some View {
         Section {
-            // Advance Day
+            // Jump to Any Day (Primary debug feature)
+            HStack {
+                Label("Jump to Day", systemImage: "arrow.right.to.line")
+                    .foregroundColor(.purple)
+                Spacer()
+                Picker("", selection: $jumpTargetDay) {
+                    ForEach(1...14, id: \.self) { day in
+                        Text("Day \(day)").tag(day)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 100)
+
+                Button {
+                    jumpToDay()
+                } label: {
+                    if isJumpingToDay {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    } else {
+                        Text("Go")
+                            .fontWeight(.semibold)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.purple)
+                .disabled(isJumpingToDay || jumpTargetDay == questionnaireManager.currentDay)
+            }
+
+            // Advance Day (Sequential)
             Button {
                 advanceDay()
             } label: {
@@ -634,6 +666,37 @@ struct UnifiedDebugPanel: View {
             }
         } header: {
             Label("Journey Controls", systemImage: "slider.horizontal.3")
+        } footer: {
+            Text("Jump to Day lets you test any day's questionnaires without completing previous days.")
+        }
+    }
+
+    private func jumpToDay() {
+        isJumpingToDay = true
+        statusMessage = nil
+
+        Task {
+            do {
+                let response = try await ConvexService.shared.jumpToDay(jumpTargetDay)
+                await MainActor.run {
+                    if response.success {
+                        questionnaireManager.currentDay = response.newDay ?? jumpTargetDay
+                        statusMessage = "Jumped to Day \(response.newDay ?? jumpTargetDay)"
+                        statusIsError = false
+                    } else {
+                        statusMessage = "Failed to jump to day"
+                        statusIsError = true
+                    }
+                    isJumpingToDay = false
+                }
+                await questionnaireManager.loadJourneyProgress()
+            } catch {
+                await MainActor.run {
+                    statusMessage = error.localizedDescription
+                    statusIsError = true
+                    isJumpingToDay = false
+                }
+            }
         }
     }
 

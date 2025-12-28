@@ -1583,6 +1583,58 @@ export const resetJourneyProgress = mutation({
 });
 
 /**
+ * Jump to any day (DEBUG MODE ONLY)
+ * Allows testers to instantly move to any day 1-14 for testing specific questionnaires
+ * Does NOT require completing previous days - purely for testing purposes
+ */
+export const jumpToDay = mutation({
+  args: {
+    userId: v.id("users"),
+    targetDay: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Validate target day is 1-14
+    if (args.targetDay < 1 || args.targetDay > 14) {
+      throw new Error("Target day must be between 1 and 14");
+    }
+
+    const previousDay = user.current_day || 1;
+
+    // Update user's current day directly
+    await ctx.db.patch(args.userId, {
+      current_day: args.targetDay,
+      last_accessed: Date.now(),
+    });
+
+    // Log the debug action
+    await ctx.db.insert("ios_app_events", {
+      user_id: args.userId,
+      device_id: "debug",
+      event_type: "debug_jump_to_day",
+      event_data: JSON.stringify({
+        from: previousDay,
+        to: args.targetDay,
+        timestamp: Date.now()
+      }),
+      timestamp: Date.now(),
+    });
+
+    console.log(`[jumpToDay] User ${user.username}: jumped from day ${previousDay} to day ${args.targetDay}`);
+
+    return {
+      success: true,
+      previousDay,
+      newDay: args.targetDay,
+    };
+  },
+});
+
+/**
  * Get current journey state (for debugging)
  */
 export const getJourneyDebugInfo = query({
