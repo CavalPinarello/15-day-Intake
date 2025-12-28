@@ -113,6 +113,16 @@ iPhone ←→ Convex ←→ Dashboard
 3. Backend API stability
 
 **Latest Updates:**
+- **Enhanced Splash Screen Aurora & ISI Labels:** Visual polish and validated questionnaire labels (Dec 28, 2025)
+  - **EnhancedAuroraBorealisView:** New dramatic aurora with vertical flowing curtains, multiple layers, pulsing central glow
+  - **SplashScreenView refactor:** Smoother animations, better timing, more elegant logo reveal
+  - **ISI question-specific labels:** Per the validated Morin et al. 2011 instrument:
+    - Items 1-3 (Severity): None → Mild → Moderate → Severe → Very Severe
+    - Item 4 (Satisfaction): Very Satisfied → Very Dissatisfied
+    - Item 5 (Interference): Not at all interfering → Very much interfering
+    - Item 6 (Noticeable): Not at all noticeable → Very much noticeable
+    - Item 7 (Worried): Not at all worried → Very much worried
+  - **Files changed:** `AuroraBorealisView.swift`, `SplashScreenView.swift`, `AnswerDerivationSystem.swift`, `JourneyIntroScreens.swift`
 - **Workday vs Weekend Day Type Analysis:** Complete day type tracking and clinical pattern detection (Dec 27, 2025)
   - **Schema enrichment:** Added to `user_sleep_data` table: `day_number`, `day_type`, `naps_taken`, `nap_count`, `nap_total_mins`, `nap_details_json`, `medications_taken`, `medication_time`, `medication_categories_json`, `subjective_quality`
   - **Day types tracked:** Workday, School Day, Day Off, Vacation, Holiday, Weekend
