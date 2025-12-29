@@ -1866,6 +1866,11 @@ struct ConditionalLogic: Codable {
     init(ageOver: Int) {
         self.ageOver = ageOver
     }
+
+    // Default empty initializer for building logic progressively
+    init() {
+        // All fields default to nil
+    }
 }
 
 // MARK: - Response Model

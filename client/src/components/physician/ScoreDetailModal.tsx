@@ -194,8 +194,44 @@ const scoreThresholds: Record<string, { ranges: Array<{ max: number; severity: s
   },
 };
 
+// Map full questionnaire names to their abbreviations for threshold lookup
+const questionnaireNameToAbbreviation: Record<string, string> = {
+  "Insomnia Severity Index": "ISI",
+  "Patient Health Questionnaire": "PHQ-9",
+  "Patient Health Questionnaire-9": "PHQ-9",
+  "Generalized Anxiety Disorder": "GAD-7",
+  "Generalized Anxiety Disorder-7": "GAD-7",
+  "Epworth Sleepiness Scale": "ESS",
+  "STOP-BANG Sleep Apnea Screening": "STOP-BANG",
+  "Pittsburgh Sleep Quality Index": "PSQI",
+  "Dysfunctional Beliefs and Attitudes about Sleep": "DBAS-16",
+  "Fatigue Severity Scale": "FSS",
+  "Functional Outcomes of Sleep Questionnaire": "FOSQ-10",
+  "Depression Anxiety Stress Scales": "DASS-21",
+  "Berlin Questionnaire": "Berlin",
+  "Brief Pain Inventory": "BPI",
+  "Mediterranean Diet Adherence Screener": "MEDAS",
+  "Morningness-Eveningness Questionnaire": "MEQ",
+  "PROMIS Cognitive Function": "PROMIS",
+  "PROMIS Cognitive": "PROMIS",
+  "Sleep Hygiene Index": "Sleep Hygiene",
+  "Pre-Sleep Arousal Scale": "PSAS-Cognitive",
+  "Pre-Sleep Arousal Scale - Cognitive": "PSAS-Cognitive",
+  "Pre-Sleep Arousal Scale - Somatic": "PSAS-Somatic",
+};
+
 function getSeverityForScore(questionnaireName: string, score: number): string {
-  const thresholds = scoreThresholds[questionnaireName];
+  // Try direct lookup first
+  let thresholds = scoreThresholds[questionnaireName];
+
+  // If not found, try normalized abbreviation
+  if (!thresholds) {
+    const abbreviation = questionnaireNameToAbbreviation[questionnaireName];
+    if (abbreviation) {
+      thresholds = scoreThresholds[abbreviation];
+    }
+  }
+
   if (!thresholds) return "unknown";
 
   for (const range of thresholds.ranges) {

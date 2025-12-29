@@ -508,7 +508,6 @@ class QuestionnaireManager: ObservableObject {
                 maxValue: 180,
                 unit: "minutes",
                 defaultValue: 15,
-                helpText: "This can be derived from your sleep log",
                 isGateway: true,
                 gatewayType: .insomnia,
                 gatewayThreshold: 30
@@ -521,10 +520,9 @@ class QuestionnaireManager: ObservableObject {
                 questionType: .numberScroll,
                 minValue: 0,
                 maxValue: 15,
-                step: 0.5,
+                step: 0.25,
                 unit: "hours",
-                defaultValue: 7,
-                helpText: "This can be derived from your sleep log"
+                defaultValue: 7
             )
         ],
 
@@ -568,8 +566,7 @@ class QuestionnaireManager: ObservableObject {
                 questionType: .numberScroll,
                 minValue: 0,
                 maxValue: 15,
-                defaultValue: 1,
-                helpText: "Auto-derived from your Sleep Log"
+                defaultValue: 1
             ),
             Question(
                 id: "12B",
@@ -588,7 +585,6 @@ class QuestionnaireManager: ObservableObject {
                 maxValue: 120,
                 unit: "minutes",
                 defaultValue: 15,
-                helpText: "Auto-derived from your Sleep Log",
                 conditionalLogic: ConditionalLogic(questionId: "CSD_AWAKENINGS", greaterThan: 0)
             ),
 

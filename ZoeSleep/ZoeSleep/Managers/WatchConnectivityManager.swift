@@ -288,6 +288,9 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             return "date"
         case .info, .repeatingGroup, .napDetails:
             return "text"
+        case .prescriptionMedSelect, .supplementSelect, .surgeryDetails:
+            // These complex types are not suitable for Watch - display as text
+            return "text"
         }
     }
 

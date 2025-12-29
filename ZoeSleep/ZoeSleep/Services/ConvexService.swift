@@ -1350,6 +1350,21 @@ struct ConvexConditionalLogic: Codable {
         self.any = try? container.decodeIfPresent([ConvexConditionalLogic].self, forKey: .any)
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(questionId, forKey: .questionId)
+        try container.encodeIfPresent(equals, forKey: .equals)
+        try container.encodeIfPresent(greaterThan, forKey: .greaterThan)
+        try container.encodeIfPresent(lessThan, forKey: .lessThan)
+        try container.encodeIfPresent(greaterThanOrEqual, forKey: .greaterThanOrEqual)
+        try container.encodeIfPresent(lessThanOrEqual, forKey: .lessThanOrEqual)
+        try container.encodeIfPresent(contains, forKey: .contains)
+        try container.encodeIfPresent(ageUnder, forKey: .ageUnder)
+        try container.encodeIfPresent(ageOver, forKey: .ageOver)
+        try container.encodeIfPresent(all, forKey: .all)
+        try container.encodeIfPresent(any, forKey: .any)
+    }
+
     private struct ShowIfContent: Codable {
         let questionId: String
         let value: String?

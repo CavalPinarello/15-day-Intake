@@ -77,6 +77,7 @@ struct SharedQuestion: Identifiable, Codable {
     var scaleMaxLabel: String?
     var minValue: Int?
     var maxValue: Int?
+    var step: Double?
     var unit: String?
     var helpText: String?
     var required: Bool
@@ -99,6 +100,7 @@ struct SharedQuestion: Identifiable, Codable {
         scaleMaxLabel: String? = nil,
         minValue: Int? = nil,
         maxValue: Int? = nil,
+        step: Double? = nil,
         unit: String? = nil,
         helpText: String? = nil,
         required: Bool = true,
@@ -116,6 +118,7 @@ struct SharedQuestion: Identifiable, Codable {
         self.scaleMaxLabel = scaleMaxLabel
         self.minValue = minValue
         self.maxValue = maxValue
+        self.step = step
         self.unit = unit
         self.helpText = helpText
         self.required = required
@@ -374,8 +377,7 @@ struct SharedQuestionBank {
             type: .minutesScroll,
             minValue: 0,
             maxValue: 180,
-            unit: "minutes",
-            helpText: "This can be derived from your sleep log"
+            unit: "minutes"
         ),
         SharedQuestion(
             id: "PSQI_3",
@@ -391,8 +393,8 @@ struct SharedQuestionBank {
             type: .numberScroll,
             minValue: 0,
             maxValue: 15,
-            unit: "hours",
-            helpText: "This can be derived from your sleep log"
+            step: 0.25,
+            unit: "hours"
         )
     ]
 

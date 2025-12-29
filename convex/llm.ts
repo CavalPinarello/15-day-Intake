@@ -763,9 +763,16 @@ export const interpretQuestionnaireScore = action({
       .filter((s) => s.questionnaire_name === args.questionnaireName)
       .map((s) => `Score: ${s.score}/${s.max_score} on ${new Date(s.calculated_at).toLocaleDateString()}`);
 
+    // Build questionnaire-specific clinical reference based on peer-reviewed literature
+    const clinicalReferences = getClinicalReferenceForQuestionnaire(args.questionnaireName);
+
     const systemPrompt = `You are an expert sleep medicine clinician reviewing standardized questionnaire results.
 Provide detailed, clinically-relevant interpretations that would help a physician understand the patient's condition.
-Be specific about what the scores mean clinically and what actions should be considered.`;
+Be specific about what the scores mean clinically and what actions should be considered.
+
+CRITICAL: Use ONLY the validated clinical interpretation guidelines provided below. Do NOT hallucinate severity levels or clinical thresholds.
+
+${clinicalReferences}`;
 
     const userPrompt = `Analyze this ${args.questionnaireName} questionnaire result:
 

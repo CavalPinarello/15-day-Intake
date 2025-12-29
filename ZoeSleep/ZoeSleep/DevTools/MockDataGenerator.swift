@@ -137,6 +137,18 @@ class MockDataGenerator {
         case .caffeineSelect:
             // Generate mock caffeine data (empty by default, let sleep log handle it)
             return (nil, nil, nil, "[]")
+
+        case .prescriptionMedSelect:
+            // Generate mock prescription medication data (empty array by default)
+            return (nil, nil, nil, "[]")
+
+        case .supplementSelect:
+            // Generate mock supplement data (empty array by default)
+            return (nil, nil, nil, "[]")
+
+        case .surgeryDetails:
+            // Generate mock surgery data (empty array by default)
+            return (nil, nil, nil, "[]")
         }
     }
 
@@ -598,6 +610,9 @@ class MockDataGenerator {
         case .repeatingGroup: return "repeating_group"
         case .napDetails: return "nap_details"
         case .caffeineSelect: return "caffeine_select"
+        case .prescriptionMedSelect: return "prescription_med_select"
+        case .supplementSelect: return "supplement_select"
+        case .surgeryDetails: return "surgery_details"
         }
     }
 }
