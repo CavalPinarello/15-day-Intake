@@ -576,8 +576,7 @@ struct NumberInput: View {
             return 1     // Night awakenings - typical
         case "PSQI_2":
             return 15    // Time to fall asleep (minutes)
-        case "PSQI_4":
-            return 7     // Hours of actual sleep
+        // PSQI_4 removed - derived from sleep log
         // Caffeine/Alcohol
         case "30":
             return 2     // Cups of caffeine per day
@@ -790,12 +789,12 @@ struct TimeInput: View {
             components.minute = 30
 
         case "CSD_OUT_BED":
-            // Typically 5-15 min after final wake
+            // Typically 15 min after final wake (user usually stays in bed briefly after waking)
             if let wakeTime = previousBedtime {
-                return calendar.date(byAdding: .minute, value: 10, to: wakeTime) ?? wakeTime
+                return calendar.date(byAdding: .minute, value: 15, to: wakeTime) ?? wakeTime
             }
-            components.hour = 6
-            components.minute = 45
+            components.hour = 7
+            components.minute = 15
 
         case "CSD_CAFFEINE_LAST":
             // Default to 2 PM for last caffeine
@@ -833,11 +832,12 @@ struct TimeInput: View {
             components.minute = 30
 
         case "SD_OUT_OF_BED":
+            // Typically 15 min after final wake (user usually stays in bed briefly after waking)
             if let wakeTime = previousBedtime {
-                return calendar.date(byAdding: .minute, value: 10, to: wakeTime) ?? wakeTime
+                return calendar.date(byAdding: .minute, value: 15, to: wakeTime) ?? wakeTime
             }
-            components.hour = 6
-            components.minute = 45
+            components.hour = 7
+            components.minute = 15
 
         // PSQI questions
         case "PSQI_1":

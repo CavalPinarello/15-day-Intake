@@ -6,6 +6,15 @@
 
 ### Dec 29, 2025
 
+#### Unified Body Metrics Slider UI
+Imperial height in onboarding now uses a single slider instead of wheel pickers.
+
+- **Before:** Metric used sliders, Imperial used two wheel pickers (feet/inches) - inconsistent UX
+- **After:** Both metric and imperial use unified slider interface
+- **Imperial slider:** Range 48-95 inches (4'0" to 7'11"), displays as feet/inches format
+- **Implementation:** Custom Binding converts total inches ↔ feet/inches for existing temp values
+- **Files changed:** `ZoeSleep/ZoeSleep/Views/OnboardingView.swift`
+
 #### Auto-Derivable Questions System
 Questions that can be calculated from sleep log data are now automatically derived, reducing user burden.
 

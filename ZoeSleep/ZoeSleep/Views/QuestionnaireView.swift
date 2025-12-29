@@ -551,21 +551,26 @@ struct QuestionnaireView: View {
     }
 
     private func dateBinding(for questionId: String, question: Question?, previousBedtime: Date?) -> Binding<Date> {
-        // Calculate smart default based on question context
-        let defaultDate: Date
-        if let q = question {
-            defaultDate = TimeInput.smartDefault(for: q, previousBedtime: previousBedtime)
-        } else {
-            defaultDate = Date()
-        }
-
         return Binding(
             get: {
+                // Check for existing response first
                 if currentSection == .sleepLog {
-                    return (sleepLogResponses[questionId] as? Date) ?? defaultDate
+                    if let existingValue = sleepLogResponses[questionId] as? Date {
+                        return existingValue
+                    }
                 } else {
-                    return (assessmentResponses[questionId] as? Date) ?? defaultDate
+                    if let existingValue = assessmentResponses[questionId] as? Date {
+                        return existingValue
+                    }
                 }
+
+                // Calculate smart default dynamically (not captured at binding creation time)
+                // This ensures dependent questions get the latest previous answers
+                let currentPreviousBedtime = getPreviousBedtime(for: questionId)
+                if let q = question {
+                    return TimeInput.smartDefault(for: q, previousBedtime: currentPreviousBedtime)
+                }
+                return Date()
             },
             set: { newValue in
                 if currentSection == .sleepLog {
@@ -1933,6 +1938,9 @@ struct QuestionnaireView: View {
         for (questionId, value) in sleepLogResponses {
             saveResponseFromDictionary(questionId: questionId, value: value, questions: sleepLogQuestions)
         }
+
+        // Generate derived PSQI responses from sleep log data (e.g., PSQI_4 sleep hours)
+        questionnaireManager.generateDerivedPSQIResponses(forDay: currentDay)
 
         // Show saving indicator and sync to Convex BEFORE transitioning
         isSaving = true

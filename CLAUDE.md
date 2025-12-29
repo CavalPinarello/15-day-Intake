@@ -84,7 +84,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
-**Dec 29:** Auto-derivable questions (Q44 sleep hours from sleep log), questionnaire name mapping fix, LLM clinical references
+**Dec 29:** Unified body metrics slider UI (imperial height now uses slider instead of wheel pickers), auto-derivable questions (Q44 sleep hours from sleep log), questionnaire name mapping fix, LLM clinical references
 **Dec 28:** Expansion pack slider UX fix, journey intro flow, fresh install detection, dashboard UX redesign
 **Dec 27:** Day type analysis, nap/medication tracking, scale labels fix, dynamic task counter, new logo
 **Dec 22:** 8-phase circadian system, text contrast fix, unified debug panel, admin tools

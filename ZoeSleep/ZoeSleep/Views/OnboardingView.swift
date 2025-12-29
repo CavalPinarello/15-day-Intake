@@ -414,25 +414,20 @@ struct HeightWeightStepView: View {
                                 onboardingManager.updateProfileFromMetric()
                             }
                     } else {
-                        HStack(spacing: 8) {
-                            Picker("Feet", selection: $onboardingManager.tempHeightFeet) {
-                                ForEach(4...7, id: \.self) { ft in
-                                    Text("\(ft)'").tag(ft)
+                        // Single slider for imperial height (total inches displayed as feet/inches)
+                        Slider(
+                            value: Binding(
+                                get: { Double(onboardingManager.tempHeightFeet * 12 + onboardingManager.tempHeightInches) },
+                                set: { newValue in
+                                    let totalInches = Int(newValue)
+                                    onboardingManager.tempHeightFeet = totalInches / 12
+                                    onboardingManager.tempHeightInches = totalInches % 12
                                 }
-                            }
-                            .pickerStyle(.wheel)
-                            .frame(width: 70, height: 80)
-                            .clipped()
-
-                            Picker("Inches", selection: $onboardingManager.tempHeightInches) {
-                                ForEach(0...11, id: \.self) { inch in
-                                    Text("\(inch)\"").tag(inch)
-                                }
-                            }
-                            .pickerStyle(.wheel)
-                            .frame(width: 70, height: 80)
-                            .clipped()
-                        }
+                            ),
+                            in: 48...95,  // 4'0" to 7'11"
+                            step: 1
+                        )
+                        .tint(palette.accent)
                         .onChange(of: onboardingManager.tempHeightFeet) { _, _ in
                             onboardingManager.updateMetricFromImperial()
                         }

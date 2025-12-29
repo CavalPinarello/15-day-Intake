@@ -285,11 +285,7 @@ class MockDataGenerator {
             if questionId == "PSQI_3" {
                 return (nil, Double(Int.random(in: 6...8, using: &randomGenerator)), nil, nil)
             }
-            // PSQI_4: Hours of actual sleep
-            if questionId == "PSQI_4" {
-                let base = gatewaysToTrigger.contains(.insomnia) ? 5 : 7
-                return (nil, Double(base + Int.random(in: -1...1, using: &randomGenerator)), nil, nil)
-            }
+            // PSQI_4 removed - derived from sleep log
             // PSQI_5a-5j: Sleep disturbances (0-3 each)
             if questionId.hasPrefix("PSQI_5") {
                 let severity = gatewaysToTrigger.contains(.insomnia) ? 2 : 1
