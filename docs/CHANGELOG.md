@@ -6,6 +6,24 @@
 
 ### Dec 29, 2025
 
+#### Time Picker Default Fix for Dependent Questions
+Fixed issue where "out of bed" time showed incorrect default (e.g., 7:15 AM) when user changed wake time (e.g., to 8:00 AM).
+
+- **Root cause:** SwiftUI wheel DatePicker binding setter may not fire immediately when user taps Next quickly
+- **Fix 1:** Added `onInitialValue` callback to TimeInput that saves smart default on view appear
+- **Fix 2:** Added `.onChange(of: value)` handler to ensure binding setter fires for wheel picker changes
+- **Result:** Out-of-bed time now correctly defaults to 15 minutes after user's selected wake time
+- **Files changed:** `QuestionComponents.swift`, `QuestionnaireView.swift`
+
+#### Dashboard Pillar Completion UI Update
+Changed pillar score colors from health-implying (green/red) to neutral amber for completion progress.
+
+- **Rationale:** Completion percentage shouldn't imply health status (80% completion ≠ good health)
+- **Changes:** Renamed "Pillar Score" to "Assessment Progress/Completion"
+- **Color:** All completion bars now use consistent amber color
+- **Sleep log fix:** Progress now based on 14-day journey total (not current_day)
+- **Files changed:** `Patient360Tab.tsx`, `PillarDetailModal.tsx`, `PillarSummaryCard.tsx`
+
 #### Sleep Health Factors Dashboard Module
 Comprehensive 14-day rolling view of naps, medications, supplements, and caffeine in physician dashboard.
 
