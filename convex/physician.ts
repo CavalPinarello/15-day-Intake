@@ -3948,9 +3948,28 @@ export const getPatientCheckInTrends = query({
 // Sleep Health Factors - Rolling 14-Day Data
 // ============================================
 
-// Supplement categories (separate from prescription meds)
-const SUPPLEMENT_CATEGORIES = ["melatonin", "magnesium", "herbal", "cbd_thc"];
-const PRESCRIPTION_CATEGORIES = ["prescription", "otc"];
+// Medication categories (prescription drugs only - everything else is a supplement)
+// Using inverse approach: only these are "medications", everything else is "supplement"
+const MEDICATION_CATEGORIES = ["prescription", "otc"];
+
+// All known supplement IDs from iOS SupplementCategory.allCategories
+// This list is for display name lookup - anything not in MEDICATION_CATEGORIES is treated as supplement
+const SUPPLEMENT_DISPLAY_NAMES: Record<string, string> = {
+  melatonin: "Melatonin",
+  magnesium: "Magnesium",
+  valerian_root: "Valerian Root",
+  l_theanine: "L-Theanine",
+  cbd_cbn: "CBD/CBN",
+  cbd_thc: "CBD/THC",
+  gaba: "GABA",
+  chamomile: "Chamomile",
+  ashwagandha: "Ashwagandha",
+  glycine: "Glycine",
+  "5_htp": "5-HTP",
+  herbal: "Herbal/Natural",
+  other_supplement: "Other Supplement",
+  other: "Other",
+};
 
 /**
  * Get comprehensive rolling sleep health data for the past 14 days
@@ -4105,10 +4124,11 @@ export const getPatientSleepHealthRolling = query({
             dose: med.dose,
             timing: med.timingCategories,
           };
-          if (SUPPLEMENT_CATEGORIES.includes(med.categoryId)) {
-            dayMap[day].supplements.push(entry);
-          } else {
+          // Only prescription and OTC are medications - everything else is a supplement
+          if (MEDICATION_CATEGORIES.includes(med.categoryId)) {
             dayMap[day].medications.push(entry);
+          } else {
+            dayMap[day].supplements.push(entry);
           }
         }
 
@@ -4226,12 +4246,7 @@ export const getPatientSleepHealthRolling = query({
       other: "Other",
     };
 
-    const supplementCategoryInfo: Record<string, string> = {
-      melatonin: "Melatonin",
-      magnesium: "Magnesium",
-      herbal: "Herbal/Natural",
-      cbd_thc: "CBD/THC",
-    };
+    // Use SUPPLEMENT_DISPLAY_NAMES defined at top of section for lookups
 
     return {
       // Rolling daily data
@@ -4264,7 +4279,7 @@ export const getPatientSleepHealthRolling = query({
         daysUsing: supplementDays,
         categories: Object.entries(supplementCategoryCounts).map(([id, data]) => ({
           id,
-          name: supplementCategoryInfo[id] || id,
+          name: SUPPLEMENT_DISPLAY_NAMES[id] || id,
           count: data.count,
           doses: data.doses,
         })).sort((a, b) => b.count - a.count),
