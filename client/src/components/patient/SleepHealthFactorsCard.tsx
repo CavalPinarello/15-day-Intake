@@ -22,6 +22,24 @@ interface SleepHealthFactorsCardProps {
   userId: Id<"users">;
 }
 
+// Display names for supplement category IDs
+const SUPPLEMENT_NAMES: Record<string, string> = {
+  melatonin: "Melatonin",
+  magnesium: "Magnesium",
+  valerian_root: "Valerian Root",
+  l_theanine: "L-Theanine",
+  cbd_cbn: "CBD/CBN",
+  cbd_thc: "CBD/THC",
+  gaba: "GABA",
+  chamomile: "Chamomile",
+  ashwagandha: "Ashwagandha",
+  glycine: "Glycine",
+  "5_htp": "5-HTP",
+  herbal: "Herbal/Natural",
+  other_supplement: "Other Supplement",
+  other: "Other",
+};
+
 // Types matching the API response
 interface DailyData {
   dayNumber: number;
@@ -33,7 +51,7 @@ interface DailyData {
   tookMeds: boolean;
   medications: Array<{ categoryId: string; medicationName?: string; dose?: string; timing?: string[] }>;
   tookSupplements: boolean;
-  supplements: Array<{ categoryId: string; name?: string; dose?: string; timing?: string[] }>;
+  supplements: Array<{ categoryId: string; medicationName?: string; dose?: string; timing?: string[] }>;
   hadCaffeine: boolean;
   caffeineEntries: Array<{ typeId: string; count: number }>;
   totalCaffeineMg: number;
@@ -571,10 +589,12 @@ export function SleepHealthFactorsCard({ userId }: SleepHealthFactorsCardProps) 
                           sleepQuality={day.sleepQuality}
                         >
                           <div className="space-y-1">
-                            {day.supplements.map((supp: { categoryId: string; name?: string; dose?: string; timing?: string[] }, i: number) => (
+                            {day.supplements.map((supp: { categoryId: string; medicationName?: string; dose?: string; timing?: string[] }, i: number) => (
                               <div key={i} className="flex items-center gap-2 text-xs">
                                 <Leaf className="w-3 h-3 text-green-400" />
-                                <span className="text-green-300">{supp.name || supp.categoryId}</span>
+                                <span className="text-green-300">
+                                  {supp.medicationName || SUPPLEMENT_NAMES[supp.categoryId] || supp.categoryId}
+                                </span>
                                 {supp.dose && (
                                   <>
                                     <span className="text-gray-400">•</span>
