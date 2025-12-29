@@ -128,7 +128,7 @@ async function getSleepLogResponsesIfComplete(
   ctx: any,
   userId: Id<"users">,
   dayNumber: number
-): Promise<Map<string, { value?: string; number?: number }> | null> {
+): Promise<Map<string, { value?: string; number?: number; array?: string[] }> | null> {
   // Get all responses for this user and day
   const responses = await ctx.db
     .query("user_assessment_responses")
@@ -144,12 +144,23 @@ async function getSleepLogResponsesIfComplete(
 
   // Check if essential sleep log questions are answered
   const essentialQuestions = ["CSD_TRY_SLEEP", "CSD_FINAL_WAKE", "CSD_WASO", "CSD_LATENCY"];
-  const responseMap = new Map<string, { value?: string; number?: number }>();
+  const responseMap = new Map<string, { value?: string; number?: number; array?: string[] }>();
 
   for (const r of csdResponses) {
+    // Parse array from JSON if present (for multi-select questions like CSD_MEDS_LIST)
+    let arrayValue: string[] | undefined;
+    if (r.response_array) {
+      try {
+        arrayValue = JSON.parse(r.response_array);
+      } catch {
+        // Invalid JSON, ignore
+      }
+    }
+
     responseMap.set(r.question_id, {
       value: r.response_value,
       number: r.response_number,
+      array: arrayValue,
     });
   }
 
@@ -208,13 +219,16 @@ async function generateDerivedResponses(
     }
 
     // Save the derived response
+    // Determine the type: number, array (JSON string starting with [), or string
     const isNumeric = typeof derivedValue === "number";
+    const isArray = typeof derivedValue === "string" && derivedValue.startsWith("[");
 
     await ctx.db.insert("user_assessment_responses", {
       user_id: userId,
       question_id: questionId,
-      response_value: isNumeric ? undefined : String(derivedValue),
+      response_value: isNumeric || isArray ? undefined : String(derivedValue),
       response_number: isNumeric ? derivedValue : undefined,
+      response_array: isArray ? derivedValue : undefined, // Store array as JSON string
       day_number: dayNumber,
       is_derived: true, // Mark as derived for physician dashboard
       response_source: "derived", // Track source for audit
@@ -222,7 +236,7 @@ async function generateDerivedResponses(
       updated_at: now,
     });
 
-    console.log(`[Convex] Generated derived response for ${questionId}: ${derivedValue} (is_derived=true)`);
+    console.log(`[Convex] Generated derived response for ${questionId}: ${derivedValue} (is_derived=true, isArray=${isArray})`);
     derivedCount++;
   }
 

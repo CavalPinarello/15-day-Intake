@@ -512,18 +512,8 @@ class QuestionnaireManager: ObservableObject {
                 gatewayType: .insomnia,
                 gatewayThreshold: 30
             ),
-            Question(id: "PSQI_3", text: "During the past month, when have you usually gotten up in the morning?", pillar: .sleepQuality, questionType: .time, helpText: "Your subjective perception - don't check your wearable"),
-            Question(
-                id: "PSQI_4",
-                text: "During the past month, how many hours of actual sleep did you typically get at night?",
-                pillar: .sleepQuality,
-                questionType: .numberScroll,
-                minValue: 0,
-                maxValue: 15,
-                step: 0.25,
-                unit: "hours",
-                defaultValue: 7
-            )
+            Question(id: "PSQI_3", text: "During the past month, when have you usually gotten up in the morning?", pillar: .sleepQuality, questionType: .time, helpText: "Your subjective perception - don't check your wearable")
+            // PSQI_4 removed - always derived from sleep log (CSD times calculate actual sleep hours)
         ],
 
         // DAY 2: PSQI Part 2 + Sleep Quantity + Sleep Regularity
@@ -1434,6 +1424,11 @@ class QuestionnaireManager: ObservableObject {
         case .shiftWork:
             // Triggered if question 53B = "yes" (works shifts or irregular hours)
             if let response = responses["53B"], response.stringValue?.lowercased() == "yes" { return true }
+            return false
+
+        case .exercise:
+            // Triggered if question 24 = "Yes" (exercises regularly)
+            if let response = responses["24"], response.stringValue == "Yes" { return true }
             return false
         }
     }

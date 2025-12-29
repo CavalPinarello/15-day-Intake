@@ -70,6 +70,10 @@ struct QuestionnaireView: View {
     @State private var showingPreFillConfirmation: Bool = false
     @State private var preFillSuggestions: [String: Any] = [:]
 
+    // Gateway notification state - track which gateways have been acknowledged to only show NEW triggers
+    @State private var acknowledgedGateways: Set<GatewayType> = []
+    @State private var newlyTriggeredGateway: GatewayType? = nil
+
     @Environment(\.presentationMode) var presentationMode
 
     private var theme: ColorTheme { themeManager.currentTheme }
@@ -176,12 +180,7 @@ struct QuestionnaireView: View {
         .toolbarBackground(navBarBackgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(isEvening ? .dark : .light, for: .navigationBar)
-        .onAppear {
-            loadQuestions()
-            if startSection == .sleepLog {
-                fetchHealthKitSleepData()
-            }
-        }
+        .onAppear(perform: handleViewAppear)
         .onDisappear {
             // When leaving the questionnaire (back button or dismissal),
             // save any in-progress responses BEFORE posting refresh notification
@@ -189,6 +188,9 @@ struct QuestionnaireView: View {
             print("[iOS Questionnaire] View disappearing - saving in-progress responses")
             saveInProgressResponses()
             NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
+        }
+        .onChange(of: questionnaireManager.gatewayStates) { _, newStates in
+            handleGatewayStateChange(newStates)
         }
         .overlay {
             // Saving overlay
@@ -292,13 +294,8 @@ struct QuestionnaireView: View {
                                 .padding(.horizontal)
                         }
 
-                        // Gateway alerts (only show in assessment section)
-                        if currentSection == .assessment {
-                            ForEach(questionnaireManager.gatewayStates.filter { $0.triggered }, id: \.id) { gateway in
-                                GatewayAlertBanner(gatewayType: gateway.gatewayType, isTriggered: true, theme: theme)
-                                    .padding(.horizontal)
-                            }
-                        }
+                        // Gateway alert (only show NEWLY triggered gateway in assessment section)
+                        gatewayAlertBannerView
                     }
                     .padding(.vertical)
                 }
@@ -913,6 +910,45 @@ struct QuestionnaireView: View {
             return Color(red: 0.15, green: 0.08, blue: 0.05)  // Very dark brown
         } else {
             return Color(.systemBackground)
+        }
+    }
+
+    @ViewBuilder
+    private var gatewayAlertBannerView: some View {
+        if currentSection == .assessment, let newGateway = newlyTriggeredGateway {
+            GatewayAlertBanner(gatewayType: newGateway, isTriggered: true, theme: theme)
+                .padding(.horizontal)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .onAppear { scheduleGatewayDismissal(newGateway) }
+                .onTapGesture { dismissGateway(newGateway) }
+        }
+    }
+
+    private func scheduleGatewayDismissal(_ gateway: GatewayType) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            withAnimation {
+                acknowledgedGateways.insert(gateway)
+                newlyTriggeredGateway = nil
+            }
+        }
+    }
+
+    private func dismissGateway(_ gateway: GatewayType) {
+        withAnimation {
+            acknowledgedGateways.insert(gateway)
+            newlyTriggeredGateway = nil
+        }
+    }
+
+    private func handleViewAppear() {
+        loadQuestions()
+        if startSection == .sleepLog {
+            fetchHealthKitSleepData()
+        }
+        // Initialize acknowledged gateways with any that are already triggered
+        // This prevents showing notifications for gateways triggered in previous sessions
+        for gateway in questionnaireManager.gatewayStates where gateway.triggered {
+            acknowledgedGateways.insert(gateway.gatewayType)
         }
     }
 
@@ -2522,6 +2558,21 @@ struct QuestionnaireView: View {
         }
 
         questionnaireManager.saveResponse(response)
+    }
+
+    /// Handle gateway state changes and show notification for newly triggered gateways
+    private func handleGatewayStateChange(_ newStates: [GatewayState]) {
+        // Detect newly triggered gateways and show notification for just that gateway
+        for gateway in newStates where gateway.triggered {
+            // Only show if not already acknowledged and not currently showing another
+            if !acknowledgedGateways.contains(gateway.gatewayType) && newlyTriggeredGateway == nil {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    newlyTriggeredGateway = gateway.gatewayType
+                }
+                print("[iOS] New gateway triggered: \(gateway.gatewayType.displayName)")
+                break // Only show one at a time
+            }
+        }
     }
 
     /// Save any in-progress responses when leaving the questionnaire (e.g., via back button)

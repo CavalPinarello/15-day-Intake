@@ -1511,6 +1511,7 @@ enum GatewayType: String, Codable, CaseIterable {
     case dietImpact = "diet_impact"
     case poorSleepQuality = "poor_sleep_quality"
     case shiftWork = "shift_work"
+    case exercise = "exercise"
 
     var displayName: String {
         switch self {
@@ -1525,6 +1526,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .dietImpact: return "Diet Impact"
         case .poorSleepQuality: return "Poor Sleep Quality"
         case .shiftWork: return "Shift Work Disorder"
+        case .exercise: return "Physical Activity"
         }
     }
 
@@ -1542,6 +1544,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .dietImpact: return "Nutrition"
         case .poorSleepQuality: return "Sleep Quality"
         case .shiftWork: return "Shift Work"
+        case .exercise: return "Exercise"
         }
     }
 
@@ -1559,6 +1562,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .sleepTiming: return 9.5  // MEQ chronotype
         case .dietImpact: return 7.0  // MEDAS
         case .shiftWork: return 3.0  // SWDSQ (4 questions)
+        case .exercise: return 8.0  // Physical activity expansion
         }
     }
 
@@ -1570,7 +1574,7 @@ enum GatewayType: String, Codable, CaseIterable {
             return ["expansion_mental_health"]
         case .excessiveSleepiness, .cognitive:
             return ["expansion_cognitive"]
-        case .osa, .pain:
+        case .osa, .pain, .exercise:
             return ["expansion_physical"]
         case .sleepTiming:
             return ["expansion_sleep_timing"]
@@ -1595,6 +1599,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .sleepTiming: return "clock"
         case .dietImpact: return "fork.knife"
         case .shiftWork: return "clock.badge.exclamationmark"
+        case .exercise: return "figure.run"
         }
     }
 
@@ -1612,6 +1617,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .sleepTiming: return .green
         case .dietImpact: return .mint
         case .shiftWork: return .teal
+        case .exercise: return .brown
         }
     }
 
@@ -1629,6 +1635,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .sleepTiming: return "Delayed/advanced sleep phase"
         case .dietImpact: return "Caffeine/alcohol affecting sleep"
         case .shiftWork: return "Works shifts or irregular hours"
+        case .exercise: return "Exercises regularly"
         }
     }
 
@@ -1657,6 +1664,8 @@ enum GatewayType: String, Codable, CaseIterable {
             return ["MEDAS"]
         case .shiftWork:
             return ["SWDSQ", "KSS (Sleep Log)"]
+        case .exercise:
+            return ["IPAQ (Physical Activity)", "Exercise Timing"]
         }
     }
 
@@ -1685,6 +1694,8 @@ enum GatewayType: String, Codable, CaseIterable {
             return "MEDAS"
         case .shiftWork:
             return "SWDSQ, KSS"
+        case .exercise:
+            return "IPAQ"
         }
     }
 }
@@ -1941,7 +1952,7 @@ struct DayConfiguration: Identifiable, Codable {
 
 // MARK: - Gateway State
 
-struct GatewayState: Identifiable, Codable {
+struct GatewayState: Identifiable, Codable, Equatable {
     let id: String
     let gatewayType: GatewayType
     var triggered: Bool
@@ -1954,6 +1965,10 @@ struct GatewayState: Identifiable, Codable {
         self.triggered = triggered
         self.triggeredAt = triggeredAt
         self.evaluationData = evaluationData
+    }
+
+    static func == (lhs: GatewayState, rhs: GatewayState) -> Bool {
+        lhs.id == rhs.id && lhs.triggered == rhs.triggered
     }
 }
 

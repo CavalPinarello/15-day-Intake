@@ -9,15 +9,27 @@
 #### Auto-Derivable Questions System
 Questions that can be calculated from sleep log data are now automatically derived, reducing user burden.
 
-- **Derivable questions:** Q44 (hours of actual sleep), Q42 (sleep latency), Q41 (bedtime)
+- **Derivable questions:** Q44 (hours of actual sleep), Q42 (sleep latency), Q41 (bedtime), Q33D (sleep aids)
 - **Auto-calculation:** When user completes sleep log, these values are calculated from CSD_ responses:
   - Q44 = (finalWake - trySleep) - latency - WASO (rounded to nearest 0.5 hour)
   - Q42 = CSD_LATENCY (direct mapping)
   - Q41 = CSD_TRY_SLEEP (direct mapping)
+  - Q33D = Derived from CSD_MEDS (yes/no) and CSD_MEDS_LIST (medication selections)
 - **Question filtering:** `getQuestionsForUserDay` filters out derivable questions when sleep log is complete
 - **Response generation:** `markSectionComplete` auto-generates derived responses with `is_derived: true` flag
+- **Array support:** Added support for array-type derived responses (stored as JSON in `response_array`)
 - **Physician dashboard:** Derived responses are included in scoring with source tracking
-- **Files changed:** `convex/watch.ts`, `convex/ios.ts`
+- **Files changed:** `convex/watch.ts`
+
+#### Q33D Redundancy Fix
+Q33D "Do you use any sleep aids?" was redundant with CSD_MEDS from the sleep log.
+
+- **Problem:** Users were asked about sleep medications twice - once in daily sleep log (CSD_MEDS) and again in Day 6 assessment (Q33D)
+- **Solution:** Q33D is now derived from CSD_MEDS responses:
+  - If CSD_MEDS = "No" → Q33D = ["none"]
+  - If CSD_MEDS = "Yes" → Q33D = values from CSD_MEDS_LIST (or ["other"] if no list)
+- **Result:** Question is automatically skipped when sleep log is complete, reducing redundant questions
+- **Files changed:** `convex/watch.ts`
 
 #### Questionnaire Name Mapping Fix
 Fixed severity lookup for full questionnaire names in physician dashboard.

@@ -101,6 +101,13 @@ const GATEWAY_DEFINITIONS = [
     trigger_question_ids: ["53B"],
     expansion_module_ids: ["expansion_swdsq"],
   },
+  {
+    gateway_id: "exercise",
+    name: "Physical Activity",
+    description: "Regular physical activity and its relationship to sleep quality",
+    trigger_question_ids: ["24"],
+    expansion_module_ids: ["expansion_physical_1", "expansion_physical_2"],
+  },
 ];
 
 // ============================================

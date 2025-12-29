@@ -14,6 +14,11 @@ import {
   Wind,
   Activity,
   CheckCircle,
+  Clock,
+  Utensils,
+  BedDouble,
+  Briefcase,
+  Dumbbell,
 } from "lucide-react";
 import { ReviewSection } from "./ReviewSection";
 
@@ -34,7 +39,7 @@ interface GatewayInfo {
   triggerReason?: string;
 }
 
-// Gateway definitions
+// Gateway definitions - maps gateway IDs to their display info
 const GATEWAY_DEFINITIONS: Record<
   string,
   {
@@ -70,6 +75,14 @@ const GATEWAY_DEFINITIONS: Record<
     threshold: 10,
     thresholdLabel: "GAD-7 ≥ 10",
   },
+  osa: {
+    name: "Sleep Apnea Risk",
+    description: "Breathing disruptions during sleep",
+    icon: Wind,
+    questionnaire: "STOP-BANG",
+    threshold: 3,
+    thresholdLabel: "STOP-BANG ≥ 3",
+  },
   sleep_apnea: {
     name: "Sleep Apnea",
     description: "Breathing disruptions during sleep",
@@ -77,6 +90,14 @@ const GATEWAY_DEFINITIONS: Record<
     questionnaire: "STOP-BANG",
     threshold: 3,
     thresholdLabel: "STOP-BANG ≥ 3",
+  },
+  excessive_sleepiness: {
+    name: "Excessive Sleepiness",
+    description: "Excessive sleepiness during the day",
+    icon: Zap,
+    questionnaire: "ESS",
+    threshold: 10,
+    thresholdLabel: "ESS ≥ 10",
   },
   sleepiness: {
     name: "Daytime Sleepiness",
@@ -86,13 +107,61 @@ const GATEWAY_DEFINITIONS: Record<
     threshold: 10,
     thresholdLabel: "ESS ≥ 10",
   },
+  cognitive: {
+    name: "Cognitive Function",
+    description: "Memory or concentration difficulties",
+    icon: Brain,
+    questionnaire: "PROMIS-Cog",
+    threshold: 0,
+    thresholdLabel: "Yes to cognitive issues",
+  },
   pain: {
     name: "Chronic Pain",
     description: "Pain interfering with sleep",
     icon: Activity,
     questionnaire: "BPI-SF",
     threshold: 4,
-    thresholdLabel: "BPI-SF ≥ 4",
+    thresholdLabel: "Pain severity ≥ 4",
+  },
+  sleep_timing: {
+    name: "Sleep Timing",
+    description: "Irregular sleep schedule or chronotype issues",
+    icon: Clock,
+    questionnaire: "MEQ",
+    threshold: 0,
+    thresholdLabel: "> 1hr weekday/weekend diff",
+  },
+  diet_impact: {
+    name: "Diet Impact",
+    description: "Nutrition affecting sleep quality",
+    icon: Utensils,
+    questionnaire: "MEDAS",
+    threshold: 0,
+    thresholdLabel: "Diet affects sleep",
+  },
+  poor_sleep_quality: {
+    name: "Poor Sleep Quality",
+    description: "Overall poor sleep quality rating",
+    icon: BedDouble,
+    questionnaire: "PSQI",
+    threshold: 5,
+    thresholdLabel: "Quality ≤ 5/10",
+  },
+  shift_work: {
+    name: "Shift Work Disorder",
+    description: "Works shifts or irregular hours",
+    icon: Briefcase,
+    questionnaire: "SWDSQ",
+    threshold: 0,
+    thresholdLabel: "Works shifts/irregular",
+  },
+  exercise: {
+    name: "Physical Activity",
+    description: "Regular exercise affecting sleep",
+    icon: Dumbbell,
+    questionnaire: "IPAQ",
+    threshold: 0,
+    thresholdLabel: "Exercises regularly",
   },
 };
 

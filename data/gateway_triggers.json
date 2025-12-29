@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "generatedAt": "2025-11-12T13:07:44.893Z",
+  "version": "1.1.0",
+  "generatedAt": "2025-12-29T00:00:00.000Z",
   "gateways": [
     {
       "gatewayId": "insomnia",
@@ -198,10 +198,42 @@
         "expansion_sleep_quality"
       ],
       "description": "Overall sleep quality ≤ 5 OR insomnia gateway = Yes"
+    },
+    {
+      "gatewayId": "exercise",
+      "name": "Exercise Gateway",
+      "triggerQuestionIds": [
+        "24"
+      ],
+      "condition": {
+        "type": "equals",
+        "questionId": "24",
+        "value": "Yes"
+      },
+      "targetModules": [
+        "expansion_physical"
+      ],
+      "description": "Do you exercise regularly? Triggers physical activity assessment."
+    },
+    {
+      "gatewayId": "shift_work",
+      "name": "Shift Work Gateway",
+      "triggerQuestionIds": [
+        "53B"
+      ],
+      "condition": {
+        "type": "equals",
+        "questionId": "53B",
+        "value": "Yes"
+      },
+      "targetModules": [
+        "expansion_swdsq"
+      ],
+      "description": "Do you work shifts or irregular hours? Triggers Shift Work Disorder Screening (SWDSQ)."
     }
   ],
   "metadata": {
-    "totalGateways": 10,
+    "totalGateways": 12,
     "totalQuestions": 285
   }
 }

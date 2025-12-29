@@ -106,6 +106,8 @@ extension GatewayType {
             return "Based on your sleep schedule patterns"
         case .shiftWork:
             return "Based on your work schedule responses"
+        case .exercise:
+            return "Based on your exercise habits"
         }
     }
 
@@ -123,6 +125,7 @@ extension GatewayType {
         case .dietImpact: return "diet patterns"
         case .sleepTiming: return "schedule patterns"
         case .shiftWork: return "shift work patterns"
+        case .exercise: return "exercise habits"
         }
     }
 }
