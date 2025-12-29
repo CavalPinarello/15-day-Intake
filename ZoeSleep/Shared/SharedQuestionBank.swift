@@ -385,17 +385,8 @@ struct SharedQuestionBank {
             pillar: .sleepQuality,
             type: .time,
             helpText: "Your subjective perception - don't check your wearable"
-        ),
-        SharedQuestion(
-            id: "PSQI_4",
-            text: "During the past month, how many hours of actual sleep did you typically get at night?",
-            pillar: .sleepQuality,
-            type: .numberScroll,
-            minValue: 0,
-            maxValue: 15,
-            step: 0.25,
-            unit: "hours"
         )
+        // PSQI_4 removed - always derived from sleep log
     ]
 
     // MARK: - Day 2: PSQI Part 2 + Sleep Quantity + Sleep Regularity
