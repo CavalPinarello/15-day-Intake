@@ -2711,7 +2711,8 @@ struct SleepDiaryEntry {
 
         // Parse timing responses (support both Date and timestamp formats)
         self.intoBedTime = Self.parseDate(responses["CSD_INTO_BED"]) ?? Self.parseDate(responses["SL_BEDTIME"])
-        self.trySleepTime = Self.parseDate(responses["CSD_TRY_SLEEP"]) ?? Self.parseDate(responses["SL_ASLEEP_TIME"])
+        // Note: SL_ASLEEP_TIME removed - use CSD_TRY_SLEEP or SD_LIGHTS_OUT as fallback
+        self.trySleepTime = Self.parseDate(responses["CSD_TRY_SLEEP"]) ?? Self.parseDate(responses["SD_LIGHTS_OUT"])
         self.finalWakeTime = Self.parseDate(responses["CSD_FINAL_WAKE"]) ?? Self.parseDate(responses["SL_WAKE_TIME"])
         self.outOfBedTime = Self.parseDate(responses["CSD_OUT_BED"])
 

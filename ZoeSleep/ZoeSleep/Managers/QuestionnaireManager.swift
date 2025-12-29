@@ -422,14 +422,7 @@ class QuestionnaireManager: ObservableObject {
             helpText: "Your subjective perception - don't check your wearable device",
             group: "sleep_log"
         ),
-        Question(
-            id: "SL_ASLEEP_TIME",
-            text: "What time did you fall asleep last night?",
-            pillar: .sleepLog,
-            questionType: .time,
-            helpText: "Your best estimate - don't check your wearable",
-            group: "sleep_log"
-        ),
+        // Note: SL_ASLEEP_TIME removed - sleep onset derived from lights_out + latency
         Question(
             id: "SL_AWAKENINGS",
             text: "How many times did you wake up during the night?",

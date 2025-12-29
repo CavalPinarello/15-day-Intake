@@ -889,6 +889,11 @@ export const resetUserProgress = mutation({
       ctx.db.query("user_insight_progress").withIndex("by_user", (q) => q.eq("user_id", userId)),
       ctx.db.query("patient_analysis_workflow").withIndex("by_user", (q) => q.eq("user_id", userId)),
       ctx.db.query("user_protocol_assignments").withIndex("by_user", (q) => q.eq("user_id", userId)),
+      // Additional tables that may contain derived/cached data
+      ctx.db.query("perception_gaps").withIndex("by_user", (q) => q.eq("user_id", userId)),
+      ctx.db.query("difficulty_adjustment_log").withIndex("by_user", (q) => q.eq("user_id", userId)),
+      ctx.db.query("compliance_outcome_correlation").withIndex("by_user", (q) => q.eq("user_id", userId)),
+      ctx.db.query("user_metrics_summary").withIndex("by_user", (q) => q.eq("user_id", userId)),
     ];
 
     for (const query of tables) {

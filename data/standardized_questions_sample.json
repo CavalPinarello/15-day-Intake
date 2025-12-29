@@ -128,22 +128,6 @@
     "estimated_time_seconds": 18
   },
   {
-    "question_id": "SD_SLEEP_ONSET",
-    "question_text": "What time do you think you fell asleep?",
-    "answer_format": "time_picker",
-    "format_config": {
-      "format": "HH:MM",
-      "allowCrossMidnight": true
-    },
-    "validation_rules": {
-      "required": true
-    },
-    "group_key": "bedtime",
-    "pillar": "Sleep Diary",
-    "order_index": 7,
-    "estimated_time_seconds": 18
-  },
-  {
     "question_id": "SD_SLEEP_LATENCY",
     "question_text": "How long did it take you to fall asleep? (minutes)",
     "answer_format": "minutes_scroll",

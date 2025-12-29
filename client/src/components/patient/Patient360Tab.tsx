@@ -5,7 +5,7 @@ import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useState, useMemo } from "react";
-import { SubjectiveVsObjectiveCard } from "./SubjectiveVsObjectiveCard";
+import { SubjectiveVsObjectiveCard, type SubjectiveSleepData } from "./SubjectiveVsObjectiveCard";
 import { PillarSummaryCard, PillarKey, type PillarStatus } from "./PillarSummaryCard";
 import { getPillarSeverities, type PillarKey as SeverityPillarKey } from "@/utils/pillarSeverity";
 import { PillarDetailModal } from "./PillarDetailModal";
@@ -92,6 +92,9 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
 
   // Fetch accurate compliance data for streak calculation
   const complianceDataQuery = useQuery(api.physician.getDailyComplianceData, { userId });
+
+  // Fetch subjective sleep quality data (from sleep log)
+  const subjectiveSleepData = useQuery(api.physician.getSubjectiveSleepQuality, { userId, days: 14 });
 
   // AI Analysis action
   const analyzePatient = useAction(api.llm.analyzePatientResponses);
@@ -557,7 +560,10 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         />
 
         {/* Subjective vs Objective */}
-        <SubjectiveVsObjectiveCard data={sleepComparison} />
+        <SubjectiveVsObjectiveCard
+          data={sleepComparison}
+          subjectiveData={subjectiveSleepData as SubjectiveSleepData | undefined}
+        />
 
         {/* Pillar Summary */}
         <PillarSummaryCard

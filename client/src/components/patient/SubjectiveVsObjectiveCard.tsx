@@ -23,16 +23,152 @@ interface SleepComparison {
   } | null; // null if no HealthKit data
 }
 
+// Extended interface for daily subjective data (from sleep log)
+export interface SubjectiveDailyData {
+  date: string;
+  dayNumber: number;
+  quality: number | null; // 1-10 scale
+  perceivedEfficiency: number | null; // percentage
+  totalSleepMins: number | null;
+  timeInBedMins: number | null;
+}
+
+export interface SubjectiveSleepData {
+  dailyData: SubjectiveDailyData[];
+  summary: {
+    avgQuality: number | null;
+    avgPerceivedEfficiency: number | null;
+    daysWithData: number;
+    trend: "improving" | "declining" | "stable" | null;
+  };
+  hasSubjectiveData: boolean;
+}
+
 interface SubjectiveVsObjectiveCardProps {
   data: SleepComparison;
+  subjectiveData?: SubjectiveSleepData;
   onViewDetails?: () => void;
+}
+
+// Mini chart component for sleep quality trend
+function QualityTrendChart({ data }: { data: SubjectiveDailyData[] }) {
+  // Get last 14 days for chart
+  const chartData = data.slice(-14);
+
+  if (chartData.length === 0) {
+    return (
+      <div className="h-20 flex items-center justify-center text-gray-500 text-xs">
+        No sleep log data yet
+      </div>
+    );
+  }
+
+  const maxQuality = 10;
+  const minQuality = 1;
+  const range = maxQuality - minQuality;
+
+  // Calculate chart dimensions
+  const chartWidth = 100; // percentage
+  const chartHeight = 80; // pixels
+
+  // Filter out null values for chart
+  const validData = chartData.filter(d => d.quality !== null);
+
+  if (validData.length === 0) {
+    return (
+      <div className="h-20 flex items-center justify-center text-gray-500 text-xs">
+        No quality ratings recorded
+      </div>
+    );
+  }
+
+  // Create SVG path for line chart
+  const points = chartData.map((d, i) => {
+    const x = (i / Math.max(chartData.length - 1, 1)) * 100;
+    const y = d.quality !== null
+      ? 100 - ((d.quality - minQuality) / range) * 100
+      : null;
+    return { x, y, quality: d.quality, dayNumber: d.dayNumber };
+  });
+
+  // Build path string (skip null points)
+  let pathD = "";
+  let isFirstPoint = true;
+  points.forEach(p => {
+    if (p.y !== null) {
+      if (isFirstPoint) {
+        pathD += `M ${p.x} ${p.y}`;
+        isFirstPoint = false;
+      } else {
+        pathD += ` L ${p.x} ${p.y}`;
+      }
+    }
+  });
+
+  return (
+    <div className="relative h-20">
+      {/* Y-axis labels */}
+      <div className="absolute left-0 top-0 bottom-0 w-6 flex flex-col justify-between text-[9px] text-gray-500 pr-1">
+        <span>10</span>
+        <span>5</span>
+        <span>1</span>
+      </div>
+
+      {/* Chart area */}
+      <div className="ml-7 h-full relative">
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          className="w-full h-full"
+        >
+          {/* Grid lines */}
+          <line x1="0" y1="50" x2="100" y2="50" stroke="#374151" strokeWidth="0.5" strokeDasharray="2,2" />
+          <line x1="0" y1="0" x2="100" y2="0" stroke="#374151" strokeWidth="0.5" />
+          <line x1="0" y1="100" x2="100" y2="100" stroke="#374151" strokeWidth="0.5" />
+
+          {/* Line chart */}
+          {pathD && (
+            <path
+              d={pathD}
+              fill="none"
+              stroke="#3B82F6"
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+
+          {/* Data points */}
+          {points.map((p, i) =>
+            p.y !== null && (
+              <circle
+                key={i}
+                cx={p.x}
+                cy={p.y}
+                r="3"
+                fill="#3B82F6"
+                vectorEffect="non-scaling-stroke"
+              />
+            )
+          )}
+        </svg>
+
+        {/* X-axis label */}
+        <div className="absolute bottom-[-16px] left-0 right-0 flex justify-between text-[9px] text-gray-500">
+          <span>Day {chartData[0]?.dayNumber || 1}</span>
+          <span>Day {chartData[chartData.length - 1]?.dayNumber || 14}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function SubjectiveVsObjectiveCard({
   data,
+  subjectiveData,
   onViewDetails,
 }: SubjectiveVsObjectiveCardProps) {
   const hasObjective = data.objective !== null;
+  const hasSubjective = subjectiveData?.hasSubjectiveData || false;
 
   // Calculate discrepancies
   const sleepDifference = hasObjective
@@ -68,10 +204,41 @@ export function SubjectiveVsObjectiveCard({
     return "text-red-400";
   };
 
+  const getTrendIcon = (trend: string | null) => {
+    switch (trend) {
+      case "improving": return "↑";
+      case "declining": return "↓";
+      case "stable": return "→";
+      default: return "";
+    }
+  };
+
+  const getTrendColor = (trend: string | null) => {
+    switch (trend) {
+      case "improving": return "text-green-400";
+      case "declining": return "text-red-400";
+      case "stable": return "text-gray-400";
+      default: return "text-gray-500";
+    }
+  };
+
+  // Badge logic
+  const badge = perceptionAccuracy !== null
+    ? {
+        text: `${Math.round(perceptionAccuracy)}% accurate`,
+        variant: perceptionAccuracy >= 85 ? "success" as const : perceptionAccuracy >= 70 ? "warning" as const : "error" as const,
+      }
+    : hasSubjective && subjectiveData?.summary?.avgQuality !== null && subjectiveData?.summary?.avgQuality !== undefined
+    ? {
+        text: `${subjectiveData.summary.avgQuality.toFixed(1)}/10 avg`,
+        variant: "info" as const,
+      }
+    : undefined;
+
   return (
     <BentoCard
       title="Sleep Perception"
-      subtitle="Subjective vs Objective"
+      subtitle={hasObjective ? "Subjective vs Objective" : "Subjective Sleep Quality"}
       size="wide"
       icon={
         <svg
@@ -88,47 +255,82 @@ export function SubjectiveVsObjectiveCard({
           />
         </svg>
       }
-      badge={
-        perceptionAccuracy !== null
-          ? {
-              text: `${Math.round(perceptionAccuracy)}% accurate`,
-              variant:
-                perceptionAccuracy >= 85
-                  ? "success"
-                  : perceptionAccuracy >= 70
-                  ? "warning"
-                  : "error",
-            }
-          : undefined
-      }
+      badge={badge}
       action={onViewDetails ? { label: "View trends", onClick: onViewDetails } : undefined}
     >
-      {!hasObjective ? (
-        <div className="h-full flex items-center justify-center">
-          <div className="text-center text-gray-500">
-            <svg
-              className="w-10 h-10 mx-auto mb-3 opacity-50"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <p className="text-sm font-medium text-gray-400">No Wearable Connected</p>
-            <p className="text-xs mt-1 text-gray-500">
-              Patient has not connected Apple Watch or other wearable device.
-            </p>
-            <p className="text-xs mt-2 text-gray-600">
-              Subjective data only (from questionnaires)
-            </p>
-          </div>
+      {/* Subjective-Only View (No Wearable) */}
+      {!hasObjective && (
+        <div className="space-y-4">
+          {hasSubjective ? (
+            <>
+              {/* Quality Trend Chart */}
+              <div>
+                <div className="text-xs text-gray-400 mb-2">Sleep Quality Trend (1-10)</div>
+                <QualityTrendChart data={subjectiveData!.dailyData} />
+              </div>
+
+              {/* Stats Row */}
+              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-gray-700">
+                <div>
+                  <div className="text-xs text-gray-500">Avg Quality</div>
+                  <div className="text-lg font-semibold text-white">
+                    {subjectiveData!.summary.avgQuality !== null
+                      ? `${subjectiveData!.summary.avgQuality.toFixed(1)}/10`
+                      : "—"
+                    }
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Perceived Efficiency</div>
+                  <div className="text-lg font-semibold text-white">
+                    {subjectiveData!.summary.avgPerceivedEfficiency !== null
+                      ? `${Math.round(subjectiveData!.summary.avgPerceivedEfficiency)}%`
+                      : "—"
+                    }
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Trend</div>
+                  <div className={`text-lg font-semibold ${getTrendColor(subjectiveData!.summary.trend)}`}>
+                    {getTrendIcon(subjectiveData!.summary.trend)} {subjectiveData!.summary.trend || "—"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Hint about wearable */}
+              <div className="text-xs text-gray-500 text-center pt-2 border-t border-gray-700/50">
+                <span className="opacity-70">Connect Apple Watch for objective sleep data comparison</span>
+              </div>
+            </>
+          ) : (
+            // No subjective data yet
+            <div className="h-full flex items-center justify-center py-4">
+              <div className="text-center text-gray-500">
+                <svg
+                  className="w-10 h-10 mx-auto mb-3 opacity-50"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <p className="text-sm font-medium text-gray-400">Awaiting Sleep Log Data</p>
+                <p className="text-xs mt-1 text-gray-500">
+                  Quality ratings appear after patient completes morning sleep log
+                </p>
+              </div>
+            </div>
+          )}
         </div>
-      ) : (
+      )}
+
+      {/* Full Comparison View (With Wearable) */}
+      {hasObjective && (
         <div className="grid grid-cols-3 gap-4 h-full">
           {/* Subjective column */}
           <div className="space-y-2">

@@ -11,8 +11,9 @@ import { useCircadianTheme } from '@/hooks/useCircadianTheme';
 const SMART_DEFAULTS: Record<string, string> = {
   // Daily Sleep Log
   'SL_BEDTIME': '22:00',      // 10:00 PM - typical bedtime
-  'SL_ASLEEP_TIME': '22:30',  // 10:30 PM - slightly after bedtime (accounts for sleep latency)
+  // Note: SL_ASLEEP_TIME removed - sleep onset derived from lights_out + latency
   'SL_WAKE_TIME': '07:00',    // 7:00 AM - typical wake time
+  'SD_LIGHTS_OUT': '22:15',   // 10:15 PM - typical lights out time
   // PSQI Assessment questions
   'PSQI_1': '22:30',          // Usual bedtime - 10:30 PM
   'PSQI_3': '07:00',          // Usual wake time - 7:00 AM
@@ -39,13 +40,7 @@ export function TimePicker({ config, value, onChange, error, disabled, previousR
 
     let smartDefault: string | null = null;
 
-    // For SL_ASLEEP_TIME, use bedtime + 30 minutes if available
-    if (questionKey === 'SL_ASLEEP_TIME' && previousResponses) {
-      const bedtime = previousResponses.get('SL_BEDTIME');
-      if (bedtime && typeof bedtime === 'string') {
-        smartDefault = addMinutesToTime(bedtime, 30);
-      }
-    }
+    // Note: SL_ASLEEP_TIME logic removed - sleep onset now derived from lights_out + latency
 
     // Use explicit default, or smart default based on question key, or fallback
     if (!smartDefault) {

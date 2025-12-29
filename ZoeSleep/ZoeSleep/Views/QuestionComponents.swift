@@ -728,7 +728,7 @@ struct TimeInput: View {
     let question: Question
     @Binding var value: Date
     var previousBedtime: Date? = nil  // Used to calculate smart defaults for wake/asleep times
-    var onInitialValue: ((Date) -> Void)? = nil  // Called on appear to save initial value without marking interacted
+    var onValueChange: ((Date) -> Void)? = nil  // Called whenever value changes (initial or user scroll)
     @ObservedObject private var themeManager = ThemeManager.shared
 
     // Circadian-aware check
@@ -755,15 +755,13 @@ struct TimeInput: View {
         }
         .id("\(question.id)-\(previousBedtime?.timeIntervalSince1970 ?? 0)") // Force view recreation when question or context changes
         .onAppear {
-            // Save the initial value (smart default) so it's available for dependent questions
-            // This callback saves WITHOUT marking as user-interacted
-            onInitialValue?(value)
+            // Save initial value so it's available for dependent questions
+            onValueChange?(value)
         }
         .onChange(of: value) { _, newValue in
-            // Force the binding setter to be called by writing the value back.
-            // This ensures the value is saved to sleepLogResponses even if the DatePicker's
-            // internal binding behavior is delayed. The binding setter handles saving.
-            value = newValue
+            // CRITICAL: Explicitly save whenever picker value changes
+            // This bypasses SwiftUI binding issues with wheel pickers
+            onValueChange?(newValue)
         }
     }
 
@@ -824,17 +822,14 @@ struct TimeInput: View {
             }
             return todayAt(hour: 22, minute: 15)
 
-        case "SL_ASLEEP_TIME":
-            if let lightsOut = previousBedtime {
-                return calendar.date(byAdding: .minute, value: 15, to: lightsOut) ?? lightsOut
-            }
-            return todayAt(hour: 22, minute: 30)
+        // Note: SL_ASLEEP_TIME removed - sleep onset derived from lights_out + latency
 
-        case "SL_WAKE_TIME":
-            if let asleepTime = previousBedtime {
-                return calendar.date(byAdding: .hour, value: 8, to: asleepTime) ?? todayAt(hour: 6, minute: 30)
+        case "SD_FINAL_WAKE", "SL_WAKE_TIME":
+            // Wake time is typically 8 hours after lights out
+            if let lightsOut = previousBedtime {
+                return calendar.date(byAdding: .hour, value: 8, to: lightsOut) ?? todayAt(hour: 7, minute: 0)
             }
-            return todayAt(hour: 6, minute: 30)
+            return todayAt(hour: 7, minute: 0)
 
         case "SD_OUT_OF_BED":
             // Typically 15 min after final wake (user usually stays in bed briefly after waking)

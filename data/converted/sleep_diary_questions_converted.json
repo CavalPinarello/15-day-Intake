@@ -107,21 +107,6 @@
     "updated_at": 1763104572237
   },
   {
-    "id": "SD_SLEEP_ONSET",
-    "question_text": "What time do you think you fell asleep?",
-    "group_key": "bedtime",
-    "pillar": "Sleep Diary",
-    "answer_format": "time",
-    "format_config": {},
-    "validation_rules": {
-      "required": true
-    },
-    "order_index": 6,
-    "estimated_time_seconds": 18,
-    "created_at": 1763104572237,
-    "updated_at": 1763104572237
-  },
-  {
     "id": "SD_SLEEP_LATENCY",
     "question_text": "How long did it take you to fall asleep? (minutes)",
     "group_key": "bedtime",

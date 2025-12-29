@@ -14,22 +14,13 @@ const dailySleepLogQuestions = [
     is_daily_log: true,
     help_text: 'We want your subjective perception of when you went to bed, not what your device recorded.'
   },
-  {
-    question_key: 'SL_ASLEEP_TIME',
-    question_text: 'What time did you fall asleep last night? (Your best estimate - don\'t check your wearable)',
-    question_type: 'time',
-    options: null,
-    order_index: 1,
-    required: true,
-    is_daily_log: true,
-    help_text: 'This is about your perception of when you actually fell asleep.'
-  },
+  // Note: SL_ASLEEP_TIME removed - sleep onset derived from lights_out + latency (CSD_TRY_SLEEP + CSD_LATENCY)
   {
     question_key: 'SL_AWAKENINGS',
     question_text: 'How many times did you wake up during the night?',
     question_type: 'number',
     options: { min: 0, max: 20 },
-    order_index: 2,
+    order_index: 1,
     required: true,
     is_daily_log: true
   },
@@ -38,7 +29,7 @@ const dailySleepLogQuestions = [
     question_text: 'What time did you wake up this morning? (Final awakening - don\'t check your wearable)',
     question_type: 'time',
     options: null,
-    order_index: 3,
+    order_index: 2,
     required: true,
     is_daily_log: true,
     help_text: 'We want your subjective perception, not device data.'
@@ -48,7 +39,7 @@ const dailySleepLogQuestions = [
     question_text: 'How would you rate your sleep quality last night?',
     question_type: 'scale',
     options: { min: 1, max: 10, minLabel: 'Very Poor', maxLabel: 'Excellent' },
-    order_index: 4,
+    order_index: 3,
     required: true,
     is_daily_log: true
   }

@@ -43,7 +43,7 @@ export interface TimePickerConfig extends BaseFormatConfig {
   format: 'HH:MM';
   allowCrossMidnight?: boolean;
   defaultValue?: string;  // HH:MM format default time
-  questionKey?: string;   // For smart defaults based on question type (SL_BEDTIME, SL_ASLEEP_TIME, etc.)
+  questionKey?: string;   // For smart defaults based on question type (SL_BEDTIME, SD_LIGHTS_OUT, etc.)
 }
 
 // Minutes Scroll Configuration

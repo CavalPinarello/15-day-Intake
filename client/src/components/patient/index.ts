@@ -3,6 +3,8 @@ export { BentoCard, BentoGrid } from "./BentoCard";
 export {
   SubjectiveVsObjectiveCard,
   getPerceptionInsights,
+  type SubjectiveDailyData,
+  type SubjectiveSleepData,
 } from "./SubjectiveVsObjectiveCard";
 export {
   PillarSummaryCard,

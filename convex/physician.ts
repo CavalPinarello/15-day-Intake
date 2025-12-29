@@ -8,9 +8,12 @@ import { validatePhysicianRole, validateIOSSession } from "./auth";
 // ============================================
 
 // Stanford Sleep Log questions (SL_ prefix - used by Watch quick log)
+// Note: Watch app is PAUSED - these remain for backward compatibility with existing data
 const SLEEP_LOG_QUESTIONS: Record<string, { text: string; type: string }> = {
   // Watch/iPhone quick sleep log (SL_ prefix)
   "SL_BEDTIME": { text: "What time did you go to bed last night?", type: "time" },
+  // Note: SL_ASLEEP_TIME deprecated in favor of deriving from lights_out + latency
+  // Kept for backward compatibility with Watch app data
   "SL_ASLEEP_TIME": { text: "What time did you fall asleep?", type: "time" },
   "SL_AWAKENINGS": { text: "How many times did you wake up during the night?", type: "number" },
   "SL_WAKE_TIME": { text: "What time did you wake up this morning?", type: "time" },
@@ -35,7 +38,7 @@ const SLEEP_DIARY_QUESTIONS: Record<string, { text: string; type: string }> = {
   "SD_MEDS_OTHER": { text: "Other medication (specify)", type: "text" },
   "SD_GOT_INTO_BED": { text: "What time did you get into bed last night?", type: "time" },
   "SD_LIGHTS_OUT": { text: "What time did you turn off the lights to sleep?", type: "time" },
-  "SD_SLEEP_ONSET": { text: "What time do you think you fell asleep?", type: "time" },
+  // Note: SD_SLEEP_ONSET removed - sleep onset time derived from SD_LIGHTS_OUT + SD_SLEEP_LATENCY
   "SD_SLEEP_LATENCY": { text: "How long did it take you to fall asleep? (minutes)", type: "minutes" },
   "SD_AWAKENINGS_COUNT": { text: "How many times did you wake up during the night?", type: "number" },
   "SD_AWAKENINGS_DURATION": { text: "Total time awake during the night (minutes)", type: "minutes" },
@@ -4298,6 +4301,183 @@ export const getPatientSleepHealthRolling = query({
           totalServings: data.totalServings,
         })).sort((a, b) => b.totalServings - a.totalServings),
       },
+    };
+  },
+});
+
+/**
+ * Get subjective sleep quality data from sleep log responses
+ * Returns daily quality ratings and calculated perceived sleep efficiency
+ * Works even without wearable - uses questionnaire responses only
+ */
+export const getSubjectiveSleepQuality = query({
+  args: {
+    userId: v.id("users"),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const daysToFetch = args.days ?? 14;
+
+    // Get sleep quality and sleep diary responses
+    const responses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .filter((q) =>
+        q.or(
+          // Sleep quality questions
+          q.eq(q.field("question_id"), "CSD_QUALITY"),
+          q.eq(q.field("question_id"), "SD_SLEEP_QUALITY"),
+          q.eq(q.field("question_id"), "SL_QUALITY"),
+          // Time metrics for efficiency calculation
+          q.eq(q.field("question_id"), "CSD_INTO_BED"),
+          q.eq(q.field("question_id"), "CSD_OUT_BED"),
+          q.eq(q.field("question_id"), "CSD_LATENCY"),
+          q.eq(q.field("question_id"), "CSD_WASO"),
+          q.eq(q.field("question_id"), "CSD_TRY_SLEEP"),
+          q.eq(q.field("question_id"), "CSD_FINAL_WAKE"),
+          // Stanford versions
+          q.eq(q.field("question_id"), "SD_GOT_INTO_BED"),
+          q.eq(q.field("question_id"), "SD_OUT_OF_BED"),
+          q.eq(q.field("question_id"), "SD_SLEEP_LATENCY"),
+          q.eq(q.field("question_id"), "SD_AWAKENINGS_DURATION"),
+          q.eq(q.field("question_id"), "SL_BEDTIME"),
+          q.eq(q.field("question_id"), "SL_OUT_OF_BED"),
+          q.eq(q.field("question_id"), "SL_AWAKENINGS")
+        )
+      )
+      .collect();
+
+    // Build day-by-day data
+    type DaySleepData = {
+      dayNumber: number;
+      date?: string;
+      quality: number | null; // 1-10 scale
+      intoBedTime: number | null; // minutes from midnight
+      outOfBedTime: number | null;
+      latencyMins: number | null;
+      wasoMins: number | null;
+      timeInBedMins: number | null;
+      totalSleepMins: number | null;
+      perceivedEfficiency: number | null; // 0-100%
+    };
+
+    const dayMap: Record<number, DaySleepData> = {};
+
+    // Initialize days
+    for (let i = 1; i <= daysToFetch; i++) {
+      dayMap[i] = {
+        dayNumber: i,
+        quality: null,
+        intoBedTime: null,
+        outOfBedTime: null,
+        latencyMins: null,
+        wasoMins: null,
+        timeInBedMins: null,
+        totalSleepMins: null,
+        perceivedEfficiency: null,
+      };
+    }
+
+    // Helper to parse time string to minutes from midnight
+    const parseTimeToMins = (timeStr: string | null | undefined): number | null => {
+      if (!timeStr) return null;
+      const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+      if (!match) return null;
+      const hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      return hours * 60 + minutes;
+    };
+
+    // Process responses
+    for (const r of responses) {
+      const day = r.day_number ?? 1;
+      if (day > daysToFetch || !dayMap[day]) continue;
+
+      const qid = r.question_id;
+      dayMap[day].date = r.created_at ? new Date(r.created_at).toISOString().split("T")[0] : undefined;
+
+      // Sleep quality (1-10)
+      if (qid === "CSD_QUALITY" || qid === "SD_SLEEP_QUALITY" || qid === "SL_QUALITY") {
+        const val = r.response_number ?? parseFloat(r.response_value || "");
+        if (!isNaN(val)) {
+          dayMap[day].quality = val;
+        }
+      }
+      // Into bed time
+      else if (qid === "CSD_INTO_BED" || qid === "SD_GOT_INTO_BED" || qid === "SL_BEDTIME") {
+        dayMap[day].intoBedTime = parseTimeToMins(r.response_value);
+      }
+      // Out of bed time
+      else if (qid === "CSD_OUT_BED" || qid === "SD_OUT_OF_BED" || qid === "SL_OUT_OF_BED") {
+        dayMap[day].outOfBedTime = parseTimeToMins(r.response_value);
+      }
+      // Sleep latency (minutes to fall asleep)
+      else if (qid === "CSD_LATENCY" || qid === "SD_SLEEP_LATENCY") {
+        const val = r.response_number ?? parseFloat(r.response_value || "");
+        if (!isNaN(val)) {
+          dayMap[day].latencyMins = val;
+        }
+      }
+      // WASO (wake after sleep onset)
+      else if (qid === "CSD_WASO" || qid === "SD_AWAKENINGS_DURATION" || qid === "SL_AWAKENINGS") {
+        const val = r.response_number ?? parseFloat(r.response_value || "");
+        if (!isNaN(val)) {
+          dayMap[day].wasoMins = val;
+        }
+      }
+    }
+
+    // Calculate derived metrics for each day
+    for (const day of Object.values(dayMap)) {
+      // Calculate Time in Bed
+      if (day.intoBedTime !== null && day.outOfBedTime !== null) {
+        if (day.outOfBedTime > day.intoBedTime) {
+          // Same day (e.g., 23:00 to 07:00 next day doesn't apply here)
+          day.timeInBedMins = day.outOfBedTime - day.intoBedTime;
+        } else {
+          // Crossed midnight: e.g., 23:00 to 07:00 = 8 hours
+          day.timeInBedMins = (24 * 60 - day.intoBedTime) + day.outOfBedTime;
+        }
+      }
+
+      // Calculate Total Sleep Time = Time in Bed - Latency - WASO
+      if (day.timeInBedMins !== null) {
+        const latency = day.latencyMins ?? 0;
+        const waso = day.wasoMins ?? 0;
+        day.totalSleepMins = Math.max(0, day.timeInBedMins - latency - waso);
+      }
+
+      // Calculate Perceived Sleep Efficiency = (Total Sleep / Time in Bed) × 100
+      if (day.totalSleepMins !== null && day.timeInBedMins !== null && day.timeInBedMins > 0) {
+        day.perceivedEfficiency = Math.round((day.totalSleepMins / day.timeInBedMins) * 100);
+      }
+    }
+
+    // Convert to array and filter to days with data
+    const dailyData = Object.values(dayMap)
+      .filter(d => d.quality !== null || d.perceivedEfficiency !== null)
+      .sort((a, b) => a.dayNumber - b.dayNumber);
+
+    // Calculate averages
+    const qualityValues = dailyData.filter(d => d.quality !== null).map(d => d.quality!);
+    const efficiencyValues = dailyData.filter(d => d.perceivedEfficiency !== null).map(d => d.perceivedEfficiency!);
+    const sleepDurations = dailyData.filter(d => d.totalSleepMins !== null).map(d => d.totalSleepMins!);
+
+    return {
+      dailyData,
+      summary: {
+        daysWithData: dailyData.length,
+        avgQuality: qualityValues.length > 0
+          ? Math.round(qualityValues.reduce((a, b) => a + b, 0) / qualityValues.length * 10) / 10
+          : null,
+        avgPerceivedEfficiency: efficiencyValues.length > 0
+          ? Math.round(efficiencyValues.reduce((a, b) => a + b, 0) / efficiencyValues.length)
+          : null,
+        avgSleepDurationMins: sleepDurations.length > 0
+          ? Math.round(sleepDurations.reduce((a, b) => a + b, 0) / sleepDurations.length)
+          : null,
+      },
+      hasSubjectiveData: dailyData.length > 0,
     };
   },
 });

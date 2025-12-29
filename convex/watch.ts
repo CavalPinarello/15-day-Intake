@@ -3170,6 +3170,30 @@ export const removeDateQuestion = mutation({
   },
 });
 
+/**
+ * Remove the SD_SLEEP_ONSET question from sleep diary
+ * This question is redundant - sleep onset time can be derived from lights_out + latency.
+ * Run with: npx convex run watch:removeSleepOnsetQuestion
+ */
+export const removeSleepOnsetQuestion = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Find and delete the SD_SLEEP_ONSET question
+    const allQuestions = await ctx.db
+      .query("sleep_diary_questions")
+      .collect();
+
+    const sleepOnsetQuestion = allQuestions.find(q => q.id === "SD_SLEEP_ONSET");
+
+    if (sleepOnsetQuestion) {
+      await ctx.db.delete(sleepOnsetQuestion._id);
+      return { deleted: true, message: "SD_SLEEP_ONSET question removed successfully" };
+    }
+
+    return { deleted: false, message: "SD_SLEEP_ONSET question not found in database" };
+  },
+});
+
 // ============================================
 // Expansion Schedule Queries
 // ============================================

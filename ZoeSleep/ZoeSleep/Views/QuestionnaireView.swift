@@ -362,17 +362,14 @@ struct QuestionnaireView: View {
                     question: question,
                     value: dateBinding(for: question.id, question: question, previousBedtime: getPreviousBedtime(for: question.id)),
                     previousBedtime: getPreviousBedtime(for: question.id),
-                    onInitialValue: { initialValue in
-                        // Save the initial value without marking as user-interacted
-                        // This ensures the value is available for dependent questions
+                    onValueChange: { newValue in
+                        // CRITICAL: Always save the current picker value directly to responses
+                        // This ensures dependent questions get the correct previous value
+                        // Note: This saves without marking user-interacted (that happens in binding setter)
                         if currentSection == .sleepLog {
-                            if sleepLogResponses[question.id] == nil {
-                                sleepLogResponses[question.id] = initialValue
-                            }
+                            sleepLogResponses[question.id] = newValue
                         } else {
-                            if assessmentResponses[question.id] == nil {
-                                assessmentResponses[question.id] = initialValue
-                            }
+                            assessmentResponses[question.id] = newValue
                         }
                     }
                 )
@@ -869,15 +866,20 @@ struct QuestionnaireView: View {
                 // No dependency, but might use an evening default
                 return nil
 
-            // Legacy Stanford Sleep Diary question dependencies
+            // Stanford Sleep Diary question dependencies (SD_ prefix)
             case "SD_LIGHTS_OUT":
                 return sleepLogResponses["SD_GOT_INTO_BED"] as? Date
-            // Note: SL_ASLEEP_TIME removed - sleep onset derived from lights_out + latency
-            case "SL_WAKE_TIME":
-                // Use lights out time as base for wake time dependency
+            // Note: SL_ASLEEP_TIME/SD_SLEEP_ONSET removed - sleep onset derived from lights_out + latency
+            case "SD_FINAL_WAKE", "SL_WAKE_TIME":
+                // Wake time depends on lights out (typically 8 hours later)
                 return sleepLogResponses["SD_LIGHTS_OUT"] as? Date ?? sleepLogResponses["SD_GOT_INTO_BED"] as? Date
             case "SD_OUT_OF_BED":
-                // CRITICAL: If wake time isn't saved yet, calculate what it would be from the chain
+                // Out of bed depends on wake time - use SD_FINAL_WAKE (not SL_WAKE_TIME)
+                // Return the wake time so smartTimeDefault can add 15 min
+                if let wakeTime = sleepLogResponses["SD_FINAL_WAKE"] as? Date {
+                    return wakeTime
+                }
+                // Fallback: try SL_WAKE_TIME for backward compatibility
                 if let wakeTime = sleepLogResponses["SL_WAKE_TIME"] as? Date {
                     return wakeTime
                 }

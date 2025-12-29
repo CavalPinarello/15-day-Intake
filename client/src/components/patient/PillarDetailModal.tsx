@@ -5,16 +5,8 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { X, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Clock, Loader2 } from "lucide-react";
-import { PILLARS, PillarKey } from "./PillarSummaryCard";
-
-interface PillarStatus {
-  pillar: PillarKey;
-  score: number | null;
-  questionsAnswered: number;
-  questionsTotal: number;
-  trend: "improving" | "declining" | "stable" | null;
-  alerts: string[];
-}
+import { PILLARS, PillarKey, type PillarStatus } from "./PillarSummaryCard";
+import { type PillarSeverity, getSeverityDotColor, severityColors } from "@/utils/pillarSeverity";
 
 interface PillarDetailModalProps {
   isOpen: boolean;
@@ -197,6 +189,34 @@ export function PillarDetailModal({
                   {alert}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* Clinical Severity Indicators */}
+          {pillarStatus.severities && pillarStatus.severities.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-gray-700">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+                Clinical Status
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {pillarStatus.severities.map((sev, idx) => (
+                  <div
+                    key={`${sev.name}-${idx}`}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${severityColors[sev.level].bg} border ${severityColors[sev.level].border}`}
+                  >
+                    <div className={`w-2.5 h-2.5 rounded-full ${getSeverityDotColor(sev.level)}`} />
+                    <span className={`text-sm font-medium ${severityColors[sev.level].text}`}>
+                      {sev.name}
+                      {sev.value !== undefined && `: ${sev.value}`}
+                    </span>
+                    {sev.label && (
+                      <span className="text-xs text-gray-400">
+                        ({sev.label})
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
