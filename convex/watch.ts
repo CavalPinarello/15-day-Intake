@@ -78,6 +78,38 @@ const DERIVABLE_QUESTIONS = {
       return responses.get("CSD_TRY_SLEEP")?.value ?? null;
     }
   },
+
+  // Question 33D: "Do you use any sleep aids?"
+  // Derived from: CSD_MEDS (yes/no) and CSD_MEDS_LIST (medication selections)
+  // If user answered "Yes" to CSD_MEDS, we derive from their medication list
+  // If user answered "No" to CSD_MEDS, we derive as ["none"]
+  "33D": {
+    sources: ["CSD_MEDS", "CSD_MEDS_LIST"],
+    derive: (responses: Map<string, { value?: string; number?: number; array?: string[] }>) => {
+      const tookMeds = responses.get("CSD_MEDS")?.value;
+
+      if (tookMeds === "No") {
+        // User said they don't take sleep aids
+        return JSON.stringify(["none"]);
+      }
+
+      if (tookMeds === "Yes") {
+        // User takes sleep aids - derive from their medication list
+        // CSD_MEDS_LIST is a medication_select which stores medications
+        const medsList = responses.get("CSD_MEDS_LIST");
+        if (medsList?.array && medsList.array.length > 0) {
+          // Map medication categories to 33D options
+          // This provides a reasonable approximation
+          return JSON.stringify(medsList.array);
+        }
+        // They said yes but no list - default to "other"
+        return JSON.stringify(["other"]);
+      }
+
+      // No answer yet - can't derive
+      return null;
+    }
+  },
 } as const;
 
 // Set of all derivable question IDs for quick lookup
@@ -2099,6 +2131,20 @@ export const getQuestionsForUserDay = query({
 
     // ========== ASSESSMENT (Day-Specific + Gateway Expansion) ==========
     if (section === "all" || section === "assessment") {
+      // Get all user's responses for conditional logic evaluation (gender, age, etc.)
+      const allUserResponses = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+        .collect();
+
+      // Cast to UserResponse type for the evaluator
+      const userResponsesForEval: UserResponse[] = allUserResponses.map(r => ({
+        question_id: r.question_id,
+        response_value: r.response_value as string | number | null,
+      }));
+
+      console.log(`[Convex] User ${args.userId} has ${userResponsesForEval.length} previous responses for conditional logic`);
+
       // Get all modules assigned to this day from static day_modules table
       const dayModules = await ctx.db
         .query("day_modules")
@@ -2194,10 +2240,17 @@ export const getQuestionsForUserDay = query({
             .first();
 
           if (question) {
-            // Check conditional logic
+            // Check conditional logic (e.g., gender-specific questions like pregnancy)
             if (question.conditional_logic) {
-              // TODO: Evaluate conditional logic based on user's responses
-              // For now, include all questions
+              const shouldShow = evaluateConditionalLogic(
+                question.conditional_logic,
+                userResponsesForEval,
+                question.question_id
+              );
+              if (!shouldShow) {
+                console.log(`[Convex] Skipping question ${question.question_id} - conditional logic not met`);
+                continue; // Skip this question
+              }
             }
 
             result.assessment.push({
@@ -2259,6 +2312,19 @@ export const getQuestionsForUserDay = query({
             .first();
 
           if (question) {
+            // Check conditional logic for expansion questions too
+            if (question.conditional_logic) {
+              const shouldShow = evaluateConditionalLogic(
+                question.conditional_logic,
+                userResponsesForEval,
+                question.question_id
+              );
+              if (!shouldShow) {
+                console.log(`[Convex] Skipping expansion question ${question.question_id} - conditional logic not met`);
+                continue;
+              }
+            }
+
             result.assessment.push({
               id: question.question_id,
               text: question.question_text,
@@ -2413,6 +2479,168 @@ function parseConditionalLogic(conditionalLogicJson: string): { question_id: str
   } catch {
     return undefined;
   }
+}
+
+// Type for user response record
+interface UserResponse {
+  question_id: string;
+  response_value: string | number | null;
+  response_number?: number;
+}
+
+/**
+ * Evaluate complex conditional logic to determine if a question should be shown.
+ * Supports:
+ * - all: Array of conditions (all must be true)
+ * - any: Array of conditions (at least one must be true)
+ * - questionId + equals: Check if answer matches
+ * - ageUnder/ageOver: Check user's age (requires D2 date of birth response)
+ */
+function evaluateConditionalLogic(
+  conditionalLogicJson: string,
+  userResponses: UserResponse[],
+  questionId: string
+): boolean {
+  try {
+    const logic = JSON.parse(conditionalLogicJson);
+
+    // Create lookup map for faster access
+    const responseMap = new Map<string, string | number | null>();
+    for (const r of userResponses) {
+      responseMap.set(r.question_id, r.response_value);
+    }
+
+    return evaluateLogicNode(logic, responseMap, questionId);
+  } catch (error) {
+    console.log(`[Convex] Error evaluating conditional logic for ${questionId}: ${error}`);
+    // On error, default to showing the question
+    return true;
+  }
+}
+
+/**
+ * Recursively evaluate a logic node
+ */
+function evaluateLogicNode(
+  node: Record<string, unknown>,
+  responseMap: Map<string, string | number | null>,
+  questionId: string
+): boolean {
+  // Handle compound AND conditions
+  if (node.all && Array.isArray(node.all)) {
+    const results = node.all.map((condition: Record<string, unknown>) =>
+      evaluateLogicNode(condition, responseMap, questionId)
+    );
+    const result = results.every(Boolean);
+    console.log(`[Convex] Question ${questionId}: ALL conditions [${results.join(', ')}] => ${result}`);
+    return result;
+  }
+
+  // Handle compound OR conditions
+  if (node.any && Array.isArray(node.any)) {
+    const results = node.any.map((condition: Record<string, unknown>) =>
+      evaluateLogicNode(condition, responseMap, questionId)
+    );
+    const result = results.some(Boolean);
+    console.log(`[Convex] Question ${questionId}: ANY conditions [${results.join(', ')}] => ${result}`);
+    return result;
+  }
+
+  // Handle age-based conditions (requires D2 date of birth)
+  if (typeof node.ageUnder === 'number') {
+    const age = calculateAgeFromResponse(responseMap.get("D2"));
+    if (age === null) {
+      console.log(`[Convex] Question ${questionId}: ageUnder=${node.ageUnder} - no DOB available, defaulting to show`);
+      return true; // No DOB available, default to showing
+    }
+    const result = age < node.ageUnder;
+    console.log(`[Convex] Question ${questionId}: ageUnder=${node.ageUnder}, userAge=${age} => ${result}`);
+    return result;
+  }
+
+  if (typeof node.ageOver === 'number') {
+    const age = calculateAgeFromResponse(responseMap.get("D2"));
+    if (age === null) {
+      console.log(`[Convex] Question ${questionId}: ageOver=${node.ageOver} - no DOB available, defaulting to show`);
+      return true;
+    }
+    const result = age > node.ageOver;
+    console.log(`[Convex] Question ${questionId}: ageOver=${node.ageOver}, userAge=${age} => ${result}`);
+    return result;
+  }
+
+  // Handle single question condition
+  if (typeof node.questionId === 'string') {
+    const userValue = responseMap.get(node.questionId);
+
+    if (typeof node.equals === 'string') {
+      if (userValue === null || userValue === undefined) {
+        console.log(`[Convex] Question ${questionId}: ${node.questionId}="${node.equals}" - no response yet, hiding`);
+        return false; // No response yet, hide the question
+      }
+      const result = String(userValue).toLowerCase() === String(node.equals).toLowerCase();
+      console.log(`[Convex] Question ${questionId}: ${node.questionId}="${userValue}" equals "${node.equals}" => ${result}`);
+      return result;
+    }
+
+    if (typeof node.greaterThan === 'number') {
+      const numValue = Number(userValue);
+      if (isNaN(numValue)) return false;
+      return numValue > node.greaterThan;
+    }
+
+    if (typeof node.lessThan === 'number') {
+      const numValue = Number(userValue);
+      if (isNaN(numValue)) return false;
+      return numValue < node.lessThan;
+    }
+  }
+
+  // Handle show_if wrapper format
+  if (node.show_if && typeof node.show_if === 'object') {
+    return evaluateLogicNode(node.show_if as Record<string, unknown>, responseMap, questionId);
+  }
+
+  // Unknown format - default to showing
+  return true;
+}
+
+/**
+ * Calculate age from a date of birth response (various formats supported)
+ */
+function calculateAgeFromResponse(dobValue: string | number | null | undefined): number | null {
+  if (dobValue === null || dobValue === undefined) return null;
+
+  const dobString = String(dobValue);
+
+  // Try parsing various date formats
+  let birthDate: Date | null = null;
+
+  // ISO format: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(dobString)) {
+    birthDate = new Date(dobString);
+  }
+  // MM/DD/YYYY format
+  else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dobString)) {
+    const [month, day, year] = dobString.split('/').map(Number);
+    birthDate = new Date(year, month - 1, day);
+  }
+  // Year only
+  else if (/^\d{4}$/.test(dobString)) {
+    birthDate = new Date(Number(dobString), 0, 1);
+  }
+
+  if (!birthDate || isNaN(birthDate.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return age;
 }
 
 /**

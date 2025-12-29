@@ -1239,6 +1239,15 @@ struct QuestionnaireView: View {
         var minValue: Int? = nil
         var maxValue: Int? = nil
 
+        // Unit-related fields for metric/imperial switching
+        var unit: String? = nil
+        var unitImperial: String? = nil
+        var step: Double? = nil
+        var defaultValue: Int? = nil
+        var minImperial: Int? = nil
+        var maxImperial: Int? = nil
+        var defaultImperial: Int? = nil
+
         if let config = cq.formatConfig {
             // Try Convex format first (scaleMin/scaleMax)
             if let min = config["scaleMin"]?.value as? Int { scaleMin = min; minValue = min }
@@ -1255,6 +1264,16 @@ struct QuestionnaireView: View {
                 if let minLabel = config["minLabel"]?.value as? String { scaleMinLabel = minLabel }
                 if let maxLabel = config["maxLabel"]?.value as? String { scaleMaxLabel = maxLabel }
             }
+
+            // Extract unit-related fields for metric/imperial switching
+            if let u = config["unit"]?.value as? String { unit = u }
+            if let uImp = config["unitImperial"]?.value as? String { unitImperial = uImp }
+            if let s = config["step"]?.value as? Double { step = s }
+            else if let s = config["step"]?.value as? Int { step = Double(s) }
+            if let dv = config["defaultValue"]?.value as? Int { defaultValue = dv }
+            if let minImp = config["minImperial"]?.value as? Int { minImperial = minImp }
+            if let maxImp = config["maxImperial"]?.value as? Int { maxImperial = maxImp }
+            if let defImp = config["defaultImperial"]?.value as? Int { defaultImperial = defImp }
         }
 
         // Convert conditional logic if present (handles compound all/any conditions)
@@ -1287,6 +1306,13 @@ struct QuestionnaireView: View {
             scaleMaxLabel: scaleMaxLabel,
             minValue: minValue,
             maxValue: maxValue,
+            step: step,
+            unit: unit,
+            defaultValue: defaultValue,
+            unitImperial: unitImperial,
+            minImperial: minImperial,
+            maxImperial: maxImperial,
+            defaultImperial: defaultImperial,
             helpText: cq.helpText,
             isGateway: false,
             conditionalLogic: conditionalLogic,

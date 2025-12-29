@@ -635,7 +635,7 @@
     "validation_rules": {
       "required": false
     },
-    "help_text": "Measure around your belly button. Skip if you don't know.",
+    "help_text": "Measure around your belly button. This is approximately your pants waist size.",
     "estimated_time_seconds": 20,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
