@@ -6,6 +6,30 @@
 
 ### Dec 29, 2025
 
+#### Sleep Health Factors Dashboard Module
+Comprehensive 14-day rolling view of naps, medications, supplements, and caffeine in physician dashboard.
+
+- **New API:** `getPatientSleepHealthRolling` returns day-by-day breakdown for 14 days
+- **Supplements vs Medications:** Only prescription/OTC are medications; all others (melatonin, chamomile, valerian, etc.) are supplements
+- **4 health factor rows:** Napping, Sleep Medications, Supplements, Caffeine
+- **14-day rolling charts:** Mini bar charts showing usage patterns over time
+- **Day-by-day breakdown:** Detail modals show individual entries with:
+  - Medication/supplement names, doses, and timing
+  - Nap details with start times and durations
+  - Caffeine intake with mg totals and drink counts
+  - Sleep quality rating for correlation analysis
+- **Clinical insights:** Alerts for frequent napping, high caffeine, etc.
+- **Files changed:** `convex/physician.ts`, `client/src/components/patient/SleepHealthFactorsCard.tsx`
+
+#### iOS Complex Response Serialization Fix
+Fixed serialization of complex types (medications, naps, caffeine) from iOS to Convex.
+
+- **Problem:** `[MedicationSelection]`, `[NapEntry]`, `[CaffeineEntry]` were not being serialized to backend
+- **Solution:** Added `convertValueToConvexFormat` helper function
+- **Changes:** All 3 sync locations (`syncResponsesToConvex`, `saveInProgressResponsesOnDismiss`, `completeSectionInBackground`) now use helper
+- **Backend:** Added `responseObject` field to `saveResponses` mutation in `convex/watch.ts`
+- **Files changed:** `ZoeSleep/ZoeSleep/Views/QuestionnaireView.swift`, `convex/watch.ts`
+
 #### Unified Body Metrics Slider UI
 Imperial height in onboarding now uses a single slider instead of wheel pickers.
 
@@ -39,6 +63,14 @@ Q33D "Do you use any sleep aids?" was redundant with CSD_MEDS from the sleep log
   - If CSD_MEDS = "Yes" → Q33D = values from CSD_MEDS_LIST (or ["other"] if no list)
 - **Result:** Question is automatically skipped when sleep log is complete, reducing redundant questions
 - **Files changed:** `convex/watch.ts`
+
+#### Remove Redundant Bed Partner Question (Q59)
+Q59 "Do you have a bed partner or room mate?" was redundant with Q35 "Do you share your bedroom with a partner?"
+
+- **Problem:** Users were asked about bed partners twice - Q35 on Day 1, then Q59 later in same assessment
+- **Solution:** Removed Q59 from `core_social` module. If any scoring needs Q59, it can be derived from Q35
+- **Derivation exists:** `AnswerDerivationSystem.swift` already has mapping `"59": "35"` for automatic derivation
+- **Files changed:** `data/assessment_modules.json`, `server/core_questions.json`, `data/sleep360_questions.json`
 
 #### Questionnaire Name Mapping Fix
 Fixed severity lookup for full questionnaire names in physician dashboard.

@@ -77,13 +77,6 @@
     "is_gateway": false
   },
   {
-    "id": "59",
-    "text": "Do you have a bed partner or room mate?",
-    "pillar": "Social",
-    "scale_type": "Yes/No",
-    "is_gateway": false
-  },
-  {
     "id": "26",
     "text": "Do you have diabetes or pre-diabetes?",
     "pillar": "Metabolic",

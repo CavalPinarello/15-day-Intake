@@ -119,7 +119,7 @@
     "scaleType": "Yes/No",
     "timeMinutes": 0.5,
     "notes": [
-      "---"
+      "DEPRECATED - Redundant with Q35. Derive from Q35 if needed for scoring."
     ]
   },
   {
