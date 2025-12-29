@@ -3944,3 +3944,346 @@ export const getPatientCheckInTrends = query({
   },
 });
 
+// ============================================
+// Sleep Health Factors - Rolling 14-Day Data
+// ============================================
+
+// Supplement categories (separate from prescription meds)
+const SUPPLEMENT_CATEGORIES = ["melatonin", "magnesium", "herbal", "cbd_thc"];
+const PRESCRIPTION_CATEGORIES = ["prescription", "otc"];
+
+/**
+ * Get comprehensive rolling sleep health data for the past 14 days
+ * Returns day-by-day breakdown for: naps, medications, supplements, caffeine
+ * Plus correlation with sleep quality for clinical insights
+ */
+export const getPatientSleepHealthRolling = query({
+  args: {
+    userId: v.id("users"),
+    days: v.optional(v.number()), // Default 14
+  },
+  handler: async (ctx, args) => {
+    const daysToFetch = args.days ?? 14;
+
+    // Get all relevant responses for this user
+    const allResponses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .filter((q) =>
+        q.or(
+          // Naps
+          q.eq(q.field("question_id"), "CSD_NAPS"),
+          q.eq(q.field("question_id"), "CSD_NAP_COUNT"),
+          q.eq(q.field("question_id"), "CSD_NAP_DETAILS"),
+          q.eq(q.field("question_id"), "SD_NAPS_TAKEN"),
+          q.eq(q.field("question_id"), "SD_NAPS_COUNT"),
+          q.eq(q.field("question_id"), "SD_NAP_DETAILS"),
+          // Medications
+          q.eq(q.field("question_id"), "CSD_MEDS"),
+          q.eq(q.field("question_id"), "CSD_MEDS_LIST"),
+          q.eq(q.field("question_id"), "CSD_MEDS_OTHER"),
+          q.eq(q.field("question_id"), "SD_MEDICATION_TAKEN"),
+          q.eq(q.field("question_id"), "SD_MEDS_LIST"),
+          q.eq(q.field("question_id"), "SD_MEDS_OTHER"),
+          // Caffeine
+          q.eq(q.field("question_id"), "CSD_CAFFEINE"),
+          q.eq(q.field("question_id"), "CSD_CAFFEINE_TYPES"),
+          q.eq(q.field("question_id"), "CSD_CAFFEINE_LAST")
+        )
+      )
+      .collect();
+
+    // Get sleep quality data for correlation
+    const sleepData = await ctx.db
+      .query("user_sleep_data")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Build day-by-day data structure
+    type DayData = {
+      dayNumber: number;
+      date?: string;
+      // Naps
+      tookNaps: boolean;
+      napCount: number;
+      napDetails: Array<{ startTime?: string; durationMinutes?: number }>;
+      totalNapMinutes: number;
+      // Medications (prescription/OTC)
+      tookMeds: boolean;
+      medications: Array<{ categoryId: string; medicationName?: string; dose?: string; timing?: string[] }>;
+      // Supplements
+      tookSupplements: boolean;
+      supplements: Array<{ categoryId: string; name?: string; dose?: string; timing?: string[] }>;
+      // Caffeine
+      hadCaffeine: boolean;
+      caffeineEntries: Array<{ typeId: string; count: number }>;
+      totalCaffeineMg: number;
+      lastCaffeineTime?: string;
+      // Sleep quality (for correlation)
+      sleepQuality?: number;
+      sleepDurationMins?: number;
+      sleepEfficiency?: number;
+    };
+
+    const dayMap: Record<number, DayData> = {};
+
+    // Initialize days
+    for (let i = 1; i <= daysToFetch; i++) {
+      dayMap[i] = {
+        dayNumber: i,
+        tookNaps: false,
+        napCount: 0,
+        napDetails: [],
+        totalNapMinutes: 0,
+        tookMeds: false,
+        medications: [],
+        tookSupplements: false,
+        supplements: [],
+        hadCaffeine: false,
+        caffeineEntries: [],
+        totalCaffeineMg: 0,
+      };
+    }
+
+    // Process responses
+    for (const response of allResponses) {
+      const day = response.day_number ?? 1;
+      if (day > daysToFetch || !dayMap[day]) continue;
+
+      const qid = response.question_id;
+
+      // Naps
+      if (qid === "CSD_NAPS" || qid === "SD_NAPS_TAKEN") {
+        dayMap[day].tookNaps = response.response_value?.toLowerCase() === "yes";
+      } else if (qid === "CSD_NAP_COUNT" || qid === "SD_NAPS_COUNT") {
+        dayMap[day].napCount = response.response_number ?? 0;
+      } else if (qid === "CSD_NAP_DETAILS" || qid === "SD_NAP_DETAILS") {
+        if (response.response_object) {
+          try {
+            const parsed = JSON.parse(response.response_object);
+            if (Array.isArray(parsed)) {
+              dayMap[day].napDetails = parsed.map((n: { startTime?: string; nap_start_time?: string; durationMinutes?: number; nap_duration_minutes?: number }) => ({
+                startTime: n.startTime || n.nap_start_time,
+                durationMinutes: n.durationMinutes ?? n.nap_duration_minutes ?? 0,
+              }));
+              dayMap[day].totalNapMinutes = dayMap[day].napDetails.reduce((sum, n) => sum + (n.durationMinutes ?? 0), 0);
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
+      // Medications & Supplements
+      else if (qid === "CSD_MEDS" || qid === "SD_MEDICATION_TAKEN") {
+        const took = response.response_value?.toLowerCase() === "yes";
+        dayMap[day].tookMeds = took;
+        dayMap[day].tookSupplements = took; // Will filter below
+      } else if (qid === "CSD_MEDS_LIST" || qid === "SD_MEDS_LIST") {
+        let meds: Array<{ categoryId: string; medicationName?: string; dose?: string; timingCategories?: string[] }> = [];
+
+        if (response.response_object) {
+          try {
+            meds = JSON.parse(response.response_object);
+          } catch { /* ignore */ }
+        } else if (response.response_array) {
+          try {
+            const parsed = JSON.parse(response.response_array);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              if (typeof parsed[0] === "object") {
+                meds = parsed;
+              } else if (typeof parsed[0] === "string") {
+                meds = parsed.map((cat: string) => ({ categoryId: cat }));
+              }
+            }
+          } catch { /* ignore */ }
+        }
+
+        // Split into medications vs supplements
+        for (const med of meds) {
+          const entry = {
+            categoryId: med.categoryId,
+            medicationName: med.medicationName,
+            dose: med.dose,
+            timing: med.timingCategories,
+          };
+          if (SUPPLEMENT_CATEGORIES.includes(med.categoryId)) {
+            dayMap[day].supplements.push(entry);
+          } else {
+            dayMap[day].medications.push(entry);
+          }
+        }
+
+        // Update flags based on what we found
+        dayMap[day].tookMeds = dayMap[day].medications.length > 0;
+        dayMap[day].tookSupplements = dayMap[day].supplements.length > 0;
+      } else if (qid === "CSD_MEDS_OTHER" || qid === "SD_MEDS_OTHER") {
+        if (response.response_value) {
+          dayMap[day].medications.push({
+            categoryId: "other",
+            medicationName: response.response_value,
+          });
+          dayMap[day].tookMeds = true;
+        }
+      }
+
+      // Caffeine
+      else if (qid === "CSD_CAFFEINE") {
+        if (response.response_value?.toLowerCase() === "yes") {
+          dayMap[day].hadCaffeine = true;
+        } else if (response.response_value?.toLowerCase() === "no") {
+          dayMap[day].hadCaffeine = false;
+        } else if (response.response_number !== undefined) {
+          // Legacy: numeric count
+          dayMap[day].hadCaffeine = response.response_number > 0;
+        }
+      } else if (qid === "CSD_CAFFEINE_TYPES") {
+        if (response.response_array) {
+          try {
+            const entries = JSON.parse(response.response_array) as Array<{ typeId: string; count: number }>;
+            dayMap[day].caffeineEntries = entries;
+            dayMap[day].hadCaffeine = entries.length > 0;
+            // Calculate total mg
+            dayMap[day].totalCaffeineMg = entries.reduce((sum, e) => {
+              const mgPerServing = CAFFEINE_TYPE_INFO[e.typeId]?.mgPerServing || 95;
+              return sum + (mgPerServing * e.count);
+            }, 0);
+          } catch { /* ignore */ }
+        }
+      } else if (qid === "CSD_CAFFEINE_LAST") {
+        dayMap[day].lastCaffeineTime = response.response_value || undefined;
+      }
+    }
+
+    // Add sleep quality data
+    for (const sleep of sleepData) {
+      const day = sleep.day_number ?? 1;
+      if (day <= daysToFetch && dayMap[day]) {
+        dayMap[day].sleepQuality = sleep.subjective_quality;
+        dayMap[day].sleepDurationMins = sleep.total_sleep_mins;
+        dayMap[day].sleepEfficiency = sleep.sleep_efficiency;
+        if (sleep.date) {
+          dayMap[day].date = sleep.date;
+        }
+      }
+    }
+
+    // Convert to array sorted by day
+    const dailyData = Object.values(dayMap).sort((a, b) => a.dayNumber - b.dayNumber);
+
+    // Calculate aggregates
+    const napDays = dailyData.filter(d => d.tookNaps).length;
+    const medDays = dailyData.filter(d => d.tookMeds).length;
+    const supplementDays = dailyData.filter(d => d.tookSupplements).length;
+    const caffeineDays = dailyData.filter(d => d.hadCaffeine).length;
+    const totalDays = dailyData.filter(d =>
+      d.tookNaps !== undefined || d.tookMeds !== undefined || d.hadCaffeine !== undefined
+    ).length;
+
+    // Aggregate medication categories
+    const medCategoryCounts: Record<string, { count: number; names: string[]; doses: string[] }> = {};
+    const supplementCategoryCounts: Record<string, { count: number; names: string[]; doses: string[] }> = {};
+    const caffeineCategoryCounts: Record<string, { count: number; totalServings: number }> = {};
+
+    for (const day of dailyData) {
+      for (const med of day.medications) {
+        if (!medCategoryCounts[med.categoryId]) {
+          medCategoryCounts[med.categoryId] = { count: 0, names: [], doses: [] };
+        }
+        medCategoryCounts[med.categoryId].count++;
+        if (med.medicationName && !medCategoryCounts[med.categoryId].names.includes(med.medicationName)) {
+          medCategoryCounts[med.categoryId].names.push(med.medicationName);
+        }
+        if (med.dose && !medCategoryCounts[med.categoryId].doses.includes(med.dose)) {
+          medCategoryCounts[med.categoryId].doses.push(med.dose);
+        }
+      }
+
+      for (const supp of day.supplements) {
+        if (!supplementCategoryCounts[supp.categoryId]) {
+          supplementCategoryCounts[supp.categoryId] = { count: 0, names: [], doses: [] };
+        }
+        supplementCategoryCounts[supp.categoryId].count++;
+        if (supp.name && !supplementCategoryCounts[supp.categoryId].names.includes(supp.name)) {
+          supplementCategoryCounts[supp.categoryId].names.push(supp.name);
+        }
+        if (supp.dose && !supplementCategoryCounts[supp.categoryId].doses.includes(supp.dose)) {
+          supplementCategoryCounts[supp.categoryId].doses.push(supp.dose);
+        }
+      }
+
+      for (const caff of day.caffeineEntries) {
+        if (!caffeineCategoryCounts[caff.typeId]) {
+          caffeineCategoryCounts[caff.typeId] = { count: 0, totalServings: 0 };
+        }
+        caffeineCategoryCounts[caff.typeId].count++;
+        caffeineCategoryCounts[caff.typeId].totalServings += caff.count;
+      }
+    }
+
+    // Category info for display
+    const medCategoryInfo: Record<string, string> = {
+      prescription: "Prescription",
+      otc: "OTC Sleep Aid",
+      other: "Other",
+    };
+
+    const supplementCategoryInfo: Record<string, string> = {
+      melatonin: "Melatonin",
+      magnesium: "Magnesium",
+      herbal: "Herbal/Natural",
+      cbd_thc: "CBD/THC",
+    };
+
+    return {
+      // Rolling daily data
+      dailyData,
+      totalDays,
+
+      // Nap summary
+      naps: {
+        daysWithNaps: napDays,
+        avgNapMinutes: napDays > 0
+          ? Math.round(dailyData.filter(d => d.tookNaps).reduce((sum, d) => sum + d.totalNapMinutes, 0) / napDays)
+          : 0,
+        commonTimes: [...new Set(dailyData.flatMap(d => d.napDetails.map(n => n.startTime)).filter(Boolean))].slice(0, 5),
+      },
+
+      // Medication summary (prescription/OTC only)
+      medications: {
+        daysUsing: medDays,
+        categories: Object.entries(medCategoryCounts).map(([id, data]) => ({
+          id,
+          name: medCategoryInfo[id] || id,
+          count: data.count,
+          medicationNames: data.names,
+          doses: data.doses,
+        })).sort((a, b) => b.count - a.count),
+      },
+
+      // Supplement summary (melatonin, magnesium, herbal, cbd)
+      supplements: {
+        daysUsing: supplementDays,
+        categories: Object.entries(supplementCategoryCounts).map(([id, data]) => ({
+          id,
+          name: supplementCategoryInfo[id] || id,
+          count: data.count,
+          doses: data.doses,
+        })).sort((a, b) => b.count - a.count),
+      },
+
+      // Caffeine summary
+      caffeine: {
+        daysWithCaffeine: caffeineDays,
+        avgDailyMg: caffeineDays > 0
+          ? Math.round(dailyData.filter(d => d.hadCaffeine).reduce((sum, d) => sum + d.totalCaffeineMg, 0) / caffeineDays)
+          : 0,
+        categories: Object.entries(caffeineCategoryCounts).map(([id, data]) => ({
+          id,
+          name: CAFFEINE_TYPE_INFO[id]?.name || id,
+          daysUsed: data.count,
+          totalServings: data.totalServings,
+        })).sort((a, b) => b.totalServings - a.totalServings),
+      },
+    };
+  },
+});
+
