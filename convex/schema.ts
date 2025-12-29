@@ -575,6 +575,7 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_user_status", ["user_id", "status"])
     .index("by_intervention", ["intervention_id"])
+    .index("by_intervention_string", ["intervention_string_id"])
     .index("by_coach", ["assigned_by_coach_id"]),
 
   // Daily tasks generated from interventions (shown in patient app)
@@ -947,6 +948,7 @@ export default defineSchema({
 
   module_gateways: defineTable({
     gateway_id: v.string(), // Text ID
+    module_id: v.optional(v.string()), // References assessment_modules.module_id
     name: v.string(),
     description: v.optional(v.string()),
     condition_json: v.string(), // JSON string
@@ -954,7 +956,8 @@ export default defineSchema({
     trigger_question_ids_json: v.string(), // JSON array string
     created_at: v.number(),
   })
-    .index("by_gateway_id", ["gateway_id"]),
+    .index("by_gateway_id", ["gateway_id"])
+    .index("by_module_id", ["module_id"]),
 
   user_gateway_states: defineTable({
     user_id: v.id("users"),
@@ -963,6 +966,8 @@ export default defineSchema({
     triggered_at: v.optional(v.number()),
     last_evaluated_at: v.number(),
     evaluation_data_json: v.optional(v.string()), // JSON string
+    trigger_question_id: v.optional(v.string()), // Question that triggered this gateway
+    trigger_value: v.optional(v.string()), // Value that triggered this gateway
   })
     .index("by_user", ["user_id"])
     .index("by_user_gateway", ["user_id", "gateway_id"])
@@ -1006,6 +1011,9 @@ export default defineSchema({
     derived_from_question_id: v.optional(v.string()),
     // Response source tracking: "user" (default), "profile" (from onboarding), "derived" (calculated), "healthkit"
     response_source: v.optional(v.string()),
+    // Unit of measurement for numeric responses (e.g., "cm", "in", "°C", "°F", "kg", "lbs")
+    // Stored alongside response_number to enable proper display on physician dashboard
+    response_unit: v.optional(v.string()),
     created_at: v.number(),
     updated_at: v.number(),
   })
@@ -1081,7 +1089,8 @@ export default defineSchema({
     calculation_metadata_json: v.optional(v.string()),
   })
     .index("by_user", ["user_id"])
-    .index("by_user_questionnaire", ["user_id", "questionnaire_name"]),
+    .index("by_user_questionnaire", ["user_id", "questionnaire_name"])
+    .index("by_questionnaire", ["questionnaire_name"]),
 
   patient_visible_fields: defineTable({
     user_id: v.id("users"),
@@ -1647,6 +1656,7 @@ export default defineSchema({
     context: v.string(), // Where it was shown
     dismissed: v.boolean(),
     reaction: v.optional(v.string()), // "helpful", "not_helpful", null
+    was_helpful: v.optional(v.boolean()), // Direct helpful/not helpful feedback
   })
     .index("by_user", ["user_id"])
     .index("by_user_message", ["user_id", "message_id"])

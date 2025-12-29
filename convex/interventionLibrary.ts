@@ -1540,7 +1540,7 @@ export const getInterventions = query({
       _id: i._id,
       name: i.name,
       category: i.category,
-      difficulty_level: i.difficulty_level,
+      difficulty_level: i.evidence_score ?? 3, // Use evidence_score as proxy for difficulty
       description: i.instructions_text,
     }));
   },

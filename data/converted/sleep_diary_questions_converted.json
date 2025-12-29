@@ -345,5 +345,43 @@
     "estimated_time_seconds": 20,
     "created_at": 1763104572237,
     "updated_at": 1763104572237
+  },
+  {
+    "id": "SD_KSS",
+    "question_text": "How sleepy do you feel right now?",
+    "help_text": "Karolinska Sleepiness Scale - Rate your current sleepiness level",
+    "group_key": "shift_work",
+    "pillar": "Sleep Diary",
+    "answer_format": "scale",
+    "format_config": {
+      "scaleMin": 1,
+      "scaleMax": 9,
+      "labels": [
+        "Extremely alert",
+        "Very alert",
+        "Alert",
+        "Rather alert",
+        "Neither alert nor sleepy",
+        "Some signs of sleepiness",
+        "Sleepy, but no effort to stay awake",
+        "Sleepy, some effort to stay awake",
+        "Very sleepy, great effort to stay awake"
+      ],
+      "step": 1
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "53B",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "order_index": 13,
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572237,
+    "updated_at": 1763104572237
   }
 ]

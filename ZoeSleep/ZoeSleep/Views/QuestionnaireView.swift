@@ -420,6 +420,27 @@ struct QuestionnaireView: View {
                     entries: caffeineEntriesBinding(for: question.id),
                     theme: theme
                 )
+
+            case .prescriptionMedSelect:
+                PrescriptionMedSelectInput(
+                    question: question,
+                    medications: medicationsWithTimingBinding(for: question.id),
+                    theme: theme
+                )
+
+            case .supplementSelect:
+                SupplementSelectInput(
+                    question: question,
+                    supplements: medicationsWithTimingBinding(for: question.id),
+                    theme: theme
+                )
+
+            case .surgeryDetails:
+                SurgeryDetailsInput(
+                    question: question,
+                    entries: surgeryEntriesBinding(for: question.id),
+                    theme: theme
+                )
             }
         }
     }
@@ -708,6 +729,85 @@ struct QuestionnaireView: View {
         )
     }
 
+    /// Binding for medications with timing (stored as JSON array with dose + timing info)
+    /// Used for prescriptionMedSelect and supplementSelect question types
+    private func medicationsWithTimingBinding(for questionId: String) -> Binding<[MedicationWithTiming]> {
+        Binding(
+            get: {
+                // Try to get existing medication selections from responses
+                if currentSection == .sleepLog {
+                    if let selections = sleepLogResponses[questionId] as? [MedicationWithTiming] {
+                        return selections
+                    }
+                    // Try to decode from JSON string
+                    if let jsonString = sleepLogResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let selections = try? JSONDecoder().decode([MedicationWithTiming].self, from: data) {
+                        return selections
+                    }
+                } else {
+                    if let selections = assessmentResponses[questionId] as? [MedicationWithTiming] {
+                        return selections
+                    }
+                    if let jsonString = assessmentResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let selections = try? JSONDecoder().decode([MedicationWithTiming].self, from: data) {
+                        return selections
+                    }
+                }
+                return []
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
+                } else {
+                    assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
+                }
+            }
+        )
+    }
+
+    /// Binding for surgery entries (stored as JSON array with procedure name + date)
+    private func surgeryEntriesBinding(for questionId: String) -> Binding<[SurgeryEntry]> {
+        Binding(
+            get: {
+                // Try to get existing surgery entries from responses
+                if currentSection == .sleepLog {
+                    if let entries = sleepLogResponses[questionId] as? [SurgeryEntry] {
+                        return entries
+                    }
+                    // Try to decode from JSON string
+                    if let jsonString = sleepLogResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let entries = try? JSONDecoder().decode([SurgeryEntry].self, from: data) {
+                        return entries
+                    }
+                } else {
+                    if let entries = assessmentResponses[questionId] as? [SurgeryEntry] {
+                        return entries
+                    }
+                    if let jsonString = assessmentResponses[questionId] as? String,
+                       let data = jsonString.data(using: .utf8),
+                       let entries = try? JSONDecoder().decode([SurgeryEntry].self, from: data) {
+                        return entries
+                    }
+                }
+                return []
+            },
+            set: { newValue in
+                if currentSection == .sleepLog {
+                    sleepLogResponses[questionId] = newValue
+                    sleepLogUserInteracted.insert(questionId)
+                } else {
+                    assessmentResponses[questionId] = newValue
+                    assessmentUserInteracted.insert(questionId)
+                }
+            }
+        )
+    }
+
     /// Gets the nap count from SD_NAPS_COUNT or CSD_NAP_COUNT response
     private func getNapCount() -> Int {
         // Question IDs to check (SD_ is current format, CSD_ is legacy)
@@ -945,6 +1045,20 @@ struct QuestionnaireView: View {
                 return !entries.isEmpty
             }
             return false
+        case .prescriptionMedSelect, .supplementSelect:
+            // Prescription/supplement select requires at least one selection
+            guard let response = responses[question.id] else { return false }
+            if let selections = response as? [MedicationWithTiming] {
+                return !selections.isEmpty
+            }
+            return false
+        case .surgeryDetails:
+            // Surgery details requires at least one entry with a procedure name
+            guard let response = responses[question.id] else { return false }
+            if let entries = response as? [SurgeryEntry] {
+                return entries.contains { !$0.procedureName.isEmpty }
+            }
+            return false
         default:
             // For other types, check if user interacted OR if response exists
             return userInteracted.contains(question.id) || responses[question.id] != nil
@@ -1105,6 +1219,11 @@ struct QuestionnaireView: View {
         case "medicationSelect": questionType = .medicationSelect
         case "caffeineSelect": questionType = .caffeineSelect
 
+        // New intake follow-up question types
+        case "prescriptionMedSelect", "prescription_med_select": questionType = .prescriptionMedSelect
+        case "supplementSelect", "supplement_select": questionType = .supplementSelect
+        case "surgeryDetails", "surgery_details": questionType = .surgeryDetails
+
         default:
             print("[iOS] WARNING: Unknown question type '\(cq.type)' for question \(cq.id), defaulting to text")
             questionType = .text
@@ -1138,15 +1257,17 @@ struct QuestionnaireView: View {
             }
         }
 
-        // Convert conditional logic if present
+        // Convert conditional logic if present (handles compound all/any conditions)
         var conditionalLogic: ConditionalLogic? = nil
         if let convexLogic = cq.conditionalLogic {
-            conditionalLogic = ConditionalLogic(
-                questionId: convexLogic.questionId,
-                equals: convexLogic.equals,
-                greaterThan: convexLogic.greaterThan
-            )
-            print("[iOS] Question \(cq.id) has conditionalLogic: questionId=\(convexLogic.questionId), equals=\(convexLogic.equals ?? "nil")")
+            conditionalLogic = convertConditionalLogic(convexLogic)
+            if let all = convexLogic.all {
+                print("[iOS] Question \(cq.id) has COMPOUND conditionalLogic: all=\(all.count) conditions")
+            } else if let any = convexLogic.any {
+                print("[iOS] Question \(cq.id) has COMPOUND conditionalLogic: any=\(any.count) conditions")
+            } else {
+                print("[iOS] Question \(cq.id) has conditionalLogic: questionId=\(convexLogic.questionId ?? "nil"), equals=\(convexLogic.equals ?? "nil")")
+            }
         } else {
             print("[iOS] Question \(cq.id) has NO conditionalLogic")
         }
@@ -1171,6 +1292,35 @@ struct QuestionnaireView: View {
             conditionalLogic: conditionalLogic,
             group: isSleepLog ? "sleep_log" : nil
         )
+    }
+
+    /// Recursively convert ConvexConditionalLogic to iOS ConditionalLogic
+    /// Handles simple conditions (questionId + equals) and compound conditions (all/any arrays)
+    private func convertConditionalLogic(_ convexLogic: ConvexConditionalLogic) -> ConditionalLogic {
+        var logic = ConditionalLogic()
+
+        // Copy simple condition fields
+        logic.questionId = convexLogic.questionId
+        logic.equals = convexLogic.equals
+        logic.greaterThan = convexLogic.greaterThan
+        logic.lessThan = convexLogic.lessThan
+        logic.greaterThanOrEqual = convexLogic.greaterThanOrEqual
+        logic.lessThanOrEqual = convexLogic.lessThanOrEqual
+        logic.contains = convexLogic.contains
+
+        // Copy age-based conditions
+        logic.ageUnder = convexLogic.ageUnder
+        logic.ageOver = convexLogic.ageOver
+
+        // Recursively convert compound conditions
+        if let all = convexLogic.all {
+            logic.all = all.map { convertConditionalLogic($0) }
+        }
+        if let any = convexLogic.any {
+            logic.any = any.map { convertConditionalLogic($0) }
+        }
+
+        return logic
     }
 
     /// Pre-fill demographic questions (D2, D4, D5, D6) from Apple Health
@@ -1474,37 +1624,112 @@ struct QuestionnaireView: View {
             return true // No condition = always show
         }
 
-        print("[iOS] shouldShowQuestion(\(question.id)): Has condition - questionId=\(condition.questionId ?? "nil"), equals=\(condition.equals ?? "nil")")
+        let result = evaluateCondition(condition, responses: responses, questionId: question.id)
+        print("[iOS] shouldShowQuestion(\(question.id)): Final result = \(result)")
+        return result
+    }
 
-        // Get the response to the dependent question
-        guard let questionId = condition.questionId,
-              let dependentResponse = responses[questionId] else {
-            print("[iOS] shouldShowQuestion(\(question.id)): No response for \(condition.questionId ?? "nil"), hiding")
-            return false // No response to dependent question = hide
+    /// Recursively evaluate conditional logic including compound conditions (all/any) and age checks
+    private func evaluateCondition(_ condition: ConditionalLogic, responses: [String: Any], questionId: String) -> Bool {
+        // Handle compound AND conditions (all must be true)
+        if let allConditions = condition.all {
+            print("[iOS] evaluateCondition(\(questionId)): Evaluating ALL (\(allConditions.count) conditions)")
+            for (index, subCondition) in allConditions.enumerated() {
+                let subResult = evaluateCondition(subCondition, responses: responses, questionId: questionId)
+                print("[iOS] evaluateCondition(\(questionId)): ALL[\(index)] = \(subResult)")
+                if !subResult {
+                    return false
+                }
+            }
+            return true
         }
 
-        print("[iOS] shouldShowQuestion(\(question.id)): Found response '\(dependentResponse)' for \(questionId)")
+        // Handle compound OR conditions (at least one must be true)
+        if let anyConditions = condition.any {
+            print("[iOS] evaluateCondition(\(questionId)): Evaluating ANY (\(anyConditions.count) conditions)")
+            for (index, subCondition) in anyConditions.enumerated() {
+                let subResult = evaluateCondition(subCondition, responses: responses, questionId: questionId)
+                print("[iOS] evaluateCondition(\(questionId)): ANY[\(index)] = \(subResult)")
+                if subResult {
+                    return true
+                }
+            }
+            return false
+        }
+
+        // Handle age-based conditions (calculated from D2 birth date)
+        if let ageUnder = condition.ageUnder {
+            guard let age = calculateUserAge(from: responses) else {
+                print("[iOS] evaluateCondition(\(questionId)): ageUnder=\(ageUnder), no DOB found, hiding")
+                return false
+            }
+            let result = age < ageUnder
+            print("[iOS] evaluateCondition(\(questionId)): age \(age) < \(ageUnder) = \(result)")
+            return result
+        }
+
+        if let ageOver = condition.ageOver {
+            guard let age = calculateUserAge(from: responses) else {
+                print("[iOS] evaluateCondition(\(questionId)): ageOver=\(ageOver), no DOB found, hiding")
+                return false
+            }
+            let result = age > ageOver
+            print("[iOS] evaluateCondition(\(questionId)): age \(age) > \(ageOver) = \(result)")
+            return result
+        }
+
+        // Handle simple question-based conditions
+        guard let refQuestionId = condition.questionId else {
+            // No questionId and not a compound/age condition - default to show
+            return true
+        }
+
+        guard let dependentResponse = responses[refQuestionId] else {
+            print("[iOS] evaluateCondition(\(questionId)): No response for '\(refQuestionId)', hiding")
+            return false
+        }
+
+        print("[iOS] evaluateCondition(\(questionId)): Found response '\(dependentResponse)' for '\(refQuestionId)'")
 
         // Check equals condition
         if let equalsValue = condition.equals {
             if let stringResponse = dependentResponse as? String {
                 let matches = stringResponse.lowercased() == equalsValue.lowercased()
-                print("[iOS] shouldShowQuestion(\(question.id)): Comparing '\(stringResponse)' == '\(equalsValue)' => \(matches)")
+                print("[iOS] evaluateCondition(\(questionId)): '\(stringResponse)' == '\(equalsValue)' => \(matches)")
                 return matches
             }
-            print("[iOS] shouldShowQuestion(\(question.id)): Response is not a string, hiding")
+            print("[iOS] evaluateCondition(\(questionId)): Response is not a string for equals check")
             return false
         }
 
         // Check greaterThan condition
         if let greaterThanValue = condition.greaterThan {
-            if let numResponse = dependentResponse as? Double {
-                return numResponse > greaterThanValue
-            } else if let numResponse = dependentResponse as? Int {
-                return Double(numResponse) > greaterThanValue
-            } else if let stringResponse = dependentResponse as? String,
-                      let numValue = Double(stringResponse) {
+            if let numValue = extractNumericValue(from: dependentResponse) {
                 return numValue > greaterThanValue
+            }
+            return false
+        }
+
+        // Check lessThan condition
+        if let lessThanValue = condition.lessThan {
+            if let numValue = extractNumericValue(from: dependentResponse) {
+                return numValue < lessThanValue
+            }
+            return false
+        }
+
+        // Check greaterThanOrEqual condition
+        if let gteValue = condition.greaterThanOrEqual {
+            if let numValue = extractNumericValue(from: dependentResponse) {
+                return numValue >= gteValue
+            }
+            return false
+        }
+
+        // Check lessThanOrEqual condition
+        if let lteValue = condition.lessThanOrEqual {
+            if let numValue = extractNumericValue(from: dependentResponse) {
+                return numValue <= lteValue
             }
             return false
         }
@@ -1513,57 +1738,79 @@ struct QuestionnaireView: View {
         if let containsValue = condition.contains {
             // Check if response is an array of strings
             if let arrayResponse = dependentResponse as? [String] {
-                let matches = arrayResponse.contains(containsValue)
-                print("[iOS] shouldShowQuestion(\(question.id)): Array contains '\(containsValue)' => \(matches)")
+                let matches = arrayResponse.contains { $0.lowercased() == containsValue.lowercased() }
+                print("[iOS] evaluateCondition(\(questionId)): Array contains '\(containsValue)' => \(matches)")
                 return matches
             }
             // Check if response is a JSON string array
             if let stringResponse = dependentResponse as? String,
                let data = stringResponse.data(using: .utf8),
                let arrayResponse = try? JSONDecoder().decode([String].self, from: data) {
-                let matches = arrayResponse.contains(containsValue)
-                print("[iOS] shouldShowQuestion(\(question.id)): JSON array contains '\(containsValue)' => \(matches)")
+                let matches = arrayResponse.contains { $0.lowercased() == containsValue.lowercased() }
+                print("[iOS] evaluateCondition(\(questionId)): JSON array contains '\(containsValue)' => \(matches)")
                 return matches
             }
-            print("[iOS] shouldShowQuestion(\(question.id)): Response is not an array for contains check, hiding")
-            return false
-        }
-
-        // Check compound conditions (all)
-        if let allConditions = condition.all {
-            for subCondition in allConditions {
-                let subQuestion = Question(
-                    id: question.id,
-                    text: "",
-                    pillar: .sleepLog,
-                    questionType: .text,
-                    conditionalLogic: subCondition
-                )
-                if !shouldShowQuestion(subQuestion, responses: responses) {
-                    return false
-                }
-            }
-            return true
-        }
-
-        // Check compound conditions (any)
-        if let anyConditions = condition.any {
-            for subCondition in anyConditions {
-                let subQuestion = Question(
-                    id: question.id,
-                    text: "",
-                    pillar: .sleepLog,
-                    questionType: .text,
-                    conditionalLogic: subCondition
-                )
-                if shouldShowQuestion(subQuestion, responses: responses) {
-                    return true
-                }
-            }
+            print("[iOS] evaluateCondition(\(questionId)): Response is not an array for contains check")
             return false
         }
 
         return true
+    }
+
+    /// Extract numeric value from various response types
+    private func extractNumericValue(from response: Any) -> Double? {
+        if let numResponse = response as? Double {
+            return numResponse
+        } else if let numResponse = response as? Int {
+            return Double(numResponse)
+        } else if let stringResponse = response as? String,
+                  let numValue = Double(stringResponse) {
+            return numValue
+        }
+        return nil
+    }
+
+    /// Calculate user's age from D2 (Date of Birth) response
+    private func calculateUserAge(from responses: [String: Any]) -> Int? {
+        // Try to get DOB from current responses first
+        var dobString: String? = nil
+
+        if let dobResponse = responses["D2"] {
+            if let strResponse = dobResponse as? String {
+                dobString = strResponse
+            }
+        }
+
+        // Fallback: check assessmentResponses (might have been answered earlier in session)
+        if dobString == nil, let dobResponse = assessmentResponses["D2"] {
+            if let strResponse = dobResponse as? String {
+                dobString = strResponse
+            }
+        }
+
+        // Fallback: check questionnaire manager's responses (might have been persisted)
+        if dobString == nil, let managerResponse = questionnaireManager.responses["D2"] {
+            dobString = managerResponse.stringValue
+        }
+
+        guard let dob = dobString else {
+            print("[iOS] calculateUserAge: No D2 response found in any source")
+            return nil
+        }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        guard let birthDate = dateFormatter.date(from: dob) else {
+            print("[iOS] calculateUserAge: Failed to parse DOB '\(dob)'")
+            return nil
+        }
+
+        let calendar = Calendar.current
+        let ageComponents = calendar.dateComponents([.year], from: birthDate, to: Date())
+        let age = ageComponents.year
+        print("[iOS] calculateUserAge: Calculated age = \(age ?? -1) from DOB '\(dob)'")
+        return age
     }
 
     /// Advance to the next question (called after reward dismissal or directly)
@@ -1984,8 +2231,16 @@ struct QuestionnaireView: View {
                 response["responseValue"] = stringValue
             } else if let numberValue = value as? Double {
                 response["responseNumber"] = numberValue
+                // Add unit if this is a question with unit configuration
+                if let unit = getUnitForQuestion(questionId) {
+                    response["responseUnit"] = unit
+                }
             } else if let intValue = value as? Int {
                 response["responseNumber"] = Double(intValue)
+                // Add unit if this is a question with unit configuration
+                if let unit = getUnitForQuestion(questionId) {
+                    response["responseUnit"] = unit
+                }
             } else if let dateValue = value as? Date {
                 // Format based on question type: use full date for .date, time only for .time
                 let formatter = DateFormatter()
@@ -2018,8 +2273,16 @@ struct QuestionnaireView: View {
                 response["responseValue"] = stringValue
             } else if let numberValue = value as? Double {
                 response["responseNumber"] = numberValue
+                // Add unit if this is a question with unit configuration
+                if let unit = getUnitForQuestion(questionId) {
+                    response["responseUnit"] = unit
+                }
             } else if let intValue = value as? Int {
                 response["responseNumber"] = Double(intValue)
+                // Add unit if this is a question with unit configuration
+                if let unit = getUnitForQuestion(questionId) {
+                    response["responseUnit"] = unit
+                }
             } else if let dateValue = value as? Date {
                 // Format based on question type: use full date for .date, time only for .time
                 let formatter = DateFormatter()
@@ -2069,6 +2332,21 @@ struct QuestionnaireView: View {
         } else {
             print("[iOS] No responses to sync!")
         }
+    }
+
+    /// Get the appropriate unit for a question based on user's measurement preference
+    /// Returns nil if the question doesn't have unit configuration
+    private func getUnitForQuestion(_ questionId: String) -> String? {
+        // Look up question in both sleep log and assessment questions
+        let question = sleepLogQuestions.first(where: { $0.id == questionId })
+            ?? assessmentQuestions.first(where: { $0.id == questionId })
+        guard let question = question else { return nil }
+
+        // Check if user prefers imperial and question has imperial unit config
+        let useImperial = OnboardingManager.shared.profile.measurementSystem == MeasurementSystem.imperial.rawValue
+            && question.unitImperial != nil
+
+        return useImperial ? question.unitImperial : question.unit
     }
 
     private func saveResponseFromDictionary(questionId: String, value: Any, questions: [Question]) {
@@ -2124,8 +2402,14 @@ struct QuestionnaireView: View {
                         response["responseValue"] = stringValue
                     } else if let numberValue = value as? Double {
                         response["responseNumber"] = numberValue
+                        if let unit = getUnitForQuestion(questionId) {
+                            response["responseUnit"] = unit
+                        }
                     } else if let intValue = value as? Int {
                         response["responseNumber"] = Double(intValue)
+                        if let unit = getUnitForQuestion(questionId) {
+                            response["responseUnit"] = unit
+                        }
                     } else if let dateValue = value as? Date {
                         let formatter = DateFormatter()
                         formatter.dateFormat = "HH:mm"
@@ -2144,8 +2428,14 @@ struct QuestionnaireView: View {
                         response["responseValue"] = stringValue
                     } else if let numberValue = value as? Double {
                         response["responseNumber"] = numberValue
+                        if let unit = getUnitForQuestion(questionId) {
+                            response["responseUnit"] = unit
+                        }
                     } else if let intValue = value as? Int {
                         response["responseNumber"] = Double(intValue)
+                        if let unit = getUnitForQuestion(questionId) {
+                            response["responseUnit"] = unit
+                        }
                     } else if let dateValue = value as? Date {
                         let formatter = DateFormatter()
                         formatter.dateFormat = "HH:mm"
@@ -2192,8 +2482,14 @@ struct QuestionnaireView: View {
                         response["responseValue"] = stringValue
                     } else if let numberValue = value as? Double {
                         response["responseNumber"] = numberValue
+                        if let unit = getUnitForQuestion(questionId) {
+                            response["responseUnit"] = unit
+                        }
                     } else if let intValue = value as? Int {
                         response["responseNumber"] = Double(intValue)
+                        if let unit = getUnitForQuestion(questionId) {
+                            response["responseUnit"] = unit
+                        }
                     } else if let dateValue = value as? Date {
                         let formatter = DateFormatter()
                         formatter.dateFormat = "HH:mm"

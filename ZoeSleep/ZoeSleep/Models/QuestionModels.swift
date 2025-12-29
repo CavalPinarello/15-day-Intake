@@ -835,6 +835,9 @@ enum QuestionType: String, Codable, CaseIterable {
     case napDetails = "NapDetails"  // Dynamic nap blocks with start time + duration
     case medicationSelect = "MedicationSelect"  // Multi-select medication categories with doses
     case caffeineSelect = "CaffeineSelect"  // Multi-select caffeine types with quantity and mg tracking
+    case prescriptionMedSelect = "PrescriptionMedSelect"  // Multi-select Rx meds with dose + timing
+    case supplementSelect = "SupplementSelect"  // Multi-select supplements with dose + timing
+    case surgeryDetails = "SurgeryDetails"  // Surgery/procedure entries with name + date
 }
 
 // MARK: - Nap Entry Model
@@ -974,6 +977,302 @@ struct MedicationSelection: Codable, Equatable {
         }
 
         return parts.joined(separator: " ")
+    }
+}
+
+// MARK: - Medication Timing Categories
+
+/// Time of day categories for medication/supplement intake
+enum MedicationTimingCategory: String, Codable, CaseIterable {
+    case morning = "morning"        // 5 AM - 12 PM
+    case afternoon = "afternoon"    // 12 PM - 5 PM
+    case evening = "evening"        // 5 PM - 9 PM
+    case bedtime = "bedtime"        // 9 PM - 12 AM
+
+    var displayName: String {
+        switch self {
+        case .morning: return "Morning"
+        case .afternoon: return "Afternoon"
+        case .evening: return "Evening"
+        case .bedtime: return "Bedtime"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .morning: return "sun.max.fill"
+        case .afternoon: return "sun.min.fill"
+        case .evening: return "sunset.fill"
+        case .bedtime: return "moon.stars.fill"
+        }
+    }
+}
+
+// MARK: - Medication With Timing Selection
+
+/// Represents a selected medication/supplement with dose AND timing
+struct MedicationWithTiming: Codable, Equatable {
+    let categoryId: String
+    var dose: String?
+    var medicationName: String?
+    var timingCategories: [MedicationTimingCategory]  // Can select multiple (e.g., morning + bedtime)
+    var specificTime: String?  // Optional "HH:mm" format for precise tracking
+
+    init(categoryId: String, dose: String? = nil, medicationName: String? = nil,
+         timingCategories: [MedicationTimingCategory] = [], specificTime: String? = nil) {
+        self.categoryId = categoryId
+        self.dose = dose
+        self.medicationName = medicationName
+        self.timingCategories = timingCategories
+        self.specificTime = specificTime
+    }
+
+    /// Display string for the selection
+    func displayString(using categories: [MedicationCategory]) -> String {
+        let category = categories.first { $0.id == categoryId }
+        var parts: [String] = []
+
+        if let name = medicationName, !name.isEmpty {
+            parts.append(name)
+        } else if let cat = category {
+            parts.append(cat.name)
+        }
+
+        if let dose = dose, !dose.isEmpty, let cat = category {
+            parts.append("\(dose) \(cat.doseUnit)")
+        }
+
+        if !timingCategories.isEmpty {
+            let timings = timingCategories.map { $0.displayName }.joined(separator: ", ")
+            parts.append("(\(timings))")
+        }
+
+        return parts.joined(separator: " ")
+    }
+}
+
+// MARK: - Prescription Medication Categories (44A)
+
+/// Represents prescription medication categories for the intake assessment
+struct PrescriptionMedCategory: Identifiable {
+    let id: String
+    let name: String
+    let subtitle: String?
+    let icon: String
+    let doseUnit: String
+    let commonDoses: [String]
+    let requiresName: Bool
+
+    init(id: String, name: String, subtitle: String? = nil, icon: String, doseUnit: String = "mg", commonDoses: [String] = [], requiresName: Bool = true) {
+        self.id = id
+        self.name = name
+        self.subtitle = subtitle
+        self.icon = icon
+        self.doseUnit = doseUnit
+        self.commonDoses = commonDoses
+        self.requiresName = requiresName
+    }
+
+    /// All prescription medication categories
+    static let allCategories: [PrescriptionMedCategory] = [
+        PrescriptionMedCategory(
+            id: "sleep_aid",
+            name: "Prescription Sleep Aid",
+            subtitle: "Ambien, Lunesta, Sonata",
+            icon: "pills",
+            doseUnit: "mg",
+            commonDoses: ["5", "10", "12.5", "20"]
+        ),
+        PrescriptionMedCategory(
+            id: "benzodiazepine",
+            name: "Benzodiazepine",
+            subtitle: "Xanax, Valium, Ativan, Klonopin",
+            icon: "pills.fill",
+            doseUnit: "mg",
+            commonDoses: ["0.25", "0.5", "1", "2"]
+        ),
+        PrescriptionMedCategory(
+            id: "antidepressant",
+            name: "Antidepressant",
+            subtitle: "Trazodone, Mirtazapine, Amitriptyline",
+            icon: "brain",
+            doseUnit: "mg",
+            commonDoses: ["25", "50", "100", "150"]
+        ),
+        PrescriptionMedCategory(
+            id: "blood_pressure",
+            name: "Blood Pressure Medication",
+            subtitle: "Beta-blockers, ACE inhibitors",
+            icon: "heart.fill",
+            doseUnit: "mg",
+            commonDoses: ["10", "25", "50", "100"]
+        ),
+        PrescriptionMedCategory(
+            id: "pain_medication",
+            name: "Pain Medication",
+            subtitle: "Opioids, NSAIDs, Muscle relaxants",
+            icon: "bandage.fill",
+            doseUnit: "mg",
+            commonDoses: ["5", "10", "20", "50"]
+        ),
+        PrescriptionMedCategory(
+            id: "thyroid",
+            name: "Thyroid Medication",
+            subtitle: "Levothyroxine, Synthroid",
+            icon: "staroflife.fill",
+            doseUnit: "mcg",
+            commonDoses: ["25", "50", "75", "100", "125"],
+            requiresName: false
+        ),
+        PrescriptionMedCategory(
+            id: "diabetes",
+            name: "Diabetes Medication",
+            subtitle: "Metformin, Insulin, etc.",
+            icon: "drop.fill",
+            doseUnit: "mg",
+            commonDoses: ["500", "850", "1000"]
+        ),
+        PrescriptionMedCategory(
+            id: "other_rx",
+            name: "Other Prescription",
+            icon: "cross.case.fill",
+            doseUnit: "mg",
+            commonDoses: []
+        )
+    ]
+}
+
+// MARK: - Supplement Categories (44C)
+
+/// Represents supplement categories for the intake assessment
+struct SupplementCategory: Identifiable {
+    let id: String
+    let name: String
+    let subtitle: String?
+    let icon: String
+    let doseUnit: String
+    let commonDoses: [String]
+    let requiresName: Bool
+
+    init(id: String, name: String, subtitle: String? = nil, icon: String, doseUnit: String = "mg", commonDoses: [String] = [], requiresName: Bool = false) {
+        self.id = id
+        self.name = name
+        self.subtitle = subtitle
+        self.icon = icon
+        self.doseUnit = doseUnit
+        self.commonDoses = commonDoses
+        self.requiresName = requiresName
+    }
+
+    /// All sleep-related supplement categories
+    static let allCategories: [SupplementCategory] = [
+        SupplementCategory(
+            id: "melatonin",
+            name: "Melatonin",
+            subtitle: "Sleep hormone",
+            icon: "moon.stars",
+            doseUnit: "mg",
+            commonDoses: ["0.5", "1", "2", "3", "5", "10"]
+        ),
+        SupplementCategory(
+            id: "magnesium",
+            name: "Magnesium",
+            subtitle: "Glycinate, Citrate, Threonate",
+            icon: "bolt.circle",
+            doseUnit: "mg",
+            commonDoses: ["200", "300", "400", "500"]
+        ),
+        SupplementCategory(
+            id: "valerian_root",
+            name: "Valerian Root",
+            icon: "leaf.fill",
+            doseUnit: "mg",
+            commonDoses: ["300", "450", "600", "900"]
+        ),
+        SupplementCategory(
+            id: "l_theanine",
+            name: "L-Theanine",
+            icon: "leaf.circle",
+            doseUnit: "mg",
+            commonDoses: ["100", "200", "300", "400"]
+        ),
+        SupplementCategory(
+            id: "cbd_cbn",
+            name: "CBD/CBN",
+            icon: "leaf",
+            doseUnit: "mg",
+            commonDoses: ["10", "15", "20", "25", "50"]
+        ),
+        SupplementCategory(
+            id: "gaba",
+            name: "GABA",
+            icon: "brain.head.profile",
+            doseUnit: "mg",
+            commonDoses: ["100", "250", "500", "750"]
+        ),
+        SupplementCategory(
+            id: "chamomile",
+            name: "Chamomile",
+            subtitle: "Tea or extract",
+            icon: "cup.and.saucer",
+            doseUnit: "mg",
+            commonDoses: ["250", "400", "500"]
+        ),
+        SupplementCategory(
+            id: "ashwagandha",
+            name: "Ashwagandha",
+            icon: "leaf.circle.fill",
+            doseUnit: "mg",
+            commonDoses: ["300", "450", "600"]
+        ),
+        SupplementCategory(
+            id: "glycine",
+            name: "Glycine",
+            icon: "atom",
+            doseUnit: "g",
+            commonDoses: ["1", "2", "3"]
+        ),
+        SupplementCategory(
+            id: "5_htp",
+            name: "5-HTP",
+            icon: "pills.circle",
+            doseUnit: "mg",
+            commonDoses: ["50", "100", "200"]
+        ),
+        SupplementCategory(
+            id: "other_supplement",
+            name: "Other Supplement",
+            icon: "ellipsis.circle",
+            doseUnit: "mg",
+            commonDoses: [],
+            requiresName: true
+        )
+    ]
+}
+
+// MARK: - Surgery Entry Model (44G)
+
+/// Represents a surgery or medical procedure entry
+struct SurgeryEntry: Codable, Identifiable, Equatable {
+    var id: UUID = UUID()
+    var procedureName: String
+    var procedureDate: String  // "yyyy-MM" format (month/year)
+
+    init(procedureName: String = "", procedureDate: String = "") {
+        self.procedureName = procedureName
+        self.procedureDate = procedureDate
+    }
+
+    /// Display string for the entry
+    var displayString: String {
+        var parts: [String] = []
+        if !procedureName.isEmpty {
+            parts.append(procedureName)
+        }
+        if !procedureDate.isEmpty {
+            parts.append("(\(procedureDate))")
+        }
+        return parts.isEmpty ? "New procedure" : parts.joined(separator: " ")
     }
 }
 
@@ -1211,6 +1510,7 @@ enum GatewayType: String, Codable, CaseIterable {
     case sleepTiming = "sleep_timing"
     case dietImpact = "diet_impact"
     case poorSleepQuality = "poor_sleep_quality"
+    case shiftWork = "shift_work"
 
     var displayName: String {
         switch self {
@@ -1224,6 +1524,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .sleepTiming: return "Sleep Timing"
         case .dietImpact: return "Diet Impact"
         case .poorSleepQuality: return "Poor Sleep Quality"
+        case .shiftWork: return "Shift Work Disorder"
         }
     }
 
@@ -1240,6 +1541,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .sleepTiming: return "Chronotype"
         case .dietImpact: return "Nutrition"
         case .poorSleepQuality: return "Sleep Quality"
+        case .shiftWork: return "Shift Work"
         }
     }
 
@@ -1256,6 +1558,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .pain: return 8.0  // BPI
         case .sleepTiming: return 9.5  // MEQ chronotype
         case .dietImpact: return 7.0  // MEDAS
+        case .shiftWork: return 3.0  // SWDSQ (4 questions)
         }
     }
 
@@ -1273,6 +1576,8 @@ enum GatewayType: String, Codable, CaseIterable {
             return ["expansion_sleep_timing"]
         case .dietImpact:
             return ["expansion_nutritional"]
+        case .shiftWork:
+            return ["expansion_swdsq"]
         }
     }
 
@@ -1289,6 +1594,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .pain: return "bolt.heart"
         case .sleepTiming: return "clock"
         case .dietImpact: return "fork.knife"
+        case .shiftWork: return "clock.badge.exclamationmark"
         }
     }
 
@@ -1305,6 +1611,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .pain: return .yellow
         case .sleepTiming: return .green
         case .dietImpact: return .mint
+        case .shiftWork: return .teal
         }
     }
 
@@ -1321,6 +1628,7 @@ enum GatewayType: String, Codable, CaseIterable {
         case .pain: return "Pain affecting sleep"
         case .sleepTiming: return "Delayed/advanced sleep phase"
         case .dietImpact: return "Caffeine/alcohol affecting sleep"
+        case .shiftWork: return "Works shifts or irregular hours"
         }
     }
 
@@ -1347,6 +1655,8 @@ enum GatewayType: String, Codable, CaseIterable {
             return ["MEQ (Chronotype)"]
         case .dietImpact:
             return ["MEDAS"]
+        case .shiftWork:
+            return ["SWDSQ", "KSS (Sleep Log)"]
         }
     }
 
@@ -1373,6 +1683,8 @@ enum GatewayType: String, Codable, CaseIterable {
             return "MEQ"
         case .dietImpact:
             return "MEDAS"
+        case .shiftWork:
+            return "SWDSQ, KSS"
         }
     }
 }
@@ -1752,6 +2064,7 @@ struct QuestionnaireValidationInfo {
         case physical = "Physical Health"
         case lifestyle = "Lifestyle"
         case chronotype = "Sleep Timing"
+        case occupational = "Occupational Sleep"
     }
 }
 
@@ -2079,6 +2392,27 @@ struct QuestionnaireLibrary {
             questionCount: 19,
             icon: "clock.arrow.2.circlepath",
             category: .chronotype
+        ),
+
+        // MARK: - Shift Work Disorder
+
+        QuestionnaireValidationInfo(
+            id: "expansion_swdsq",
+            fullName: "Shift Work Disorder Screening Questionnaire",
+            abbreviation: "SWDSQ",
+            originalAuthors: "Barger et al.",
+            originalYear: 2012,
+            originalJournal: "Sleep Medicine",
+            validationStudiesCount: "500+",
+            sensitivity: "89%",
+            specificity: "76%",
+            cronbachAlpha: "0.78",
+            purpose: "Screens for Shift Work Disorder—a circadian rhythm sleep disorder caused by work schedules that conflict with your natural sleep-wake cycle",
+            whyWeAsk: "Working shifts or irregular hours creates unique sleep challenges. This helps us understand if your work schedule is contributing to your sleep difficulties and customize your treatment plan accordingly.",
+            estimatedMinutes: 3,
+            questionCount: 4,
+            icon: "clock.badge.exclamationmark",
+            category: .occupational
         )
     ]
 

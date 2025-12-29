@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 // ============================================
 // Constants
@@ -538,7 +539,7 @@ export const recordDayComplete = mutation({
     };
 
     // 1. Record streak activity
-    const streakResult = await ctx.runMutation(recordDailyActivity, {
+    const streakResult = await ctx.runMutation(api.gamification.recordDailyActivity, {
       userId: args.userId,
     });
     results.streakUpdate = streakResult;
@@ -549,7 +550,7 @@ export const recordDayComplete = mutation({
     if (args.completedSleepLog && args.completedAssessment) {
       // Perfect day bonus
       totalXP = XP_VALUES.PERFECT_DAY;
-      await ctx.runMutation(awardXP, {
+      await ctx.runMutation(api.gamification.awardXP, {
         userId: args.userId,
         amount: XP_VALUES.PERFECT_DAY,
         transactionType: "assessment",
@@ -558,7 +559,7 @@ export const recordDayComplete = mutation({
     } else {
       if (args.completedSleepLog) {
         totalXP += XP_VALUES.SLEEP_LOG;
-        await ctx.runMutation(awardXP, {
+        await ctx.runMutation(api.gamification.awardXP, {
           userId: args.userId,
           amount: XP_VALUES.SLEEP_LOG,
           transactionType: "sleep_log",
@@ -567,7 +568,7 @@ export const recordDayComplete = mutation({
       }
       if (args.completedAssessment) {
         totalXP += XP_VALUES.ASSESSMENT;
-        await ctx.runMutation(awardXP, {
+        await ctx.runMutation(api.gamification.awardXP, {
           userId: args.userId,
           amount: XP_VALUES.ASSESSMENT,
           transactionType: "assessment",
@@ -578,7 +579,7 @@ export const recordDayComplete = mutation({
 
     // Award streak XP if applicable
     if (streakResult.xpEarned > 0) {
-      await ctx.runMutation(awardXP, {
+      await ctx.runMutation(api.gamification.awardXP, {
         userId: args.userId,
         amount: streakResult.xpEarned,
         transactionType: "streak_bonus",
@@ -598,7 +599,7 @@ export const recordDayComplete = mutation({
 
     for (const badge of journeyBadges) {
       if (args.dayNumber === badge.day) {
-        const result = await ctx.runMutation(awardBadge, {
+        const result = await ctx.runMutation(api.gamification.awardBadge, {
           userId: args.userId,
           badgeId: badge.id,
           badgeName: badge.name,
@@ -614,7 +615,7 @@ export const recordDayComplete = mutation({
 
     // 4. Check for gateway explorer badge
     if (args.triggeredGateways && args.triggeredGateways.length > 0) {
-      const result = await ctx.runMutation(awardBadge, {
+      const result = await ctx.runMutation(api.gamification.awardBadge, {
         userId: args.userId,
         badgeId: "gateway_explorer",
         badgeName: "Gateway Explorer",
@@ -636,7 +637,7 @@ export const recordDayComplete = mutation({
 
     for (const badge of streakBadges) {
       if (streakResult.currentStreak === badge.streak) {
-        const result = await ctx.runMutation(awardBadge, {
+        const result = await ctx.runMutation(api.gamification.awardBadge, {
           userId: args.userId,
           badgeId: badge.id,
           badgeName: badge.name,

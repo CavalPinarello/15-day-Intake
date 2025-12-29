@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 // ============================================
 // Assessment Questions
@@ -694,6 +695,14 @@ export const saveGatewayState = mutation({
         triggered_at: args.triggered ? (args.triggeredAt || now) : undefined,
         last_evaluated_at: now,
         evaluation_data_json: args.evaluationDataJson,
+      });
+    }
+
+    // When a gateway is triggered, recompute the expansion schedule
+    // This ensures expansion packs are properly scheduled for Days 6-14
+    if (args.triggered) {
+      await ctx.scheduler.runAfter(0, api.expansionScheduler.computeAndStoreSchedule, {
+        userId: args.userId,
       });
     }
   },

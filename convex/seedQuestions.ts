@@ -1,14 +1,45 @@
 /**
  * Seed questions into the database
- * Run with: npx convex run seedQuestions:seedAll
+ * Run each seeder individually:
+ *   npx convex run seedQuestions:seedAssessmentQuestions
+ *   npx convex run seedQuestions:seedSleepDiaryQuestions
  */
 
 import { internalMutation, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
-// Import converted questions
-import assessmentQuestionsData from "../data/converted/assessment_questions_converted.json";
-import sleepDiaryQuestionsData from "../data/converted/sleep_diary_questions_converted.json";
+// Import converted questions with explicit type casting to avoid deep type instantiation
+import assessmentQuestionsDataRaw from "../data/converted/assessment_questions_converted.json";
+import sleepDiaryQuestionsDataRaw from "../data/converted/sleep_diary_questions_converted.json";
+
+// Type assertions to prevent TypeScript deep instantiation errors
+const assessmentQuestionsData = assessmentQuestionsDataRaw as unknown as Array<{
+  question_id: string;
+  question_text: string;
+  help_text?: string;
+  pillar: string;
+  tier: string;
+  answer_format: string;
+  format_config: Record<string, unknown>;
+  validation_rules: Record<string, unknown>;
+  estimated_time_seconds: number;
+  trigger?: string;
+  conditional_logic?: Record<string, unknown>;
+}>;
+
+const sleepDiaryQuestionsData = sleepDiaryQuestionsDataRaw as unknown as Array<{
+  id: string;
+  question_text: string;
+  help_text?: string;
+  group_key?: string;
+  pillar?: string;
+  answer_format: string;
+  format_config: Record<string, unknown>;
+  validation_rules?: Record<string, unknown>;
+  conditional_logic?: Record<string, unknown>;
+  order_index?: number;
+  estimated_time_seconds: number;
+}>;
 
 /**
  * Seed all assessment questions (Sleep 360°)
@@ -148,35 +179,7 @@ export const seedSleepDiaryQuestions = internalMutation({
   },
 });
 
-/**
- * Seed all questions (assessment + sleep diary)
- */
-export const seedAll = internalMutation({
-  args: {},
-  returns: v.object({
-    assessmentQuestions: v.object({
-      inserted: v.number(),
-      errors: v.array(v.string())
-    }),
-    sleepDiaryQuestions: v.object({
-      inserted: v.number(),
-      errors: v.array(v.string())
-    })
-  }),
-  handler: async (ctx) => {
-    const assessmentQuestions = await ctx.runMutation(
-      internal.seedQuestions.seedAssessmentQuestions
-    );
-    const sleepDiaryQuestions = await ctx.runMutation(
-      internal.seedQuestions.seedSleepDiaryQuestions
-    );
-
-    return {
-      assessmentQuestions,
-      sleepDiaryQuestions
-    };
-  },
-});
+// To seed all questions, run the two seeders above individually
 
 /**
  * Clear all questions (for testing)

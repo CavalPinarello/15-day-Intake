@@ -15,7 +15,7 @@
  */
 
 import { v } from "convex/values";
-import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
+import { query, mutation, internalQuery, internalMutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { Id, Doc } from "./_generated/dataModel";
 
 // ============================================
@@ -186,85 +186,162 @@ const PHENOTYPE_DEFINITIONS: Record<
 // ============================================
 
 /**
+ * Helper function to detect all patterns from user's sleep data
+ * This is extracted to avoid self-referential internal API calls during bootstrap
+ */
+async function detectSleepPatternsHelper(ctx: QueryCtx, userId: Id<"users">): Promise<SleepPattern[]> {
+  const patterns: SleepPattern[] = [];
+
+  // Get user data
+  const user = await ctx.db.get(userId);
+  if (!user) return patterns;
+
+  // Get sleep data (last 14 days)
+  const sleepData = await ctx.db
+    .query("user_sleep_data")
+    .withIndex("by_user", (q) => q.eq("user_id", userId))
+    .order("desc")
+    .take(14);
+
+  // Get perception gaps
+  const perceptionGaps = await ctx.db
+    .query("perception_gaps")
+    .withIndex("by_user", (q) => q.eq("user_id", userId))
+    .order("desc")
+    .take(14);
+
+  // Get gateway states
+  const gateways = await ctx.db
+    .query("user_gateway_states")
+    .withIndex("by_user", (q) => q.eq("user_id", userId))
+    .filter((q) => q.eq(q.field("triggered"), true))
+    .collect();
+
+  // Get questionnaire responses
+  const responses = await ctx.db
+    .query("user_assessment_responses")
+    .withIndex("by_user", (q) => q.eq("user_id", userId))
+    .collect();
+
+  const responseMap = new Map(responses.map((r) => [r.question_id, r]));
+
+  if (sleepData.length < 5) {
+    return patterns; // Not enough data
+  }
+
+  // Pattern 1: Sleep State Misperception
+  const gapPattern = detectPerceptionGapPattern(perceptionGaps);
+  if (gapPattern) patterns.push(gapPattern);
+
+  // Pattern 2: Weekend Compensation (Social Jet Lag)
+  const compensationPattern = detectCompensationPattern(sleepData);
+  if (compensationPattern) patterns.push(compensationPattern);
+
+  // Pattern 3: Irregular Rhythm
+  const irregularPattern = detectIrregularPattern(sleepData);
+  if (irregularPattern) patterns.push(irregularPattern);
+
+  // Pattern 4: Sleep Fragmentation
+  const fragmentationPattern = detectFragmentationPattern(sleepData);
+  if (fragmentationPattern) patterns.push(fragmentationPattern);
+
+  // Pattern 5: Early Morning Awakening
+  const earlyWakePattern = detectEarlyWakePattern(sleepData, responseMap);
+  if (earlyWakePattern) patterns.push(earlyWakePattern);
+
+  // Pattern 6: Delayed Phase
+  const delayedPattern = detectDelayedPhasePattern(sleepData);
+  if (delayedPattern) patterns.push(delayedPattern);
+
+  // Pattern 7: Low Sleep Efficiency
+  const efficiencyPattern = detectEfficiencyPattern(sleepData);
+  if (efficiencyPattern) patterns.push(efficiencyPattern);
+
+  // Pattern 8: Anxiety-Driven Insomnia
+  const anxietyPattern = detectAnxietyPattern(gateways, responseMap);
+  if (anxietyPattern) patterns.push(anxietyPattern);
+
+  return patterns;
+}
+
+/**
  * Detect all patterns from user's sleep data
  */
 export const detectSleepPatterns = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args): Promise<SleepPattern[]> => {
-    const patterns: SleepPattern[] = [];
-
-    // Get user data
-    const user = await ctx.db.get(args.userId);
-    if (!user) return patterns;
-
-    // Get sleep data (last 14 days)
-    const sleepData = await ctx.db
-      .query("user_sleep_data")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .order("desc")
-      .take(14);
-
-    // Get perception gaps
-    const perceptionGaps = await ctx.db
-      .query("perception_gaps")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .order("desc")
-      .take(14);
-
-    // Get gateway states
-    const gateways = await ctx.db
-      .query("user_gateway_states")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .filter((q) => q.eq(q.field("triggered"), true))
-      .collect();
-
-    // Get questionnaire responses
-    const responses = await ctx.db
-      .query("user_assessment_responses")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .collect();
-
-    const responseMap = new Map(responses.map((r) => [r.question_id, r]));
-
-    if (sleepData.length < 5) {
-      return patterns; // Not enough data
-    }
-
-    // Pattern 1: Sleep State Misperception
-    const gapPattern = detectPerceptionGapPattern(perceptionGaps);
-    if (gapPattern) patterns.push(gapPattern);
-
-    // Pattern 2: Weekend Compensation (Social Jet Lag)
-    const compensationPattern = detectCompensationPattern(sleepData);
-    if (compensationPattern) patterns.push(compensationPattern);
-
-    // Pattern 3: Irregular Rhythm
-    const irregularPattern = detectIrregularPattern(sleepData);
-    if (irregularPattern) patterns.push(irregularPattern);
-
-    // Pattern 4: Sleep Fragmentation
-    const fragmentationPattern = detectFragmentationPattern(sleepData);
-    if (fragmentationPattern) patterns.push(fragmentationPattern);
-
-    // Pattern 5: Early Morning Awakening
-    const earlyWakePattern = detectEarlyWakePattern(sleepData, responseMap);
-    if (earlyWakePattern) patterns.push(earlyWakePattern);
-
-    // Pattern 6: Delayed Phase
-    const delayedPattern = detectDelayedPhasePattern(sleepData);
-    if (delayedPattern) patterns.push(delayedPattern);
-
-    // Pattern 7: Low Sleep Efficiency
-    const efficiencyPattern = detectEfficiencyPattern(sleepData);
-    if (efficiencyPattern) patterns.push(efficiencyPattern);
-
-    // Pattern 8: Anxiety-Driven Insomnia
-    const anxietyPattern = detectAnxietyPattern(gateways, responseMap);
-    if (anxietyPattern) patterns.push(anxietyPattern);
-
-    return patterns;
+    return detectSleepPatternsHelper(ctx, args.userId);
   },
 });
+
+/**
+ * Helper function to classify sleep phenotype
+ * Extracted to avoid self-referential internal API calls during bootstrap
+ */
+async function classifySleepPhenotypeHelper(ctx: QueryCtx, userId: Id<"users">): Promise<PhenotypeClassification | null> {
+  // Get detected patterns using helper directly
+  const patterns = await detectSleepPatternsHelper(ctx, userId);
+
+  if (patterns.length === 0) {
+    return null;
+  }
+
+  // Score each phenotype based on matching patterns
+  const phenotypeScores: Map<string, number> = new Map();
+
+  for (const pattern of patterns) {
+    switch (pattern.pattern_id) {
+      case "perception_gap":
+        addScore(phenotypeScores, "sleep_state_misperception", pattern.confidence);
+        break;
+      case "compensation":
+        addScore(phenotypeScores, "compensator", pattern.confidence);
+        break;
+      case "irregular_rhythm":
+        addScore(phenotypeScores, "irregular_rhythm", pattern.confidence);
+        break;
+      case "fragmented_sleep":
+        addScore(phenotypeScores, "fragmented_sleeper", pattern.confidence);
+        break;
+      case "early_termination":
+        addScore(phenotypeScores, "early_terminator", pattern.confidence);
+        break;
+      case "delayed_phase":
+        addScore(phenotypeScores, "delayed_phase", pattern.confidence);
+        break;
+      case "low_efficiency":
+        addScore(phenotypeScores, "efficiency_struggler", pattern.confidence);
+        break;
+      case "anxiety_driven":
+        addScore(phenotypeScores, "tired_but_wired", pattern.confidence * 1.2); // Boost for anxiety
+        break;
+    }
+  }
+
+  // Find top phenotypes
+  const sortedPhenotypes = [...phenotypeScores.entries()].sort((a, b) => b[1] - a[1]);
+
+  if (sortedPhenotypes.length === 0) {
+    return null;
+  }
+
+  const [primaryId, primaryScore] = sortedPhenotypes[0];
+  const secondary =
+    sortedPhenotypes.length > 1 && sortedPhenotypes[1][1] > 40
+      ? sortedPhenotypes[1][0]
+      : undefined;
+
+  // Build leverage points based on primary phenotype
+  const leveragePoints = buildLeveragePoints(primaryId, patterns);
+
+  return {
+    primary_phenotype: primaryId,
+    secondary_phenotype: secondary,
+    confidence: Math.min(95, primaryScore),
+    patterns,
+    leverage_points: leveragePoints,
+  };
+}
 
 // Pattern detection helpers
 function detectPerceptionGapPattern(gaps: Doc<"perception_gaps">[]): SleepPattern | null {
@@ -564,68 +641,8 @@ function formatTime(hours: number): string {
 export const classifySleepPhenotype = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args): Promise<PhenotypeClassification | null> => {
-    // Get detected patterns
-    const patterns = await detectSleepPatterns.handler(ctx, args);
-
-    if (patterns.length === 0) {
-      return null;
-    }
-
-    // Score each phenotype based on matching patterns
-    const phenotypeScores: Map<string, number> = new Map();
-
-    for (const pattern of patterns) {
-      switch (pattern.pattern_id) {
-        case "perception_gap":
-          addScore(phenotypeScores, "sleep_state_misperception", pattern.confidence);
-          break;
-        case "compensation":
-          addScore(phenotypeScores, "compensator", pattern.confidence);
-          break;
-        case "irregular_rhythm":
-          addScore(phenotypeScores, "irregular_rhythm", pattern.confidence);
-          break;
-        case "fragmented_sleep":
-          addScore(phenotypeScores, "fragmented_sleeper", pattern.confidence);
-          break;
-        case "early_termination":
-          addScore(phenotypeScores, "early_terminator", pattern.confidence);
-          break;
-        case "delayed_phase":
-          addScore(phenotypeScores, "delayed_phase", pattern.confidence);
-          break;
-        case "low_efficiency":
-          addScore(phenotypeScores, "efficiency_struggler", pattern.confidence);
-          break;
-        case "anxiety_driven":
-          addScore(phenotypeScores, "tired_but_wired", pattern.confidence * 1.2); // Boost for anxiety
-          break;
-      }
-    }
-
-    // Find top phenotypes
-    const sortedPhenotypes = [...phenotypeScores.entries()].sort((a, b) => b[1] - a[1]);
-
-    if (sortedPhenotypes.length === 0) {
-      return null;
-    }
-
-    const [primaryId, primaryScore] = sortedPhenotypes[0];
-    const secondary =
-      sortedPhenotypes.length > 1 && sortedPhenotypes[1][1] > 40
-        ? sortedPhenotypes[1][0]
-        : undefined;
-
-    // Build leverage points based on primary phenotype
-    const leveragePoints = buildLeveragePoints(primaryId, patterns);
-
-    return {
-      primary_phenotype: primaryId,
-      secondary_phenotype: secondary,
-      confidence: Math.min(95, primaryScore),
-      patterns,
-      leverage_points: leveragePoints,
-    };
+    // Use helper function to avoid self-referential internal API calls
+    return classifySleepPhenotypeHelper(ctx, args.userId);
   },
 });
 
@@ -660,8 +677,8 @@ export const generateSleepNarrative = internalMutation({
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
-    // Get phenotype classification
-    const classification = await classifySleepPhenotype.handler(ctx, args);
+    // Get phenotype classification using helper to avoid self-referential internal API calls
+    const classification = await classifySleepPhenotypeHelper(ctx, args.userId);
     if (!classification) return null;
 
     const phenotypeDef = PHENOTYPE_DEFINITIONS[classification.primary_phenotype];

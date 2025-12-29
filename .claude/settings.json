@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "image-sanitizer@image-sanitizer-marketplace": true
+  }
+}

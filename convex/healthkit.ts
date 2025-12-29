@@ -1149,7 +1149,7 @@ export const computeAllSleepMetricsFromResponses = mutation({
     // Group responses by day_number
     const responsesByDay = new Map<number, typeof csdResponses>();
     for (const r of csdResponses) {
-      const day = r.day_number;
+      const day = r.day_number ?? 1; // Default to day 1 if not specified
       if (!responsesByDay.has(day)) {
         responsesByDay.set(day, []);
       }
@@ -1168,11 +1168,11 @@ export const computeAllSleepMetricsFromResponses = mutation({
       return hours * 60 + mins;
     };
 
-    // Get user to find journey start date
+    // Get user to find journey start date (use started_at or created_at as fallback)
     const user = await ctx.db.get(userId);
-    const journeyStartDate = user?.journey_start_date
-      ? new Date(user.journey_start_date)
-      : new Date();
+    const journeyStartDate = user?.started_at
+      ? new Date(user.started_at)
+      : new Date(user?.created_at ?? Date.now());
 
     let daysProcessed = 0;
 

@@ -2,8 +2,87 @@
  * Query functions for assessment questions
  */
 
-import { query } from "./_generated/server";
+import { query, internalQuery, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
+
+// Type for the question result
+interface QuestionResult {
+  question_id: string;
+  question_text: string;
+  help_text?: string;
+  pillar: string;
+  tier: string;
+  answer_format: string;
+  format_config: string;
+  validation_rules?: string;
+  conditional_logic?: string;
+  order_index?: number;
+  estimated_time_seconds: number;
+  module_id: string;
+  module_name: string;
+}
+
+/**
+ * Helper function to get questions by day (used internally)
+ * Avoids self-referential API imports
+ */
+async function getQuestionsByDayHelper(ctx: QueryCtx, dayNumber: number): Promise<QuestionResult[]> {
+  // Get all modules for this day
+  const dayModules = await ctx.db
+    .query("day_modules")
+    .withIndex("by_day", (q) => q.eq("day_number", dayNumber))
+    .collect();
+
+  const result: QuestionResult[] = [];
+
+  // For each module, get its questions
+  for (const dayModule of dayModules) {
+    // Get module info
+    const module = await ctx.db
+      .query("assessment_modules")
+      .withIndex("by_module_id", (q) => q.eq("module_id", dayModule.module_id))
+      .first();
+
+    if (!module) continue;
+
+    // Get questions in this module
+    const moduleQuestions = await ctx.db
+      .query("module_questions")
+      .withIndex("by_module", (q) => q.eq("module_id", dayModule.module_id))
+      .collect();
+
+    // Sort by order_index
+    moduleQuestions.sort((a, b) => a.order_index - b.order_index);
+
+    // Get full question data
+    for (const mq of moduleQuestions) {
+      const question = await ctx.db
+        .query("assessment_questions")
+        .withIndex("by_question_id", (q) => q.eq("question_id", mq.question_id))
+        .first();
+
+      if (question) {
+        result.push({
+          question_id: question.question_id,
+          question_text: question.question_text,
+          help_text: question.help_text,
+          pillar: question.pillar,
+          tier: question.tier,
+          answer_format: question.answer_format,
+          format_config: question.format_config,
+          validation_rules: question.validation_rules ?? undefined,
+          conditional_logic: question.conditional_logic ?? undefined,
+          order_index: mq.order_index,
+          estimated_time_seconds: question.estimated_time_seconds,
+          module_id: dayModule.module_id,
+          module_name: module.name
+        });
+      }
+    }
+  }
+
+  return result;
+}
 
 /**
  * Get all questions for a specific day
@@ -31,61 +110,19 @@ export const getQuestionsByDay = query({
     })
   ),
   handler: async (ctx, args) => {
-    // Get all modules for this day
-    const dayModules = await ctx.db
-      .query("day_modules")
-      .withIndex("by_day", (q) => q.eq("day_number", args.dayNumber))
-      .collect();
+    return await getQuestionsByDayHelper(ctx, args.dayNumber);
+  },
+});
 
-    const result = [];
-
-    // For each module, get its questions
-    for (const dayModule of dayModules) {
-      // Get module info
-      const module = await ctx.db
-        .query("assessment_modules")
-        .withIndex("by_module_id", (q) => q.eq("module_id", dayModule.module_id))
-        .first();
-
-      if (!module) continue;
-
-      // Get questions in this module
-      const moduleQuestions = await ctx.db
-        .query("module_questions")
-        .withIndex("by_module", (q) => q.eq("module_id", dayModule.module_id))
-        .collect();
-
-      // Sort by order_index
-      moduleQuestions.sort((a, b) => a.order_index - b.order_index);
-
-      // Get full question data
-      for (const mq of moduleQuestions) {
-        const question = await ctx.db
-          .query("assessment_questions")
-          .withIndex("by_question_id", (q) => q.eq("question_id", mq.question_id))
-          .first();
-
-        if (question) {
-          result.push({
-            question_id: question.question_id,
-            question_text: question.question_text,
-            help_text: question.help_text,
-            pillar: question.pillar,
-            tier: question.tier,
-            answer_format: question.answer_format,
-            format_config: question.format_config,
-            validation_rules: question.validation_rules,
-            conditional_logic: question.conditional_logic,
-            order_index: mq.order_index,
-            estimated_time_seconds: question.estimated_time_seconds,
-            module_id: dayModule.module_id,
-            module_name: module.name
-          });
-        }
-      }
-    }
-
-    return result;
+/**
+ * Internal version of getQuestionsByDay - avoids API circular reference issues
+ */
+export const getQuestionsByDayInternal = internalQuery({
+  args: {
+    dayNumber: v.number()
+  },
+  handler: async (ctx, args) => {
+    return await getQuestionsByDayHelper(ctx, args.dayNumber);
   },
 });
 
@@ -296,11 +333,8 @@ export const getUserDayProgress = query({
     time_spent_seconds: v.number()
   }),
   handler: async (ctx, args) => {
-    // Get all questions for the day
-    const questions = await ctx.runQuery(
-      api.assessmentQueries.getQuestionsByDay,
-      { dayNumber: args.dayNumber }
-    );
+    // Get all questions for the day using the helper function (avoids self-reference)
+    const questions = await getQuestionsByDayHelper(ctx, args.dayNumber);
 
     let answeredCount = 0;
     let totalTimeSpent = 0;
@@ -332,8 +366,3 @@ export const getUserDayProgress = query({
     };
   },
 });
-
-// Import api for internal queries
-import { api } from "./_generated/api";
-
-

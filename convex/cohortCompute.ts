@@ -286,7 +286,7 @@ export const computeInterventionEffectiveness = internalMutation({
     // Get all user_interventions for this intervention in this cohort
     const userInterventions = await ctx.db
       .query("user_interventions")
-      .withIndex("by_intervention", (q) => q.eq("intervention_string_id", args.intervention_id))
+      .withIndex("by_intervention_string", (q) => q.eq("intervention_string_id", args.intervention_id))
       .collect();
 
     // Filter to only cohort members who completed the intervention

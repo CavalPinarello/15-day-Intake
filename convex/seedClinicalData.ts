@@ -9,9 +9,8 @@
  * 4. Slider scale questions missing scaleMin/scaleMax
  */
 
-import { internalMutation, mutation } from "./_generated/server";
+import { internalMutation, mutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
 
 // ============================================
 // Gateway Definitions
@@ -94,6 +93,13 @@ const GATEWAY_DEFINITIONS = [
     description: "Dietary habits affecting sleep quality",
     trigger_question_ids: ["33", "34"],
     expansion_module_ids: ["expansion_nutritional"],
+  },
+  {
+    gateway_id: "shift_work",
+    name: "Shift Work Disorder",
+    description: "Work schedule that conflicts with normal sleep patterns, including night shifts, rotating shifts, and irregular hours",
+    trigger_question_ids: ["53B"],
+    expansion_module_ids: ["expansion_swdsq"],
   },
 ];
 
@@ -539,7 +545,7 @@ export const seedClinicalQuestions = internalMutation({
 
         const data = {
           question_text: q.question_text,
-          help_text: q.help_text,
+          help_text: (q as { help_text?: string }).help_text,
           pillar: q.pillar,
           tier: q.tier,
           answer_format: q.answer_format,
@@ -791,46 +797,9 @@ export const fixSliderScaleQuestions = internalMutation({
   },
 });
 
-/**
- * Run all seeders
- */
-export const seedAll = mutation({
-  args: {},
-  returns: v.object({
-    gateways: v.object({
-      inserted: v.number(),
-      updated: v.number(),
-      errors: v.array(v.string()),
-    }),
-    questions: v.object({
-      inserted: v.number(),
-      updated: v.number(),
-      errors: v.array(v.string()),
-    }),
-    modules: v.object({
-      modulesInserted: v.number(),
-      modulesUpdated: v.number(),
-      mappingsInserted: v.number(),
-      errors: v.array(v.string()),
-    }),
-    sliderFix: v.object({
-      fixed: v.number(),
-      alreadyValid: v.number(),
-      errors: v.array(v.string()),
-    }),
-    question33D: v.object({
-      fixed: v.boolean(),
-      error: v.optional(v.string()),
-    }),
-  }),
-  handler: async (ctx) => {
-    // Run all seeders
-    const gateways = await ctx.runMutation(internal.seedClinicalData.seedGateways, {});
-    const questions = await ctx.runMutation(internal.seedClinicalData.seedClinicalQuestions, {});
-    const modules = await ctx.runMutation(internal.seedClinicalData.seedExpansionModules, {});
-    const sliderFix = await ctx.runMutation(internal.seedClinicalData.fixSliderScaleQuestions, {});
-    const question33D = await ctx.runMutation(internal.seedClinicalData.fixQuestion33D, {});
-
-    return { gateways, questions, modules, sliderFix, question33D };
-  },
-});
+// Note: To seed all data, run each seeder individually:
+// npx convex run seedClinicalData:seedGateways
+// npx convex run seedClinicalData:seedClinicalQuestions
+// npx convex run seedClinicalData:seedExpansionModules
+// npx convex run seedClinicalData:fixSliderScaleQuestions
+// npx convex run seedClinicalData:fixQuestion33D

@@ -1218,47 +1218,136 @@ struct ConvexQuestion: Codable {
     let conditionalLogic: ConvexConditionalLogic?
 }
 
+/// Conditional logic for showing/hiding questions based on other answers
+/// Supports simple conditions (questionId + equals/greaterThan) and compound conditions (all/any)
 struct ConvexConditionalLogic: Codable {
-    let questionId: String
-    let equals: String?
-    let greaterThan: Double?
+    // Simple condition fields
+    var questionId: String?
+    var equals: String?
+    var greaterThan: Double?
+    var lessThan: Double?
+    var greaterThanOrEqual: Double?
+    var lessThanOrEqual: Double?
+    var contains: String?
+
+    // Age-based conditions (calculated from D2 birth date)
+    var ageUnder: Int?
+    var ageOver: Int?
+
+    // Compound conditions (recursive)
+    var all: [ConvexConditionalLogic]?  // AND logic - all must be true
+    var any: [ConvexConditionalLogic]?  // OR logic - at least one must be true
 
     enum CodingKeys: String, CodingKey {
-        case questionId = "question_id"
+        case questionId = "questionId"
         case equals
-        case greaterThan = "greater_than"
+        case greaterThan
+        case lessThan
+        case greaterThanOrEqual
+        case lessThanOrEqual
+        case contains
+        case ageUnder
+        case ageOver
+        case all
+        case any
+        // Also support snake_case variants
+        case questionIdSnake = "question_id"
+        case greaterThanSnake = "greater_than"
+        case lessThanSnake = "less_than"
+        case greaterThanOrEqualSnake = "greater_than_or_equal"
+        case lessThanOrEqualSnake = "less_than_or_equal"
+        case ageUnderSnake = "age_under"
+        case ageOverSnake = "age_over"
+        case showIf = "show_if"
     }
 
-    // Also support snake_case "show_if" format from database
+    init(
+        questionId: String? = nil,
+        equals: String? = nil,
+        greaterThan: Double? = nil,
+        lessThan: Double? = nil,
+        greaterThanOrEqual: Double? = nil,
+        lessThanOrEqual: Double? = nil,
+        contains: String? = nil,
+        ageUnder: Int? = nil,
+        ageOver: Int? = nil,
+        all: [ConvexConditionalLogic]? = nil,
+        any: [ConvexConditionalLogic]? = nil
+    ) {
+        self.questionId = questionId
+        self.equals = equals
+        self.greaterThan = greaterThan
+        self.lessThan = lessThan
+        self.greaterThanOrEqual = greaterThanOrEqual
+        self.lessThanOrEqual = lessThanOrEqual
+        self.contains = contains
+        self.ageUnder = ageUnder
+        self.ageOver = ageOver
+        self.all = all
+        self.any = any
+    }
+
     init(from decoder: Decoder) throws {
-        // Try direct format first
-        if let container = try? decoder.container(keyedBy: CodingKeys.self) {
-            self.questionId = try container.decode(String.self, forKey: .questionId)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
 
-            // Handle equals as either String or number (Convex may return either)
-            if let stringValue = try? container.decodeIfPresent(String.self, forKey: .equals) {
-                self.equals = stringValue
-            } else if let intValue = try? container.decodeIfPresent(Int.self, forKey: .equals) {
-                self.equals = String(intValue)
-            } else if let doubleValue = try? container.decodeIfPresent(Double.self, forKey: .equals) {
-                self.equals = String(Int(doubleValue))
-            } else {
-                self.equals = nil
-            }
-
-            self.greaterThan = try container.decodeIfPresent(Double.self, forKey: .greaterThan)
-        } else {
-            // Try show_if format
-            let showIfContainer = try decoder.container(keyedBy: ShowIfKeys.self)
-            let showIf = try showIfContainer.decode(ShowIfContent.self, forKey: .showIf)
+        // Check for show_if wrapper format first
+        if let showIf = try? container.decode(ShowIfContent.self, forKey: .showIf) {
             self.questionId = showIf.questionId
             self.equals = showIf.value
             self.greaterThan = showIf.greaterThan
+            self.lessThan = nil
+            self.greaterThanOrEqual = nil
+            self.lessThanOrEqual = nil
+            self.contains = nil
+            self.ageUnder = nil
+            self.ageOver = nil
+            self.all = nil
+            self.any = nil
+            return
         }
-    }
 
-    private enum ShowIfKeys: String, CodingKey {
-        case showIf = "show_if"
+        // Decode questionId (try both camelCase and snake_case)
+        if let qId = try? container.decodeIfPresent(String.self, forKey: .questionId) {
+            self.questionId = qId
+        } else if let qId = try? container.decodeIfPresent(String.self, forKey: .questionIdSnake) {
+            self.questionId = qId
+        } else {
+            self.questionId = nil
+        }
+
+        // Decode equals (handle String, Int, or Double values)
+        if let stringValue = try? container.decodeIfPresent(String.self, forKey: .equals) {
+            self.equals = stringValue
+        } else if let intValue = try? container.decodeIfPresent(Int.self, forKey: .equals) {
+            self.equals = String(intValue)
+        } else if let doubleValue = try? container.decodeIfPresent(Double.self, forKey: .equals) {
+            self.equals = String(Int(doubleValue))
+        } else {
+            self.equals = nil
+        }
+
+        // Decode numeric comparisons (try both camelCase and snake_case)
+        self.greaterThan = (try? container.decodeIfPresent(Double.self, forKey: .greaterThan))
+            ?? (try? container.decodeIfPresent(Double.self, forKey: .greaterThanSnake))
+        self.lessThan = (try? container.decodeIfPresent(Double.self, forKey: .lessThan))
+            ?? (try? container.decodeIfPresent(Double.self, forKey: .lessThanSnake))
+        self.greaterThanOrEqual = (try? container.decodeIfPresent(Double.self, forKey: .greaterThanOrEqual))
+            ?? (try? container.decodeIfPresent(Double.self, forKey: .greaterThanOrEqualSnake))
+        self.lessThanOrEqual = (try? container.decodeIfPresent(Double.self, forKey: .lessThanOrEqual))
+            ?? (try? container.decodeIfPresent(Double.self, forKey: .lessThanOrEqualSnake))
+
+        // Decode contains
+        self.contains = try? container.decodeIfPresent(String.self, forKey: .contains)
+
+        // Decode age conditions (try both camelCase and snake_case)
+        self.ageUnder = (try? container.decodeIfPresent(Int.self, forKey: .ageUnder))
+            ?? (try? container.decodeIfPresent(Int.self, forKey: .ageUnderSnake))
+        self.ageOver = (try? container.decodeIfPresent(Int.self, forKey: .ageOver))
+            ?? (try? container.decodeIfPresent(Int.self, forKey: .ageOverSnake))
+
+        // Decode compound conditions (recursive)
+        self.all = try? container.decodeIfPresent([ConvexConditionalLogic].self, forKey: .all)
+        self.any = try? container.decodeIfPresent([ConvexConditionalLogic].self, forKey: .any)
     }
 
     private struct ShowIfContent: Codable {

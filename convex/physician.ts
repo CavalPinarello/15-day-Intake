@@ -859,6 +859,50 @@ function calculatePSAS(responses: Map<string, number>): { cognitive: Questionnai
   };
 }
 
+// Shift Work Disorder Screening Questionnaire (SWDSQ)
+// 4 Yes/No questions - screening for shift work disorder
+function calculateSWDSQ(responses: Map<string, number>): QuestionnaireScore {
+  const swdsqQuestions = ["SWDSQ_1", "SWDSQ_2", "SWDSQ_3", "SWDSQ_4"];
+  let yesCount = 0;
+  let answered = 0;
+
+  for (const qId of swdsqQuestions) {
+    const val = responses.get(qId);
+    if (val !== undefined) {
+      // Yes = 1, No = 0
+      if (val === 1) yesCount++;
+      answered++;
+    }
+  }
+
+  let interpretation = "Not enough data";
+  let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
+
+  if (answered >= 3) {
+    // SWDSQ Interpretation:
+    // - All 4 "Yes" = High risk for Shift Work Disorder
+    // - 3 "Yes" = Moderate risk
+    // - 2 "Yes" = Low risk
+    // - 0-1 "Yes" = Unlikely SWD
+    if (yesCount === 4) {
+      interpretation = "High risk for Shift Work Disorder - meets all 4 criteria";
+      severity = "severe";
+    } else if (yesCount === 3) {
+      interpretation = "Moderate risk for Shift Work Disorder - meets 3 of 4 criteria";
+      severity = "moderate";
+    } else if (yesCount === 2) {
+      interpretation = "Low risk - some shift work sleep symptoms";
+      severity = "mild";
+    } else {
+      interpretation = "Unlikely Shift Work Disorder";
+      severity = "normal";
+    }
+    return { name: "Shift Work Disorder Screen", abbreviation: "SWDSQ", score: yesCount, maxScore: 4, interpretation, severity, questionsAnswered: answered, questionsRequired: 4 };
+  }
+
+  return { name: "Shift Work Disorder Screen", abbreviation: "SWDSQ", score: null, maxScore: 4, interpretation, severity, questionsAnswered: answered, questionsRequired: 4 };
+}
+
 // ============================================
 // Patient List & Overview Queries
 // ============================================
@@ -1148,6 +1192,7 @@ export const getPatientDayData = query({
         _id: v.id("user_assessment_responses"),
         question_id: v.string(),
         response_value: v.optional(v.string()),
+        response_unit: v.optional(v.string()),
         question_text: v.optional(v.string()),
         question_type: v.optional(v.string()),
         pillar: v.optional(v.string()),
@@ -1261,10 +1306,16 @@ export const getPatientDayData = query({
           }
         }
 
+        // Append unit to display value if present (e.g., "85 cm" instead of just "85")
+        const finalDisplayValue = displayValue && response.response_unit
+          ? `${displayValue} ${response.response_unit}`
+          : displayValue;
+
         return {
           _id: response._id,
           question_id: response.question_id,
-          response_value: displayValue,
+          response_value: finalDisplayValue,
+          response_unit: response.response_unit,
           question_text: questionText,
           question_type: questionType,
           pillar: pillar,
@@ -2689,6 +2740,7 @@ export const calculatePatientScores = query({
       calculateFOSQ10(responseMap),
       calculateMEDAS(responseMap),
       calculateMEQ(responseMap),
+      calculateSWDSQ(responseMap),
     ];
 
     // Add DASS-21 subscales
@@ -2864,6 +2916,7 @@ export const persistCalculatedScores = mutation({
       calculateFOSQ10(responseMap),
       calculateMEDAS(responseMap),
       calculateMEQ(responseMap),
+      calculateSWDSQ(responseMap),
     ];
 
     // Add DASS-21 subscales

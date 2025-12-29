@@ -1434,6 +1434,11 @@ class QuestionnaireManager: ObservableObject {
             // Triggered if question 34 >= "Moderately" (index 2)
             if let response = responses["34"], let index = getOptionIndex(response.stringValue, for: "34"), index >= 2 { return true }
             return false
+
+        case .shiftWork:
+            // Triggered if question 53B = "yes" (works shifts or irregular hours)
+            if let response = responses["53B"], response.stringValue?.lowercased() == "yes" { return true }
+            return false
         }
     }
 

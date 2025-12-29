@@ -806,7 +806,7 @@ export const testExpansionScheduling = query({
     }
 
     // Validate schedule
-    const results: Array<{ check: string; status: "pass" | "fail"; message: string }> = [];
+    const results: Array<{ check: string; status: "pass" | "fail" | "warning"; message: string }> = [];
 
     // Check triggered gateways match
     const scheduledGateways = schedule.triggered_gateways;

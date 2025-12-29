@@ -1,11 +1,13 @@
 /**
  * Seed assessment modules and day mappings
- * Run with: npx convex run seedModules:seedAll
+ * Run each seeder individually:
+ *   npx convex run seedModules:seedAssessmentModules
+ *   npx convex run seedModules:seedModuleQuestions
+ *   npx convex run seedModules:seedDayModules
  */
 
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
 
 // Import module data
 import modulesData from "../data/assessment_modules.json";
@@ -230,47 +232,6 @@ export const seedDayModules = internalMutation({
   },
 });
 
-/**
- * Seed all module data
- */
-export const seedAll = internalMutation({
-  args: {},
-  returns: v.object({
-    modules: v.object({
-      inserted: v.number(),
-      errors: v.array(v.string())
-    }),
-    moduleQuestions: v.object({
-      inserted: v.number(),
-      errors: v.array(v.string())
-    }),
-    dayModules: v.object({
-      inserted: v.number(),
-      errors: v.array(v.string())
-    })
-  }),
-  handler: async (ctx) => {
-    // Seed modules first
-    const modules = await ctx.runMutation(
-      internal.seedModules.seedAssessmentModules
-    );
-
-    // Then seed module-question mappings
-    const moduleQuestions = await ctx.runMutation(
-      internal.seedModules.seedModuleQuestions
-    );
-
-    // Finally seed day-module mappings
-    const dayModules = await ctx.runMutation(
-      internal.seedModules.seedDayModules
-    );
-
-    return {
-      modules,
-      moduleQuestions,
-      dayModules
-    };
-  },
-});
+// To seed all module data, run the three seeders above in order
 
 

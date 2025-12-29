@@ -189,7 +189,131 @@
     "validation_rules": {
       "required": true
     },
+    "trigger": "shift_work",
     "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53B_FREQ",
+    "question_text": "How often do you work non-standard hours (evenings, nights, or rotating shifts)?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "daily",
+          "label": "Daily"
+        },
+        {
+          "value": "few_times_week",
+          "label": "A few times a week"
+        },
+        {
+          "value": "few_times_month",
+          "label": "A few times a month"
+        },
+        {
+          "value": "occasionally",
+          "label": "Occasionally"
+        }
+      ],
+      "layout": "grid"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "53B",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53B_SCHEDULE",
+    "question_text": "Is your shift schedule regular (same hours each week) or rotating?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "regular",
+          "label": "Regular (same hours)"
+        },
+        {
+          "value": "rotating",
+          "label": "Rotating shifts"
+        },
+        {
+          "value": "unpredictable",
+          "label": "Unpredictable/on-call"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "53B",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53B_TYPE",
+    "question_text": "What type of shift work do you primarily do?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "early_morning",
+          "label": "Early morning (before 6 AM)"
+        },
+        {
+          "value": "evening",
+          "label": "Evening shifts"
+        },
+        {
+          "value": "night",
+          "label": "Night shifts"
+        },
+        {
+          "value": "split",
+          "label": "Split shifts"
+        },
+        {
+          "value": "24_hour",
+          "label": "24-hour shifts"
+        }
+      ],
+      "layout": "grid"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "53B",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "estimated_time_seconds": 15,
     "created_at": 1763104572235,
     "updated_at": 1763104572235
   },
@@ -544,14 +668,13 @@
   },
   {
     "question_id": "44A_DETAILS",
-    "question_text": "Please list your prescription medications",
+    "question_text": "Please tell us about your prescription medications",
     "pillar": "Metabolic",
     "tier": "CORE",
-    "answer_format": "text_area",
+    "answer_format": "prescriptionMedSelect",
     "format_config": {
-      "placeholder": "e.g., Lisinopril 10mg, Metformin 500mg, Zolpidem 5mg...",
-      "multiline": true,
-      "maxLength": 1000
+      "showTiming": true,
+      "timingOptions": ["morning", "afternoon", "evening", "bedtime"]
     },
     "validation_rules": {
       "required": false
@@ -560,8 +683,8 @@
       "questionId": "44A",
       "equals": "yes"
     },
-    "help_text": "Include names and dosages. Many medications affect sleep - this helps your physician provide better recommendations.",
-    "estimated_time_seconds": 60,
+    "help_text": "Select all medications you take. Include dose and time of day for each.",
+    "estimated_time_seconds": 90,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
@@ -593,14 +716,13 @@
   },
   {
     "question_id": "44C_DETAILS",
-    "question_text": "Please list your supplements and vitamins",
+    "question_text": "Please tell us about your supplements and vitamins",
     "pillar": "Metabolic",
     "tier": "CORE",
-    "answer_format": "text_area",
+    "answer_format": "supplementSelect",
     "format_config": {
-      "placeholder": "e.g., Vitamin D 2000 IU, Melatonin 3mg, Magnesium 400mg...",
-      "multiline": true,
-      "maxLength": 1000
+      "showTiming": true,
+      "timingOptions": ["morning", "afternoon", "evening", "bedtime"]
     },
     "validation_rules": {
       "required": false
@@ -609,8 +731,8 @@
       "questionId": "44C",
       "equals": "yes"
     },
-    "help_text": "Include names and dosages if you know them. This helps your physician understand potential interactions with sleep.",
-    "estimated_time_seconds": 60,
+    "help_text": "Select all supplements you take. Include dose and time of day for each.",
+    "estimated_time_seconds": 90,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
@@ -691,14 +813,16 @@
   },
   {
     "question_id": "44G_DETAILS",
-    "question_text": "Please describe your recent surgeries or procedures",
+    "question_text": "Please tell us about your recent surgeries or procedures",
     "pillar": "Metabolic",
     "tier": "CORE",
-    "answer_format": "text_area",
+    "answer_format": "surgeryDetails",
     "format_config": {
-      "placeholder": "e.g., Knee replacement (March 2025), Appendectomy (January 2025)...",
-      "multiline": true,
-      "maxLength": 1000
+      "allowMultiple": true,
+      "fields": [
+        {"id": "procedure_name", "label": "Procedure", "type": "text"},
+        {"id": "procedure_date", "label": "Approximate Date", "type": "text"}
+      ]
     },
     "validation_rules": {
       "required": false
@@ -707,8 +831,8 @@
       "questionId": "44G",
       "equals": "yes"
     },
-    "help_text": "Include the type of surgery and approximate date. Recent procedures can affect sleep patterns.",
-    "estimated_time_seconds": 60,
+    "help_text": "Add each surgery or procedure with its approximate date. Recent procedures can affect sleep patterns.",
+    "estimated_time_seconds": 90,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
@@ -6638,6 +6762,118 @@
     },
     "estimated_time_seconds": 15,
     "trigger": "Diet impact gateway = YES",
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "SWDSQ_1",
+    "question_text": "Do you work a schedule that sometimes overlaps with the time when you would normally sleep?",
+    "help_text": "This includes night shifts, early morning shifts, rotating shifts, or any work schedule that interferes with your normal sleep time.",
+    "pillar": "Sleep Disorder Screening",
+    "tier": "EXPANSION",
+    "answer_format": "yes_no_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "trigger": "Shift work gateway = YES",
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "SWDSQ_2",
+    "question_text": "Do you have difficulties sleeping or staying asleep that you associate with your work schedule?",
+    "help_text": "Consider whether your sleep problems are worse during or after shift work periods.",
+    "pillar": "Sleep Disorder Screening",
+    "tier": "EXPANSION",
+    "answer_format": "yes_no_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "trigger": "Shift work gateway = YES",
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "SWDSQ_3",
+    "question_text": "Do you experience excessive sleepiness or fatigue when you are awake, which you associate with your work schedule?",
+    "help_text": "This includes feeling sleepy during shifts, having trouble staying alert, or experiencing fatigue related to your work hours.",
+    "pillar": "Sleep Disorder Screening",
+    "tier": "EXPANSION",
+    "answer_format": "yes_no_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "trigger": "Shift work gateway = YES",
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "SWDSQ_4",
+    "question_text": "Have these sleep or sleepiness problems lasted for at least one month?",
+    "help_text": "A consistent pattern of symptoms over time is important for diagnosis.",
+    "pillar": "Sleep Disorder Screening",
+    "tier": "EXPANSION",
+    "answer_format": "yes_no_chips",
+    "format_config": {
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes"
+        },
+        {
+          "value": "no",
+          "label": "No"
+        }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "trigger": "Shift work gateway = YES",
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   }

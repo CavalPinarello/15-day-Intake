@@ -191,6 +191,16 @@ export const EXPANSION_MODULES: ExpansionModule[] = [
     requiredGateways: ["sleep_timing"],
     priority: 5,
   },
+  // Priority 2: Shift Work - clinical urgency for occupational health
+  {
+    id: "expansion_swdsq",
+    name: "Shift Work Disorder Screening",
+    instrument: "SWDSQ",
+    questionCount: 4,
+    estimatedMinutes: 3,
+    requiredGateways: ["shift_work"],
+    priority: 2,
+  },
 ];
 
 // ============================================

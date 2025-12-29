@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 
 /**
  * Circadian Signal Tracking Functions
@@ -346,5 +346,181 @@ export const getCircadianDataForPhysician = query({
         outdoorWorkoutCount: d.outdoor_workout_count,
       })),
     };
+  },
+});
+
+// ============================================
+// Mock Data Generation (Testing Only)
+// ============================================
+
+/**
+ * Generate mock circadian data for testing
+ * Run with: npx convex run circadian:generateMockCircadianData '{"userId": "...", "pattern": "healthy"}'
+ *
+ * Patterns:
+ * - "healthy": Good light exposure, regular rhythm
+ * - "poor_light": Low daylight exposure
+ * - "shift_work": Irregular patterns with variable light
+ * - "night_owl": Late light exposure, minimal morning light
+ */
+export const generateMockCircadianData = mutation({
+  args: {
+    userId: v.id("users"),
+    days: v.optional(v.number()),
+    pattern: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, days = 14, pattern = "healthy" } = args;
+    const now = Date.now();
+    const insertedIds: string[] = [];
+
+    // Generate data for each day
+    for (let i = 0; i < days; i++) {
+      const date = new Date(now - i * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split("T")[0];
+
+      // Generate values based on pattern
+      let data: {
+        timeInDaylightMins: number;
+        morningLightMins: number;
+        afternoonLightMins: number;
+        outdoorWorkoutMins: number;
+        outdoorWorkoutCount: number;
+        circadianScore: number;
+        sleepingWristTempDeviation: number;
+        wristTempTrend: string;
+      };
+
+      switch (pattern) {
+        case "poor_light":
+          data = {
+            timeInDaylightMins: randomRange(15, 45),
+            morningLightMins: randomRange(0, 10),
+            afternoonLightMins: randomRange(10, 30),
+            outdoorWorkoutMins: randomRange(0, 15),
+            outdoorWorkoutCount: Math.random() > 0.7 ? 1 : 0,
+            circadianScore: randomRange(35, 55),
+            sleepingWristTempDeviation: randomRange(-0.4, 0.6) / 10,
+            wristTempTrend: Math.random() > 0.5 ? "elevated" : "normal",
+          };
+          break;
+
+        case "shift_work":
+          // Variable patterns with occasional night shifts
+          const isNightShift = Math.random() > 0.6;
+          data = {
+            timeInDaylightMins: isNightShift ? randomRange(10, 30) : randomRange(40, 80),
+            morningLightMins: isNightShift ? randomRange(0, 5) : randomRange(10, 40),
+            afternoonLightMins: isNightShift ? randomRange(5, 20) : randomRange(20, 50),
+            outdoorWorkoutMins: randomRange(0, 30),
+            outdoorWorkoutCount: Math.random() > 0.5 ? 1 : 0,
+            circadianScore: isNightShift ? randomRange(30, 50) : randomRange(50, 70),
+            sleepingWristTempDeviation: randomRange(-0.6, 0.8) / 10,
+            wristTempTrend: isNightShift ? "irregular" : "normal",
+          };
+          break;
+
+        case "night_owl":
+          data = {
+            timeInDaylightMins: randomRange(30, 60),
+            morningLightMins: randomRange(0, 15), // Minimal morning light
+            afternoonLightMins: randomRange(25, 50), // More afternoon
+            outdoorWorkoutMins: randomRange(10, 40),
+            outdoorWorkoutCount: Math.random() > 0.5 ? 1 : 0,
+            circadianScore: randomRange(45, 65),
+            sleepingWristTempDeviation: randomRange(-0.3, 0.5) / 10,
+            wristTempTrend: "delayed",
+          };
+          break;
+
+        case "healthy":
+        default:
+          data = {
+            timeInDaylightMins: randomRange(70, 120),
+            morningLightMins: randomRange(25, 60),
+            afternoonLightMins: randomRange(30, 60),
+            outdoorWorkoutMins: randomRange(20, 60),
+            outdoorWorkoutCount: Math.random() > 0.3 ? Math.floor(Math.random() * 2) + 1 : 0,
+            circadianScore: randomRange(70, 95),
+            sleepingWristTempDeviation: randomRange(-0.2, 0.2) / 10,
+            wristTempTrend: "normal",
+          };
+          break;
+      }
+
+      // Check for existing entry
+      const existing = await ctx.db
+        .query("user_circadian_data")
+        .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", dateStr))
+        .first();
+
+      if (existing) {
+        // Update existing
+        await ctx.db.patch(existing._id, {
+          time_in_daylight_mins: data.timeInDaylightMins,
+          morning_light_mins: data.morningLightMins,
+          afternoon_light_mins: data.afternoonLightMins,
+          outdoor_workout_mins: data.outdoorWorkoutMins,
+          outdoor_workout_count: data.outdoorWorkoutCount,
+          circadian_score: data.circadianScore,
+          sleeping_wrist_temp_deviation: data.sleepingWristTempDeviation,
+          wrist_temp_trend: data.wristTempTrend,
+          primary_source: "mock_generator",
+          synced_at: now,
+        });
+        insertedIds.push(existing._id);
+      } else {
+        // Insert new
+        const id = await ctx.db.insert("user_circadian_data", {
+          user_id: userId,
+          date: dateStr,
+          time_in_daylight_mins: data.timeInDaylightMins,
+          morning_light_mins: data.morningLightMins,
+          afternoon_light_mins: data.afternoonLightMins,
+          outdoor_workout_mins: data.outdoorWorkoutMins,
+          outdoor_workout_count: data.outdoorWorkoutCount,
+          circadian_score: data.circadianScore,
+          sleeping_wrist_temp_deviation: data.sleepingWristTempDeviation,
+          wrist_temp_trend: data.wristTempTrend,
+          primary_source: "mock_generator",
+          synced_at: now,
+        });
+        insertedIds.push(id);
+      }
+    }
+
+    return {
+      pattern,
+      daysGenerated: days,
+      recordIds: insertedIds,
+    };
+  },
+});
+
+/**
+ * Helper: Generate random number in range
+ */
+function randomRange(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
+ * Clear all circadian data for a user (testing only)
+ */
+export const clearCircadianData = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const data = await ctx.db
+      .query("user_circadian_data")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    for (const d of data) {
+      await ctx.db.delete(d._id);
+    }
+
+    return { deleted: data.length };
   },
 });

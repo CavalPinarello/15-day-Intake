@@ -544,5 +544,20 @@
       "230"
     ],
     "estimatedMinutes": 7
+  },
+  {
+    "moduleId": "expansion_swdsq",
+    "name": "Shift Work Disorder Screening",
+    "description": "Screening questionnaire for shift work disorder (SWDSQ)",
+    "pillar": "Sleep Disorder Screening",
+    "tier": "EXPANSION",
+    "moduleType": "expansion",
+    "questionIds": [
+      "SWDSQ_1",
+      "SWDSQ_2",
+      "SWDSQ_3",
+      "SWDSQ_4"
+    ],
+    "estimatedMinutes": 3
   }
 ]

@@ -667,8 +667,8 @@ struct InteractiveProgressDots: View {
                 let day = index + 1
                 let isCompleted = completedDays.contains(day)
                 let isCurrent = day == current
-                let isFuture = day > current
-                let isDebugTappable = isDebugMode && isFuture
+                // In debug mode, can jump to ANY day except current
+                let isDebugTappable = isDebugMode && !isCurrent
 
                 ZStack {
                     // Invisible tap target (larger area)
@@ -690,12 +690,10 @@ struct InteractiveProgressDots: View {
                 .animation(.spring(response: 0.3), value: current)
                 .contentShape(Rectangle())  // Entire ZStack is tappable
                 .onTapGesture {
-                    print("[InteractiveProgressDots] Tap on day \(day), isDebugTappable=\(isDebugTappable), isDebugMode=\(isDebugMode), isFuture=\(isFuture)")
                     if isDebugTappable {
-                        // Debug mode: Jump to future day
-                        print("[InteractiveProgressDots] Calling onDebugJumpToDay for day \(day)")
+                        // Debug mode: Jump to any day (forward or backward)
                         onDebugJumpToDay?(day)
-                    } else if isCompleted {
+                    } else if isCompleted && !isDebugMode {
                         // Normal mode: View completed day's diary
                         onDayTapped(day)
                     }

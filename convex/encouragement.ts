@@ -379,17 +379,23 @@ export const getEncouragementForUser = query({
 
     // Get user's triggered gateways
     const gatewayResults = await ctx.db
-      .query("gateway_results")
+      .query("user_gateway_states")
       .withIndex("by_user", (q) => q.eq("user_id", userId))
       .filter((q) => q.eq(q.field("triggered"), true))
       .collect();
     const triggeredGateways = gatewayResults.map((g) => g.gateway_id);
 
     // Get user's clinical scores
-    const scores = await ctx.db
+    const allScores = await ctx.db
       .query("questionnaire_scores")
       .withIndex("by_user", (q) => q.eq("user_id", userId))
-      .first();
+      .collect();
+    // Build a scores object from individual questionnaire results
+    const scores = {
+      isi_score: allScores.find(s => s.questionnaire_name === "ISI")?.score ?? null,
+      phq9_score: allScores.find(s => s.questionnaire_name === "PHQ-9")?.score ?? null,
+      gad7_score: allScores.find(s => s.questionnaire_name === "GAD-7")?.score ?? null,
+    };
 
     // Get messages already shown to this user
     const shownMessages = await ctx.db
@@ -433,7 +439,7 @@ export const getEncouragementForUser = query({
       }
 
       // Score threshold filter
-      if (filter.scoreThresholds && scores) {
+      if (filter.scoreThresholds) {
         const thresholds = filter.scoreThresholds;
         if (thresholds.isi) {
           if (thresholds.isi.min && (scores.isi_score ?? 0) < thresholds.isi.min) return false;
@@ -475,7 +481,7 @@ export const getEncouragementMessages = query({
     const userAge = user.birth_year ? currentYear - user.birth_year : null;
 
     const gatewayResults = await ctx.db
-      .query("gateway_results")
+      .query("user_gateway_states")
       .withIndex("by_user", (q) => q.eq("user_id", userId))
       .filter((q) => q.eq(q.field("triggered"), true))
       .collect();
@@ -533,10 +539,10 @@ export const getCohortComparison = query({
     const user = await ctx.db.get(userId);
     if (!user) return null;
 
-    // Get cohort statistics
+    // Get cohort statistics by stat_id (metric type as stat_id)
     const cohortStats = await ctx.db
       .query("cohort_statistics")
-      .withIndex("by_metric", (q) => q.eq("metric_type", metricType))
+      .withIndex("by_stat_id", (q) => q.eq("stat_id", metricType))
       .first();
 
     if (!cohortStats) return null;
@@ -545,11 +551,13 @@ export const getCohortComparison = query({
     let userValue: number | null = null;
 
     if (metricType === "isi_score") {
-      const scores = await ctx.db
+      const isiScore = await ctx.db
         .query("questionnaire_scores")
-        .withIndex("by_user", (q) => q.eq("user_id", userId))
+        .withIndex("by_user_questionnaire", (q) =>
+          q.eq("user_id", userId).eq("questionnaire_name", "ISI")
+        )
         .first();
-      userValue = scores?.isi_score ?? null;
+      userValue = isiScore?.score ?? null;
     } else if (metricType === "completion_rate") {
       const progress = await ctx.db
         .query("user_progress")
@@ -561,17 +569,24 @@ export const getCohortComparison = query({
 
     if (userValue === null) return null;
 
-    // Calculate percentile (simplified)
-    const percentile = calculatePercentile(
-      userValue,
-      cohortStats.mean_value,
-      cohortStats.std_deviation
-    );
+    // Calculate percentile using stat_value as the cohort mean
+    // Parse cohort_criteria_json for more detailed statistics if available
+    let cohortMean = cohortStats.stat_value;
+    let stdDev = 1; // Default standard deviation
+    try {
+      const criteria = JSON.parse(cohortStats.cohort_criteria_json);
+      if (criteria.std_deviation) stdDev = criteria.std_deviation;
+      if (criteria.mean) cohortMean = criteria.mean;
+    } catch {
+      // Use defaults if parsing fails
+    }
+
+    const percentile = calculatePercentile(userValue, cohortMean, stdDev);
 
     return {
       userValue,
       percentile,
-      cohortMean: cohortStats.mean_value,
+      cohortMean,
       sampleSize: cohortStats.sample_size,
       message: generateCohortMessage(metricType, percentile),
     };
@@ -597,7 +612,7 @@ export const recordEncouragementSeen = mutation({
       message_id: messageId,
       shown_at: Date.now(),
       context: context || "unknown",
-      was_helpful: null,
+      dismissed: false,
     });
   },
 });

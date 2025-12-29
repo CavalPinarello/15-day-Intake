@@ -14,8 +14,188 @@ import { Id } from "./_generated/dataModel";
 import { validateIOSSession } from "./auth";
 
 // ============================================
+// Derivable Questions Configuration
+// ============================================
+
+/**
+ * Questions that can be automatically derived from sleep log (CSD_) data.
+ * When the user completes their sleep log, these questions are skipped in the assessment
+ * and their values are auto-calculated and saved.
+ *
+ * This reduces user burden while maintaining data integrity for physician scoring.
+ */
+const DERIVABLE_QUESTIONS = {
+  // Question 44: "How many hours of actual sleep did you typically get at night?"
+  // Derived from: CSD_TRY_SLEEP, CSD_FINAL_WAKE, CSD_WASO, CSD_LATENCY
+  "44": {
+    sources: ["CSD_TRY_SLEEP", "CSD_FINAL_WAKE", "CSD_WASO", "CSD_LATENCY"],
+    derive: (responses: Map<string, { value?: string; number?: number }>) => {
+      const trySleep = responses.get("CSD_TRY_SLEEP")?.value;
+      const finalWake = responses.get("CSD_FINAL_WAKE")?.value;
+      const wasoMinutes = responses.get("CSD_WASO")?.number ?? 0;
+      const latencyMinutes = responses.get("CSD_LATENCY")?.number ?? 0;
+
+      if (!trySleep || !finalWake) return null;
+
+      // Parse times (HH:MM format)
+      const [tryH, tryM] = trySleep.split(":").map(Number);
+      const [wakeH, wakeM] = finalWake.split(":").map(Number);
+
+      // Calculate time in bed (minutes)
+      let tryMinutes = tryH * 60 + tryM;
+      let wakeMinutes = wakeH * 60 + wakeM;
+
+      // Handle crossing midnight
+      if (wakeMinutes < tryMinutes) {
+        wakeMinutes += 24 * 60;
+      }
+
+      const timeInBed = wakeMinutes - tryMinutes;
+
+      // Actual sleep = Time in bed - latency - WASO
+      const actualSleepMinutes = timeInBed - latencyMinutes - wasoMinutes;
+      const actualSleepHours = actualSleepMinutes / 60;
+
+      // Round to nearest 0.5 hour
+      return Math.round(actualSleepHours * 2) / 2;
+    }
+  },
+
+  // Question 42: "How many minutes did it typically take you to fall asleep?"
+  // Directly derived from: CSD_LATENCY
+  "42": {
+    sources: ["CSD_LATENCY"],
+    derive: (responses: Map<string, { value?: string; number?: number }>) => {
+      return responses.get("CSD_LATENCY")?.number ?? null;
+    }
+  },
+
+  // Question 41: "When have you usually gone to bed at night?"
+  // Directly derived from: CSD_TRY_SLEEP
+  "41": {
+    sources: ["CSD_TRY_SLEEP"],
+    derive: (responses: Map<string, { value?: string; number?: number }>) => {
+      return responses.get("CSD_TRY_SLEEP")?.value ?? null;
+    }
+  },
+} as const;
+
+// Set of all derivable question IDs for quick lookup
+const DERIVABLE_QUESTION_IDS = new Set(Object.keys(DERIVABLE_QUESTIONS));
+
+// ============================================
 // Helper Functions
 // ============================================
+
+/**
+ * Check if user has completed sleep log for the current day
+ * Returns the response map if complete, null otherwise
+ */
+async function getSleepLogResponsesIfComplete(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  userId: Id<"users">,
+  dayNumber: number
+): Promise<Map<string, { value?: string; number?: number }> | null> {
+  // Get all responses for this user and day
+  const responses = await ctx.db
+    .query("user_assessment_responses")
+    .withIndex("by_user_day", (q: { eq: (field: string, value: unknown) => { eq: (field: string, value: unknown) => unknown } }) =>
+      q.eq("user_id", userId).eq("day_number", dayNumber)
+    )
+    .collect();
+
+  // Filter to CSD_ questions
+  const csdResponses = responses.filter((r: { question_id: string }) =>
+    r.question_id.startsWith("CSD_")
+  );
+
+  // Check if essential sleep log questions are answered
+  const essentialQuestions = ["CSD_TRY_SLEEP", "CSD_FINAL_WAKE", "CSD_WASO", "CSD_LATENCY"];
+  const responseMap = new Map<string, { value?: string; number?: number }>();
+
+  for (const r of csdResponses) {
+    responseMap.set(r.question_id, {
+      value: r.response_value,
+      number: r.response_number,
+    });
+  }
+
+  // Check if all essential questions are answered
+  const hasAllEssential = essentialQuestions.every(qId => responseMap.has(qId));
+
+  if (!hasAllEssential) {
+    return null;
+  }
+
+  return responseMap;
+}
+
+/**
+ * Generate and save derived responses for questions that can be auto-calculated from sleep log
+ * Called when sleep log section is completed
+ */
+async function generateDerivedResponses(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  dayNumber: number
+): Promise<number> {
+  // Get sleep log responses
+  const sleepLogResponses = await getSleepLogResponsesIfComplete(ctx, userId, dayNumber);
+
+  if (!sleepLogResponses) {
+    console.log(`[Convex] Cannot generate derived responses - sleep log not complete for day ${dayNumber}`);
+    return 0;
+  }
+
+  const now = Date.now();
+  let derivedCount = 0;
+
+  // Generate derived responses for each derivable question
+  for (const [questionId, config] of Object.entries(DERIVABLE_QUESTIONS)) {
+    // Check if response already exists for this question
+    const existingResponse = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user_question", (q) =>
+        q.eq("user_id", userId).eq("question_id", questionId)
+      )
+      .filter((q) => q.eq(q.field("day_number"), dayNumber))
+      .first();
+
+    if (existingResponse) {
+      console.log(`[Convex] Derived response for ${questionId} already exists, skipping`);
+      continue;
+    }
+
+    // Derive the value
+    const derivedValue = config.derive(sleepLogResponses);
+
+    if (derivedValue === null) {
+      console.log(`[Convex] Could not derive value for ${questionId}`);
+      continue;
+    }
+
+    // Save the derived response
+    const isNumeric = typeof derivedValue === "number";
+
+    await ctx.db.insert("user_assessment_responses", {
+      user_id: userId,
+      question_id: questionId,
+      response_value: isNumeric ? undefined : String(derivedValue),
+      response_number: isNumeric ? derivedValue : undefined,
+      day_number: dayNumber,
+      is_derived: true, // Mark as derived for physician dashboard
+      response_source: "derived", // Track source for audit
+      created_at: now,
+      updated_at: now,
+    });
+
+    console.log(`[Convex] Generated derived response for ${questionId}: ${derivedValue} (is_derived=true)`);
+    derivedCount++;
+  }
+
+  return derivedCount;
+}
 
 /**
  * Compute sleep metrics from CSD_ questionnaire responses and save to user_sleep_data.
@@ -184,6 +364,7 @@ async function computeExpansionScheduleForUser(
     { id: "expansion_bpi", name: "BPI", questionCount: 11, estimatedMinutes: 8, requiredGateways: ["pain"], priority: 5 },
     { id: "expansion_medas", name: "MEDAS", questionCount: 14, estimatedMinutes: 10, requiredGateways: ["diet_impact"], priority: 5 },
     { id: "expansion_meq", name: "MEQ", questionCount: 19, estimatedMinutes: 12, requiredGateways: ["sleep_timing"], priority: 5 },
+    { id: "expansion_swdsq", name: "SWDSQ", questionCount: 4, estimatedMinutes: 3, requiredGateways: ["shift_work"], priority: 2 },
   ];
 
   const TARGET_QUESTIONS_PER_DAY = 14;
@@ -759,6 +940,16 @@ export const completeSection = mutation({
         completed_at: sleepLogCompleted && assessmentCompleted ? now : undefined,
         created_at: now,
       });
+    }
+
+    // When sleep log is completed, generate derived responses for assessment questions
+    // These questions won't be shown to the user but their values will be calculated
+    // from sleep log data for physician scoring
+    if (args.section === "sleepLog") {
+      const derivedCount = await generateDerivedResponses(ctx, args.userId, args.dayNumber);
+      if (derivedCount > 0) {
+        console.log(`[Convex] Generated ${derivedCount} derived responses from sleep log for day ${args.dayNumber}`);
+      }
     }
 
     // Check if both sections are now complete
@@ -1394,6 +1585,8 @@ export const saveResponses = mutation({
         responseValue: v.optional(v.string()),
         responseNumber: v.optional(v.number()),
         responseArray: v.optional(v.array(v.string())),
+        // Unit of measurement for numeric responses (e.g., "cm", "in", "°C", "°F")
+        responseUnit: v.optional(v.string()),
         // Derived answer fields - for answers auto-populated from equivalent questions
         isDerived: v.optional(v.boolean()),
         derivedFromQuestionId: v.optional(v.string()),
@@ -1426,6 +1619,7 @@ export const saveResponses = mutation({
           response_value: response.responseValue,
           response_number: response.responseNumber,
           response_array: response.responseArray ? JSON.stringify(response.responseArray) : undefined,
+          response_unit: response.responseUnit,
           day_number: args.dayNumber,
           is_derived: response.isDerived ?? false,
           derived_from_question_id: response.derivedFromQuestionId,
@@ -1438,6 +1632,7 @@ export const saveResponses = mutation({
           response_value: response.responseValue,
           response_number: response.responseNumber,
           response_array: response.responseArray ? JSON.stringify(response.responseArray) : undefined,
+          response_unit: response.responseUnit,
           day_number: args.dayNumber,
           is_derived: response.isDerived ?? false,
           derived_from_question_id: response.derivedFromQuestionId,
@@ -1842,7 +2037,49 @@ export const getQuestionsForUserDay = query({
       // Sort by order_index
       sleepDiaryQuestions.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
-      result.sleepLog = sleepDiaryQuestions.map((q) => ({
+      // Get all user's assessment responses for cross-questionnaire conditional logic
+      const allResponses = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+        .collect();
+
+      // Filter out gateway-conditional questions if their gateway is not triggered
+      // This handles cross-questionnaire conditional logic (e.g., SD_KSS requires shift_work gateway)
+      const filteredQuestions = sleepDiaryQuestions.filter((q) => {
+        if (!q.conditional_logic) return true;
+
+        try {
+          const logic = JSON.parse(q.conditional_logic);
+          // Check if this is a gateway-based condition (references an assessment question like 53B)
+          const conditionQuestionId = logic.show_if?.question_id || logic.question_id;
+
+          // If the condition references an assessment question (not SD_*),
+          // we need to check if the user answered affirmatively
+          if (conditionQuestionId && !conditionQuestionId.startsWith("SD_")) {
+            // Look up the user's response to the assessment question
+            const assessmentResponse = allResponses.find(
+              (r: { question_id: string }) => r.question_id === conditionQuestionId
+            );
+
+            const expectedValue = logic.show_if?.value || logic.equals;
+            if (expectedValue && assessmentResponse) {
+              const actualValue = String(assessmentResponse.response_value).toLowerCase();
+              const matches = actualValue === String(expectedValue).toLowerCase();
+              console.log(`[Convex] Sleep diary question ${q.id}: Checking ${conditionQuestionId}=${assessmentResponse.response_value} vs ${expectedValue} => ${matches ? "INCLUDE" : "EXCLUDE"}`);
+              return matches;
+            }
+
+            // No response found for the condition question - exclude this question
+            console.log(`[Convex] Sleep diary question ${q.id}: No response for ${conditionQuestionId}, excluding`);
+            return false;
+          }
+        } catch {
+          // Parse error - include the question
+        }
+        return true;
+      });
+
+      result.sleepLog = filteredQuestions.map((q) => ({
         id: q.id,
         text: q.question_text,
         type: mapAnswerFormatToType(q.answer_format),
@@ -1858,7 +2095,7 @@ export const getQuestionsForUserDay = query({
 
     // ========== ASSESSMENT (Day-Specific + Gateway Expansion) ==========
     if (section === "all" || section === "assessment") {
-      // Get all modules assigned to this day
+      // Get all modules assigned to this day from static day_modules table
       const dayModules = await ctx.db
         .query("day_modules")
         .withIndex("by_day", (q) => q.eq("day_number", args.dayNumber))
@@ -1867,8 +2104,30 @@ export const getQuestionsForUserDay = query({
       // Sort modules by order
       dayModules.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
+      // ========== EXPANSION SCHEDULE CHECK (Days 6+) ==========
+      // For Days 6-14, also check user_expansion_schedules for dynamically scheduled modules
+      // This handles expansion packs triggered by gateways (e.g., shift_work -> expansion_swdsq)
+      let expansionModuleIds: string[] = [];
+      if (args.dayNumber >= 6) {
+        const expansionSchedule = await ctx.db
+          .query("user_expansion_schedules")
+          .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+          .first();
+
+        if (expansionSchedule) {
+          const dayAssignment = expansionSchedule.day_assignments.find(
+            (d: { day_number: number }) => d.day_number === args.dayNumber
+          );
+          if (dayAssignment) {
+            expansionModuleIds = dayAssignment.module_ids || [];
+            console.log(`[Convex] Day ${args.dayNumber} expansion modules from schedule: ${expansionModuleIds.join(", ")}`);
+          }
+        }
+      }
+
       let totalSeconds = 0;
 
+      // Process static day_modules first
       for (const dayModule of dayModules) {
         // Get module info
         const module = await ctx.db
@@ -1951,6 +2210,81 @@ export const getQuestionsForUserDay = query({
 
             totalSeconds += question.estimated_time_seconds || 30;
           }
+        }
+      }
+
+      // ========== PROCESS EXPANSION MODULES FROM SCHEDULE (Days 6+) ==========
+      // These are dynamically computed based on triggered gateways
+      for (const expansionModuleId of expansionModuleIds) {
+        // Skip if already processed from day_modules
+        if (result.metadata.modules.includes(expansionModuleId)) {
+          console.log(`[Convex] Skipping expansion module ${expansionModuleId} - already processed from day_modules`);
+          continue;
+        }
+
+        // Get module info
+        const module = await ctx.db
+          .query("assessment_modules")
+          .withIndex("by_module_id", (q) => q.eq("module_id", expansionModuleId))
+          .first();
+
+        if (!module) {
+          console.log(`[Convex] Warning: Expansion module ${expansionModuleId} not found in assessment_modules`);
+          continue;
+        }
+
+        console.log(`[Convex] Processing expansion module ${expansionModuleId} (${module.name})`);
+
+        // Track this module as included
+        result.metadata.modules.push(expansionModuleId);
+
+        // Get questions in this module
+        const moduleQuestions = await ctx.db
+          .query("module_questions")
+          .withIndex("by_module", (q) => q.eq("module_id", expansionModuleId))
+          .collect();
+
+        // Sort by order_index
+        moduleQuestions.sort((a, b) => a.order_index - b.order_index);
+
+        // Get full question data
+        for (const mq of moduleQuestions) {
+          const question = await ctx.db
+            .query("assessment_questions")
+            .withIndex("by_question_id", (q) => q.eq("question_id", mq.question_id))
+            .first();
+
+          if (question) {
+            result.assessment.push({
+              id: question.question_id,
+              text: question.question_text,
+              type: mapAnswerFormatToType(question.answer_format),
+              required: true,
+              helpText: question.help_text ?? undefined,
+              moduleName: module.name,
+              formatConfig: question.format_config ? JSON.parse(question.format_config) : undefined,
+              options: question.format_config ? parseOptions(question.format_config) : undefined,
+              conditionalLogic: question.conditional_logic ? parseConditionalLogic(question.conditional_logic) : undefined,
+            });
+
+            totalSeconds += question.estimated_time_seconds || 30;
+          }
+        }
+      }
+
+      // ========== FILTER DERIVABLE QUESTIONS ==========
+      // If user has completed sleep log for this day, filter out questions
+      // that can be derived from sleep log data (reduces user burden)
+      const sleepLogResponses = await getSleepLogResponsesIfComplete(ctx, args.userId, args.dayNumber);
+
+      if (sleepLogResponses) {
+        const originalCount = result.assessment.length;
+        result.assessment = result.assessment.filter(
+          (q) => !DERIVABLE_QUESTION_IDS.has(q.id)
+        );
+        const filteredCount = originalCount - result.assessment.length;
+        if (filteredCount > 0) {
+          console.log(`[Convex] Filtered ${filteredCount} derivable questions (user has sleep log data for day ${args.dayNumber})`);
         }
       }
 
@@ -2160,9 +2494,10 @@ export const migrateGatewayStates = mutation({
     // Get all gateway states (optionally filtered by user)
     let states;
     if (args.userId) {
+      const userId = args.userId;
       states = await ctx.db
         .query("user_gateway_states")
-        .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+        .withIndex("by_user", (q) => q.eq("user_id", userId))
         .collect();
     } else {
       states = await ctx.db.query("user_gateway_states").collect();
@@ -2762,6 +3097,7 @@ export const previewExpansionSchedule = query({
       { id: "expansion_bpi", name: "BPI", questionCount: 11, estimatedMinutes: 8, requiredGateways: ["pain"], priority: 5 },
       { id: "expansion_medas", name: "MEDAS", questionCount: 14, estimatedMinutes: 10, requiredGateways: ["diet_impact"], priority: 5 },
       { id: "expansion_meq", name: "MEQ", questionCount: 19, estimatedMinutes: 12, requiredGateways: ["sleep_timing"], priority: 5 },
+      { id: "expansion_swdsq", name: "SWDSQ", questionCount: 4, estimatedMinutes: 3, requiredGateways: ["shift_work"], priority: 2 },
     ];
 
     const TARGET_QUESTIONS_PER_DAY = 14;

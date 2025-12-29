@@ -478,10 +478,10 @@ async function updateWeeklyChallengeProgress(
       // Use existing schema structure
       const existing = await ctx.db
         .query("user_challenges")
-        .withIndex("by_user_type", (q) =>
+        .withIndex("by_user_type", (q: { eq: (field: string, value: unknown) => typeof q }) =>
           q.eq("user_id", userId).eq("challenge_type", "weekly")
         )
-        .filter((q) =>
+        .filter((q: { and: (...args: unknown[]) => unknown; eq: (field: unknown, value: unknown) => unknown; field: (name: string) => unknown }) =>
           q.and(
             q.eq(q.field("challenge_id"), challenge.id),
             q.eq(q.field("start_date"), weekStart)

@@ -8,10 +8,232 @@
  * to prevent unauthorized access.
  */
 
-import { query, mutation, action } from "./_generated/server";
+import { query, mutation, action, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 import { validateIOSSession, validateUserOwnership } from "./auth";
+
+// ============================================
+// Inline Helper Functions (avoids internal.xxx bootstrap issues)
+// ============================================
+
+interface QuestionResult {
+  question_id: string;
+  question_text: string;
+  help_text?: string;
+  pillar: string;
+  tier: string;
+  answer_format: string;
+  format_config: string;
+  validation_rules?: string;
+  conditional_logic?: string;
+  order_index?: number;
+  estimated_time_seconds: number;
+  module_id: string;
+  module_name: string;
+}
+
+/**
+ * Inline helper to get questions by day (avoids internal.xxx bootstrap issues)
+ */
+async function getQuestionsByDayHelper(ctx: QueryCtx, dayNumber: number): Promise<QuestionResult[]> {
+  const dayModules = await ctx.db
+    .query("day_modules")
+    .withIndex("by_day", (q) => q.eq("day_number", dayNumber))
+    .collect();
+
+  const result: QuestionResult[] = [];
+
+  for (const dayModule of dayModules) {
+    const module = await ctx.db
+      .query("assessment_modules")
+      .withIndex("by_module_id", (q) => q.eq("module_id", dayModule.module_id))
+      .first();
+
+    if (!module) continue;
+
+    const moduleQuestions = await ctx.db
+      .query("module_questions")
+      .withIndex("by_module", (q) => q.eq("module_id", dayModule.module_id))
+      .collect();
+
+    moduleQuestions.sort((a, b) => a.order_index - b.order_index);
+
+    for (const mq of moduleQuestions) {
+      const question = await ctx.db
+        .query("assessment_questions")
+        .withIndex("by_question_id", (q) => q.eq("question_id", mq.question_id))
+        .first();
+
+      if (question) {
+        result.push({
+          question_id: question.question_id,
+          question_text: question.question_text,
+          help_text: question.help_text,
+          pillar: question.pillar,
+          tier: question.tier,
+          answer_format: question.answer_format,
+          format_config: question.format_config,
+          validation_rules: question.validation_rules ?? undefined,
+          conditional_logic: question.conditional_logic ?? undefined,
+          order_index: mq.order_index,
+          estimated_time_seconds: question.estimated_time_seconds,
+          module_id: dayModule.module_id,
+          module_name: module.name
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
+interface SaveResponseArgs {
+  userId: Id<"users">;
+  questionId: string;
+  answerFormat: string;
+  value: string | number | null;
+  arrayValue?: string[];
+  objectValue?: string;
+  responseUnit?: string;
+  dayNumber?: number;
+  answeredInSeconds?: number;
+}
+
+/**
+ * Inline helper to save response (avoids internal.xxx bootstrap issues)
+ */
+async function saveResponseHelper(
+  ctx: MutationCtx,
+  args: SaveResponseArgs
+): Promise<Id<"user_assessment_responses">> {
+  const startTime = Date.now();
+
+  let existing;
+  if (args.dayNumber !== undefined) {
+    existing = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user_question_day", (q) =>
+        q.eq("user_id", args.userId).eq("question_id", args.questionId).eq("day_number", args.dayNumber)
+      )
+      .first();
+  } else {
+    existing = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user_question", (q) =>
+        q.eq("user_id", args.userId).eq("question_id", args.questionId)
+      )
+      .first();
+  }
+
+  let responseData: {
+    response_value?: string;
+    response_number?: number;
+    response_array?: string;
+    response_object?: string;
+    response_unit?: string;
+  } = {};
+
+  // Include unit if provided
+  if (args.responseUnit) {
+    responseData.response_unit = args.responseUnit;
+  }
+
+  switch (args.answerFormat) {
+    case "time_picker":
+    case "single_select_chips":
+    case "date_picker":
+      responseData.response_value =
+        typeof args.value === "string" ? args.value : undefined;
+      break;
+    case "minutes_scroll":
+    case "number_scroll":
+    case "slider_scale":
+    case "number_input":
+      responseData.response_number =
+        typeof args.value === "number"
+          ? args.value
+          : typeof args.value === "string"
+          ? parseFloat(args.value)
+          : undefined;
+      break;
+    case "multi_select_chips":
+      responseData.response_array = args.arrayValue
+        ? JSON.stringify(args.arrayValue)
+        : undefined;
+      break;
+    case "repeating_group":
+      responseData.response_object = args.objectValue;
+      break;
+    default:
+      throw new Error(`Unknown answer format: ${args.answerFormat}`);
+  }
+
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      ...responseData,
+      day_number: args.dayNumber,
+      answered_in_seconds:
+        args.answeredInSeconds ||
+        Math.floor((Date.now() - startTime) / 1000),
+      updated_at: Date.now()
+    });
+    return existing._id;
+  } else {
+    return await ctx.db.insert("user_assessment_responses", {
+      user_id: args.userId,
+      question_id: args.questionId,
+      ...responseData,
+      day_number: args.dayNumber,
+      answered_in_seconds:
+        args.answeredInSeconds ||
+        Math.floor((Date.now() - startTime) / 1000),
+      created_at: Date.now(),
+      updated_at: Date.now()
+    });
+  }
+}
+
+/**
+ * Inline helper to mark day complete (avoids internal.xxx bootstrap issues)
+ */
+async function markDayCompleteHelper(
+  ctx: MutationCtx,
+  args: { userId: Id<"users">; dayNumber: number }
+): Promise<Id<"user_progress">> {
+  const day = await ctx.db
+    .query("days")
+    .withIndex("by_day_number", (q) => q.eq("day_number", args.dayNumber))
+    .first();
+
+  if (!day) {
+    throw new Error(`Day ${args.dayNumber} not found`);
+  }
+
+  const existing = await ctx.db
+    .query("user_progress")
+    .withIndex("by_user_day", (q) =>
+      q.eq("user_id", args.userId).eq("day_id", day._id)
+    )
+    .first();
+
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      completed: true,
+      completed_at: Date.now()
+    });
+    return existing._id;
+  } else {
+    return await ctx.db.insert("user_progress", {
+      user_id: args.userId,
+      day_id: day._id,
+      completed: true,
+      completed_at: Date.now(),
+      created_at: Date.now()
+    });
+  }
+}
 
 // ============================================
 // iOS Authentication Functions
@@ -1042,11 +1264,8 @@ export const getDayQuestionnaire = query({
       dayNum = user.current_day;
     }
 
-    // Get questions for this day using existing query
-    const questions = await ctx.runQuery(
-      api.assessmentQueries.getQuestionsByDay,
-      { dayNumber: dayNum }
-    );
+    // Get questions for this day using inline helper (avoids internal.xxx bootstrap issues)
+    const questions = await getQuestionsByDayHelper(ctx, dayNum);
 
     // Get user's existing responses for these questions
     const responses: Record<string, unknown> = {};
@@ -1070,7 +1289,7 @@ export const getDayQuestionnaire = query({
 
     return {
       dayNumber: dayNum,
-      questions: questions.map(q => ({
+      questions: questions.map((q) => ({
         questionId: q.question_id,
         questionText: q.question_text,
         helpText: q.help_text,
@@ -1099,18 +1318,20 @@ export const submitQuestionnaireResponse = mutation({
     value: v.optional(v.union(v.string(), v.number())),
     arrayValue: v.optional(v.array(v.string())),
     objectValue: v.optional(v.string()),
+    responseUnit: v.optional(v.string()),
     dayNumber: v.number(),
     answeredInSeconds: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // Use existing mutation
-    return await ctx.runMutation(api.assessmentMutations.saveResponse, {
+    // Use inline helper (avoids internal.xxx bootstrap issues)
+    return await saveResponseHelper(ctx, {
       userId: args.userId,
       questionId: args.questionId,
       answerFormat: args.answerFormat,
       value: args.value ?? null,
       arrayValue: args.arrayValue,
       objectValue: args.objectValue,
+      responseUnit: args.responseUnit,
       dayNumber: args.dayNumber,
       answeredInSeconds: args.answeredInSeconds,
     });
@@ -1129,8 +1350,8 @@ export const completeDay = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    // Mark day as complete
-    await ctx.runMutation(api.assessmentMutations.markDayComplete, {
+    // Mark day as complete using inline helper (avoids internal.xxx bootstrap issues)
+    await markDayCompleteHelper(ctx, {
       userId: args.userId,
       dayNumber: args.dayNumber,
     });
@@ -1414,32 +1635,32 @@ export const advanceToNextDay = mutation({
     });
 
     // Mark current day as completed in user_progress
-    const existingProgress = await ctx.db
-      .query("user_progress")
-      .withIndex("by_user_day", (q) =>
-        q.eq("user_id", args.userId).eq("day_number", currentDay)
-      )
+    // First get the day entry
+    const dayEntry = await ctx.db
+      .query("days")
+      .withIndex("by_day_number", (q) => q.eq("day_number", currentDay))
       .first();
 
-    if (existingProgress) {
-      await ctx.db.patch(existingProgress._id, {
-        completed: true,
-        completed_at: Date.now(),
-      });
-    } else {
-      // Create progress entry for the day being completed
-      const day = await ctx.db
-        .query("days")
-        .withIndex("by_day_number", (q) => q.eq("day_number", currentDay))
+    if (dayEntry) {
+      const existingProgress = await ctx.db
+        .query("user_progress")
+        .withIndex("by_user_day", (q) =>
+          q.eq("user_id", args.userId).eq("day_id", dayEntry._id)
+        )
         .first();
 
-      if (day) {
+      if (existingProgress) {
+        await ctx.db.patch(existingProgress._id, {
+          completed: true,
+          completed_at: Date.now(),
+        });
+      } else {
+        // Create progress entry for the day being completed
         await ctx.db.insert("user_progress", {
           user_id: args.userId,
-          day_id: day._id,
-          day_number: currentDay,
+          day_id: dayEntry._id,
           completed: true,
-          started_at: Date.now(),
+          created_at: Date.now(),
           completed_at: Date.now(),
         });
       }
@@ -1554,7 +1775,7 @@ export const resetJourneyProgress = mutation({
 
     // Reset gateway states
     const gatewayStates = await ctx.db
-      .query("gateway_states")
+      .query("user_gateway_states")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
 
@@ -1658,20 +1879,28 @@ export const getJourneyDebugInfo = query({
       .collect();
 
     const gatewayStates = await ctx.db
-      .query("gateway_states")
+      .query("user_gateway_states")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
+
+    // Get day info for each progress entry
+    const progressWithDays = await Promise.all(
+      progress.map(async (p) => {
+        const day = await ctx.db.get(p.day_id);
+        return {
+          day: day?.day_number ?? 0,
+          completed: p.completed,
+        };
+      })
+    );
 
     return {
       currentDay: user.current_day || 1,
       onboardingCompleted: user.onboarding_completed || false,
       progressCount: progress.length,
       responsesCount: responses.length,
-      triggeredGateways: gatewayStates.filter(g => g.triggered).map(g => g.gateway_type),
-      progressByDay: progress.map(p => ({
-        day: p.day_number,
-        completed: p.completed,
-      })),
+      triggeredGateways: gatewayStates.filter(g => g.triggered).map(g => g.gateway_id),
+      progressByDay: progressWithDays,
     };
   },
 });

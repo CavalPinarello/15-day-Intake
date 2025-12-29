@@ -41,7 +41,7 @@ export const getScorePercentile = query({
     // Get all scores of this type
     const allScores = await ctx.db
       .query("questionnaire_scores")
-      .withIndex("by_score_type", (q) => q.eq("score_type", args.scoreType))
+      .withIndex("by_questionnaire", (q) => q.eq("questionnaire_name", args.scoreType))
       .collect();
 
     if (allScores.length < 10) {
@@ -263,8 +263,8 @@ export const getImprovementStats = query({
     // If user has pre/post scores, calculate their improvement
     if (userScores.length >= 2) {
       const isiScores = userScores
-        .filter((s) => s.score_type === "ISI")
-        .sort((a, b) => (a.scored_at ?? 0) - (b.scored_at ?? 0));
+        .filter((s) => s.questionnaire_name === "ISI")
+        .sort((a, b) => (a.calculated_at ?? 0) - (b.calculated_at ?? 0));
 
       if (isiScores.length >= 2) {
         const firstScore = isiScores[0].score;
@@ -349,14 +349,21 @@ export const recordCohortDatapoint = mutation({
     metadata: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Note: cohort_statistics is for aggregated stats, not individual data points
+    // This function stores a single user's data point for later aggregation
+    const now = Date.now();
     await ctx.db.insert("cohort_statistics", {
-      user_id: args.userId,
-      data_type: args.dataType,
-      value: args.value,
-      metadata_json: args.metadata,
-      is_anonymous: true,
-      sample_date: new Date().toISOString().split("T")[0],
-      created_at: Date.now(),
+      stat_id: `user_${args.userId}_${args.dataType}_${now}`,
+      stat_name: args.dataType,
+      stat_description: `User data point for ${args.dataType}`,
+      cohort_criteria_json: JSON.stringify({ user_id: args.userId }),
+      sample_size: 1,
+      stat_value: args.value,
+      stat_type: "individual",
+      display_format: `${args.dataType}: {{value}}`,
+      computed_at: now,
+      data_source: "internal",
+      is_active: true,
     });
   },
 });
