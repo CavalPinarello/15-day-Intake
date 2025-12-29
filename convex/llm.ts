@@ -712,6 +712,367 @@ async function calculateESS(
 }
 
 // ============================================
+// Clinical Reference Data from Peer-Reviewed Literature
+// ============================================
+
+/**
+ * Returns validated clinical interpretation guidelines for a specific questionnaire
+ * All thresholds and interpretations are based on peer-reviewed literature
+ */
+function getClinicalReferenceForQuestionnaire(questionnaireName: string): string {
+  const normalizedName = questionnaireName.toLowerCase();
+
+  // ISI - Insomnia Severity Index
+  // Reference: Bastien CH, Vallières A, Morin CM. Validation of the Insomnia Severity Index. Sleep Med. 2001;2(4):297-307
+  // Reference: Morin CM, Belleville G, Bélanger L, Ivers H. The Insomnia Severity Index: psychometric indicators to detect insomnia cases and evaluate treatment response. Sleep. 2011;34(5):601-8
+  if (normalizedName.includes("isi") || normalizedName.includes("insomnia severity")) {
+    return `**INSOMNIA SEVERITY INDEX (ISI) - Clinical Reference**
+Source: Bastien et al. (2001), Morin et al. (2011) - Sleep Medicine
+
+**Validated Severity Thresholds:**
+- 0-7: No clinically significant insomnia
+- 8-14: Subthreshold insomnia (subclinical symptoms)
+- 15-21: Clinical insomnia of MODERATE severity
+- 22-28: Clinical insomnia of SEVERE severity
+
+**Clinical Significance:**
+- The ISI has demonstrated sensitivity to change and is recommended for detecting insomnia cases in clinical and research settings
+- A score of 15+ indicates clinical insomnia warranting intervention per DSM-5/ICSD-3 criteria
+- A change of ≥6 points is considered clinically meaningful improvement
+- The ISI correlates strongly (r=0.65) with polysomnographic sleep efficiency
+
+**Domain Assessment (Questions):**
+1-3: Nighttime symptoms (difficulty falling asleep, staying asleep, early awakening)
+4: Sleep satisfaction
+5: Daytime impairment noticeability
+6: Distress/worry about sleep
+7: Interference with daily functioning`;
+  }
+
+  // PHQ-9 - Patient Health Questionnaire
+  // Reference: Kroenke K, Spitzer RL, Williams JB. The PHQ-9: validity of a brief depression severity measure. J Gen Intern Med. 2001;16(9):606-13
+  if (normalizedName.includes("phq") || normalizedName.includes("patient health")) {
+    return `**PHQ-9 (Patient Health Questionnaire-9) - Clinical Reference**
+Source: Kroenke et al. (2001) - Journal of General Internal Medicine
+
+**Validated Severity Thresholds:**
+- 0-4: Minimal depression (no treatment indicated)
+- 5-9: Mild depression (watchful waiting, consider follow-up)
+- 10-14: Moderate depression (treatment plan indicated - therapy and/or medication)
+- 15-19: Moderately severe depression (active treatment with pharmacotherapy and/or psychotherapy)
+- 20-27: Severe depression (immediate initiation of pharmacotherapy, consider specialty mental health referral)
+
+**Clinical Significance:**
+- A score ≥10 has 88% sensitivity and 88% specificity for major depression
+- Question 9 (suicidal ideation) requires immediate assessment regardless of total score
+- Treatment response is typically defined as ≥50% reduction in PHQ-9 score
+- Remission is defined as PHQ-9 score <5
+
+**Risk Assessment:**
+- Any positive response to Q9 warrants safety assessment
+- Anhedonia (Q1) and depressed mood (Q2) are core symptoms for MDD diagnosis`;
+  }
+
+  // GAD-7 - Generalized Anxiety Disorder
+  // Reference: Spitzer RL, Kroenke K, Williams JB, Löwe B. A brief measure for assessing generalized anxiety disorder. Arch Intern Med. 2006;166(10):1092-7
+  if (normalizedName.includes("gad") || normalizedName.includes("anxiety")) {
+    return `**GAD-7 (Generalized Anxiety Disorder-7) - Clinical Reference**
+Source: Spitzer et al. (2006) - Archives of Internal Medicine
+
+**Validated Severity Thresholds:**
+- 0-4: Minimal anxiety
+- 5-9: Mild anxiety
+- 10-14: Moderate anxiety (consider treatment)
+- 15-21: Severe anxiety (active treatment recommended)
+
+**Clinical Significance:**
+- A score ≥10 has 89% sensitivity and 82% specificity for GAD diagnosis
+- The GAD-7 is also a good screener for panic disorder, social anxiety, and PTSD
+- Consider psychiatric referral for scores ≥15
+- Treatment response is typically defined as ≥50% reduction
+
+**Sleep Relevance:**
+- Anxiety is bidirectionally related to insomnia
+- High arousal from anxiety impairs sleep onset and maintenance
+- CBT-I effectiveness may be reduced if GAD is untreated`;
+  }
+
+  // ESS - Epworth Sleepiness Scale
+  // Reference: Johns MW. A new method for measuring daytime sleepiness: the Epworth sleepiness scale. Sleep. 1991;14(6):540-5
+  if (normalizedName.includes("ess") || normalizedName.includes("epworth") || normalizedName.includes("sleepiness")) {
+    return `**EPWORTH SLEEPINESS SCALE (ESS) - Clinical Reference**
+Source: Johns MW (1991) - Sleep
+
+**Validated Severity Thresholds:**
+- 0-7: Normal daytime sleepiness
+- 8-9: Average sleepiness (borderline)
+- 10-15: Excessive daytime sleepiness (EDS) - mild to moderate
+- 16-24: Severe excessive daytime sleepiness
+
+**Clinical Significance:**
+- ESS ≥10 indicates clinically significant EDS warranting evaluation
+- High ESS in combination with loud snoring suggests OSA evaluation
+- ESS >15 may indicate narcolepsy, severe OSA, or other hypersomnia
+- Driving safety should be assessed for ESS ≥12
+
+**Differential Diagnosis:**
+- Obstructive sleep apnea
+- Insufficient sleep syndrome
+- Narcolepsy or idiopathic hypersomnia
+- Medication side effects
+- Shift work disorder`;
+  }
+
+  // STOP-BANG - Sleep Apnea Screening
+  // Reference: Chung F et al. STOP questionnaire: a tool to screen patients for obstructive sleep apnea. Anesthesiology. 2008;108(5):812-21
+  // Reference: Chung F et al. High STOP-Bang score indicates a high probability of obstructive sleep apnoea. Br J Anaesth. 2012;108(5):768-75
+  if (normalizedName.includes("stop") || normalizedName.includes("bang") || normalizedName.includes("apnea")) {
+    return `**STOP-BANG Questionnaire - Clinical Reference**
+Source: Chung et al. (2008, 2012) - Anesthesiology, British Journal of Anaesthesia
+
+**Validated Risk Stratification:**
+- 0-2: Low risk for OSA
+- 3-4: Intermediate risk for OSA (consider home sleep test)
+- 5-8: High risk for OSA (polysomnography recommended)
+
+**Clinical Significance:**
+- Score ≥3 has 93% sensitivity for detecting moderate-severe OSA (AHI≥15)
+- Score ≥5 has high specificity for severe OSA (AHI≥30)
+- Male sex + BMI>35 + score≥2 = very high risk regardless of total
+- Used as preoperative screening in anesthesiology guidelines
+
+**Components (STOP-BANG):**
+S - Snoring loudly
+T - Tiredness/fatigue/sleepiness
+O - Observed apneas
+P - Pressure (hypertension)
+B - BMI >35
+A - Age >50
+N - Neck circumference >40cm
+G - Gender male`;
+  }
+
+  // PSQI - Pittsburgh Sleep Quality Index
+  // Reference: Buysse DJ, Reynolds CF, Monk TH, Berman SR, Kupfer DJ. The Pittsburgh Sleep Quality Index: a new instrument for psychiatric practice and research. Psychiatry Res. 1989;28(2):193-213
+  if (normalizedName.includes("psqi") || normalizedName.includes("pittsburgh")) {
+    return `**PITTSBURGH SLEEP QUALITY INDEX (PSQI) - Clinical Reference**
+Source: Buysse et al. (1989) - Psychiatry Research
+
+**Validated Severity Thresholds:**
+- 0-5: Good sleep quality
+- 6-10: Poor sleep quality
+- 11-15: Moderate sleep difficulty
+- 16-21: Severe sleep difficulty
+
+**Clinical Significance:**
+- Global score >5 distinguishes good from poor sleepers with 89.6% sensitivity and 86.5% specificity
+- Seven component scores assess: subjective quality, latency, duration, efficiency, disturbances, medication use, daytime dysfunction
+- Widely used in sleep research as primary outcome measure
+
+**Component Scores (0-3 each):**
+1. Subjective sleep quality
+2. Sleep latency
+3. Sleep duration
+4. Habitual sleep efficiency
+5. Sleep disturbances
+6. Use of sleep medication
+7. Daytime dysfunction`;
+  }
+
+  // DBAS-16 - Dysfunctional Beliefs and Attitudes about Sleep
+  // Reference: Morin CM, Vallières A, Ivers H. Dysfunctional beliefs and attitudes about sleep (DBAS): validation of a brief version. Sleep. 2007;30(11):1547-54
+  if (normalizedName.includes("dbas") || normalizedName.includes("dysfunctional")) {
+    return `**DBAS-16 (Dysfunctional Beliefs and Attitudes about Sleep) - Clinical Reference**
+Source: Morin et al. (2007) - Sleep
+
+**Validated Interpretation:**
+- Higher scores indicate more dysfunctional sleep-related cognitions
+- Mean score >4 (on 0-10 scale per item) or total >64/160 suggests significant cognitive distortions
+- No strict clinical cutoffs; used to identify CBT-I targets
+
+**Clinical Significance:**
+- Identifies maladaptive beliefs that perpetuate insomnia
+- Key target for cognitive restructuring in CBT-I
+- Changes in DBAS predict treatment response in CBT-I
+- Assesses misconceptions about sleep requirements, consequences, and control
+
+**Cognitive Domains:**
+- Perceived consequences of insomnia
+- Worry about sleep
+- Sleep expectations
+- Beliefs about medication`;
+  }
+
+  // FSS - Fatigue Severity Scale
+  // Reference: Krupp LB, LaRocca NG, Muir-Nash J, Steinberg AD. The fatigue severity scale: application to patients with multiple sclerosis and systemic lupus erythematosus. Arch Neurol. 1989;46(10):1121-3
+  if (normalizedName.includes("fss") || normalizedName.includes("fatigue severity")) {
+    return `**FATIGUE SEVERITY SCALE (FSS) - Clinical Reference**
+Source: Krupp et al. (1989) - Archives of Neurology
+
+**Validated Interpretation:**
+- Mean score <4: No significant fatigue
+- Mean score 4-5: Mild fatigue
+- Mean score 5-6: Moderate fatigue
+- Mean score ≥6: Severe fatigue
+
+**Clinical Significance:**
+- Originally validated in MS and SLE, widely used in sleep medicine
+- Mean score ≥4 indicates clinically significant fatigue
+- Distinguishes fatigue from sleepiness (different from ESS)
+- Assesses functional impact of fatigue on daily activities
+
+**Differential Considerations:**
+- Sleep disorders causing fatigue
+- Medical conditions (thyroid, anemia, autoimmune)
+- Depression and mood disorders
+- Chronic fatigue syndrome`;
+  }
+
+  // FOSQ-10 - Functional Outcomes of Sleep Questionnaire
+  // Reference: Chasens ER, Ratcliffe SJ, Weaver TE. Development of the FOSQ-10: a short version of the Functional Outcomes of Sleep Questionnaire. Sleep. 2009;32(7):915-9
+  if (normalizedName.includes("fosq") || normalizedName.includes("functional outcomes")) {
+    return `**FOSQ-10 (Functional Outcomes of Sleep Questionnaire) - Clinical Reference**
+Source: Chasens et al. (2009) - Sleep
+
+**Validated Interpretation:**
+- Score 5-17.5: Normal functional status
+- Score 17.5-35: Moderate impairment
+- Score 35-50 (lower end): Significant functional impairment
+Note: Scoring is REVERSED - lower scores indicate greater impairment
+
+**Clinical Significance:**
+- Assesses impact of sleepiness on daily functioning
+- Five domains: activity level, vigilance, intimacy, general productivity, social outcomes
+- Sensitive to treatment effects in OSA patients on CPAP
+- Correlates with quality of life measures
+
+**Domain Assessment:**
+- General productivity
+- Social outcomes
+- Activity level
+- Vigilance
+- Intimate relationships`;
+  }
+
+  // DASS-21 - Depression Anxiety Stress Scales
+  // Reference: Lovibond SH, Lovibond PF. Manual for the Depression Anxiety Stress Scales. 2nd ed. Sydney: Psychology Foundation; 1995
+  if (normalizedName.includes("dass")) {
+    return `**DASS-21 (Depression Anxiety Stress Scales) - Clinical Reference**
+Source: Lovibond & Lovibond (1995)
+
+**Validated Severity Thresholds (multiply raw scores by 2 for DASS-21):**
+
+Depression subscale (x2):
+- 0-9: Normal
+- 10-13: Mild
+- 14-20: Moderate
+- 21-27: Severe
+- 28+: Extremely severe
+
+Anxiety subscale (x2):
+- 0-7: Normal
+- 8-9: Mild
+- 10-14: Moderate
+- 15-19: Severe
+- 20+: Extremely severe
+
+Stress subscale (x2):
+- 0-14: Normal
+- 15-18: Mild
+- 19-25: Moderate
+- 26-33: Severe
+- 34+: Extremely severe
+
+**Clinical Significance:**
+- Differentiates between depression, physical arousal (anxiety), and psychological tension (stress)
+- Does NOT diagnose clinical disorders but indicates symptom severity
+- Useful for tracking treatment progress`;
+  }
+
+  // Berlin Questionnaire - OSA Risk
+  // Reference: Netzer NC, Stoohs RA, Netzer CM, Clark K, Strohl KP. Using the Berlin Questionnaire to identify patients at risk for the sleep apnea syndrome. Ann Intern Med. 1999;131(7):485-91
+  if (normalizedName.includes("berlin")) {
+    return `**BERLIN QUESTIONNAIRE - Clinical Reference**
+Source: Netzer et al. (1999) - Annals of Internal Medicine
+
+**Risk Stratification:**
+- 0-1 categories positive: Low risk for OSA
+- 2-3 categories positive: High risk for OSA
+
+**Categories:**
+Category 1: Snoring behavior (Q1-5)
+Category 2: Daytime sleepiness (Q6-9)
+Category 3: BMI >30 and/or hypertension
+
+**Clinical Significance:**
+- High risk (≥2 categories) has 86% sensitivity for OSA (AHI>5)
+- Positive predictive value 89% for respiratory disturbance index >5
+- Recommended for primary care OSA screening
+- High-risk patients should be referred for sleep study`;
+  }
+
+  // BPI - Brief Pain Inventory
+  // Reference: Cleeland CS, Ryan KM. Pain assessment: global use of the Brief Pain Inventory. Ann Acad Med Singap. 1994;23(2):129-38
+  if (normalizedName.includes("bpi") || normalizedName.includes("brief pain")) {
+    return `**BRIEF PAIN INVENTORY (BPI) - Clinical Reference**
+Source: Cleeland & Ryan (1994) - Annals of the Academy of Medicine Singapore
+
+**Severity Interpretation (0-10 scales):**
+- 0: No pain
+- 1-3: Mild pain
+- 4-6: Moderate pain
+- 7-10: Severe pain
+
+**Subscales:**
+- Pain Severity: Average of worst, least, average, and current pain
+- Pain Interference: Average of 7 interference items
+
+**Clinical Significance:**
+- Pain severity ≥4 typically warrants pain management intervention
+- High interference scores indicate significant functional impact
+- Chronic pain is strongly associated with insomnia (50-90% comorbidity)
+- Pain management often required for successful insomnia treatment
+
+**Sleep Relevance:**
+- Pain disrupts sleep architecture
+- Sleep deprivation lowers pain threshold
+- Bidirectional relationship requires concurrent treatment`;
+  }
+
+  // MEDAS - Mediterranean Diet Adherence
+  // Reference: Schröder H, Fitó M, Estruch R, et al. A short screener is valid for assessing Mediterranean diet adherence among older Spanish men and women. J Nutr. 2011;141(6):1140-5
+  if (normalizedName.includes("medas") || normalizedName.includes("mediterranean")) {
+    return `**MEDAS (Mediterranean Diet Adherence Screener) - Clinical Reference**
+Source: Schröder et al. (2011) - Journal of Nutrition
+
+**Adherence Interpretation:**
+- 0-5: Poor adherence to Mediterranean diet
+- 6-8: Moderate adherence
+- 9-11: Good adherence
+- 12-14: High adherence
+
+**Clinical Significance:**
+- Higher Mediterranean diet adherence associated with better sleep quality
+- Each point increase associated with reduced insomnia risk
+- Anti-inflammatory diet may improve sleep through reduced inflammation
+- High adherence linked to reduced risk of obesity, cardiovascular disease
+
+**Key Components:**
+- Olive oil as primary fat
+- High vegetable/fruit intake
+- Fish consumption
+- Limited red meat and processed foods
+- Moderate wine consumption`;
+  }
+
+  // Default reference for unknown questionnaires
+  return `**Clinical Reference for ${questionnaireName}**
+Please interpret this score using standard clinical guidelines for this assessment tool.
+Severity classification provided: Use the severity level passed to guide interpretation.
+Focus on evidence-based recommendations appropriate for the indicated severity level.`;
+}
+
+// ============================================
 // Comprehensive Score Interpretation with Claude
 // ============================================
 

@@ -4,6 +4,36 @@
 
 ## December 2025
 
+### Dec 29, 2025
+
+#### Auto-Derivable Questions System
+Questions that can be calculated from sleep log data are now automatically derived, reducing user burden.
+
+- **Derivable questions:** Q44 (hours of actual sleep), Q42 (sleep latency), Q41 (bedtime)
+- **Auto-calculation:** When user completes sleep log, these values are calculated from CSD_ responses:
+  - Q44 = (finalWake - trySleep) - latency - WASO (rounded to nearest 0.5 hour)
+  - Q42 = CSD_LATENCY (direct mapping)
+  - Q41 = CSD_TRY_SLEEP (direct mapping)
+- **Question filtering:** `getQuestionsForUserDay` filters out derivable questions when sleep log is complete
+- **Response generation:** `markSectionComplete` auto-generates derived responses with `is_derived: true` flag
+- **Physician dashboard:** Derived responses are included in scoring with source tracking
+- **Files changed:** `convex/watch.ts`, `convex/ios.ts`
+
+#### Questionnaire Name Mapping Fix
+Fixed severity lookup for full questionnaire names in physician dashboard.
+
+- **Bug:** ScoreDetailModal couldn't find thresholds for full names like "Insomnia Severity Index"
+- **Fix:** Added `questionnaireNameToAbbreviation` mapping (22 questionnaires)
+- **Result:** Severity badges now display correctly for all questionnaire types
+- **Files changed:** `client/src/components/physician/ScoreDetailModal.tsx`
+
+#### LLM Clinical References Enhancement
+Improved AI interpretations with validated clinical guidelines.
+
+- **New system prompt:** Added `getClinicalReferenceForQuestionnaire` for peer-reviewed interpretation guidelines
+- **Hallucination prevention:** Explicit instruction to use ONLY validated thresholds
+- **Files changed:** `convex/llm.ts`
+
 ### Dec 28, 2025
 
 #### Expansion Pack Slider UX Fix
