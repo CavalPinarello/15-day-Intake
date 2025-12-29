@@ -1,6 +1,7 @@
 "use client";
 
 import { BentoCard } from "./BentoCard";
+import { type PillarSeverity, getSeverityDotColor, type SeverityLevel } from "@/utils/pillarSeverity";
 
 // 11 Pillars from the Zoe Sleep system
 export const PILLARS = {
@@ -74,13 +75,15 @@ export const PILLARS = {
 
 export type PillarKey = keyof typeof PILLARS;
 
-interface PillarStatus {
+export interface PillarStatus {
   pillar: PillarKey;
-  score: number | null; // 0-100 normalized score, null if no data
+  score: number | null; // 0-100 completion percentage, null if no data
   questionsAnswered: number;
   questionsTotal: number;
   trend: "improving" | "declining" | "stable" | null;
   alerts: string[];
+  // Clinical severity indicators (traffic lights) - optional for backward compatibility
+  severities?: PillarSeverity[];
 }
 
 interface PillarSummaryCardProps {
@@ -121,11 +124,37 @@ const getTrendColor = (trend: PillarStatus["trend"]) => {
   }
 };
 
+// Severity dot component for traffic light indicators
+const SeverityDot = ({ severity }: { severity: PillarSeverity }) => (
+  <div
+    className={`w-2.5 h-2.5 rounded-full ${getSeverityDotColor(severity.level)} shrink-0`}
+    title={`${severity.name}: ${severity.label || severity.level}${severity.value !== undefined ? ` (${severity.value})` : ""}`}
+  />
+);
+
+// Get the worst severity from an array for overall indicator
+const getOverallSeverity = (pillars: PillarStatus[]): SeverityLevel | null => {
+  const severityOrder: SeverityLevel[] = ["normal", "mild", "moderate", "severe"];
+  let worstIndex = -1;
+
+  for (const pillar of pillars) {
+    if (!pillar.severities) continue;
+    for (const sev of pillar.severities) {
+      const idx = severityOrder.indexOf(sev.level);
+      if (idx > worstIndex) {
+        worstIndex = idx;
+      }
+    }
+  }
+
+  return worstIndex >= 0 ? severityOrder[worstIndex] : null;
+};
+
 export function PillarSummaryCard({
   pillars,
   onPillarClick,
 }: PillarSummaryCardProps) {
-  // Calculate overall health score
+  // Calculate overall completion percentage
   const validScores = pillars.filter((p) => p.score !== null);
   const overallScore =
     validScores.length > 0
@@ -137,6 +166,14 @@ export function PillarSummaryCard({
 
   // Count alerts
   const totalAlerts = pillars.reduce((acc, p) => acc + p.alerts.length, 0);
+
+  // Count pillars that are >= 80% complete
+  const completeCount = pillars.filter(
+    (p) => p.questionsTotal > 0 && (p.questionsAnswered / p.questionsTotal) >= 0.8
+  ).length;
+
+  // Get overall severity (worst case from all pillars)
+  const overallSeverity = getOverallSeverity(pillars);
 
   return (
     <BentoCard
@@ -248,12 +285,22 @@ export function PillarSummaryCard({
                   )}
                 </div>
 
-                {/* Score */}
-                {hasData && (
-                  <div className="text-xs font-medium text-white mt-0.5">
-                    {pillarStatus.score}%
-                  </div>
-                )}
+                {/* Score and Severity dots */}
+                <div className="flex items-center justify-between mt-0.5">
+                  {hasData && (
+                    <span className="text-xs font-medium text-white">
+                      {pillarStatus.score}%
+                    </span>
+                  )}
+                  {/* Severity traffic light dots */}
+                  {pillarStatus.severities && pillarStatus.severities.length > 0 && (
+                    <div className="flex gap-0.5">
+                      {pillarStatus.severities.map((sev, idx) => (
+                        <SeverityDot key={`${sev.name}-${idx}`} severity={sev} />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </button>
             );
           })}
@@ -261,12 +308,20 @@ export function PillarSummaryCard({
 
         {/* Completion stats */}
         <div className="flex justify-between text-xs text-gray-500 pt-2 border-t border-gray-700">
-          <span>
-            {validScores.length}/{pillars.length} pillars assessed
-          </span>
+          <div className="flex items-center gap-2">
+            <span>
+              {completeCount}/{pillars.length} pillars complete
+            </span>
+            {/* Overall severity indicator */}
+            {overallSeverity && (
+              <div
+                className={`w-2.5 h-2.5 rounded-full ${getSeverityDotColor(overallSeverity)}`}
+                title={`Overall status: ${overallSeverity}`}
+              />
+            )}
+          </div>
           <span>
             {pillars.reduce((acc, p) => acc + p.questionsAnswered, 0)} questions
-            answered
           </span>
         </div>
       </div>

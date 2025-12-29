@@ -46,14 +46,6 @@
     "estimatedMinutes": 0.3
   },
   {
-    "id": "SD_SLEEP_ONSET",
-    "text": "What time do you think you fell asleep?",
-    "type": "time",
-    "group": "bedtime",
-    "pillar": "Sleep Diary",
-    "estimatedMinutes": 0.3
-  },
-  {
     "id": "SD_SLEEP_LATENCY",
     "text": "How long did it take you to fall asleep? (minutes)",
     "type": "minutes_scroll",

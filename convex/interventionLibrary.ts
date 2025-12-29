@@ -528,18 +528,44 @@ export const getSuggestedInterventions = query({
 });
 
 // Helper function to calculate sleep time variability
+// Derives sleep onset time from lights_out + sleep_latency for each day
 function calculateSleepTimeVariability(
-  responses: { question_id: string; response_value?: string }[]
+  responses: { question_id: string; response_value?: string; day_number?: number }[]
 ): number {
-  const sleepTimes = responses
-    .filter((r) => r.question_id === "SD_SLEEP_ONSET" || r.question_id === "SL_ASLEEP_TIME")
-    .map((r) => {
-      if (!r.response_value) return null;
-      const [hours, mins] = r.response_value.split(":").map(Number);
-      if (isNaN(hours)) return null;
-      return hours * 60 + (mins || 0);
-    })
-    .filter((t): t is number => t !== null);
+  // Collect all lights_out times (SD_LIGHTS_OUT or CSD_TRY_SLEEP)
+  const lightsOutResponses = responses.filter(
+    (r) => r.question_id === "SD_LIGHTS_OUT" || r.question_id === "CSD_TRY_SLEEP"
+  );
+  // Collect all latency responses (SD_SLEEP_LATENCY or CSD_LATENCY)
+  const latencyResponses = responses.filter(
+    (r) => r.question_id === "SD_SLEEP_LATENCY" || r.question_id === "CSD_LATENCY"
+  );
+
+  // Calculate derived sleep onset times
+  // Since responses are grouped by day_number if available, we try to pair them
+  const sleepTimes: number[] = [];
+
+  // If day_number is available, pair by day; otherwise pair by index order
+  if (lightsOutResponses.length > 0 && latencyResponses.length > 0) {
+    for (let i = 0; i < Math.min(lightsOutResponses.length, latencyResponses.length); i++) {
+      const lightsOut = lightsOutResponses[i];
+      // Try to find matching latency by day_number, or use same index
+      const latency = lightsOut.day_number !== undefined
+        ? latencyResponses.find(l => l.day_number === lightsOut.day_number)
+        : latencyResponses[i];
+
+      if (lightsOut.response_value && latency?.response_value) {
+        const [hours, mins] = lightsOut.response_value.split(":").map(Number);
+        const latencyMinutes = parseInt(latency.response_value, 10);
+        if (!isNaN(hours) && !isNaN(latencyMinutes)) {
+          // Calculate sleep onset time = lights_out + latency
+          const totalMinutes = hours * 60 + (mins || 0) + latencyMinutes;
+          // Normalize to 24-hour format (handle crossing midnight)
+          sleepTimes.push(totalMinutes % (24 * 60));
+        }
+      }
+    }
+  }
 
   if (sleepTimes.length < 3) return 0;
 

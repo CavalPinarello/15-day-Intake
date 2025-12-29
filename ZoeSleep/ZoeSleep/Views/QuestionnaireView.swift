@@ -847,6 +847,7 @@ struct QuestionnaireView: View {
     // MARK: - Smart Default Helpers
 
     /// Returns the previously answered bedtime to help set smart defaults for subsequent time questions
+    /// If the previous answer doesn't exist, calculates what it would have been based on the chain of defaults
     private func getPreviousBedtime(for questionId: String) -> Date? {
         // For Consensus Sleep Diary questions, chain the time dependencies
         if currentSection == .sleepLog {
@@ -871,12 +872,30 @@ struct QuestionnaireView: View {
             // Legacy Stanford Sleep Diary question dependencies
             case "SD_LIGHTS_OUT":
                 return sleepLogResponses["SD_GOT_INTO_BED"] as? Date
-            case "SL_ASLEEP_TIME":
-                return sleepLogResponses["SD_LIGHTS_OUT"] as? Date ?? sleepLogResponses["SD_GOT_INTO_BED"] as? Date
+            // Note: SL_ASLEEP_TIME removed - sleep onset derived from lights_out + latency
             case "SL_WAKE_TIME":
-                return sleepLogResponses["SL_ASLEEP_TIME"] as? Date ?? sleepLogResponses["SD_LIGHTS_OUT"] as? Date
+                // Use lights out time as base for wake time dependency
+                return sleepLogResponses["SD_LIGHTS_OUT"] as? Date ?? sleepLogResponses["SD_GOT_INTO_BED"] as? Date
             case "SD_OUT_OF_BED":
-                return sleepLogResponses["SL_WAKE_TIME"] as? Date
+                // CRITICAL: If wake time isn't saved yet, calculate what it would be from the chain
+                if let wakeTime = sleepLogResponses["SL_WAKE_TIME"] as? Date {
+                    return wakeTime
+                }
+                // Fall back to calculating wake time from earlier answers
+                let calendar = Calendar.current
+                if let lightsOut = sleepLogResponses["SD_LIGHTS_OUT"] as? Date {
+                    // lights out + 15min (fall asleep) + 8 hours = wake time
+                    return calendar.date(byAdding: .minute, value: 8 * 60 + 15, to: lightsOut)
+                }
+                if let bedtime = sleepLogResponses["SD_GOT_INTO_BED"] as? Date {
+                    // bedtime + 10min (lights out) + 15min (fall asleep) + 8 hours = wake time
+                    return calendar.date(byAdding: .minute, value: 8 * 60 + 25, to: bedtime)
+                }
+                // Ultimate fallback: 7:00 AM (typical wake time)
+                var components = DateComponents()
+                components.hour = 7
+                components.minute = 0
+                return calendar.date(from: components)
             default:
                 break
             }

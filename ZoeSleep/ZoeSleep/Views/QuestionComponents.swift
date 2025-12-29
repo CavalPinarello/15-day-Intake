@@ -771,123 +771,115 @@ struct TimeInput: View {
     /// Call this from the binding's default parameter
     static func smartDefault(for question: Question, previousBedtime: Date? = nil) -> Date {
         let calendar = Calendar.current
-        var components = DateComponents()
-        components.minute = 0
+
+        // Helper to create a Date for today at a specific hour:minute
+        // This ensures we always get a valid date, never falling back to Date()
+        func todayAt(hour: Int, minute: Int) -> Date {
+            var components = calendar.dateComponents([.year, .month, .day], from: Date())
+            components.hour = hour
+            components.minute = minute
+            components.second = 0
+            return calendar.date(from: components) ?? Date()
+        }
 
         switch question.id {
         // Consensus Sleep Diary (CSD) question IDs
         case "CSD_INTO_BED":
-            components.hour = 22  // 10:00 PM - when you got into bed
+            return todayAt(hour: 22, minute: 0)  // 10:00 PM - when you got into bed
 
         case "CSD_TRY_SLEEP":
             // Typically 5-15 min after getting into bed
             if let gotIntoBed = previousBedtime {
                 return calendar.date(byAdding: .minute, value: 10, to: gotIntoBed) ?? gotIntoBed
             }
-            components.hour = 22
-            components.minute = 15
+            return todayAt(hour: 22, minute: 15)
 
         case "CSD_FINAL_WAKE":
             // Typically ~7-8 hours after trying to sleep
             if let trySleep = previousBedtime {
-                return calendar.date(byAdding: .hour, value: 8, to: trySleep) ?? Date()
+                return calendar.date(byAdding: .hour, value: 8, to: trySleep) ?? todayAt(hour: 6, minute: 30)
             }
-            components.hour = 6
-            components.minute = 30
+            return todayAt(hour: 6, minute: 30)
 
         case "CSD_OUT_BED":
             // Typically 15 min after final wake (user usually stays in bed briefly after waking)
             if let wakeTime = previousBedtime {
                 return calendar.date(byAdding: .minute, value: 15, to: wakeTime) ?? wakeTime
             }
-            components.hour = 7
-            components.minute = 15
+            return todayAt(hour: 7, minute: 15)
 
         case "CSD_CAFFEINE_LAST":
-            // Default to 2 PM for last caffeine
-            components.hour = 14
-            components.minute = 0
+            return todayAt(hour: 14, minute: 0)  // 2 PM default for caffeine
 
         case "CSD_ALCOHOL_LAST":
-            // Default to 8 PM for last alcohol
-            components.hour = 20
-            components.minute = 0
+            return todayAt(hour: 20, minute: 0)  // 8 PM default for alcohol
 
         // Legacy Stanford Sleep Log IDs (backward compatibility)
         case "SL_BEDTIME", "SD_GOT_INTO_BED":
-            components.hour = 22  // 10:00 PM - typical bedtime
+            return todayAt(hour: 22, minute: 0)  // 10:00 PM - typical bedtime
 
         case "SD_LIGHTS_OUT":
             if let gotIntoBed = previousBedtime {
                 return calendar.date(byAdding: .minute, value: 10, to: gotIntoBed) ?? gotIntoBed
             }
-            components.hour = 22
-            components.minute = 15
+            return todayAt(hour: 22, minute: 15)
 
         case "SL_ASLEEP_TIME":
             if let lightsOut = previousBedtime {
                 return calendar.date(byAdding: .minute, value: 15, to: lightsOut) ?? lightsOut
             }
-            components.hour = 22
-            components.minute = 30
+            return todayAt(hour: 22, minute: 30)
 
         case "SL_WAKE_TIME":
             if let asleepTime = previousBedtime {
-                return calendar.date(byAdding: .hour, value: 8, to: asleepTime) ?? Date()
+                return calendar.date(byAdding: .hour, value: 8, to: asleepTime) ?? todayAt(hour: 6, minute: 30)
             }
-            components.hour = 6
-            components.minute = 30
+            return todayAt(hour: 6, minute: 30)
 
         case "SD_OUT_OF_BED":
             // Typically 15 min after final wake (user usually stays in bed briefly after waking)
             if let wakeTime = previousBedtime {
                 return calendar.date(byAdding: .minute, value: 15, to: wakeTime) ?? wakeTime
             }
-            components.hour = 7
-            components.minute = 15
+            return todayAt(hour: 7, minute: 15)
 
         // PSQI questions
         case "PSQI_1":
-            components.hour = 22
-            components.minute = 30
+            return todayAt(hour: 22, minute: 30)
         case "PSQI_3":
             if let bedtime = previousBedtime {
-                return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? Date()
+                return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? todayAt(hour: 7, minute: 0)
             }
-            components.hour = 7
+            return todayAt(hour: 7, minute: 0)
 
         default:
             // Smart inference based on question text
             let lowerText = question.text.lowercased()
             if lowerText.contains("wake") || lowerText.contains("morning") || lowerText.contains("get up") || lowerText.contains("out of bed") {
                 if let bedtime = previousBedtime {
-                    return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? Date()
+                    return calendar.date(byAdding: .hour, value: 8, to: bedtime) ?? todayAt(hour: 7, minute: 0)
                 }
-                components.hour = 7
+                return todayAt(hour: 7, minute: 0)
             } else if lowerText.contains("fall asleep") || lowerText.contains("fell asleep") {
                 if let bedtime = previousBedtime {
                     return calendar.date(byAdding: .minute, value: 15, to: bedtime) ?? bedtime
                 }
-                components.hour = 22
-                components.minute = 30
+                return todayAt(hour: 22, minute: 30)
             } else if lowerText.contains("lights") || lowerText.contains("try to sleep") {
                 if let bedtime = previousBedtime {
                     return calendar.date(byAdding: .minute, value: 10, to: bedtime) ?? bedtime
                 }
-                components.hour = 22
-                components.minute = 15
+                return todayAt(hour: 22, minute: 15)
             } else if lowerText.contains("caffeine") {
-                components.hour = 14  // 2 PM default for caffeine
+                return todayAt(hour: 14, minute: 0)  // 2 PM default for caffeine
             } else if lowerText.contains("alcohol") {
-                components.hour = 20  // 8 PM default for alcohol
+                return todayAt(hour: 20, minute: 0)  // 8 PM default for alcohol
             } else if lowerText.contains("bed") || lowerText.contains("sleep") || lowerText.contains("night") {
-                components.hour = 22
+                return todayAt(hour: 22, minute: 0)
             } else {
-                components.hour = 12  // Noon for unknown
+                return todayAt(hour: 12, minute: 0)  // Noon for unknown
             }
         }
-
-        return calendar.date(from: components) ?? Date()
     }
 }
 

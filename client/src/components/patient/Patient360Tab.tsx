@@ -6,7 +6,8 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useState, useMemo } from "react";
 import { SubjectiveVsObjectiveCard } from "./SubjectiveVsObjectiveCard";
-import { PillarSummaryCard, PillarKey } from "./PillarSummaryCard";
+import { PillarSummaryCard, PillarKey, type PillarStatus } from "./PillarSummaryCard";
+import { getPillarSeverities, type PillarKey as SeverityPillarKey } from "@/utils/pillarSeverity";
 import { PillarDetailModal } from "./PillarDetailModal";
 import { AIInsightsCard, generateSampleInsights } from "./AIInsightsCard";
 import { PatientEngagementCard } from "./PatientEngagementCard";
@@ -380,6 +381,29 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         if (hrs < 6) alerts.push("Insufficient sleep duration");
       }
 
+      // Calculate severity indicators for traffic lights
+      const scoresForSeverity: Record<string, number | undefined> = {
+        PSQI: patientScores.PSQI,
+        "PHQ-9": patientScores.PHQ9,
+        "GAD-7": patientScores.GAD7,
+        ISI: patientScores.ISI,
+        ESS: patientScores.ESS,
+        MEQ: patientScores.MEQ,
+        "DBAS-16": patientScores.DBAS16,
+        BPI: patientScores.BPI,
+        MEDAS: patientScores.MEDAS,
+        BMI: patientScores.BMI,
+        // Add derived metrics for sleep quantity/regularity
+        avgSleepHours: healthSummary?.summary?.avgSleepHours,
+        bedtimeVariance: healthSummary?.summary?.bedtimeVariance,
+      };
+
+      const severities = getPillarSeverities(
+        pillar as SeverityPillarKey,
+        scoresForSeverity,
+        undefined // responses - could pass actual responses for Social/Metabolic derivation
+      );
+
       return {
         pillar,
         score,
@@ -387,6 +411,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         questionsTotal,
         trend: null,
         alerts,
+        severities,
       };
     });
   }, [patientScores, patient, healthSummary, pillarStats]);

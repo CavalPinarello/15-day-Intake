@@ -175,14 +175,9 @@ struct SharedQuestionBank {
             helpText: "When you started trying to fall asleep"
         ),
 
-        // Q4: Sleep Onset
-        SharedQuestion(
-            id: "SL_ASLEEP_TIME",
-            text: "What time do you think you fell asleep?",
-            pillar: .sleepLog,
-            type: .time,
-            helpText: "Your best estimate - don't check your wearable"
-        ),
+        // Q4: Sleep Latency (how long it took to fall asleep)
+        // Note: SD_SLEEP_ONSET was removed - redundant with sleep latency
+        // Sleep onset time can be derived from SD_LIGHTS_OUT + sleep latency
 
         // Q5: Night Awakenings
         SharedQuestion(
