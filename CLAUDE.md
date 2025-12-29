@@ -84,7 +84,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
-**Dec 29:** Time picker defaults for dependent questions fix, dashboard pillar completion UI (neutral amber), Sleep Health Factors dashboard module, iOS complex response serialization fix, unified body metrics slider UI, auto-derivable questions
+**Dec 29:** Comprehensive debug reset fix (Clinical Scores + all dashboard data), time picker defaults for dependent questions fix, dashboard pillar completion UI (neutral amber), Sleep Health Factors dashboard module, iOS complex response serialization fix, unified body metrics slider UI, auto-derivable questions
 **Dec 28:** Expansion pack slider UX fix, journey intro flow, fresh install detection, dashboard UX redesign
 **Dec 27:** Day type analysis, nap/medication tracking, scale labels fix, dynamic task counter, new logo
 **Dec 22:** 8-phase circadian system, text contrast fix, unified debug panel, admin tools

@@ -1468,6 +1468,7 @@ export const advanceDay = mutation({
 /**
  * Reset journey progress (Debug Mode)
  * SECURITY: Requires sessionToken to validate user ownership
+ * Comprehensive reset that clears ALL assessment data, scores, and progress
  */
 export const resetProgress = mutation({
   args: {
@@ -1491,60 +1492,140 @@ export const resetProgress = mutation({
       throw new Error("User not found");
     }
 
-    // Reset user's day to 1
+    let deletedRecords = 0;
+
+    // Helper to delete all records from a table for this user
+    async function deleteFromTable(
+      tableName: string,
+      query: { collect: () => Promise<Array<{ _id: Id<any> }>> }
+    ) {
+      const records = await query.collect();
+      for (const record of records) {
+        await ctx.db.delete(record._id);
+        deletedRecords++;
+      }
+      if (records.length > 0) {
+        console.log(`[resetProgress] Deleted ${records.length} from ${tableName}`);
+      }
+    }
+
+    // Reset user's day to 1 and clear onboarding/dev mode
     await ctx.db.patch(args.userId, {
       current_day: 1,
       onboarding_completed: false,
       onboarding_completed_at: undefined,
+      developer_mode: false,
       last_accessed: Date.now(),
     });
 
-    // Delete all progress entries for this user
-    const progressEntries = await ctx.db
-      .query("user_progress")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .collect();
+    // Core assessment data
+    await deleteFromTable("user_assessment_responses",
+      ctx.db.query("user_assessment_responses").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
 
-    for (const entry of progressEntries) {
-      await ctx.db.delete(entry._id);
-    }
+    await deleteFromTable("responses",
+      ctx.db.query("responses").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
 
-    // Delete all questionnaire responses
-    const responses = await ctx.db
-      .query("responses")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .collect();
+    await deleteFromTable("user_progress",
+      ctx.db.query("user_progress").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
 
-    for (const response of responses) {
-      await ctx.db.delete(response._id);
-    }
+    await deleteFromTable("daily_checkins",
+      ctx.db.query("daily_checkins").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
 
-    // Delete assessment responses
-    const assessmentResponses = await ctx.db
-      .query("user_assessment_responses")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .collect();
+    // Questionnaire scores - CRITICAL: This clears Clinical Scores (ISI, PHQ-9, GAD-7, ESS)
+    await deleteFromTable("questionnaire_scores",
+      ctx.db.query("questionnaire_scores").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
 
-    for (const response of assessmentResponses) {
-      await ctx.db.delete(response._id);
-    }
+    await deleteFromTable("questionnaire_session",
+      ctx.db.query("questionnaire_session").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
 
-    // Delete questionnaire session progress (cross-device sync state)
-    // Use by_user index since we're only filtering by user_id
-    const sessions = await ctx.db
-      .query("questionnaire_session")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .collect();
+    // Gateway and expansion data
+    await deleteFromTable("user_gateway_states",
+      ctx.db.query("user_gateway_states").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
 
-    for (const session of sessions) {
-      await ctx.db.delete(session._id);
-    }
+    await deleteFromTable("user_expansion_schedules",
+      ctx.db.query("user_expansion_schedules").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
 
-    console.log(`[Convex] Reset complete: cleared ${progressEntries.length} progress, ${responses.length} responses, ${assessmentResponses.length} assessment responses, ${sessions.length} sessions`);
+    // Insights and analysis
+    await deleteFromTable("sleep_insights",
+      ctx.db.query("sleep_insights").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("user_insight_queue",
+      ctx.db.query("user_insight_queue").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("user_insight_progress",
+      ctx.db.query("user_insight_progress").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("onboarding_insights",
+      ctx.db.query("onboarding_insights").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    // Journey and workflow status
+    await deleteFromTable("patient_journey_status",
+      ctx.db.query("patient_journey_status").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("patient_analysis_workflow",
+      ctx.db.query("patient_analysis_workflow").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    // Gamification data
+    await deleteFromTable("user_streaks",
+      ctx.db.query("user_streaks").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("user_badges",
+      ctx.db.query("user_badges").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("user_xp",
+      ctx.db.query("user_xp").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("xp_transactions",
+      ctx.db.query("xp_transactions").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("user_daily_tasks",
+      ctx.db.query("user_daily_tasks").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    // Cohort and narrative data
+    await deleteFromTable("user_cohort_memberships",
+      ctx.db.query("user_cohort_memberships").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("user_sleep_narrative",
+      ctx.db.query("user_sleep_narrative").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("user_encouragement_history",
+      ctx.db.query("user_encouragement_history").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    // Physician dashboard data
+    await deleteFromTable("physician_notes",
+      ctx.db.query("physician_notes").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("patient_review_status",
+      ctx.db.query("patient_review_status").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    // Interventions and compliance data
+    await deleteFromTable("user_interventions",
+      ctx.db.query("user_interventions").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("user_protocol_assignments",
+      ctx.db.query("user_protocol_assignments").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    // Additional metrics and analysis tables
+    await deleteFromTable("perception_gaps",
+      ctx.db.query("perception_gaps").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("difficulty_adjustment_log",
+      ctx.db.query("difficulty_adjustment_log").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("compliance_outcome_correlation",
+      ctx.db.query("compliance_outcome_correlation").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    await deleteFromTable("user_metrics_summary",
+      ctx.db.query("user_metrics_summary").withIndex("by_user", (q) => q.eq("user_id", args.userId)));
+
+    // Note: user_sleep_data is intentionally NOT cleared to preserve HealthKit sync data
+
+    console.log(`[resetProgress] Complete reset for user ${args.userId}: ${deletedRecords} records deleted`);
 
     return {
       success: true,
       newDay: 1,
+      deletedRecords,
     };
   },
 });

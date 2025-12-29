@@ -6,6 +6,24 @@
 
 ### Dec 29, 2025
 
+#### Comprehensive Debug Reset Fix
+Fixed iOS "Reset to Day 1" debug function to properly clear ALL dashboard data including Clinical Scores.
+
+- **Problem:** After clicking "Reset to Day 1" in iOS debug panel, dashboard still showed Clinical Scores (ISI, PHQ-9, GAD-7, ESS), Health Pillars progress, and other data
+- **Root cause:** iOS app called `watch:resetProgress` which only cleared 4 tables, missing `questionnaire_scores` and 20+ other tables
+- **Fix:** Updated both `watch:resetProgress` and `ios:resetJourneyProgress` to comprehensively clear all user data:
+  - Core assessment data (`user_assessment_responses`, `responses`, `user_progress`, `daily_checkins`)
+  - Clinical scores (`questionnaire_scores`) - **This was the key missing table**
+  - Gateway/expansion data (`user_gateway_states`, `user_expansion_schedules`)
+  - Insights (`sleep_insights`, `user_insight_queue`, `user_insight_progress`, `onboarding_insights`)
+  - Journey status (`patient_journey_status`, `patient_analysis_workflow`)
+  - Gamification (`user_streaks`, `user_badges`, `user_xp`, `xp_transactions`, `user_daily_tasks`)
+  - Cohort/narrative (`user_cohort_memberships`, `user_sleep_narrative`, `user_encouragement_history`)
+  - Physician data (`physician_notes`, `patient_review_status`)
+  - Metrics (`perception_gaps`, `difficulty_adjustment_log`, `compliance_outcome_correlation`, `user_metrics_summary`)
+- **Note:** `user_sleep_data` (HealthKit sync) is intentionally preserved
+- **Files changed:** `convex/watch.ts`, `convex/ios.ts`
+
 #### Time Picker Default Fix for Dependent Questions
 Fixed issue where "out of bed" time showed incorrect default (e.g., 7:15 AM) when user changed wake time (e.g., to 8:00 AM).
 
