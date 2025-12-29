@@ -728,9 +728,8 @@ struct TimeInput: View {
     let question: Question
     @Binding var value: Date
     var previousBedtime: Date? = nil  // Used to calculate smart defaults for wake/asleep times
+    var onInitialValue: ((Date) -> Void)? = nil  // Called on appear to save initial value without marking interacted
     @ObservedObject private var themeManager = ThemeManager.shared
-    // NOTE: Smart defaults are now handled by the dateBinding getter in QuestionnaireView
-    // This component should NOT set values on appear
 
     // Circadian-aware check
     private var isEvening: Bool {
@@ -755,9 +754,17 @@ struct TimeInput: View {
             .tint(isEvening ? Color(red: 0.988, green: 0.827, blue: 0.302) : nil) // Golden amber tint
         }
         .id("\(question.id)-\(previousBedtime?.timeIntervalSince1970 ?? 0)") // Force view recreation when question or context changes
-        // REMOVED: .task and .onChange that were setting smart defaults
-        // This was causing values to be marked as user-interacted before the user actually touched the picker
-        // Smart defaults are now provided via the dateBinding getter in QuestionnaireView
+        .onAppear {
+            // Save the initial value (smart default) so it's available for dependent questions
+            // This callback saves WITHOUT marking as user-interacted
+            onInitialValue?(value)
+        }
+        .onChange(of: value) { _, newValue in
+            // Force the binding setter to be called by writing the value back.
+            // This ensures the value is saved to sleepLogResponses even if the DatePicker's
+            // internal binding behavior is delayed. The binding setter handles saving.
+            value = newValue
+        }
     }
 
     /// Static helper to compute smart default time for a question

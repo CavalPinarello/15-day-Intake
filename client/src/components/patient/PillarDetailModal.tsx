@@ -42,12 +42,10 @@ const getSeverityColor = (severity?: string) => {
   }
 };
 
-const getScoreColor = (score: number | null) => {
+// Uses neutral color for completion percentage (not health-implying)
+const getCompletionColor = (score: number | null) => {
   if (score === null) return "text-gray-400";
-  if (score >= 80) return "text-green-500";
-  if (score >= 60) return "text-amber-500";
-  if (score >= 40) return "text-orange-500";
-  return "text-red-500";
+  return "text-amber-400"; // Neutral color - not health status
 };
 
 const getTrendIcon = (trend: PillarStatus["trend"]) => {
@@ -143,9 +141,9 @@ export function PillarDetailModal({
             <div className="flex items-center gap-4">
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider">
-                  Pillar Score
+                  Assessment Progress
                 </p>
-                <p className={`text-3xl font-bold ${getScoreColor(pillarStatus.score)}`}>
+                <p className={`text-3xl font-bold ${getCompletionColor(pillarStatus.score)}`}>
                   {pillarStatus.score !== null ? `${pillarStatus.score}%` : "N/A"}
                 </p>
               </div>

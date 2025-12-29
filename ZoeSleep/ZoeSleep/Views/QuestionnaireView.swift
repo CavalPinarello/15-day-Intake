@@ -361,7 +361,20 @@ struct QuestionnaireView: View {
                 TimeInput(
                     question: question,
                     value: dateBinding(for: question.id, question: question, previousBedtime: getPreviousBedtime(for: question.id)),
-                    previousBedtime: getPreviousBedtime(for: question.id)
+                    previousBedtime: getPreviousBedtime(for: question.id),
+                    onInitialValue: { initialValue in
+                        // Save the initial value without marking as user-interacted
+                        // This ensures the value is available for dependent questions
+                        if currentSection == .sleepLog {
+                            if sleepLogResponses[question.id] == nil {
+                                sleepLogResponses[question.id] = initialValue
+                            }
+                        } else {
+                            if assessmentResponses[question.id] == nil {
+                                assessmentResponses[question.id] = initialValue
+                            }
+                        }
+                    }
                 )
 
             case .date:

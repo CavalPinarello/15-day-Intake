@@ -88,12 +88,11 @@ interface PillarSummaryCardProps {
   onPillarClick?: (pillar: PillarKey) => void;
 }
 
-const getScoreColor = (score: number | null) => {
+// Uses neutral color for completion percentage (not health-implying)
+const getCompletionColor = (score: number | null) => {
   if (score === null) return "bg-gray-600";
-  if (score >= 80) return "bg-green-500";
-  if (score >= 60) return "bg-amber-500";
-  if (score >= 40) return "bg-orange-500";
-  return "bg-red-500";
+  // Use consistent amber/orange for completion progress - not green/red which implies health status
+  return "bg-amber-500";
 };
 
 const getTrendIcon = (trend: PillarStatus["trend"]) => {
@@ -168,37 +167,24 @@ export function PillarSummaryCard({
           : overallScore !== null
           ? {
               text: `${overallScore}%`,
-              variant:
-                overallScore >= 70
-                  ? "success"
-                  : overallScore >= 50
-                  ? "warning"
-                  : "error",
+              variant: "warning", // Neutral color for completion - not health status
             }
           : undefined
       }
     >
       <div className="space-y-3">
-        {/* Overall score bar */}
+        {/* Assessment completion bar */}
         {overallScore !== null && (
           <div className="mb-4">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-gray-400">Overall Score</span>
-              <span
-                className={`text-sm font-medium ${
-                  overallScore >= 70
-                    ? "text-green-400"
-                    : overallScore >= 50
-                    ? "text-amber-400"
-                    : "text-red-400"
-                }`}
-              >
+              <span className="text-xs text-gray-400">Assessment Completion</span>
+              <span className="text-sm font-medium text-amber-400">
                 {overallScore}%
               </span>
             </div>
             <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${getScoreColor(
+                className={`h-full rounded-full transition-all duration-500 ${getCompletionColor(
                   overallScore
                 )}`}
                 style={{ width: `${overallScore}%` }}
@@ -238,10 +224,10 @@ export function PillarSummaryCard({
                 {/* Icon */}
                 <div className="text-lg mb-1">{pillar.icon}</div>
 
-                {/* Score bar */}
+                {/* Completion bar */}
                 <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden mb-1">
                   <div
-                    className={`h-full rounded-full transition-all ${getScoreColor(
+                    className={`h-full rounded-full transition-all ${getCompletionColor(
                       pillarStatus.score
                     )}`}
                     style={{ width: `${pillarStatus.score || 0}%` }}
@@ -299,9 +285,9 @@ export function PillarBar({
       {pillars.map(({ pillar, score }) => (
         <div
           key={pillar}
-          className={`flex-1 rounded-sm ${getScoreColor(score)}`}
+          className={`flex-1 rounded-sm ${getCompletionColor(score)}`}
           style={{ opacity: score === null ? 0.3 : 1 }}
-          title={`${PILLARS[pillar].name}: ${score ?? "N/A"}%`}
+          title={`${PILLARS[pillar].name}: ${score ?? "N/A"}% complete`}
         />
       ))}
     </div>

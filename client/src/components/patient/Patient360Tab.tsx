@@ -367,10 +367,11 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         }
       }
       if (pillar === "sleepLog") {
-        // Sleep log completion based on days completed
-        score = patient.completedDays > 0 ? Math.round((patient.completedDays / patient.user.current_day) * 100) : 0;
+        // Sleep log completion based on 14-day journey (not current day)
+        const TOTAL_JOURNEY_DAYS = 14;
+        score = patient.completedDays > 0 ? Math.round((patient.completedDays / TOTAL_JOURNEY_DAYS) * 100) : 0;
         questionsAnswered = patient.completedDays * 5; // 5 questions per day
-        questionsTotal = patient.user.current_day * 5;
+        questionsTotal = TOTAL_JOURNEY_DAYS * 5; // Full 14-day journey
       }
       // Only use healthSummary for sleep quantity if there's real wearable data
       if (pillar === "sleepQuantity" && healthSummary?.hasHealthKitData && healthSummary?.summary?.avgSleepHours) {
