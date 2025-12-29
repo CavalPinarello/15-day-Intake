@@ -192,6 +192,42 @@ const scoreThresholds: Record<string, { ranges: Array<{ max: number; severity: s
       { max: 40, severity: "severe", label: "High somatic arousal" },
     ],
   },
+  // MEQ - Morningness-Eveningness Questionnaire (Horne & Östberg, 1976)
+  MEQ: {
+    ranges: [
+      { max: 30, severity: "severe", label: "Definite evening type" },
+      { max: 41, severity: "moderate", label: "Moderate evening type" },
+      { max: 58, severity: "normal", label: "Neither type (intermediate)" },
+      { max: 69, severity: "mild", label: "Moderate morning type" },
+      { max: 86, severity: "normal", label: "Definite morning type" },
+    ],
+  },
+  "Morningness-Eveningness Questionnaire": {
+    ranges: [
+      { max: 30, severity: "severe", label: "Definite evening type" },
+      { max: 41, severity: "moderate", label: "Moderate evening type" },
+      { max: 58, severity: "normal", label: "Neither type (intermediate)" },
+      { max: 69, severity: "mild", label: "Moderate morning type" },
+      { max: 86, severity: "normal", label: "Definite morning type" },
+    ],
+  },
+  // SWDSQ - Shift Work Disorder Screening (binary risk assessment)
+  SWDSQ: {
+    ranges: [
+      { max: 1, severity: "normal", label: "Low risk for shift work disorder" },
+      { max: 2, severity: "mild", label: "Possible shift work disorder" },
+      { max: 3, severity: "moderate", label: "Probable shift work disorder" },
+      { max: 4, severity: "severe", label: "High risk for shift work disorder" },
+    ],
+  },
+  "Shift Work Disorder Screening": {
+    ranges: [
+      { max: 1, severity: "normal", label: "Low risk for shift work disorder" },
+      { max: 2, severity: "mild", label: "Possible shift work disorder" },
+      { max: 3, severity: "moderate", label: "Probable shift work disorder" },
+      { max: 4, severity: "severe", label: "High risk for shift work disorder" },
+    ],
+  },
 };
 
 // Map full questionnaire names to their abbreviations for threshold lookup
@@ -218,6 +254,8 @@ const questionnaireNameToAbbreviation: Record<string, string> = {
   "Pre-Sleep Arousal Scale": "PSAS-Cognitive",
   "Pre-Sleep Arousal Scale - Cognitive": "PSAS-Cognitive",
   "Pre-Sleep Arousal Scale - Somatic": "PSAS-Somatic",
+  "Shift Work Disorder Screening Questionnaire": "SWDSQ",
+  "Shift Work Disorder Screening": "SWDSQ",
 };
 
 function getSeverityForScore(questionnaireName: string, score: number): string {
@@ -299,8 +337,8 @@ export function ScoreDetailModal({
     "Pittsburgh Sleep Quality Index": 21,
     "DBAS-16": 160,
     "Dysfunctional Beliefs and Attitudes about Sleep": 160,
-    "FSS": 63,
-    "Fatigue Severity Scale": 63,
+    "FSS": 7,
+    "Fatigue Severity Scale": 7,
     "FOSQ-10": 40,
     "Functional Outcomes of Sleep Questionnaire": 40,
     "DASS-21": 63,

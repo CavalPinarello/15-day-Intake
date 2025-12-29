@@ -1888,6 +1888,7 @@ class QuestionnaireManager: ObservableObject {
     }
 
     /// Mark expansion gateways as completed (call after expansion questionnaire is done)
+    /// Updates local state and syncs to Convex for persistence across app launches
     func markExpansionCompleted(gateways: [GatewayType]) {
         guard var progress = journeyProgress else { return }
 
@@ -1900,6 +1901,17 @@ class QuestionnaireManager: ObservableObject {
         journeyProgress = progress
 
         print("[QuestionnaireManager] Marked expansion completed for: \(gateways.map { $0.rawValue })")
+
+        // Sync to Convex for persistence across app launches
+        let gatewayIds = gateways.map { $0.rawValue }
+        Task {
+            do {
+                try await convexService.markGatewayExpansionsCompleted(gatewayIds: gatewayIds)
+                print("[QuestionnaireManager] Synced completed expansions to Convex: \(gatewayIds)")
+            } catch {
+                print("[QuestionnaireManager] Failed to sync completed expansions to Convex: \(error)")
+            }
+        }
     }
 
     /// Check if there are triggered gateways that haven't had their expansion questions shown yet
@@ -2336,7 +2348,20 @@ class QuestionnaireManager: ObservableObject {
             } else {
                 startDate = Date()
             }
-            let newProgress = JourneyProgressData(
+
+            // Load completed expansion gateways from Convex (persisted across app launches)
+            var completedExpansionGateways: [GatewayType] = []
+            do {
+                let completedGatewayIds = try await convexService.getCompletedExpansionGateways()
+                completedExpansionGateways = completedGatewayIds.compactMap { GatewayType(rawValue: $0) }
+                print("[iOS] Loaded \(completedExpansionGateways.count) completed expansion gateways from Convex")
+            } catch {
+                // Fall back to existing local data if Convex fetch fails
+                completedExpansionGateways = journeyProgress?.completedExpansionGateways ?? []
+                print("[iOS] Failed to load completed expansions from Convex, using local: \(error)")
+            }
+
+            var newProgress = JourneyProgressData(
                 currentDay: progress.currentDay,
                 completedDays: progress.completedDays,
                 totalDays: progress.totalDays,
@@ -2346,6 +2371,7 @@ class QuestionnaireManager: ObservableObject {
                 assessmentCompleted: progress.assessmentCompleted ?? false,
                 expansionPackCompleted: progress.expansionPackCompleted ?? false
             )
+            newProgress.completedExpansionGateways = completedExpansionGateways
 
             // Check if anything changed to notify observers
             let progressChanged = journeyProgress?.sleepLogCompleted != newProgress.sleepLogCompleted ||

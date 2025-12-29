@@ -968,6 +968,8 @@ export default defineSchema({
     evaluation_data_json: v.optional(v.string()), // JSON string
     trigger_question_id: v.optional(v.string()), // Question that triggered this gateway
     trigger_value: v.optional(v.string()), // Value that triggered this gateway
+    expansion_completed: v.optional(v.boolean()), // Whether the expansion pack for this gateway has been completed
+    expansion_completed_at: v.optional(v.number()), // When the expansion was completed
   })
     .index("by_user", ["user_id"])
     .index("by_user_gateway", ["user_id", "gateway_id"])

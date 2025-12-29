@@ -2041,6 +2041,31 @@ extension ConvexService {
         ])
     }
 
+    /// Mark specific gateway expansions as completed (persists to Convex)
+    /// This tracks which specific gateways have had their expansion questions answered
+    func markGatewayExpansionsCompleted(gatewayIds: [String]) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let _: SuccessResponse = try await client.mutation("ios:markGatewayExpansionsCompleted", args: [
+            "userId": userId,
+            "gatewayIds": gatewayIds
+        ])
+    }
+
+    /// Get list of gateway IDs that have completed their expansion
+    /// Returns gateway IDs where expansion has been answered
+    func getCompletedExpansionGateways() async throws -> [String] {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("ios:getCompletedExpansionGateways", args: [
+            "userId": userId
+        ])
+    }
+
     /// Preview expansion schedule for given gateways (doesn't persist)
     /// Used for testing schedule computation before running full journey
     func previewExpansionSchedule(triggeredGateways: [String]) async throws -> SchedulePreviewResponse {

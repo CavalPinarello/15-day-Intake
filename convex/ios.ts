@@ -1734,6 +1734,69 @@ export const markExpansionPackCompleted = mutation({
 });
 
 /**
+ * Mark specific gateway expansions as completed
+ * Updates the expansion_completed flag on user_gateway_states entries
+ * This persists which specific gateway expansions have been answered
+ */
+export const markGatewayExpansionsCompleted = mutation({
+  args: {
+    userId: v.id("users"),
+    gatewayIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const now = Date.now();
+    const updated: string[] = [];
+
+    for (const gatewayId of args.gatewayIds) {
+      // Find the gateway state entry
+      const gatewayState = await ctx.db
+        .query("user_gateway_states")
+        .withIndex("by_user_gateway", (q) =>
+          q.eq("user_id", args.userId).eq("gateway_id", gatewayId)
+        )
+        .first();
+
+      if (gatewayState) {
+        // Update existing entry
+        await ctx.db.patch(gatewayState._id, {
+          expansion_completed: true,
+          expansion_completed_at: now,
+        });
+        updated.push(gatewayId);
+      }
+    }
+
+    console.log(`[markGatewayExpansionsCompleted] Marked ${updated.length} gateways as expansion-completed for user ${args.userId}: ${updated.join(", ")}`);
+    return { success: true, updatedGateways: updated };
+  },
+});
+
+/**
+ * Get list of gateway IDs that have completed their expansion
+ * Returns gateway IDs where expansion_completed is true
+ */
+export const getCompletedExpansionGateways = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const gatewayStates = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    return gatewayStates
+      .filter((g) => g.expansion_completed === true)
+      .map((g) => g.gateway_id);
+  },
+});
+
+/**
  * Reset journey progress (DEBUG MODE ONLY)
  * Resets user to Day 1 and clears all responses
  */

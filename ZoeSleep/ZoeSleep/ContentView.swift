@@ -923,36 +923,43 @@ struct MainDashboardView: View {
 
     @ViewBuilder
     private var gatewayStatusCard: some View {
+        // Get triggered gateways that haven't had their expansion completed yet
+        let completedExpansions = questionnaireManager.journeyProgress?.completedExpansionGateways ?? []
         let triggeredGateways = questionnaireManager.gatewayStates.filter { $0.triggered }
+        let pendingGateways = triggeredGateways.filter { !completedExpansions.contains($0.gatewayType) }
 
-        if !triggeredGateways.isEmpty {
+        // Only show if there are pending (upcoming) assessments
+        if !pendingGateways.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(theme.warning)
-                    Text("Personalized Assessments Triggered")
+                    Image(systemName: "calendar.badge.clock")
+                        .foregroundColor(theme.accent)
+                    Text("Upcoming Assessments")
                         .font(.headline)
                         .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                 }
 
-                Text("Based on your responses, the following specialized assessments have been added to your journey:")
+                Text("Based on your responses, these specialized assessments are scheduled for your journey:")
                     .font(.caption)
                     .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
 
-                ForEach(triggeredGateways, id: \.id) { gateway in
+                ForEach(pendingGateways, id: \.id) { gateway in
                     HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(theme.success)
+                        Image(systemName: "circle")
+                            .foregroundColor(theme.textOnCardSecondary)
                             .font(.caption)
                         Text(gateway.gatewayType.displayName)
                             .font(.subheadline)
                             .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                         Spacer()
+                        Text("Days 6-14")
+                            .font(.caption2)
+                            .foregroundColor(theme.textOnCardSecondary)
                     }
                 }
             }
             .padding()
-            .background(GlassyCardBackground(opacity: 0.35, tint: theme.warning))
+            .background(GlassyCardBackground(opacity: 0.35, tint: theme.accent))
             .cornerRadius(12)
         }
     }

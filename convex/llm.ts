@@ -1065,6 +1065,140 @@ Source: Schröder et al. (2011) - Journal of Nutrition
 - Moderate wine consumption`;
   }
 
+  // PSAS - Pre-Sleep Arousal Scale
+  // Reference: Nicassio PM, Mendlowitz DR, Fussell JJ, Petras L. The phenomenology of the pre-sleep state: the development of the pre-sleep arousal scale. Behav Res Ther. 1985;23(3):263-71
+  if (normalizedName.includes("psas") || normalizedName.includes("pre-sleep arousal")) {
+    return `**PRE-SLEEP AROUSAL SCALE (PSAS) - Clinical Reference**
+Source: Nicassio et al. (1985) - Behaviour Research and Therapy
+
+**Subscales:**
+- Cognitive Arousal (8 items, 8-40): Racing thoughts, worry, intrusive cognitions
+- Somatic Arousal (8 items, 8-40): Physical tension, heart racing, breathing issues
+
+**Validated Interpretation:**
+Cognitive Subscale:
+- 8-16: Low cognitive arousal
+- 17-24: Mild cognitive arousal
+- 25-32: Moderate cognitive arousal
+- 33-40: High cognitive arousal
+
+Somatic Subscale:
+- 8-16: Low somatic arousal
+- 17-24: Mild somatic arousal
+- 25-32: Moderate somatic arousal
+- 33-40: High somatic arousal
+
+**Clinical Significance:**
+- High cognitive arousal strongly associated with sleep onset insomnia
+- High somatic arousal may indicate anxiety or medical conditions
+- Distinguishes between cognitive and physiological contributors to insomnia
+- Used to target relaxation vs cognitive interventions in CBT-I`;
+  }
+
+  // MEQ - Morningness-Eveningness Questionnaire
+  // Reference: Horne JA, Östberg O. A self-assessment questionnaire to determine morningness-eveningness in human circadian rhythms. Int J Chronobiol. 1976;4(2):97-110
+  if (normalizedName.includes("meq") || normalizedName.includes("morningness") || normalizedName.includes("chronotype")) {
+    return `**MORNINGNESS-EVENINGNESS QUESTIONNAIRE (MEQ) - Clinical Reference**
+Source: Horne & Östberg (1976) - International Journal of Chronobiology
+
+**Validated Chronotype Classification:**
+- 16-30: Definite evening type
+- 31-41: Moderate evening type
+- 42-58: Neither type (intermediate)
+- 59-69: Moderate morning type
+- 70-86: Definite morning type
+
+**Clinical Significance:**
+- Chronotype affects optimal sleep-wake timing
+- Evening types at higher risk for social jet lag and sleep problems
+- Sleep timing should align with chronotype when possible
+- Shift work particularly problematic for morning types
+
+**Treatment Implications:**
+- Evening types may benefit from light therapy in morning
+- Morning types should avoid late-night activities
+- Consider chronotype in scheduling CBT-I sessions`;
+  }
+
+  // PROMIS Cognitive Function
+  // Reference: Cella D, et al. The Patient-Reported Outcomes Measurement Information System (PROMIS): progress of an NIH Roadmap cooperative group. Value Health. 2007;10 Suppl 2:S9-S21
+  if (normalizedName.includes("promis") || normalizedName.includes("cognitive function")) {
+    return `**PROMIS COGNITIVE FUNCTION - Clinical Reference**
+Source: PROMIS (Patient-Reported Outcomes Measurement Information System) - NIH
+
+**T-Score Interpretation:**
+- T-score 50 = population mean
+- Each 10 points = 1 standard deviation
+
+Cognitive Function (higher = better):
+- T ≥50: Normal cognitive function
+- T 40-49: Mild cognitive impairment
+- T 30-39: Moderate cognitive impairment
+- T <30: Severe cognitive impairment
+
+**Clinical Significance:**
+- Assesses mental acuity, concentration, memory
+- Sleep disorders commonly impair cognitive function
+- CPAP treatment improves PROMIS scores in OSA
+- Baseline for tracking cognitive effects of sleep treatment
+
+**Domains Assessed:**
+- Mental alertness
+- Concentration
+- Memory
+- Verbal fluency
+- Information processing speed`;
+  }
+
+  // Sleep Hygiene Index
+  // Reference: Mastin DF, Bryson J, Corwyn R. Assessment of sleep hygiene using the Sleep Hygiene Index. J Behav Med. 2006;29(3):223-7
+  if (normalizedName.includes("sleep hygiene") || normalizedName.includes("hygiene index")) {
+    return `**SLEEP HYGIENE INDEX (SHI) - Clinical Reference**
+Source: Mastin et al. (2006) - Journal of Behavioral Medicine
+
+**Validated Interpretation (13 items, 0-52):**
+- 0-20: Good sleep hygiene practices
+- 21-30: Fair sleep hygiene (room for improvement)
+- 31-40: Poor sleep hygiene (significant concerns)
+- 41-52: Very poor sleep hygiene (major behavioral changes needed)
+
+**Clinical Significance:**
+- Higher scores indicate worse sleep hygiene
+- Identifies modifiable behavioral factors affecting sleep
+- Foundation for sleep education component of CBT-I
+- Correlates with PSQI scores
+
+**Key Sleep Hygiene Domains:**
+- Regular sleep schedule
+- Bedroom environment (temperature, light, noise)
+- Pre-bed activities (screens, caffeine, exercise timing)
+- Daytime behaviors affecting sleep
+- Bed partner issues`;
+  }
+
+  // SWDSQ - Shift Work Disorder Screening Questionnaire
+  if (normalizedName.includes("swdsq") || normalizedName.includes("shift work")) {
+    return `**SHIFT WORK DISORDER SCREENING - Clinical Reference**
+Source: AASM Diagnostic Criteria (ICSD-3)
+
+**Screening Interpretation:**
+- Positive screen: Work schedule that overlaps normal sleep time + excessive sleepiness/insomnia + symptoms persist ≥3 months
+- High risk indicators: Night shift work, rotating schedules, early morning starts
+
+**Clinical Significance:**
+- Shift work disorder affects 10-40% of shift workers
+- Associated with increased accident risk, cardiovascular disease, metabolic dysfunction
+- Circadian rhythm disorder requiring specialized management
+- May require occupational health involvement
+
+**Management Considerations:**
+- Strategic light exposure
+- Melatonin timing
+- Scheduled napping
+- Caffeine management
+- Schedule optimization when possible`;
+  }
+
   // Default reference for unknown questionnaires
   return `**Clinical Reference for ${questionnaireName}**
 Please interpret this score using standard clinical guidelines for this assessment tool.
