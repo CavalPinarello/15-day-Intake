@@ -2252,6 +2252,34 @@ struct QuestionnaireView: View {
                 response["responseValue"] = formatter.string(from: dateValue)
             } else if let arrayValue = value as? [String] {
                 response["responseArray"] = arrayValue
+            } else if let medSelections = value as? [MedicationSelection] {
+                // Serialize medication selections to JSON
+                if let jsonData = try? JSONEncoder().encode(medSelections),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    response["responseObject"] = jsonString
+                    print("[iOS] Encoded \(medSelections.count) medication selections for \(questionId)")
+                }
+            } else if let napEntries = value as? [NapEntry] {
+                // Serialize nap entries to JSON
+                if let jsonData = try? JSONEncoder().encode(napEntries),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    response["responseObject"] = jsonString
+                    print("[iOS] Encoded \(napEntries.count) nap entries for \(questionId)")
+                }
+            } else if let caffeineEntries = value as? [CaffeineEntry] {
+                // Serialize caffeine entries to JSON
+                if let jsonData = try? JSONEncoder().encode(caffeineEntries),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    response["responseObject"] = jsonString
+                    print("[iOS] Encoded \(caffeineEntries.count) caffeine entries for \(questionId)")
+                }
+            } else if let medsWithTiming = value as? [MedicationWithTiming] {
+                // Serialize medications with timing to JSON
+                if let jsonData = try? JSONEncoder().encode(medsWithTiming),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    response["responseObject"] = jsonString
+                    print("[iOS] Encoded \(medsWithTiming.count) medications with timing for \(questionId)")
+                }
             } else {
                 print("[iOS] Warning: Unknown response type for \(questionId): \(type(of: value))")
             }
@@ -2294,6 +2322,34 @@ struct QuestionnaireView: View {
                 response["responseValue"] = formatter.string(from: dateValue)
             } else if let arrayValue = value as? [String] {
                 response["responseArray"] = arrayValue
+            } else if let medSelections = value as? [MedicationSelection] {
+                // Serialize medication selections to JSON
+                if let jsonData = try? JSONEncoder().encode(medSelections),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    response["responseObject"] = jsonString
+                    print("[iOS] Encoded \(medSelections.count) medication selections for \(questionId)")
+                }
+            } else if let napEntries = value as? [NapEntry] {
+                // Serialize nap entries to JSON
+                if let jsonData = try? JSONEncoder().encode(napEntries),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    response["responseObject"] = jsonString
+                    print("[iOS] Encoded \(napEntries.count) nap entries for \(questionId)")
+                }
+            } else if let caffeineEntries = value as? [CaffeineEntry] {
+                // Serialize caffeine entries to JSON
+                if let jsonData = try? JSONEncoder().encode(caffeineEntries),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    response["responseObject"] = jsonString
+                    print("[iOS] Encoded \(caffeineEntries.count) caffeine entries for \(questionId)")
+                }
+            } else if let medsWithTiming = value as? [MedicationWithTiming] {
+                // Serialize medications with timing to JSON
+                if let jsonData = try? JSONEncoder().encode(medsWithTiming),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    response["responseObject"] = jsonString
+                    print("[iOS] Encoded \(medsWithTiming.count) medications with timing for \(questionId)")
+                }
             }
 
             convexResponses.append(response)
@@ -2349,6 +2405,69 @@ struct QuestionnaireView: View {
         return useImperial ? question.unitImperial : question.unit
     }
 
+    /// Helper function to convert a response value to Convex format dictionary
+    /// Handles all types including complex objects (medications, naps, caffeine)
+    private func convertValueToConvexFormat(questionId: String, value: Any) -> [String: Any]? {
+        var response: [String: Any] = ["questionId": questionId]
+
+        if let stringValue = value as? String {
+            response["responseValue"] = stringValue
+        } else if let numberValue = value as? Double {
+            response["responseNumber"] = numberValue
+            if let unit = getUnitForQuestion(questionId) {
+                response["responseUnit"] = unit
+            }
+        } else if let intValue = value as? Int {
+            response["responseNumber"] = Double(intValue)
+            if let unit = getUnitForQuestion(questionId) {
+                response["responseUnit"] = unit
+            }
+        } else if let dateValue = value as? Date {
+            let formatter = DateFormatter()
+            if questionnaireManager.getQuestionType(for: questionId) == .date {
+                formatter.dateFormat = "yyyy-MM-dd"
+            } else {
+                formatter.dateFormat = "HH:mm"
+            }
+            response["responseValue"] = formatter.string(from: dateValue)
+        } else if let arrayValue = value as? [String] {
+            response["responseArray"] = arrayValue
+        } else if let medSelections = value as? [MedicationSelection] {
+            // Serialize medication selections to JSON
+            if let jsonData = try? JSONEncoder().encode(medSelections),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                response["responseObject"] = jsonString
+                print("[iOS] Encoded \(medSelections.count) medication selections for \(questionId)")
+            }
+        } else if let napEntries = value as? [NapEntry] {
+            // Serialize nap entries to JSON
+            if let jsonData = try? JSONEncoder().encode(napEntries),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                response["responseObject"] = jsonString
+                print("[iOS] Encoded \(napEntries.count) nap entries for \(questionId)")
+            }
+        } else if let caffeineEntries = value as? [CaffeineEntry] {
+            // Serialize caffeine entries to JSON
+            if let jsonData = try? JSONEncoder().encode(caffeineEntries),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                response["responseObject"] = jsonString
+                print("[iOS] Encoded \(caffeineEntries.count) caffeine entries for \(questionId)")
+            }
+        } else if let medsWithTiming = value as? [MedicationWithTiming] {
+            // Serialize medications with timing to JSON
+            if let jsonData = try? JSONEncoder().encode(medsWithTiming),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                response["responseObject"] = jsonString
+                print("[iOS] Encoded \(medsWithTiming.count) medications with timing for \(questionId)")
+            }
+        } else {
+            print("[iOS] Warning: Unknown response type for \(questionId): \(type(of: value))")
+            return nil
+        }
+
+        return response
+    }
+
     private func saveResponseFromDictionary(questionId: String, value: Any, questions: [Question]) {
         guard let question = questions.first(where: { $0.id == questionId }) else { return }
 
@@ -2391,59 +2510,23 @@ struct QuestionnaireView: View {
         // Fire-and-forget async save - we don't want to block the dismiss
         Task {
             do {
-                // Build the responses array similar to syncResponsesToConvex, but simpler
+                // Build the responses array using helper function (handles complex types)
                 var convexResponses: [[String: Any]] = []
 
                 // Save sleep log responses that user interacted with
                 for (questionId, value) in sleepLogResponses {
                     guard sleepLogUserInteracted.contains(questionId) else { continue }
-                    var response: [String: Any] = ["questionId": questionId]
-                    if let stringValue = value as? String {
-                        response["responseValue"] = stringValue
-                    } else if let numberValue = value as? Double {
-                        response["responseNumber"] = numberValue
-                        if let unit = getUnitForQuestion(questionId) {
-                            response["responseUnit"] = unit
-                        }
-                    } else if let intValue = value as? Int {
-                        response["responseNumber"] = Double(intValue)
-                        if let unit = getUnitForQuestion(questionId) {
-                            response["responseUnit"] = unit
-                        }
-                    } else if let dateValue = value as? Date {
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "HH:mm"
-                        response["responseValue"] = formatter.string(from: dateValue)
-                    } else if let arrayValue = value as? [String] {
-                        response["responseArray"] = arrayValue
+                    if let response = convertValueToConvexFormat(questionId: questionId, value: value) {
+                        convexResponses.append(response)
                     }
-                    convexResponses.append(response)
                 }
 
                 // Save assessment responses that user interacted with
                 for (questionId, value) in assessmentResponses {
                     guard assessmentUserInteracted.contains(questionId) else { continue }
-                    var response: [String: Any] = ["questionId": questionId]
-                    if let stringValue = value as? String {
-                        response["responseValue"] = stringValue
-                    } else if let numberValue = value as? Double {
-                        response["responseNumber"] = numberValue
-                        if let unit = getUnitForQuestion(questionId) {
-                            response["responseUnit"] = unit
-                        }
-                    } else if let intValue = value as? Int {
-                        response["responseNumber"] = Double(intValue)
-                        if let unit = getUnitForQuestion(questionId) {
-                            response["responseUnit"] = unit
-                        }
-                    } else if let dateValue = value as? Date {
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "HH:mm"
-                        response["responseValue"] = formatter.string(from: dateValue)
-                    } else if let arrayValue = value as? [String] {
-                        response["responseArray"] = arrayValue
+                    if let response = convertValueToConvexFormat(questionId: questionId, value: value) {
+                        convexResponses.append(response)
                     }
-                    convexResponses.append(response)
                 }
 
                 if !convexResponses.isEmpty {
@@ -2472,32 +2555,13 @@ struct QuestionnaireView: View {
                     saveResponseFromDictionary(questionId: questionId, value: value, questions: questions)
                 }
 
-                // Build Convex responses for sync
+                // Build Convex responses for sync using helper function (handles complex types)
                 var convexResponses: [[String: Any]] = []
                 for (questionId, value) in responses {
                     guard userInteracted.contains(questionId) else { continue }
-                    var response: [String: Any] = ["questionId": questionId]
-
-                    if let stringValue = value as? String {
-                        response["responseValue"] = stringValue
-                    } else if let numberValue = value as? Double {
-                        response["responseNumber"] = numberValue
-                        if let unit = getUnitForQuestion(questionId) {
-                            response["responseUnit"] = unit
-                        }
-                    } else if let intValue = value as? Int {
-                        response["responseNumber"] = Double(intValue)
-                        if let unit = getUnitForQuestion(questionId) {
-                            response["responseUnit"] = unit
-                        }
-                    } else if let dateValue = value as? Date {
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "HH:mm"
-                        response["responseValue"] = formatter.string(from: dateValue)
-                    } else if let arrayValue = value as? [String] {
-                        response["responseArray"] = arrayValue
+                    if let response = convertValueToConvexFormat(questionId: questionId, value: value) {
+                        convexResponses.append(response)
                     }
-                    convexResponses.append(response)
                 }
 
                 // Sync responses to Convex

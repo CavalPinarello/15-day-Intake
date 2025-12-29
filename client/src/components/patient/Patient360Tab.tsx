@@ -14,6 +14,7 @@ import { PatientAnalysisWorkflow } from "./PatientAnalysisWorkflow";
 import { CheckInHistoryCard } from "./CheckInHistoryCard";
 import { WellnessMetricsChart } from "./WellnessMetricsChart";
 import { CircadianMetricsCard } from "./CircadianMetricsCard";
+import { SleepHealthFactorsCard } from "./SleepHealthFactorsCard";
 import { AdaptiveDifficultyPanel } from "./AdaptiveDifficultyPanel";
 import { ComplianceCorrelationChart } from "@/components/charts/ComplianceCorrelationChart";
 import { ProtocolAssignment } from "@/components/physician/ProtocolAssignment";
@@ -660,6 +661,9 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
 
         {/* Circadian Metrics - Light Exposure & Rhythm */}
         <CircadianMetricsCard userId={userId} />
+
+        {/* Sleep Health Factors - Naps, Medications, Caffeine */}
+        <SleepHealthFactorsCard userId={userId} />
       </div>
 
       {/* Multi-Source Sleep Comparison - Only show if patient has multiple wearables */}

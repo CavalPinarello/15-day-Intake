@@ -31,6 +31,8 @@ const SLEEP_DIARY_QUESTIONS: Record<string, { text: string; type: string }> = {
   "SD_DAY_TYPE": { text: "What type of day is today?", type: "single_select" },
   "SD_MEDICATION_TAKEN": { text: "Did you take any sleep medication last night?", type: "yes_no" },
   "SD_MEDICATION_TIME": { text: "If yes, what time did you take it?", type: "time" },
+  "SD_MEDS_LIST": { text: "What type of sleep medication did you take?", type: "medication_select" },
+  "SD_MEDS_OTHER": { text: "Other medication (specify)", type: "text" },
   "SD_GOT_INTO_BED": { text: "What time did you get into bed last night?", type: "time" },
   "SD_LIGHTS_OUT": { text: "What time did you turn off the lights to sleep?", type: "time" },
   "SD_SLEEP_ONSET": { text: "What time do you think you fell asleep?", type: "time" },
@@ -42,7 +44,7 @@ const SLEEP_DIARY_QUESTIONS: Record<string, { text: string; type: string }> = {
   "SD_SLEEP_QUALITY": { text: "How would you rate your sleep quality?", type: "scale" },
   "SD_NAPS_TAKEN": { text: "Did you take any naps yesterday?", type: "yes_no" },
   "SD_NAPS_COUNT": { text: "How many naps did you take?", type: "number" },
-  "SD_NAP_DETAILS": { text: "For each nap, record the start time and duration.", type: "repeating_group" },
+  "SD_NAP_DETAILS": { text: "For each nap, record the start time and duration.", type: "nap_details" },
 };
 
 // Consensus Sleep Diary questions (CSD_ prefix - iOS app's primary sleep log)
@@ -536,8 +538,9 @@ function calculateFSS(responses: Map<string, number>): QuestionnaireScore {
   let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
 
   if (answered >= 7) {
-    // Mean score
+    // Mean score per clinical standard (Krupp et al. 1989)
     const meanScore = total / answered;
+    // Round to 1 decimal place for mean score display
     const score = Math.round(meanScore * 10) / 10;
 
     if (score < 4) { interpretation = "No significant fatigue"; severity = "normal"; }
@@ -545,10 +548,11 @@ function calculateFSS(responses: Map<string, number>): QuestionnaireScore {
     else if (score < 6) { interpretation = "Moderate fatigue"; severity = "moderate"; }
     else { interpretation = "Severe fatigue"; severity = "severe"; }
 
-    return { name: "Fatigue Severity Scale", abbreviation: "FSS", score: Math.round(total), maxScore: 63, interpretation, severity, questionsAnswered: answered, questionsRequired: 9 };
+    // Return mean score (1-7 range) as per clinical standard, not total
+    return { name: "Fatigue Severity Scale", abbreviation: "FSS", score, maxScore: 7, interpretation, severity, questionsAnswered: answered, questionsRequired: 9 };
   }
 
-  return { name: "Fatigue Severity Scale", abbreviation: "FSS", score: null, maxScore: 63, interpretation, severity, questionsAnswered: answered, questionsRequired: 9 };
+  return { name: "Fatigue Severity Scale", abbreviation: "FSS", score: null, maxScore: 7, interpretation, severity, questionsAnswered: answered, questionsRequired: 9 };
 }
 
 // FOSQ-10 (Functional Outcomes of Sleep Questionnaire) - 10 questions, 5 subscales
@@ -1284,7 +1288,7 @@ export const getPatientDayData = query({
           }
         }
 
-        // Combine response_value, response_number, and response_array into a displayable value
+        // Combine response_value, response_number, response_array, and response_object into a displayable value
         let displayValue: string | undefined = response.response_value;
 
         // If no string value, check for numeric value
@@ -1303,6 +1307,48 @@ export const getPatientDayData = query({
             }
           } catch {
             displayValue = String(response.response_array);
+          }
+        }
+
+        // Handle complex object types (medication_select, nap_details, supplement_select)
+        if (!displayValue && response.response_object) {
+          try {
+            const obj = typeof response.response_object === 'string'
+              ? JSON.parse(response.response_object)
+              : response.response_object;
+
+            // Format based on question type
+            if (questionType === "medication_select" || questionType === "prescription_med_select" || questionType === "supplement_select") {
+              // Array of MedicationWithTiming objects: { categoryId, dose?, medicationName?, timingCategories[] }
+              if (Array.isArray(obj) && obj.length > 0) {
+                displayValue = obj.map((med: { categoryId?: string; medicationName?: string; dose?: string; timingCategories?: string[] }) => {
+                  const name = med.medicationName || med.categoryId || "Unknown";
+                  const dose = med.dose ? ` (${med.dose})` : "";
+                  const timing = med.timingCategories && med.timingCategories.length > 0
+                    ? ` - ${med.timingCategories.join(", ")}`
+                    : "";
+                  return `${name}${dose}${timing}`;
+                }).join("; ");
+              } else {
+                displayValue = "No medications selected";
+              }
+            } else if (questionType === "nap_details") {
+              // Array of nap entries: { startTime, durationMinutes, napNumber }
+              if (Array.isArray(obj) && obj.length > 0) {
+                displayValue = obj.map((nap: { startTime?: string; nap_start_time?: string; durationMinutes?: number; nap_duration_minutes?: number; napNumber?: number }) => {
+                  const startTime = nap.startTime || nap.nap_start_time || "Unknown";
+                  const duration = nap.durationMinutes ?? nap.nap_duration_minutes ?? 0;
+                  return `${startTime} (${duration} min)`;
+                }).join("; ");
+              } else {
+                displayValue = "No nap details";
+              }
+            } else {
+              // Generic object display
+              displayValue = JSON.stringify(obj);
+            }
+          } catch {
+            displayValue = String(response.response_object);
           }
         }
 
@@ -3103,16 +3149,21 @@ export const getPatientNapSummary = query({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Get all nap-related responses
+    // Get all nap-related responses (both CSD_ and SD_ prefixes)
     const napResponses = await ctx.db
       .query("user_assessment_responses")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .filter((q) =>
         q.or(
+          // CSD (Consensus Sleep Diary) prefix
           q.eq(q.field("question_id"), "CSD_NAPS"),
           q.eq(q.field("question_id"), "CSD_NAP_COUNT"),
           q.eq(q.field("question_id"), "CSD_NAP_DETAILS"),
-          q.eq(q.field("question_id"), "CSD_NAP_DURATION")
+          q.eq(q.field("question_id"), "CSD_NAP_DURATION"),
+          // SD (Stanford Sleep Diary) prefix
+          q.eq(q.field("question_id"), "SD_NAPS_TAKEN"),
+          q.eq(q.field("question_id"), "SD_NAPS_COUNT"),
+          q.eq(q.field("question_id"), "SD_NAP_DETAILS")
         )
       )
       .collect();
@@ -3128,12 +3179,15 @@ export const getPatientNapSummary = query({
 
       switch (response.question_id) {
         case "CSD_NAPS":
+        case "SD_NAPS_TAKEN":
           dayData[day].tookNaps = response.response_value?.toLowerCase() === "yes";
           break;
         case "CSD_NAP_COUNT":
+        case "SD_NAPS_COUNT":
           dayData[day].napCount = response.response_number ?? 0;
           break;
         case "CSD_NAP_DETAILS":
+        case "SD_NAP_DETAILS":
           if (response.response_object) {
             try {
               dayData[day].napDetails = JSON.parse(response.response_object);
@@ -3201,6 +3255,15 @@ interface MedicationSelection {
   medicationName?: string | null;
 }
 
+// MedicationWithTiming type (new iOS format with timing)
+interface MedicationWithTiming {
+  categoryId: string;
+  dose?: string | null;
+  medicationName?: string | null;
+  timingCategories?: string[]; // ["morning", "afternoon", "evening", "bedtime"]
+  specificTime?: string | null;
+}
+
 /**
  * Get aggregated medication summary for a patient
  * Returns: days with meds, category counts with doses, other medications
@@ -3210,16 +3273,21 @@ export const getPatientMedicationSummary = query({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Get all medication-related responses
+    // Get all medication-related responses (both CSD_ and SD_ prefixes)
     const medResponses = await ctx.db
       .query("user_assessment_responses")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .filter((q) =>
         q.or(
+          // CSD (Consensus Sleep Diary) prefix
           q.eq(q.field("question_id"), "CSD_MEDS"),
           q.eq(q.field("question_id"), "CSD_MEDS_LIST"),
           q.eq(q.field("question_id"), "CSD_MEDS_NAME"),
-          q.eq(q.field("question_id"), "CSD_MEDS_OTHER")
+          q.eq(q.field("question_id"), "CSD_MEDS_OTHER"),
+          // SD (Stanford Sleep Diary) prefix
+          q.eq(q.field("question_id"), "SD_MEDICATION_TAKEN"),
+          q.eq(q.field("question_id"), "SD_MEDS_LIST"),
+          q.eq(q.field("question_id"), "SD_MEDS_OTHER")
         )
       )
       .collect();
@@ -3227,7 +3295,7 @@ export const getPatientMedicationSummary = query({
     // Group by day
     const dayData: Record<number, {
       tookMeds: boolean;
-      medications: MedicationSelection[];
+      medications: MedicationWithTiming[];
       legacyCategories: string[];
       otherText?: string;
       legacyName?: string;
@@ -3241,17 +3309,31 @@ export const getPatientMedicationSummary = query({
 
       switch (response.question_id) {
         case "CSD_MEDS":
+        case "SD_MEDICATION_TAKEN":
           dayData[day].tookMeds = response.response_value?.toLowerCase() === "yes";
           break;
         case "CSD_MEDS_LIST":
-          if (response.response_array) {
+        case "SD_MEDS_LIST":
+          // Check response_object first (new MedicationWithTiming format)
+          if (response.response_object) {
+            try {
+              const parsed = JSON.parse(response.response_object);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                dayData[day].medications = parsed as MedicationWithTiming[];
+              }
+            } catch {
+              // Invalid JSON, ignore
+            }
+          }
+          // Fall back to response_array (legacy formats)
+          else if (response.response_array) {
             try {
               const parsed = JSON.parse(response.response_array);
               // Check if it's the new MedicationSelection format or legacy string array
               if (parsed.length > 0) {
                 if (typeof parsed[0] === "object" && parsed[0].categoryId) {
-                  // New format: array of MedicationSelection objects
-                  dayData[day].medications = parsed as MedicationSelection[];
+                  // New format: array of MedicationSelection/MedicationWithTiming objects
+                  dayData[day].medications = parsed as MedicationWithTiming[];
                 } else if (typeof parsed[0] === "string") {
                   // Legacy format: array of category strings
                   dayData[day].legacyCategories = parsed as string[];
@@ -3263,6 +3345,7 @@ export const getPatientMedicationSummary = query({
           }
           break;
         case "CSD_MEDS_OTHER":
+        case "SD_MEDS_OTHER":
           dayData[day].otherText = response.response_value;
           break;
         case "CSD_MEDS_NAME":
@@ -3276,17 +3359,18 @@ export const getPatientMedicationSummary = query({
     const daysWithMeds = Object.values(dayData).filter((d) => d.tookMeds).length;
     const totalDays = Object.keys(dayData).length;
 
-    // Aggregate category counts with dose info
-    const categoryCounts: Record<string, { count: number; doses: string[]; medicationNames: string[] }> = {};
+    // Aggregate category counts with dose and timing info
+    const categoryCounts: Record<string, { count: number; doses: string[]; medicationNames: string[]; timingCounts: Record<string, number> }> = {};
     const otherMedications: string[] = [];
+    const timingCounts: Record<string, number> = { morning: 0, afternoon: 0, evening: 0, bedtime: 0 };
 
     for (const data of Object.values(dayData)) {
       if (data.tookMeds) {
-        // New format: MedicationSelection objects with doses
+        // New format: MedicationWithTiming objects with doses and timing
         for (const med of data.medications) {
           const catId = med.categoryId;
           if (!categoryCounts[catId]) {
-            categoryCounts[catId] = { count: 0, doses: [], medicationNames: [] };
+            categoryCounts[catId] = { count: 0, doses: [], medicationNames: [], timingCounts: {} };
           }
           categoryCounts[catId].count++;
           if (med.dose && !categoryCounts[catId].doses.includes(med.dose)) {
@@ -3295,12 +3379,19 @@ export const getPatientMedicationSummary = query({
           if (med.medicationName && !categoryCounts[catId].medicationNames.includes(med.medicationName)) {
             categoryCounts[catId].medicationNames.push(med.medicationName);
           }
+          // Track timing categories
+          if (med.timingCategories) {
+            for (const timing of med.timingCategories) {
+              timingCounts[timing] = (timingCounts[timing] || 0) + 1;
+              categoryCounts[catId].timingCounts[timing] = (categoryCounts[catId].timingCounts[timing] || 0) + 1;
+            }
+          }
         }
 
         // Legacy format: string categories (no dose info)
         for (const cat of data.legacyCategories) {
           if (!categoryCounts[cat]) {
-            categoryCounts[cat] = { count: 0, doses: [], medicationNames: [] };
+            categoryCounts[cat] = { count: 0, doses: [], medicationNames: [], timingCounts: {} };
           }
           categoryCounts[cat].count++;
         }
@@ -3336,14 +3427,23 @@ export const getPatientMedicationSummary = query({
         unit: categoryInfo[id]?.unit || "mg",
         commonDoses: data.doses.sort((a, b) => parseFloat(a) - parseFloat(b)),
         medications: data.medicationNames,
+        timingBreakdown: data.timingCounts,
       }))
       .sort((a, b) => b.count - a.count);
+
+    // Determine most common timing
+    const mostCommonTiming = Object.entries(timingCounts)
+      .sort((a, b) => b[1] - a[1])
+      .filter(([, count]) => count > 0)
+      .map(([timing]) => timing)[0] || "bedtime";
 
     return {
       medicationDays: daysWithMeds,
       totalDays,
       categories,
       otherMedications,
+      timingBreakdown: timingCounts,
+      mostCommonTiming,
     };
   },
 });

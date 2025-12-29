@@ -1585,6 +1585,8 @@ export const saveResponses = mutation({
         responseValue: v.optional(v.string()),
         responseNumber: v.optional(v.number()),
         responseArray: v.optional(v.array(v.string())),
+        // Complex object responses (medications, naps, etc.) - already JSON stringified
+        responseObject: v.optional(v.string()),
         // Unit of measurement for numeric responses (e.g., "cm", "in", "°C", "°F")
         responseUnit: v.optional(v.string()),
         // Derived answer fields - for answers auto-populated from equivalent questions
@@ -1619,6 +1621,7 @@ export const saveResponses = mutation({
           response_value: response.responseValue,
           response_number: response.responseNumber,
           response_array: response.responseArray ? JSON.stringify(response.responseArray) : undefined,
+          response_object: response.responseObject, // Already JSON stringified from iOS
           response_unit: response.responseUnit,
           day_number: args.dayNumber,
           is_derived: response.isDerived ?? false,
@@ -1632,6 +1635,7 @@ export const saveResponses = mutation({
           response_value: response.responseValue,
           response_number: response.responseNumber,
           response_array: response.responseArray ? JSON.stringify(response.responseArray) : undefined,
+          response_object: response.responseObject, // Already JSON stringified from iOS
           response_unit: response.responseUnit,
           day_number: args.dayNumber,
           is_derived: response.isDerived ?? false,
