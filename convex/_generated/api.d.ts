@@ -21,6 +21,7 @@ import type * as circadian from "../circadian.js";
 import type * as clinicalScenarios from "../clinicalScenarios.js";
 import type * as cohortCompute from "../cohortCompute.js";
 import type * as cohortStats from "../cohortStats.js";
+import type * as config_coreToExpansionMapping from "../config/coreToExpansionMapping.js";
 import type * as crossPlatformValidator from "../crossPlatformValidator.js";
 import type * as days from "../days.js";
 import type * as encouragement from "../encouragement.js";
@@ -80,6 +81,7 @@ declare const fullApi: ApiFromModules<{
   clinicalScenarios: typeof clinicalScenarios;
   cohortCompute: typeof cohortCompute;
   cohortStats: typeof cohortStats;
+  "config/coreToExpansionMapping": typeof config_coreToExpansionMapping;
   crossPlatformValidator: typeof crossPlatformValidator;
   days: typeof days;
   encouragement: typeof encouragement;

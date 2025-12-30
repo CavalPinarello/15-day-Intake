@@ -16,6 +16,8 @@ interface SleepDataPoint {
   day: number;
   subjectiveQuality: number | null; // 1-10 from Sleep Log
   objectiveEfficiency: number | null; // % from HealthKit
+  perceivedEfficiency: number | null; // % from Sleep Log (subjective)
+  perceptionDelta: number | null; // perceived - objective (+ = overestimates, - = underestimates)
   bedtimeConsistency: number | null; // deviation in minutes
   wakeTimeConsistency: number | null; // deviation in minutes
 }
@@ -39,17 +41,46 @@ export function SleepTrendChart({
     "Sleep Efficiency": point.objectiveEfficiency
       ? Math.round(point.objectiveEfficiency / 10)
       : null, // Scale to 0-10
+    "Perceived Efficiency": point.perceivedEfficiency
+      ? Math.round(point.perceivedEfficiency / 10)
+      : null, // Scale 0-100% to 0-10
     "Bedtime Variance": point.bedtimeConsistency,
     "Wake Variance": point.wakeTimeConsistency,
+    // Store raw values for tooltip
+    rawObjectiveEfficiency: point.objectiveEfficiency,
+    rawPerceivedEfficiency: point.perceivedEfficiency,
+    perceptionDelta: point.perceptionDelta,
   }));
 
+  // Calculate average perception gap for summary
+  const deltaValues = data
+    .map((p) => p.perceptionDelta)
+    .filter((d): d is number => d !== null);
+  const avgPerceptionGap =
+    deltaValues.length > 0
+      ? Math.round(deltaValues.reduce((a, b) => a + b, 0) / deltaValues.length)
+      : null;
+
   return (
-    <div className="w-full" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={chartData}
-          margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-        >
+    <div className="w-full">
+      {/* Perception gap summary stat */}
+      {avgPerceptionGap !== null && (
+        <div className="mb-2 flex items-center justify-end gap-2 text-sm">
+          <span className="text-gray-400">Avg Perception Gap:</span>
+          <span className={`font-medium ${avgPerceptionGap > 0 ? 'text-yellow-400' : avgPerceptionGap < 0 ? 'text-orange-400' : 'text-gray-400'}`}>
+            {avgPerceptionGap > 0 ? `+${avgPerceptionGap}%` : `${avgPerceptionGap}%`}
+            <span className="ml-1 text-xs text-gray-500">
+              {avgPerceptionGap > 5 ? '(tends to overestimate)' : avgPerceptionGap < -5 ? '(tends to underestimate)' : '(accurate)'}
+            </span>
+          </span>
+        </div>
+      )}
+      <div style={{ height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={chartData}
+            margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+          >
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
           <XAxis
             dataKey="day"
@@ -78,6 +109,48 @@ export function SleepTrendChart({
               color: "#F9FAFB",
             }}
             labelStyle={{ color: "#9CA3AF" }}
+            formatter={(value, name, props) => {
+              // Show actual percentages for efficiency metrics
+              if (name === "Sleep Efficiency" && props.payload.rawObjectiveEfficiency) {
+                return [`${props.payload.rawObjectiveEfficiency}%`, "Objective Efficiency"];
+              }
+              if (name === "Perceived Efficiency" && props.payload.rawPerceivedEfficiency) {
+                return [`${props.payload.rawPerceivedEfficiency}%`, "Perceived Efficiency"];
+              }
+              return [value, name];
+            }}
+            content={({ active, payload, label }) => {
+              if (!active || !payload || payload.length === 0) return null;
+              const data = payload[0].payload;
+              const delta = data.perceptionDelta;
+              const deltaLabel = delta !== null
+                ? delta > 0
+                  ? `+${delta}% (overestimates)`
+                  : delta < 0
+                    ? `${delta}% (underestimates)`
+                    : "0% (accurate)"
+                : null;
+
+              return (
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm">
+                  <p className="text-gray-400 mb-2">{label}</p>
+                  {data["Sleep Quality"] !== null && (
+                    <p className="text-blue-400">Sleep Quality: {data["Sleep Quality"]}/10</p>
+                  )}
+                  {data.rawObjectiveEfficiency !== null && (
+                    <p className="text-emerald-400">Objective Efficiency: {data.rawObjectiveEfficiency}%</p>
+                  )}
+                  {data.rawPerceivedEfficiency !== null && (
+                    <p className="text-purple-400">Perceived Efficiency: {data.rawPerceivedEfficiency}%</p>
+                  )}
+                  {deltaLabel && (
+                    <p className={`mt-1 pt-1 border-t border-gray-700 ${delta && delta > 0 ? 'text-yellow-400' : delta && delta < 0 ? 'text-orange-400' : 'text-gray-400'}`}>
+                      Perception Gap: {deltaLabel}
+                    </p>
+                  )}
+                </div>
+              );
+            }}
           />
           <Legend
             wrapperStyle={{ paddingTop: "10px" }}
@@ -121,7 +194,7 @@ export function SleepTrendChart({
             connectNulls
           />
 
-          {/* Objective sleep efficiency line (scaled) */}
+          {/* Objective sleep efficiency line (scaled) - from HealthKit/wearable */}
           {showObjective && (
             <Line
               type="monotone"
@@ -134,8 +207,21 @@ export function SleepTrendChart({
               connectNulls
             />
           )}
+
+          {/* Perceived sleep efficiency line (scaled) - from Sleep Log */}
+          <Line
+            type="monotone"
+            dataKey="Perceived Efficiency"
+            stroke="#9333EA"
+            strokeWidth={2}
+            strokeDasharray="5 5"
+            dot={{ fill: "#9333EA", strokeWidth: 2, r: 3 }}
+            activeDot={{ r: 5, stroke: "#9333EA" }}
+            connectNulls
+          />
         </LineChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }

@@ -868,11 +868,33 @@ struct QuestionnaireView: View {
 
             // Stanford Sleep Diary question dependencies (SD_ prefix)
             case "SD_LIGHTS_OUT":
-                return sleepLogResponses["SD_GOT_INTO_BED"] as? Date
+                // Return bedtime so smartDefault can add 10 min for lights out
+                if let bedtime = sleepLogResponses["SD_GOT_INTO_BED"] as? Date {
+                    return bedtime
+                }
+                // Fallback: Use smart default for bedtime (10 PM)
+                let calendar = Calendar.current
+                var components = calendar.dateComponents([.year, .month, .day], from: Date())
+                components.hour = 22
+                components.minute = 0
+                return calendar.date(from: components)
             // Note: SL_ASLEEP_TIME/SD_SLEEP_ONSET removed - sleep onset derived from lights_out + latency
             case "SD_FINAL_WAKE", "SL_WAKE_TIME":
                 // Wake time depends on lights out (typically 8 hours later)
-                return sleepLogResponses["SD_LIGHTS_OUT"] as? Date ?? sleepLogResponses["SD_GOT_INTO_BED"] as? Date
+                if let lightsOut = sleepLogResponses["SD_LIGHTS_OUT"] as? Date {
+                    return lightsOut
+                }
+                if let bedtime = sleepLogResponses["SD_GOT_INTO_BED"] as? Date {
+                    // bedtime + 10min (lights out delay)
+                    let calendar = Calendar.current
+                    return calendar.date(byAdding: .minute, value: 10, to: bedtime)
+                }
+                // Fallback: 10:15 PM (typical lights out)
+                let calendar = Calendar.current
+                var components = calendar.dateComponents([.year, .month, .day], from: Date())
+                components.hour = 22
+                components.minute = 15
+                return calendar.date(from: components)
             case "SD_OUT_OF_BED":
                 // Out of bed depends on wake time - use SD_FINAL_WAKE (not SL_WAKE_TIME)
                 // Return the wake time so smartTimeDefault can add 15 min

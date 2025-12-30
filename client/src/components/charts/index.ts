@@ -15,4 +15,5 @@ export {
   ComplianceChart,
   StreakIndicator,
   ComplianceSummary,
+  ModularComplianceSummary,
 } from "./ComplianceChart";

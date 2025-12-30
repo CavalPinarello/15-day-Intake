@@ -58,6 +58,8 @@ interface PatientData {
     day: number;
     subjectiveQuality: number | null;
     objectiveEfficiency: number | null;
+    perceivedEfficiency: number | null;
+    perceptionDelta: number | null;
     bedtimeConsistency: number | null;
     wakeTimeConsistency: number | null;
   }[];

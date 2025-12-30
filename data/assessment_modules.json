@@ -15,19 +15,25 @@
       "37",
       "38",
       "53A",
+      "53A_OCC",
       "53B",
+      "53B_FREQ",
+      "53B_SCHEDULE",
+      "53B_TYPE",
       "53D",
       "53E",
       "53F",
       "53G",
+      "53G_DETAILS",
+      "53G_ZONES",
       "39"
     ],
-    "estimatedMinutes": 8.5
+    "estimatedMinutes": 10
   },
   {
     "moduleId": "core_metabolic",
     "name": "Metabolic CORE",
-    "description": "CORE questions for Metabolic",
+    "description": "CORE questions for Metabolic health, medications, conditions",
     "pillar": "Metabolic",
     "tier": "CORE",
     "moduleType": "core",
@@ -36,21 +42,32 @@
       "D5",
       "D6",
       "26",
+      "26_TYPE",
+      "26_A1C",
+      "26_CONTROLLED",
       "27",
-      "28",
+      "27_CONTROLLED",
+      "27_LEVEL",
+      "27_MEDICATION",
+      "28A",
+      "28B",
       "44A",
-      "44B",
+      "44A_DETAILS",
       "44C",
-      "44D",
+      "44C_DETAILS",
       "44E",
-      "44F",
+      "44E_DETAILS",
       "44G",
-      "44H",
+      "44G_DETAILS",
       "44I",
+      "44I_TRIMESTER",
       "44J",
-      "44K"
+      "44J_DURATION",
+      "44K",
+      "44K_METHOD",
+      "44K_PURPOSE"
     ],
-    "estimatedMinutes": 13.5
+    "estimatedMinutes": 15
   },
   {
     "moduleId": "core_sleep_quality_1",
@@ -84,6 +101,8 @@
     "moduleType": "core",
     "questionIds": [
       "47",
+      "47_PROSTATE",
+      "47_STREAM",
       "48",
       "49",
       "50",
@@ -95,7 +114,7 @@
       "57",
       "58"
     ],
-    "estimatedMinutes": 9.5
+    "estimatedMinutes": 10
   },
   {
     "moduleId": "gateway_sleep_quality",
@@ -487,7 +506,6 @@
       "207",
       "208",
       "209",
-      "210",
       "211",
       "212",
       "213",
@@ -495,7 +513,7 @@
       "215",
       "216"
     ],
-    "estimatedMinutes": 7.5
+    "estimatedMinutes": 7
   },
   {
     "moduleId": "core_nutritional",
@@ -506,6 +524,7 @@
     "moduleType": "core",
     "questionIds": [
       "29",
+      "29A",
       "30",
       "31",
       "32",
@@ -517,7 +536,7 @@
       "54D",
       "54E"
     ],
-    "estimatedMinutes": 5.5
+    "estimatedMinutes": 6
   },
   {
     "moduleId": "expansion_nutritional",
@@ -529,7 +548,6 @@
     "questionIds": [
       "217",
       "218",
-      "219",
       "220",
       "221",
       "222",
@@ -542,7 +560,7 @@
       "229",
       "230"
     ],
-    "estimatedMinutes": 7
+    "estimatedMinutes": 6.5
   },
   {
     "moduleId": "expansion_swdsq",

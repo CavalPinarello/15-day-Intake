@@ -101,25 +101,30 @@
   },
   {
     "question_id": "38",
-    "question_text": "If yes, how often do they wake you up per night?",
+    "question_text": "On average, how many times per night do they wake you up?",
     "pillar": "Social",
     "tier": "CORE",
-    "answer_format": "number_input",
+    "answer_format": "single_select_chips",
     "format_config": {
-      "min": 0,
-      "max": 20,
-      "step": 1,
-      "decimalPlaces": 0,
-      "inputMode": "numeric"
+      "options": [
+        { "value": "0", "label": "Rarely/Never" },
+        { "value": "1", "label": "1 time" },
+        { "value": "2", "label": "2 times" },
+        { "value": "3", "label": "3 times" },
+        { "value": "4", "label": "4 times" },
+        { "value": "5+", "label": "5+ times" }
+      ],
+      "layout": "grid"
     },
     "validation_rules": {
-      "required": false,
-      "min": 0,
-      "max": 20
+      "required": true
     },
     "conditional_logic": {
-      "question_id": "37",
-      "equals": "yes"
+      "show_if": {
+        "question_id": "37",
+        "operator": "equals",
+        "value": "yes"
+      }
     },
     "estimated_time_seconds": 30,
     "created_at": 1763104572235,
@@ -163,6 +168,31 @@
     "validation_rules": {
       "required": true
     },
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53A_OCC",
+    "question_text": "What is your profession or occupation?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "text_input",
+    "format_config": {
+      "placeholder": "e.g., Nurse, Software Engineer, Teacher",
+      "maxLength": 100
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "53A",
+        "operator": "in",
+        "value": ["fulltime", "parttime", "shift_work"]
+      }
+    },
+    "help_text": "Understanding your profession helps us identify occupation-related sleep patterns.",
     "estimated_time_seconds": 30,
     "created_at": 1763104572235,
     "updated_at": 1763104572235
@@ -408,6 +438,64 @@
     "updated_at": 1763104572235
   },
   {
+    "question_id": "53G_DETAILS",
+    "question_text": "How many time zones do you typically cross?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "1-2", "label": "1-2 hours" },
+        { "value": "3-5", "label": "3-5 hours" },
+        { "value": "6-8", "label": "6-8 hours (e.g., US to Europe)" },
+        { "value": "9+", "label": "9+ hours (e.g., US to Asia)" }
+      ],
+      "layout": "vertical"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "53G",
+        "operator": "in",
+        "value": ["1", "2", "3"]
+      }
+    },
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
+    "question_id": "53G_ZONES",
+    "question_text": "Do you typically travel east or west?",
+    "pillar": "Social",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "east", "label": "Eastward (harder adjustment)" },
+        { "value": "west", "label": "Westward (easier adjustment)" },
+        { "value": "both", "label": "Both directions equally" }
+      ],
+      "layout": "vertical"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "53G",
+        "operator": "in",
+        "value": ["1", "2", "3"]
+      }
+    },
+    "help_text": "Eastward travel shortens your day and is typically harder to adjust to than westward travel.",
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572235,
+    "updated_at": 1763104572235
+  },
+  {
     "question_id": "39",
     "question_text": "Do you have caregiving responsibilities?",
     "pillar": "Social",
@@ -586,6 +674,94 @@
     "updated_at": 1763104572236
   },
   {
+    "question_id": "26_TYPE",
+    "question_text": "Is it Type 1 or Type 2 diabetes?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "type1", "label": "Type 1" },
+        { "value": "type2", "label": "Type 2" },
+        { "value": "prediabetes", "label": "Pre-diabetes" },
+        { "value": "gestational", "label": "Gestational" },
+        { "value": "dont_know", "label": "Don't know" }
+      ],
+      "layout": "vertical"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "26",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "26_A1C",
+    "question_text": "What is your most recent HbA1C level?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "number_input",
+    "format_config": {
+      "min": 4.0,
+      "max": 15.0,
+      "step": 0.1,
+      "defaultValue": 6.0,
+      "unit": "%",
+      "allowDontKnow": true
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "26",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "help_text": "This is a blood test that measures average blood sugar over 2-3 months. Normal is below 5.7%.",
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "26_CONTROLLED",
+    "question_text": "Is your diabetes well-controlled with current treatment?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "yes", "label": "Yes" },
+        { "value": "no", "label": "No" },
+        { "value": "somewhat", "label": "Somewhat" },
+        { "value": "dont_know", "label": "Don't know" }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "26",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
     "question_id": "27",
     "question_text": "Do you have high blood pressure?",
     "pillar": "Metabolic",
@@ -616,7 +792,118 @@
     "updated_at": 1763104572236
   },
   {
-    "question_id": "28",
+    "question_id": "27_CONTROLLED",
+    "question_text": "Is your blood pressure under control?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "yes", "label": "Yes" },
+        { "value": "no", "label": "No" },
+        { "value": "sometimes", "label": "Sometimes" },
+        { "value": "dont_know", "label": "Don't know" }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "27",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "27_LEVEL",
+    "question_text": "What are your typical blood pressure readings?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "blood_pressure",
+    "format_config": {
+      "systolicMin": 70,
+      "systolicMax": 220,
+      "systolicDefault": 120,
+      "diastolicMin": 40,
+      "diastolicMax": 140,
+      "diastolicDefault": 80,
+      "allowDontKnow": true
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "27",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "help_text": "Enter systolic (top number) and diastolic (bottom number). Normal is around 120/80.",
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "27_MEDICATION",
+    "question_text": "Are you taking medication for blood pressure?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "yes", "label": "Yes" },
+        { "value": "no", "label": "No" }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "27",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "estimated_time_seconds": 10,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "28A",
+    "question_text": "What is your hip circumference?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "number_scroll",
+    "format_config": {
+      "min": 60,
+      "max": 200,
+      "defaultValue": 100,
+      "step": 1,
+      "unit": "cm",
+      "unitImperial": "in",
+      "minImperial": 24,
+      "maxImperial": 80,
+      "defaultImperial": 40
+    },
+    "validation_rules": {
+      "required": false
+    },
+    "help_text": "Measure around the widest part of your hips/buttocks. Used to calculate waist-to-hip ratio.",
+    "estimated_time_seconds": 30,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "28B",
     "question_text": "What is your waist circumference?",
     "pillar": "Metabolic",
     "tier": "CORE",
@@ -635,8 +922,8 @@
     "validation_rules": {
       "required": false
     },
-    "help_text": "Measure around your belly button. This is approximately your pants waist size.",
-    "estimated_time_seconds": 20,
+    "help_text": "Measure around your belly button, at the narrowest point. Used to calculate waist-to-hip ratio.",
+    "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
@@ -870,6 +1157,35 @@
     "updated_at": 1763104572236
   },
   {
+    "question_id": "44I_TRIMESTER",
+    "question_text": "Which trimester are you in?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "1", "label": "First trimester (weeks 1-12)" },
+        { "value": "2", "label": "Second trimester (weeks 13-27)" },
+        { "value": "3", "label": "Third trimester (weeks 28-40)" }
+      ],
+      "layout": "vertical"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "44I",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "help_text": "Sleep patterns and challenges vary significantly across trimesters.",
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
     "question_id": "44J",
     "question_text": "Are you currently breastfeeding?",
     "pillar": "Metabolic",
@@ -903,6 +1219,36 @@
     "updated_at": 1763104572236
   },
   {
+    "question_id": "44J_DURATION",
+    "question_text": "How long have you been breastfeeding?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "0-3", "label": "Less than 3 months" },
+        { "value": "3-6", "label": "3-6 months" },
+        { "value": "6-12", "label": "6-12 months" },
+        { "value": "12+", "label": "More than 12 months" }
+      ],
+      "layout": "vertical"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "44J",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "help_text": "Night feedings significantly impact sleep patterns for breastfeeding mothers.",
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
     "question_id": "44K",
     "question_text": "How often do you use recreational drugs or cannabis?",
     "pillar": "Metabolic",
@@ -927,6 +1273,67 @@
     "updated_at": 1763104572236
   },
   {
+    "question_id": "44K_METHOD",
+    "question_text": "How do you typically consume cannabis?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "multi_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "smoke", "label": "Smoking" },
+        { "value": "vape", "label": "Vaping" },
+        { "value": "edibles", "label": "Edibles" },
+        { "value": "oil", "label": "Oils/Tinctures" },
+        { "value": "topical", "label": "Topicals" },
+        { "value": "other", "label": "Other" }
+      ],
+      "layout": "grid"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "44K",
+        "operator": "in",
+        "value": ["1", "2", "3", "4"]
+      }
+    },
+    "help_text": "Consumption method affects absorption rate and sleep impact timing.",
+    "estimated_time_seconds": 20,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "44K_PURPOSE",
+    "question_text": "Do you use cannabis specifically to help with sleep?",
+    "pillar": "Metabolic",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "yes_primary", "label": "Yes, it's my main reason" },
+        { "value": "yes_sometimes", "label": "Yes, sometimes" },
+        { "value": "no", "label": "No, not for sleep" }
+      ],
+      "layout": "vertical"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "44K",
+        "operator": "in",
+        "value": ["1", "2", "3", "4"]
+      }
+    },
+    "help_text": "Cannabis can help with sleep onset but may affect sleep architecture and REM sleep.",
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
     "question_id": "1",
     "question_text": "How would you rate your overall sleep quality in the past month?",
     "pillar": "Sleep Quality",
@@ -946,6 +1353,8 @@
       "min": 1,
       "max": 10
     },
+    "help_text": "Based on your sleep log data, you may want to consider how rested you've felt overall.",
+    "derivable_from": "sleep_log_avg_quality",
     "estimated_time_seconds": 60,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -1097,7 +1506,8 @@
       "min": 0,
       "max": 180
     },
-    "help_text": "This can be derived from your sleep log",
+    "help_text": "This can be pre-filled from your sleep log if available.",
+    "derivable_from": "sleep_log_avg_latency",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -1129,14 +1539,16 @@
       "min": 0,
       "max": 15,
       "defaultValue": 7,
-      "step": 0.5
+      "step": 0.25,
+      "displayFormat": "hours_minutes"
     },
     "validation_rules": {
       "required": true,
       "min": 0,
       "max": 15
     },
-    "help_text": "This can be derived from your sleep log",
+    "help_text": "This can be pre-filled from your sleep log if available.",
+    "derivable_from": "sleep_log_avg_duration",
     "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -1203,6 +1615,67 @@
     "validation_rules": {
       "required": true
     },
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "47_PROSTATE",
+    "question_text": "How many times per night do you typically wake up to urinate?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "1", "label": "1 time" },
+        { "value": "2", "label": "2 times" },
+        { "value": "3", "label": "3 times" },
+        { "value": "4", "label": "4 times" },
+        { "value": "5+", "label": "5 or more times" }
+      ],
+      "layout": "vertical"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "all": [
+        { "question_id": "47", "operator": "in", "value": ["2", "3"] },
+        { "question_id": "D4", "operator": "equals", "value": "male" },
+        { "ageAtLeast": 45 }
+      ]
+    },
+    "help_text": "Frequent nighttime urination (nocturia) in men over 45 may indicate prostate issues.",
+    "estimated_time_seconds": 15,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "47_STREAM",
+    "question_text": "Do you have difficulty starting or maintaining your urine stream?",
+    "pillar": "Sleep Quality",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "no", "label": "No difficulty" },
+        { "value": "sometimes", "label": "Sometimes" },
+        { "value": "often", "label": "Often" },
+        { "value": "always", "label": "Almost always" }
+      ],
+      "layout": "vertical"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "all": [
+        { "question_id": "47", "operator": "in", "value": ["2", "3"] },
+        { "question_id": "D4", "operator": "equals", "value": "male" },
+        { "ageAtLeast": 45 }
+      ]
+    },
+    "help_text": "This can be a sign of benign prostatic hyperplasia (BPH) or other urinary conditions.",
     "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -5201,20 +5674,20 @@
     "tier": "CORE",
     "answer_format": "number_scroll",
     "format_config": {
-      "min": 25,
-      "max": 60,
+      "min": 30,
+      "max": 55,
       "defaultValue": 38,
       "step": 0.5,
       "unit": "cm",
       "unitImperial": "in",
-      "minImperial": 10,
-      "maxImperial": 24,
+      "minImperial": 12,
+      "maxImperial": 22,
       "defaultImperial": 15
     },
     "validation_rules": {
       "required": false
     },
-    "help_text": "Measure just below your Adam's apple. Important for sleep apnea assessment.",
+    "help_text": "This is typically your dress shirt collar size. Measure around your neck at the Adam's apple level. A larger neck circumference (>40cm/16in) is a risk factor for sleep apnea.",
     "estimated_time_seconds": 20,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -6241,41 +6714,89 @@
     "updated_at": 1763104572236
   },
   {
-    "question_id": "30",
-    "question_text": "If yes, how many cups per day?",
+    "question_id": "29A",
+    "question_text": "What caffeine sources do you consume?",
     "pillar": "Nutritional",
     "tier": "CORE",
-    "answer_format": "number_input",
+    "answer_format": "multi_select_chips",
     "format_config": {
-      "min": 0,
-      "max": 1000,
-      "step": 1,
-      "decimalPlaces": 0,
-      "inputMode": "numeric"
+      "options": [
+        { "value": "coffee", "label": "Coffee" },
+        { "value": "tea", "label": "Tea" },
+        { "value": "energy_drinks", "label": "Energy drinks" },
+        { "value": "soda", "label": "Soda/Cola" },
+        { "value": "chocolate", "label": "Chocolate" },
+        { "value": "supplements", "label": "Caffeine supplements" }
+      ],
+      "layout": "grid"
     },
     "validation_rules": {
-      "required": true,
-      "min": 0,
-      "max": 1000
+      "required": true
     },
-    "estimated_time_seconds": 30,
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "29",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "estimated_time_seconds": 20,
+    "created_at": 1763104572236,
+    "updated_at": 1763104572236
+  },
+  {
+    "question_id": "30",
+    "question_text": "How many caffeinated drinks do you have per day?",
+    "pillar": "Nutritional",
+    "tier": "CORE",
+    "answer_format": "single_select_chips",
+    "format_config": {
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5+", "label": "5+" }
+      ],
+      "layout": "horizontal"
+    },
+    "validation_rules": {
+      "required": true
+    },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "29",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },
   {
     "question_id": "31",
-    "question_text": "If yes, time of LAST caffeinated beverage",
+    "question_text": "What time do you typically have your last caffeinated drink?",
     "pillar": "Nutritional",
     "tier": "CORE",
     "answer_format": "time_picker",
     "format_config": {
       "format": "HH:MM",
-      "allowCrossMidnight": true
+      "allowCrossMidnight": false,
+      "defaultValue": "14:00"
     },
     "validation_rules": {
       "required": true
     },
-    "estimated_time_seconds": 30,
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "29",
+        "operator": "equals",
+        "value": "yes"
+      }
+    },
+    "help_text": "Caffeine has a half-life of 5-6 hours. Having caffeine less than 6 hours before bed can affect sleep.",
+    "estimated_time_seconds": 20,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
   },

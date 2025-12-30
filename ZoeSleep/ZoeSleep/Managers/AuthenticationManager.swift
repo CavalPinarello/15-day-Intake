@@ -36,7 +36,7 @@ class AuthenticationManager: ObservableObject {
 
     func checkAuthenticationStatus() {
         // Check if user has valid session stored in Convex service
-        if let ūsession = convexService.loadSavedSession() {
+        if let _ = convexService.loadSavedSession() {
             // Validate the session with Convex
             Task {
                 await validateStoredSession()

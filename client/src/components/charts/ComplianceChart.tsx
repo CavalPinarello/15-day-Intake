@@ -9,8 +9,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
   ReferenceLine,
+  Legend,
 } from "recharts";
 
 interface ComplianceDataPoint {
@@ -20,6 +20,14 @@ interface ComplianceDataPoint {
   tasksTotal: number;
   sleepLogCompleted: boolean;
   assessmentCompleted: boolean;
+  expansionCompleted?: boolean;
+}
+
+interface StackedComplianceData {
+  sleepLogRate: number;
+  assessmentRate: number;
+  expansionRate: number;
+  hasExpansion: boolean;
 }
 
 interface ComplianceChartProps {
@@ -27,6 +35,7 @@ interface ComplianceChartProps {
   height?: number;
   showTarget?: boolean;
   targetPercentage?: number;
+  stackedData?: StackedComplianceData;
 }
 
 const getComplianceColor = (percentage: number) => {
@@ -36,27 +45,98 @@ const getComplianceColor = (percentage: number) => {
   return "#EF4444"; // Red - Poor
 };
 
+// Segment colors
+const SEGMENT_COLORS = {
+  sleepLog: "#F59E0B",    // Amber for Sleep Log
+  assessment: "#3B82F6",   // Blue for Assessment
+  expansion: "#8B5CF6",    // Purple for Expansion
+};
+
 export function ComplianceChart({
   data,
   height = 200,
   showTarget = true,
   targetPercentage = 80,
+  stackedData,
 }: ComplianceChartProps) {
+  // Build stacked chart data - each day shows segments for Sleep Log, Assessment, Expansion
+  // Each segment shows per-day completion (complete = full segment, not complete = empty)
+
   const chartData = data.map((point) => {
-    const percentage =
-      point.tasksTotal > 0
-        ? Math.round((point.tasksCompleted / point.tasksTotal) * 100)
-        : 0;
+    // Expansion is only part of a day's total if:
+    // 1. Expansion packs are triggered globally, AND
+    // 2. A "Deeper Dive" task was assigned that day (indicated by expansion questions being answered)
+    // If no expansion questions were answered that day, it's just Sleep Log + Assessment = 100%
+    const expansionActiveThisDay = point.expansionCompleted === true;
+
+    // Weights for stacked bar segments that total 100% when all complete
+    // Without expansion task: Sleep Log 50% + Assessment 50% = 100%
+    // With expansion task: Sleep Log 33% + Assessment 34% + Expansion 33% = 100%
+    const sleepLogWeight = expansionActiveThisDay ? 33 : 50;
+    const assessmentWeight = expansionActiveThisDay ? 34 : 50;
+    const expansionWeight = expansionActiveThisDay ? 33 : 0;
+
+    // Per-day completion - segment fills if task is complete for that day
+    const sleepLogValue = point.sleepLogCompleted ? sleepLogWeight : 0;
+    const assessmentValue = point.assessmentCompleted ? assessmentWeight : 0;
+    const expansionValue = expansionActiveThisDay ? expansionWeight : 0;
+
     return {
       day: `Day ${point.day}`,
       date: point.date,
-      percentage,
-      completed: point.tasksCompleted,
-      total: point.tasksTotal,
-      sleepLog: point.sleepLogCompleted,
-      assessment: point.assessmentCompleted,
+      sleepLog: sleepLogValue,
+      assessment: assessmentValue,
+      expansion: expansionValue,
+      sleepLogComplete: point.sleepLogCompleted,
+      assessmentComplete: point.assessmentCompleted,
+      expansionComplete: point.expansionCompleted ?? false,
+      hasExpansion: expansionActiveThisDay,
     };
   });
+
+  // Check if any day has expansion for legend display
+  const anyDayHasExpansion = chartData.some(d => d.hasExpansion);
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const total = data.sleepLog + data.assessment + data.expansion;
+      return (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm">
+          <div className="font-medium text-white mb-2">{label}</div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded" style={{ backgroundColor: SEGMENT_COLORS.sleepLog }} />
+              <span className={data.sleepLogComplete ? "text-green-400" : "text-gray-400"}>
+                Sleep Log: {data.sleepLog}%
+                {data.sleepLogComplete && " ✓"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded" style={{ backgroundColor: SEGMENT_COLORS.assessment }} />
+              <span className={data.assessmentComplete ? "text-green-400" : "text-gray-400"}>
+                Assessment: {data.assessment}%
+                {data.assessmentComplete && " ✓"}
+              </span>
+            </div>
+            {data.hasExpansion && (
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: SEGMENT_COLORS.expansion }} />
+                <span className={data.expansionComplete ? "text-green-400" : "text-gray-400"}>
+                  Expansion: {data.expansion}%
+                  {data.expansionComplete && " ✓"}
+                </span>
+              </div>
+            )}
+            <div className="border-t border-gray-600 pt-1 mt-1">
+              <span className="text-white font-medium">Total: {total}%</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="w-full" style={{ height }}>
@@ -79,43 +159,7 @@ export function ComplianceChart({
             axisLine={{ stroke: "#4B5563" }}
             tickFormatter={(value) => `${value}%`}
           />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#1F2937",
-              border: "1px solid #374151",
-              borderRadius: "8px",
-              color: "#F9FAFB",
-            }}
-            labelStyle={{ color: "#9CA3AF" }}
-            formatter={(value: number, name: string, props: any) => {
-              const { payload } = props;
-              return [
-                <div key="tooltip" className="space-y-1">
-                  <div className="font-medium">{value}% Complete</div>
-                  <div className="text-xs text-gray-400">
-                    {payload.completed}/{payload.total} tasks
-                  </div>
-                  <div className="flex gap-2 text-xs mt-1">
-                    <span
-                      className={
-                        payload.sleepLog ? "text-green-400" : "text-gray-500"
-                      }
-                    >
-                      {payload.sleepLog ? "✓" : "○"} Sleep Log
-                    </span>
-                    <span
-                      className={
-                        payload.assessment ? "text-green-400" : "text-gray-500"
-                      }
-                    >
-                      {payload.assessment ? "✓" : "○"} Assessment
-                    </span>
-                  </div>
-                </div>,
-                "",
-              ];
-            }}
-          />
+          <Tooltip content={<CustomTooltip />} />
 
           {/* Target line */}
           {showTarget && (
@@ -133,14 +177,39 @@ export function ComplianceChart({
             />
           )}
 
-          <Bar dataKey="percentage" radius={[4, 4, 0, 0]}>
-            {chartData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={getComplianceColor(entry.percentage)}
-              />
-            ))}
-          </Bar>
+          {/* Legend */}
+          <Legend
+            verticalAlign="top"
+            height={24}
+            iconType="rect"
+            iconSize={10}
+            formatter={(value) => <span className="text-gray-400 text-xs">{value}</span>}
+          />
+
+          {/* Stacked bars for each segment */}
+          <Bar
+            dataKey="sleepLog"
+            stackId="compliance"
+            fill={SEGMENT_COLORS.sleepLog}
+            name="Sleep Log"
+          />
+          <Bar
+            dataKey="assessment"
+            stackId="compliance"
+            fill={SEGMENT_COLORS.assessment}
+            name="Assessment"
+            radius={anyDayHasExpansion ? undefined : [4, 4, 0, 0]}
+          />
+          {/* Show expansion bar if any day has expansion completed */}
+          {anyDayHasExpansion && (
+            <Bar
+              dataKey="expansion"
+              stackId="compliance"
+              fill={SEGMENT_COLORS.expansion}
+              name="Expansion"
+              radius={[4, 4, 0, 0]}
+            />
+          )}
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -206,7 +275,7 @@ export function StreakIndicator({
   );
 }
 
-// Compact compliance summary
+// Compact compliance summary (legacy - for backwards compatibility)
 interface ComplianceSummaryProps {
   overallPercentage: number;
   sleepLogRate: number;
@@ -268,6 +337,204 @@ export function ComplianceSummary({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Modular compliance summary with expansion pack support
+interface ModularComplianceData {
+  sleepLog: {
+    daysCompleted: number;
+    totalDays: number;
+    rate: number;
+    questionsAnswered: number;
+  };
+  coreAssessment: {
+    questionsAnswered: number;
+    totalQuestions: number;
+    rate: number;
+  };
+  expansionPacks: {
+    triggered: boolean;
+    triggeredGateways: string[];
+    questionsAnswered: number;
+    totalQuestions: number;
+    rate: number;
+    modules: Array<{
+      id: string;
+      name: string;
+      questionsAnswered: number;
+      totalQuestions: number;
+      completed: boolean;
+    }>;
+  };
+  overall: {
+    rate: number;
+    totalQuestionsAnswered: number;
+    totalQuestionsExpected: number;
+  };
+}
+
+interface ModularComplianceSummaryProps {
+  data: ModularComplianceData | null | undefined;
+  showExpansionDetails?: boolean;
+}
+
+export function ModularComplianceSummary({
+  data,
+  showExpansionDetails = false,
+}: ModularComplianceSummaryProps) {
+  if (!data) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-400">Overall Compliance</span>
+          <span className="text-xl font-bold text-gray-500">--%</span>
+        </div>
+        <div className="w-full h-3 bg-gray-700 rounded-full" />
+      </div>
+    );
+  }
+
+  const { sleepLog, coreAssessment, expansionPacks, overall } = data;
+
+  return (
+    <div className="space-y-3">
+      {/* Overall percentage */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-400">Overall Compliance</span>
+        <span
+          className="text-xl font-bold"
+          style={{ color: getComplianceColor(overall.rate) }}
+        >
+          {overall.rate}%
+        </span>
+      </div>
+
+      {/* Segmented progress bar */}
+      <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden flex">
+        {/* Sleep Log segment */}
+        <div
+          className="h-full transition-all duration-500"
+          style={{
+            width: `${expansionPacks.triggered ? 30 : 40}%`,
+            backgroundColor: getComplianceColor(sleepLog.rate),
+            opacity: sleepLog.rate > 0 ? 1 : 0.3,
+          }}
+          title={`Sleep Log: ${sleepLog.rate}%`}
+        />
+        {/* Core Assessment segment */}
+        <div
+          className="h-full transition-all duration-500 border-l border-gray-600"
+          style={{
+            width: `${expansionPacks.triggered ? 40 : 60}%`,
+            backgroundColor: getComplianceColor(coreAssessment.rate),
+            opacity: coreAssessment.rate > 0 ? 1 : 0.3,
+          }}
+          title={`Core Assessment: ${coreAssessment.rate}%`}
+        />
+        {/* Expansion Packs segment (only if triggered) */}
+        {expansionPacks.triggered && (
+          <div
+            className="h-full transition-all duration-500 border-l border-gray-600"
+            style={{
+              width: "30%",
+              backgroundColor: getComplianceColor(expansionPacks.rate),
+              opacity: expansionPacks.rate > 0 ? 1 : 0.3,
+            }}
+            title={`Expansion Packs: ${expansionPacks.rate}%`}
+          />
+        )}
+      </div>
+
+      {/* Modular breakdown */}
+      <div className={`grid gap-2 pt-2 ${expansionPacks.triggered ? "grid-cols-3" : "grid-cols-2"}`}>
+        {/* Sleep Log */}
+        <div className="text-center p-2 bg-gray-800/50 rounded-lg">
+          <div className="text-lg">📝</div>
+          <div
+            className="text-sm font-medium"
+            style={{ color: getComplianceColor(sleepLog.rate) }}
+          >
+            {sleepLog.rate}%
+          </div>
+          <div className="text-xs text-gray-500">Sleep Log</div>
+          <div className="text-[10px] text-gray-600 mt-0.5">
+            {sleepLog.daysCompleted}/{sleepLog.totalDays} days
+          </div>
+        </div>
+
+        {/* Core Assessment */}
+        <div className="text-center p-2 bg-gray-800/50 rounded-lg">
+          <div className="text-lg">📋</div>
+          <div
+            className="text-sm font-medium"
+            style={{ color: getComplianceColor(coreAssessment.rate) }}
+          >
+            {coreAssessment.rate}%
+          </div>
+          <div className="text-xs text-gray-500">Core Assessment</div>
+          <div className="text-[10px] text-gray-600 mt-0.5">
+            {coreAssessment.questionsAnswered}/{coreAssessment.totalQuestions} Q
+          </div>
+        </div>
+
+        {/* Expansion Packs (only if triggered) */}
+        {expansionPacks.triggered && (
+          <div className="text-center p-2 bg-gray-800/50 rounded-lg">
+            <div className="text-lg">🔬</div>
+            <div
+              className="text-sm font-medium"
+              style={{ color: getComplianceColor(expansionPacks.rate) }}
+            >
+              {expansionPacks.rate}%
+            </div>
+            <div className="text-xs text-gray-500">Expansion</div>
+            <div className="text-[10px] text-gray-600 mt-0.5">
+              {expansionPacks.modules.length} modules
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Expansion module details (optional) */}
+      {showExpansionDetails && expansionPacks.triggered && expansionPacks.modules.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-700/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-gray-400">Expansion Modules</span>
+            <span className="text-[10px] text-gray-500">
+              {expansionPacks.modules.filter(m => m.completed).length}/{expansionPacks.modules.length} complete
+            </span>
+          </div>
+          <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+            {expansionPacks.modules.map((module) => (
+              <div
+                key={module.id}
+                className="flex items-center justify-between text-xs"
+              >
+                <span className="text-gray-400 truncate flex-1 mr-2">
+                  {module.completed && <span className="text-green-400 mr-1">✓</span>}
+                  {module.name}
+                </span>
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.round((module.questionsAnswered / module.totalQuestions) * 100)}%`,
+                        backgroundColor: module.completed ? "#10B981" : "#F59E0B",
+                      }}
+                    />
+                  </div>
+                  <span className="text-gray-500 w-12 text-right">
+                    {module.questionsAnswered}/{module.totalQuestions}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -42,7 +42,7 @@ const GATEWAY_DEFINITIONS = [
     gateway_id: "osa",
     name: "Obstructive Sleep Apnea",
     description: "Snoring, witnessed apneas, or breathing pauses during sleep",
-    trigger_question_ids: ["19", "20", "SB_1", "SB_2"],
+    trigger_question_ids: ["19", "20", "48", "49", "SB_1", "SB_2"],
     expansion_module_ids: ["expansion_stop_bang", "expansion_ess", "expansion_berlin"],
   },
   {
@@ -77,7 +77,7 @@ const GATEWAY_DEFINITIONS = [
     gateway_id: "pain",
     name: "Chronic Pain",
     description: "Pain that interferes with sleep",
-    trigger_question_ids: ["22", "23"],
+    trigger_question_ids: ["22", "23", "53"],
     expansion_module_ids: ["expansion_bpi"],
   },
   {
@@ -107,6 +107,13 @@ const GATEWAY_DEFINITIONS = [
     description: "Regular physical activity and its relationship to sleep quality",
     trigger_question_ids: ["24"],
     expansion_module_ids: ["expansion_physical_1", "expansion_physical_2"],
+  },
+  {
+    gateway_id: "prostate",
+    name: "Prostate Health",
+    description: "Nocturia and urinary symptoms that may indicate prostate issues (male 45+)",
+    trigger_question_ids: ["47"],
+    expansion_module_ids: ["expansion_prostate"],
   },
 ];
 

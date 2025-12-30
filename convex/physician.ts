@@ -1751,7 +1751,12 @@ export const getDailyComplianceData = query({
       date: v.string(),
       sleepLogCompleted: v.boolean(),
       assessmentCompleted: v.boolean(),
+      expansionCompleted: v.boolean(),
       responseCount: v.number(),
+      // Additional fields for granular tracking
+      sleepLogQuestionsAnswered: v.number(),
+      assessmentQuestionsAnswered: v.number(),
+      expansionQuestionsAnswered: v.number(),
     })
   ),
   handler: async (ctx, args) => {
@@ -1767,12 +1772,43 @@ export const getDailyComplianceData = query({
     // Sleep log question IDs (CSD = Consensus Sleep Diary, SL = Sleep Log, SD = Sleep Diary)
     const sleepLogPrefixes = ["CSD_", "SL_", "SD_"];
 
+    // Expansion module prefixes (Deeper Dive questionnaires)
+    const expansionPrefixes = [
+      "ISI_",      // Insomnia Severity Index (7 questions)
+      "PHQ9_",     // Depression (9 questions)
+      "GAD7_",     // Anxiety (7 questions)
+      "SB_",       // STOP-BANG Sleep Apnea (8 questions)
+      "ESS_",      // Epworth Sleepiness Scale (8 questions)
+      "DBAS_",     // Dysfunctional Beliefs About Sleep (16 questions)
+      "SH_",       // Sleep Hygiene (10 questions)
+      "PSAS_",     // Pre-Sleep Arousal Scale (16 questions)
+      "PSQI_",     // Pittsburgh Sleep Quality Index (19 questions)
+      "DASS_",     // Depression Anxiety Stress Scale (21 questions)
+      "BERLIN_",   // Berlin Questionnaire (10 questions)
+      "FSS_",      // Fatigue Severity Scale (9 questions)
+      "FOSQ_",     // Functional Outcomes of Sleep (10 questions)
+      "PROMIS_",   // Cognitive Function (15 questions)
+      "BPI_",      // Brief Pain Inventory (11 questions)
+      "MEQ_",      // Morningness-Eveningness Questionnaire (19 questions)
+      "SWDSQ_",    // Shift Work Disorder (4 questions)
+    ];
+
+    // Expansion module sizes for completion detection
+    const expansionModuleSizes: Record<string, number> = {
+      "ISI_": 7, "PHQ9_": 9, "GAD7_": 7, "SB_": 8, "ESS_": 8,
+      "DBAS_": 16, "SH_": 10, "PSAS_": 16, "PSQI_": 19, "DASS_": 21,
+      "BERLIN_": 10, "FSS_": 9, "FOSQ_": 10, "PROMIS_": 15,
+      "BPI_": 11, "MEQ_": 19, "SWDSQ_": 4,
+    };
+
     // Group responses by day
     const dayData: Record<
       number,
       {
         sleepLogQuestions: Set<string>;
         assessmentQuestions: Set<string>;
+        expansionQuestions: Set<string>;
+        expansionByModule: Record<string, Set<string>>;
         responseCount: number;
       }
     > = {};
@@ -1783,19 +1819,36 @@ export const getDailyComplianceData = query({
         dayData[day] = {
           sleepLogQuestions: new Set(),
           assessmentQuestions: new Set(),
+          expansionQuestions: new Set(),
+          expansionByModule: {},
           responseCount: 0,
         };
       }
       dayData[day].responseCount++;
 
-      const isSleepLog = sleepLogPrefixes.some((prefix) =>
-        response.question_id.startsWith(prefix)
-      );
+      const qId = response.question_id;
+
+      // Check if sleep log question
+      const isSleepLog = sleepLogPrefixes.some((prefix) => qId.startsWith(prefix));
       if (isSleepLog) {
-        dayData[day].sleepLogQuestions.add(response.question_id);
-      } else {
-        dayData[day].assessmentQuestions.add(response.question_id);
+        dayData[day].sleepLogQuestions.add(qId);
+        continue;
       }
+
+      // Check if expansion question
+      const expansionPrefix = expansionPrefixes.find((prefix) => qId.startsWith(prefix));
+      if (expansionPrefix) {
+        dayData[day].expansionQuestions.add(qId);
+        // Track by module for completion detection
+        if (!dayData[day].expansionByModule[expansionPrefix]) {
+          dayData[day].expansionByModule[expansionPrefix] = new Set();
+        }
+        dayData[day].expansionByModule[expansionPrefix].add(qId);
+        continue;
+      }
+
+      // Otherwise it's a core assessment question
+      dayData[day].assessmentQuestions.add(qId);
     }
 
     // Build result for each day up to current_day
@@ -1804,7 +1857,11 @@ export const getDailyComplianceData = query({
       date: string;
       sleepLogCompleted: boolean;
       assessmentCompleted: boolean;
+      expansionCompleted: boolean;
       responseCount: number;
+      sleepLogQuestionsAnswered: number;
+      assessmentQuestionsAnswered: number;
+      expansionQuestionsAnswered: number;
     }[] = [];
 
     for (let day = 1; day <= user.current_day; day++) {
@@ -1813,18 +1870,321 @@ export const getDailyComplianceData = query({
         .toISOString()
         .split("T")[0];
 
+      // Check if any expansion module is complete for this day
+      let expansionComplete = false;
+      if (data) {
+        for (const [prefix, questions] of Object.entries(data.expansionByModule)) {
+          const expectedSize = expansionModuleSizes[prefix] || 5;
+          if (questions.size >= expectedSize) {
+            expansionComplete = true;
+            break;
+          }
+        }
+      }
+
       result.push({
         dayNumber: day,
         date,
-        // Sleep log is complete if at least 3 sleep-related questions answered
-        sleepLogCompleted: data ? data.sleepLogQuestions.size >= 3 : false,
+        // Sleep log is complete if at least 5 sleep-related questions answered
+        sleepLogCompleted: data ? data.sleepLogQuestions.size >= 5 : false,
         // Assessment is complete if at least 1 non-sleep-log question answered
-        assessmentCompleted: data ? data.assessmentQuestions.size > 0 : false,
+        assessmentCompleted: data ? data.assessmentQuestions.size >= 1 : false,
+        // Expansion is complete if any module is fully answered on this day
+        expansionCompleted: expansionComplete,
         responseCount: data?.responseCount ?? 0,
+        // Actual question counts for granular progress
+        sleepLogQuestionsAnswered: data ? data.sleepLogQuestions.size : 0,
+        assessmentQuestionsAnswered: data ? data.assessmentQuestions.size : 0,
+        expansionQuestionsAnswered: data ? data.expansionQuestions.size : 0,
       });
     }
 
     return result;
+  },
+});
+
+/**
+ * Get modular compliance data with separate tracking for:
+ * - Sleep Log (daily diary entries)
+ * - Core Assessment (Days 1-5 questions everyone answers)
+ * - Expansion Packs (triggered based on gateway responses)
+ */
+export const getModularComplianceData = query({
+  args: { userId: v.id("users") },
+  returns: v.object({
+    sleepLog: v.object({
+      daysCompleted: v.number(),
+      totalDays: v.number(),
+      rate: v.number(),
+      questionsAnswered: v.number(),
+    }),
+    coreAssessment: v.object({
+      questionsAnswered: v.number(),
+      totalQuestions: v.number(),
+      rate: v.number(),
+    }),
+    expansionPacks: v.object({
+      triggered: v.boolean(),
+      triggeredGateways: v.array(v.string()),
+      questionsAnswered: v.number(),
+      totalQuestions: v.number(),
+      rate: v.number(),
+      modules: v.array(v.object({
+        id: v.string(),
+        name: v.string(),
+        questionsAnswered: v.number(),
+        questionsFromCore: v.number(),
+        questionsFromExpansion: v.number(),
+        totalQuestions: v.number(),
+        completed: v.boolean(),
+        completionPercentage: v.number(),
+      })),
+    }),
+    overall: v.object({
+      rate: v.number(),
+      totalQuestionsAnswered: v.number(),
+      totalQuestionsExpected: v.number(),
+    }),
+  }),
+  handler: async (ctx, args) => {
+    const TOTAL_JOURNEY_DAYS = 14;
+    const SLEEP_LOG_QUESTIONS_PER_DAY = 5; // Minimum required per day
+
+    // Core assessment expected questions (from crossPlatformValidator)
+    const CORE_EXPECTED_QUESTIONS = 92; // Demographics + all core modules
+
+    // Expansion module definitions with prefixes for identification
+    const EXPANSION_MODULES = [
+      { id: "expansion_isi", name: "Insomnia Severity (ISI)", prefix: "ISI_", questions: 7, gateways: ["insomnia", "poor_sleep_quality"] },
+      { id: "expansion_phq9", name: "Depression (PHQ-9)", prefix: "PHQ9_", questions: 9, gateways: ["depression"] },
+      { id: "expansion_gad7", name: "Anxiety (GAD-7)", prefix: "GAD7_", questions: 7, gateways: ["anxiety"] },
+      { id: "expansion_stop_bang", name: "Sleep Apnea (STOP-BANG)", prefix: "SB_", questions: 8, gateways: ["osa"] },
+      { id: "expansion_ess", name: "Sleepiness (ESS)", prefix: "ESS_", questions: 8, gateways: ["excessive_sleepiness"] },
+      { id: "expansion_dbas", name: "Sleep Beliefs (DBAS-16)", prefix: "DBAS_", questions: 16, gateways: ["insomnia"] },
+      { id: "expansion_sleep_hygiene", name: "Sleep Hygiene", prefix: "SH_", questions: 10, gateways: ["insomnia", "poor_sleep_quality"] },
+      { id: "expansion_psas", name: "Pre-Sleep Arousal (PSAS)", prefix: "PSAS_", questions: 16, gateways: ["insomnia"] },
+      { id: "expansion_psqi", name: "Sleep Quality (PSQI)", prefix: "PSQI_", questions: 19, gateways: ["poor_sleep_quality"] },
+      { id: "expansion_dass21", name: "Stress Scale (DASS-21)", prefix: "DASS_", questions: 21, gateways: ["depression", "anxiety"] },
+      { id: "expansion_berlin", name: "Berlin Questionnaire", prefix: "BERLIN_", questions: 10, gateways: ["osa"] },
+      { id: "expansion_fss", name: "Fatigue (FSS)", prefix: "FSS_", questions: 9, gateways: ["excessive_sleepiness"] },
+      { id: "expansion_fosq", name: "Functional Outcomes (FOSQ)", prefix: "FOSQ_", questions: 10, gateways: ["excessive_sleepiness"] },
+      { id: "expansion_promis", name: "Cognitive Function (PROMIS)", prefix: "PROMIS_", questions: 15, gateways: ["cognitive"] },
+      { id: "expansion_bpi", name: "Pain (BPI)", prefix: "BPI_", questions: 11, gateways: ["pain"] },
+      { id: "expansion_meq", name: "Chronotype (MEQ)", prefix: "MEQ_", questions: 19, gateways: ["sleep_timing"] },
+      { id: "expansion_swdsq", name: "Shift Work (SWDSQ)", prefix: "SWDSQ_", questions: 4, gateways: ["shift_work"] },
+    ];
+
+    // Core Assessment → Expansion Module Question Mapping
+    // Maps core questions (Days 1-5) to their standardized questionnaire equivalents
+    const CORE_TO_EXPANSION_MAPPING: Array<{ coreQuestionId: string; expansionModuleId: string; weight: number }> = [
+      // PSQI (16 items from core)
+      { coreQuestionId: "PSQI_1", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_2", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_3", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5a", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5b", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5c", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5d", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5e", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5f", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5g", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5h", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5i", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "PSQI_5j", expansionModuleId: "expansion_psqi", weight: 1.0 },
+      { coreQuestionId: "1", expansionModuleId: "expansion_psqi", weight: 1.0 }, // Overall sleep quality
+      { coreQuestionId: "12A", expansionModuleId: "expansion_psqi", weight: 0.5 }, // Night awakenings
+      { coreQuestionId: "12C", expansionModuleId: "expansion_psqi", weight: 0.5 }, // Return to sleep time
+      // PHQ-9 (1 gateway item)
+      { coreQuestionId: "15", expansionModuleId: "expansion_phq9", weight: 1.0 }, // Depression gateway
+      // GAD-7 (1 gateway item)
+      { coreQuestionId: "16", expansionModuleId: "expansion_gad7", weight: 1.0 }, // Anxiety gateway
+      // STOP-BANG (3 items)
+      { coreQuestionId: "19", expansionModuleId: "expansion_stop_bang", weight: 1.0 }, // Snore loudly
+      { coreQuestionId: "20", expansionModuleId: "expansion_stop_bang", weight: 1.0 }, // Stop breathing
+      { coreQuestionId: "21", expansionModuleId: "expansion_stop_bang", weight: 1.0 }, // Tired/fatigued
+      // ESS (1-2 related items)
+      { coreQuestionId: "17", expansionModuleId: "expansion_ess", weight: 0.5 }, // Excessive sleepiness
+      { coreQuestionId: "21", expansionModuleId: "expansion_ess", weight: 0.5 }, // Tired (also STOP-BANG)
+      // BPI (2 items)
+      { coreQuestionId: "22", expansionModuleId: "expansion_bpi", weight: 1.0 }, // Pain affects sleep
+      { coreQuestionId: "23", expansionModuleId: "expansion_bpi", weight: 1.0 }, // Pain level
+      // MEQ (1 related item)
+      { coreQuestionId: "11", expansionModuleId: "expansion_meq", weight: 0.5 }, // Morning sunlight
+      // Sleep Hygiene (3-4 items)
+      { coreQuestionId: "13", expansionModuleId: "expansion_sleep_hygiene", weight: 1.0 }, // Screen use
+      { coreQuestionId: "29", expansionModuleId: "expansion_sleep_hygiene", weight: 1.0 }, // Caffeine
+      { coreQuestionId: "32", expansionModuleId: "expansion_sleep_hygiene", weight: 1.0 }, // Alcohol
+      { coreQuestionId: "33", expansionModuleId: "expansion_sleep_hygiene", weight: 1.0 }, // Alcohol timing
+      // ISI (1 gateway item)
+      { coreQuestionId: "3", expansionModuleId: "expansion_isi", weight: 0.5 }, // Insomnia gateway
+    ];
+
+    // Sleep log prefixes
+    const SLEEP_LOG_PREFIXES = ["CSD_", "SL_", "SD_"];
+
+    // Get all responses for this user
+    const responses = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Get user's triggered gateways
+    const gatewayStates = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    const triggeredGateways = gatewayStates
+      .filter(g => g.triggered)
+      .map(g => g.gateway_id);
+
+    // Categorize responses
+    const sleepLogQuestionsByDay: Record<number, Set<string>> = {};
+    const coreQuestions = new Set<string>();
+    const expansionQuestionsByModule: Record<string, Set<string>> = {};
+    const coreContributionsByModule: Record<string, Set<string>> = {};
+    const answeredQuestionIds = new Set<string>();
+
+    // Initialize expansion module tracking
+    EXPANSION_MODULES.forEach(m => {
+      expansionQuestionsByModule[m.id] = new Set();
+      coreContributionsByModule[m.id] = new Set();
+    });
+
+    // First pass: collect all answered question IDs
+    for (const response of responses) {
+      answeredQuestionIds.add(response.question_id);
+    }
+
+    // Second pass: categorize responses
+    for (const response of responses) {
+      const qId = response.question_id;
+      const dayNum = response.day_number ?? 1;
+
+      // Check if sleep log question
+      const isSleepLog = SLEEP_LOG_PREFIXES.some(p => qId.startsWith(p));
+      if (isSleepLog) {
+        if (!sleepLogQuestionsByDay[dayNum]) {
+          sleepLogQuestionsByDay[dayNum] = new Set();
+        }
+        sleepLogQuestionsByDay[dayNum].add(qId);
+        continue;
+      }
+
+      // Check if expansion question (with explicit prefix like ISI_, PHQ9_, etc.)
+      let isExpansionPrefixed = false;
+      for (const module of EXPANSION_MODULES) {
+        if (qId.startsWith(module.prefix)) {
+          expansionQuestionsByModule[module.id].add(qId);
+          isExpansionPrefixed = true;
+          break;
+        }
+      }
+
+      // If not expansion-prefixed, it's a core question
+      // But also check if it maps to an expansion module
+      if (!isExpansionPrefixed) {
+        coreQuestions.add(qId);
+
+        // Check if this core question contributes to any expansion module
+        const mappings = CORE_TO_EXPANSION_MAPPING.filter(m => m.coreQuestionId === qId);
+        for (const mapping of mappings) {
+          coreContributionsByModule[mapping.expansionModuleId].add(qId);
+        }
+      }
+    }
+
+    // Calculate sleep log completion (days with >= 5 questions answered)
+    // Core CSD questions: INTO_BED, TRY_SLEEP, LATENCY, AWAKENINGS, FINAL_WAKE, OUT_BED, QUALITY, REFRESHED
+    // Not all are required (some conditional), so 5 is a reasonable minimum
+    const sleepLogDaysCompleted = Object.values(sleepLogQuestionsByDay)
+      .filter(questions => questions.size >= 5).length;
+    const totalSleepLogQuestions = Object.values(sleepLogQuestionsByDay)
+      .reduce((sum, qs) => sum + qs.size, 0);
+
+    // Calculate core assessment completion
+    const coreQuestionsAnswered = coreQuestions.size;
+    const coreRate = CORE_EXPECTED_QUESTIONS > 0
+      ? Math.min(100, Math.round((coreQuestionsAnswered / CORE_EXPECTED_QUESTIONS) * 100))
+      : 0;
+
+    // Calculate expansion packs completion
+    // Only count modules that were triggered by gateways
+    const triggeredModules = EXPANSION_MODULES.filter(m =>
+      m.gateways.some(g => triggeredGateways.includes(g))
+    );
+
+    let expansionQuestionsAnswered = 0;
+    let expansionTotalQuestions = 0;
+
+    const moduleProgress = triggeredModules.map(m => {
+      const fromExpansion = expansionQuestionsByModule[m.id].size;
+      const fromCore = coreContributionsByModule[m.id].size;
+      const totalAnswered = fromExpansion + fromCore;
+
+      expansionQuestionsAnswered += totalAnswered;
+      expansionTotalQuestions += m.questions;
+
+      const completionPercentage = Math.min(100, Math.round((totalAnswered / m.questions) * 100));
+
+      return {
+        id: m.id,
+        name: m.name,
+        questionsAnswered: totalAnswered,
+        questionsFromCore: fromCore,
+        questionsFromExpansion: fromExpansion,
+        totalQuestions: m.questions,
+        completed: totalAnswered >= m.questions,
+        completionPercentage,
+      };
+    });
+
+    const expansionRate = expansionTotalQuestions > 0
+      ? Math.min(100, Math.round((expansionQuestionsAnswered / expansionTotalQuestions) * 100))
+      : 100; // 100% if no expansion packs triggered (nothing to do)
+
+    // Calculate overall completion
+    const sleepLogRate = Math.round((sleepLogDaysCompleted / TOTAL_JOURNEY_DAYS) * 100);
+
+    // Overall = weighted average considering all components
+    // Sleep log weight: 30%, Core: 40%, Expansion: 30% (if triggered, else split between others)
+    let overallRate: number;
+    if (triggeredModules.length > 0) {
+      overallRate = Math.round((sleepLogRate * 0.3) + (coreRate * 0.4) + (expansionRate * 0.3));
+    } else {
+      // No expansion packs - just sleep log and core
+      overallRate = Math.round((sleepLogRate * 0.4) + (coreRate * 0.6));
+    }
+
+    const totalQuestionsAnswered = totalSleepLogQuestions + coreQuestionsAnswered + expansionQuestionsAnswered;
+    const totalQuestionsExpected = (TOTAL_JOURNEY_DAYS * SLEEP_LOG_QUESTIONS_PER_DAY) + CORE_EXPECTED_QUESTIONS + expansionTotalQuestions;
+
+    return {
+      sleepLog: {
+        daysCompleted: sleepLogDaysCompleted,
+        totalDays: TOTAL_JOURNEY_DAYS,
+        rate: sleepLogRate,
+        questionsAnswered: totalSleepLogQuestions,
+      },
+      coreAssessment: {
+        questionsAnswered: coreQuestionsAnswered,
+        totalQuestions: CORE_EXPECTED_QUESTIONS,
+        rate: coreRate,
+      },
+      expansionPacks: {
+        triggered: triggeredModules.length > 0,
+        triggeredGateways,
+        questionsAnswered: expansionQuestionsAnswered,
+        totalQuestions: expansionTotalQuestions,
+        rate: expansionRate,
+        modules: moduleProgress,
+      },
+      overall: {
+        rate: overallRate,
+        totalQuestionsAnswered,
+        totalQuestionsExpected,
+      },
+    };
   },
 });
 
@@ -2867,9 +3227,13 @@ export const calculatePatientScores = query({
       depression: (responseMap.get("15") !== undefined && responseMap.get("15")! >= 2), // felt down/hopeless
       anxiety: (responseMap.get("16") !== undefined && responseMap.get("16")! >= 2), // felt nervous/anxious
       sleepApnea: (responseMap.get("19") === 1) || // loud snoring
-                  (responseMap.get("20") === 1), // observed apnea
+                  (responseMap.get("20") === 1) || // observed apnea
+                  (responseMap.get("48") !== undefined && responseMap.get("48")! >= 2) || // breathing issues (PSQI)
+                  (responseMap.get("49") !== undefined && responseMap.get("49")! >= 2), // snoring/coughing (PSQI)
       excessiveSleepiness: (responseMap.get("17") !== undefined && responseMap.get("17")! >= 3), // often/always tired
-      pain: (responseMap.get("22") === 1), // pain affects sleep
+      pain: (responseMap.get("22") === 1) || // pain affects sleep
+            (responseMap.get("53") !== undefined && responseMap.get("53")! >= 2), // pain trouble sleeping (PSQI)
+      prostate: (responseMap.get("47") !== undefined && responseMap.get("47")! >= 2), // nocturia (requires male 45+ check in app)
     };
 
     return {

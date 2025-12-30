@@ -25,6 +25,7 @@ import { SleepBreakdown } from "@/components/charts/SleepArchitectureChart";
 import {
   ComplianceChart,
   ComplianceSummary,
+  ModularComplianceSummary,
 } from "@/components/charts/ComplianceChart";
 import {
   MultiSourceSleepChart,
@@ -92,6 +93,9 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
 
   // Fetch accurate compliance data for streak calculation
   const complianceDataQuery = useQuery(api.physician.getDailyComplianceData, { userId });
+
+  // Fetch modular compliance data (sleep log, core assessment, expansion packs)
+  const modularComplianceData = useQuery(api.physician.getModularComplianceData, { userId });
 
   // Fetch subjective sleep quality data (from sleep log)
   const subjectiveSleepData = useQuery(api.physician.getSubjectiveSleepQuality, { userId, days: 14 });
@@ -257,45 +261,70 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
     return baseInsights;
   }, [patientScores, healthSummary, analysis, sleepPatternInsights]);
 
-  // Build sleep trend data from HealthKit
+  // Build sleep trend data from HealthKit + subjective sleep data
   type SleepEntry = NonNullable<typeof healthSummary>["recentSleep"][number];
   type GapEntry = NonNullable<NonNullable<typeof healthSummary>["recentGaps"]>[number];
+  type SubjectiveDailyData = NonNullable<NonNullable<typeof subjectiveSleepData>["dailyData"]>[number];
   const sleepTrendData = useMemo(() => {
     if (!healthSummary?.recentSleep) return [];
-    return healthSummary.recentSleep.map((s: SleepEntry, i: number) => ({
-      day: i + 1,
-      subjectiveQuality: healthSummary.recentGaps?.find((g: GapEntry) => g.date === s.date)?.subjectiveQuality ?? null,
-      objectiveEfficiency: s.efficiency ?? null,
-      bedtimeConsistency: null,
-      wakeTimeConsistency: null,
-    })).reverse();
-  }, [healthSummary]);
+    return healthSummary.recentSleep.map((s: SleepEntry, i: number) => {
+      // Find matching subjective data by date for perceived efficiency
+      const subjectiveDay = subjectiveSleepData?.dailyData?.find(
+        (d: SubjectiveDailyData) => d.date === s.date
+      );
+      const objectiveEff = s.efficiency ?? null;
+      const perceivedEff = subjectiveDay?.perceivedEfficiency ?? null;
+      // Calculate perception delta (positive = overestimates, negative = underestimates)
+      const delta = (objectiveEff !== null && perceivedEff !== null)
+        ? perceivedEff - objectiveEff
+        : null;
 
-  // Build compliance data - prefer accurate query data, fallback to patient.completedDays
+      return {
+        day: i + 1,
+        subjectiveQuality: healthSummary.recentGaps?.find((g: GapEntry) => g.date === s.date)?.subjectiveQuality ?? null,
+        objectiveEfficiency: objectiveEff,
+        perceivedEfficiency: perceivedEff,
+        perceptionDelta: delta,
+        bedtimeConsistency: null,
+        wakeTimeConsistency: null,
+      };
+    }).reverse();
+  }, [healthSummary, subjectiveSleepData]);
+
+  // Build compliance data - per-day completion for Sleep Log, Assessment, and Expansion
   type ComplianceEntry = NonNullable<typeof complianceDataQuery>[number];
   const complianceData = useMemo(() => {
-    // Use accurate compliance query if available
+    // Use daily compliance query with per-day completion flags
     if (complianceDataQuery && complianceDataQuery.length > 0) {
-      return complianceDataQuery.map((d: ComplianceEntry) => ({
-        date: d.date,
-        day: d.dayNumber,
-        tasksCompleted: (d.sleepLogCompleted ? 1 : 0) + (d.assessmentCompleted ? 1 : 0),
-        tasksTotal: 2,
-        sleepLogCompleted: d.sleepLogCompleted,
-        assessmentCompleted: d.assessmentCompleted,
-      }));
+      return complianceDataQuery.map((d: ComplianceEntry) => {
+        // Count tasks complete for this day
+        const tasksComplete = (d.sleepLogCompleted ? 1 : 0) +
+          (d.assessmentCompleted ? 1 : 0) +
+          (d.expansionCompleted ? 1 : 0);
+
+        return {
+          date: d.date,
+          day: d.dayNumber,
+          tasksCompleted: tasksComplete,
+          tasksTotal: 3, // Sleep Log + Assessment + Expansion
+          sleepLogCompleted: d.sleepLogCompleted,
+          assessmentCompleted: d.assessmentCompleted,
+          expansionCompleted: d.expansionCompleted,
+        };
+      });
     }
 
-    // Fallback to existing logic
+    // Fallback - show empty progress
     const days = [];
     for (let i = 1; i <= patient.user.current_day; i++) {
       days.push({
         date: new Date(patient.user.started_at + (i - 1) * 86400000).toISOString().split("T")[0],
         day: i,
-        tasksCompleted: i <= patient.completedDays ? 2 : 0,
-        tasksTotal: 2,
-        sleepLogCompleted: i <= patient.completedDays,
-        assessmentCompleted: i <= patient.completedDays,
+        tasksCompleted: 0,
+        tasksTotal: 3,
+        sleepLogCompleted: false,
+        assessmentCompleted: false,
+        expansionCompleted: false,
       });
     }
     return days;
@@ -451,10 +480,44 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
 
   const hasHealthKitData = healthSummary?.hasHealthKitData || false;
 
-  // Calculate REAL compliance - both Sleep Log AND Assessment must be complete for a day to count
+  // Calculate REAL compliance using actual question counts
+  // Sleep Log: based on 14-day journey (days with sleep log complete / 14)
+  // Assessment: based on pillar questions answered / expected questions
   const actualComplianceData = useMemo(() => {
+    const TOTAL_JOURNEY_DAYS = 14;
+
+    // Calculate assessment rate from pillarStats (actual questions answered vs expected)
+    let assessmentQuestionsAnswered = 0;
+    let assessmentQuestionsTotal = 0;
+
+    if (pillarStats) {
+      type PillarStat = NonNullable<typeof pillarStats>[number];
+      pillarStats.forEach((stat: PillarStat) => {
+        // Exclude Sleep Log from assessment calculation
+        if (stat.pillar !== "Sleep Log") {
+          assessmentQuestionsAnswered += stat.questionsAnswered;
+          assessmentQuestionsTotal += stat.questionsTotal;
+        }
+      });
+    }
+
+    // Calculate assessment rate based on actual questions (not days)
+    const assessmentRate = assessmentQuestionsTotal > 0
+      ? Math.round((assessmentQuestionsAnswered / assessmentQuestionsTotal) * 100)
+      : 0;
+
     if (complianceDataQuery && complianceDataQuery.length > 0) {
-      // Count days where BOTH tasks are complete
+      // Count days where sleep log is done
+      const sleepLogDays = complianceDataQuery.filter((d: ComplianceEntry) => d.sleepLogCompleted).length;
+
+      // Sleep log rate: days with sleep log complete out of 14-day journey
+      const sleepLogRate = Math.round((sleepLogDays / TOTAL_JOURNEY_DAYS) * 100);
+
+      // Overall rate: weighted average of sleep log and assessment completion
+      // Both are important, so we average them
+      const overallRate = Math.round((sleepLogRate + assessmentRate) / 2);
+
+      // Count days where BOTH tasks are complete (for streak display)
       const fullyCompleteDays = complianceDataQuery.filter(
         (d: ComplianceEntry) => d.sleepLogCompleted && d.assessmentCompleted
       ).length;
@@ -462,28 +525,31 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
       const partialDays = complianceDataQuery.filter(
         (d: ComplianceEntry) => (d.sleepLogCompleted || d.assessmentCompleted) && !(d.sleepLogCompleted && d.assessmentCompleted)
       ).length;
-      // Count days where sleep log is done (for streak)
-      const sleepLogDays = complianceDataQuery.filter((d: ComplianceEntry) => d.sleepLogCompleted).length;
-      const assessmentDays = complianceDataQuery.filter((d: ComplianceEntry) => d.assessmentCompleted).length;
 
       return {
         fullyCompleteDays,
         partialDays,
-        sleepLogRate: Math.round((sleepLogDays / complianceDataQuery.length) * 100),
-        assessmentRate: Math.round((assessmentDays / complianceDataQuery.length) * 100),
-        overallRate: Math.round((fullyCompleteDays / complianceDataQuery.length) * 100),
+        sleepLogRate,
+        assessmentRate,
+        overallRate,
+        assessmentQuestionsAnswered,
+        assessmentQuestionsTotal,
       };
     }
+
     return {
       fullyCompleteDays: 0,
       partialDays: 0,
       sleepLogRate: 0,
-      assessmentRate: 0,
+      assessmentRate,
       overallRate: 0,
+      assessmentQuestionsAnswered,
+      assessmentQuestionsTotal,
     };
-  }, [complianceDataQuery]);
+  }, [complianceDataQuery, pillarStats]);
 
-  const complianceRate = actualComplianceData.overallRate;
+  // Use modular compliance data if available, fallback to actualComplianceData
+  const complianceRate = modularComplianceData?.overall.rate ?? actualComplianceData.overallRate;
 
   return (
     <div className="space-y-6">
@@ -514,11 +580,13 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
           icon={<TrendingUp className="w-5 h-5" />}
           label="Compliance"
           value={`${complianceRate}%`}
-          subValue={actualComplianceData.fullyCompleteDays > 0
-            ? `${actualComplianceData.fullyCompleteDays} complete days`
-            : actualComplianceData.partialDays > 0
-              ? `${actualComplianceData.partialDays} partial`
-              : "no data yet"
+          subValue={modularComplianceData
+            ? `${modularComplianceData.overall.totalQuestionsAnswered} Q answered`
+            : actualComplianceData.fullyCompleteDays > 0
+              ? `${actualComplianceData.fullyCompleteDays} complete days`
+              : actualComplianceData.partialDays > 0
+                ? `${actualComplianceData.partialDays} partial`
+                : "no data yet"
           }
           color="amber"
         />
@@ -776,14 +844,21 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
             <h3 className="text-sm font-medium text-white">Daily Compliance</h3>
             <p className="text-xs text-gray-500">Task completion over time</p>
           </div>
-          <ComplianceSummary
-            overallPercentage={complianceRate}
-            sleepLogRate={actualComplianceData.sleepLogRate}
-            assessmentRate={actualComplianceData.assessmentRate}
-            interventionRate={0}
+          <ModularComplianceSummary
+            data={modularComplianceData}
+            showExpansionDetails={true}
           />
         </div>
-        <ComplianceChart data={complianceData} height={150} />
+        <ComplianceChart
+          data={complianceData}
+          height={150}
+          stackedData={modularComplianceData ? {
+            sleepLogRate: modularComplianceData.sleepLog.rate,
+            assessmentRate: modularComplianceData.coreAssessment.rate,
+            expansionRate: modularComplianceData.expansionPacks.rate,
+            hasExpansion: modularComplianceData.expansionPacks.triggered,
+          } : undefined}
+        />
       </div>
 
       {/* Watch Wellness Metrics (Energy/Mood/Focus) */}

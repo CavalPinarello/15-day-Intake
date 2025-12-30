@@ -4,6 +4,41 @@
 
 ## December 2025
 
+### Dec 30, 2025
+
+#### Question Inventory Optimization
+Comprehensive audit and optimization of assessment questions based on physician review.
+
+**New Follow-up Questions Added (20+):**
+- **Diabetes (Q26):** Type (Q26_TYPE), HbA1C level (Q26_A1C), controlled status (Q26_CONTROLLED)
+- **Blood Pressure (Q27):** Controlled status (Q27_CONTROLLED), typical readings (Q27_LEVEL), medication (Q27_MEDICATION)
+- **Body Metrics:** Split Q28 into hip (Q28A) and waist (Q28B) for WHR calculation
+- **Occupation:** Q53A_OCC for employed users
+- **Time Zones:** Q53G_DETAILS and Q53G_ZONES for frequent travelers
+- **Prostate:** Q47_PROSTATE and Q47_STREAM for males 45+ with nocturia
+- **Pregnancy/Breastfeeding:** Q44I_TRIMESTER, Q44J_DURATION
+- **Cannabis:** Q44K_METHOD, Q44K_PURPOSE
+- **Caffeine:** Q29A for caffeine sources
+
+**New Gateway Triggers:**
+- **OSA/Sleep Apnea:** Added Q48 (breathing issues) and Q49 (snoring/coughing) - creates redundancy with Q19/Q20 for better capture
+- **Pain:** Added Q53 (trouble sleeping due to pain) - creates redundancy with Q22 for better capture
+- **Prostate:** New gateway triggered by Q47 ≥ 2 (nocturia) for males 45+
+
+**Question Fixes:**
+- Q21 (neck circumference): Fixed max from 60cm to 55cm, added collar size helper text
+- Q44 (sleep duration): Changed step from 0.5 to 0.25 for 15-minute increments
+- Q38 (kids waking): Changed from number_input to single_select_chips with sensible options
+- Q30, Q31 (caffeine): Added conditional logic on Q29
+
+**Module Cleanup:**
+- Removed orphan question IDs (44B, 44D, 44F, 44H) from modules
+- Removed redundant Q210 (location of pain - covered by body diagram Q203)
+- Removed redundant Q219 (hours before bed eat - same as Q54B)
+- Added new follow-up questions to appropriate modules
+
+**Files changed:** `convex/physician.ts`, `convex/seedClinicalData.ts`, `data/assessment_modules.json`, `data/converted/assessment_questions_converted.json`
+
 ### Dec 29, 2025
 
 #### Comprehensive Debug Reset Fix
