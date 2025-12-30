@@ -85,7 +85,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
-**Dec 30:** Question inventory optimization - 20+ new follow-up questions, 3 new gateway triggers (OSA Q48/49, Pain Q53, Prostate Q47), fixed measurement ranges/defaults, removed orphan question IDs
+**Dec 30:** Fix expansion pack scheduling bug (no longer shows on Days 2-5, only Days 6+), question inventory optimization - 20+ new follow-up questions, 3 new gateway triggers (OSA Q48/49, Pain Q53, Prostate Q47), fixed measurement ranges/defaults
 **Dec 29:** Comprehensive debug reset fix (Clinical Scores + all dashboard data), time picker defaults for dependent questions fix, dashboard pillar completion UI (neutral amber), Sleep Health Factors dashboard module, iOS complex response serialization fix, unified body metrics slider UI, auto-derivable questions
 **Dec 28:** Expansion pack slider UX fix, journey intro flow, fresh install detection, dashboard UX redesign
 **Dec 27:** Day type analysis, nap/medication tracking, scale labels fix, dynamic task counter, new logo

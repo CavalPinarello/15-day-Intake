@@ -6,6 +6,31 @@
 
 ### Dec 30, 2025
 
+#### Fix Expansion Pack Scheduling Bug
+Fixed bug where expansion packs (ISI, PHQ-9, etc.) were showing immediately on Days 2-5 when gateways triggered, and then repeating on subsequent days.
+
+**Problem:**
+- User answers Q3 gateway "Yes" on Day 2 → ISI expansion shows on Day 2, Day 3, Day 4...
+- Same expansion pack would repeat every day until core days complete
+
+**Root Cause:**
+- `sameDayExpansionModules` logic was designed to show expansions immediately on Days 1-5
+- This caused duplicated expansion pack delivery across multiple days
+
+**Fix:**
+- Removed "same-day expansion" logic from Days 1-5
+- Expansion packs are now ONLY served on Days 6-14 as intended
+- Added `TriggeredGatewaysBanner` UI component showing "Personalized Assessments Unlocked - Starting Day 6"
+- Updated `getExpansionPackForDay()` to return nil for Days 1-5
+- Updated `hadExpansionPackToday` and `availableExpansionPack` computed properties
+
+**New UX:**
+- Days 1-5: Only core questions shown
+- When gateway triggered: Banner shows which assessments are scheduled for Day 6+
+- Days 6-14: Expansion packs served based on dynamic schedule
+
+**Files changed:** `ContentView.swift`, `QuestionnaireManager.swift`
+
 #### Question Inventory Optimization
 Comprehensive audit and optimization of assessment questions based on physician review.
 

@@ -1475,62 +1475,19 @@ class QuestionnaireManager: ObservableObject {
         // Note: cognitive, pain, dietImpact, sleepTiming don't have quick same-day modules yet
     ]
 
-    /// Get expansion pack info for newly triggered gateways on the current day
-    /// - Days 1-5: Returns same-day expansion for triggered gateways (existing logic)
+    /// Get expansion pack info for the current day
+    /// - Days 1-5: Returns nil - expansion packs are SCHEDULED for Days 6+, not served immediately
     /// - Days 6+: Returns scheduled expansion from Convex dynamic scheduler
     func getExpansionPackForDay(_ dayNumber: Int) -> ExpansionPackInfo? {
+        // Expansion packs are ONLY served on Days 6-14
+        // Days 1-5 are for core questions and gateway triggering only
+        // When a gateway is triggered on Days 1-5, the expansion is SCHEDULED via Convex
+        guard dayNumber >= 6 else {
+            return nil
+        }
+
         // For Days 6+, use the dynamic expansion schedule from Convex
-        if dayNumber >= 6 {
-            return getScheduledExpansionPack()
-        }
-
-        // Days 1-5: Same-day expansion logic
-        // Get completed expansion gateways
-        let completedExpansions = journeyProgress?.completedExpansionGateways ?? []
-
-        // Get triggered gateways that have same-day expansion modules AND haven't been completed yet
-        let triggeredWithExpansion = gatewayStates.filter { state in
-            state.triggered &&
-            Self.sameDayExpansionModules.keys.contains(state.gatewayType) &&
-            !completedExpansions.contains(state.gatewayType)
-        }
-
-        guard !triggeredWithExpansion.isEmpty else { return nil }
-
-        // Collect expansion questions from triggered gateways
-        var expansionQuestions: [Question] = []
-        var includedGateways: [GatewayType] = []
-
-        for state in triggeredWithExpansion {
-            guard let moduleId = Self.sameDayExpansionModules[state.gatewayType],
-                  let moduleQuestions = Self.expansionQuestionsByModule[moduleId] else { continue }
-
-            // Filter out questions that are redundant (already answered or derivable from profile)
-            let filteredQuestions = filterRedundantExpansionQuestions(moduleQuestions)
-
-            // Check if adding this module would exceed the limit
-            if expansionQuestions.count + filteredQuestions.count <= Self.maxExpansionQuestionsPerDay {
-                // Avoid duplicates (e.g., insomnia and poorSleepQuality share the same module)
-                let newQuestionIds = Set(filteredQuestions.map { $0.id })
-                let existingQuestionIds = Set(expansionQuestions.map { $0.id })
-                if newQuestionIds.isDisjoint(with: existingQuestionIds) {
-                    expansionQuestions.append(contentsOf: filteredQuestions)
-                    includedGateways.append(state.gatewayType)
-                }
-            }
-        }
-
-        // Return nil if no questions to show
-        guard !expansionQuestions.isEmpty else { return nil }
-
-        // Calculate estimated time (roughly 1 minute per question)
-        let estimatedMinutes = max(expansionQuestions.count, 3) // Minimum 3 minutes
-
-        return ExpansionPackInfo(
-            triggeredGateways: includedGateways,
-            questions: expansionQuestions,
-            totalEstimatedMinutes: estimatedMinutes
-        )
+        return getScheduledExpansionPack()
     }
 
     /// Get expansion pack from the Convex-scheduled expansion (for Days 6+)

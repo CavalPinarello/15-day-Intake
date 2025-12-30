@@ -1772,7 +1772,18 @@ export const getDailyComplianceData = query({
     // Sleep log question IDs (CSD = Consensus Sleep Diary, SL = Sleep Log, SD = Sleep Diary)
     const sleepLogPrefixes = ["CSD_", "SL_", "SD_"];
 
+    // Core assessment question IDs that use standardized prefixes (PSQI_, etc.)
+    // These are answered in Days 1-5 core assessment and should NOT be counted as expansion
+    const coreAssessmentWithPrefixes = new Set([
+      // PSQI questions in core assessment
+      "PSQI_1", "PSQI_2", "PSQI_3", "PSQI_4",
+      "PSQI_5a", "PSQI_5b", "PSQI_5c", "PSQI_5d", "PSQI_5e",
+      "PSQI_5f", "PSQI_5g", "PSQI_5h", "PSQI_5i", "PSQI_5j",
+      "PSQI_6", "PSQI_7", "PSQI_8", "PSQI_9",
+    ]);
+
     // Expansion module prefixes (Deeper Dive questionnaires)
+    // NOTE: PSQI_ questions in core assessment are handled separately above
     const expansionPrefixes = [
       "ISI_",      // Insomnia Severity Index (7 questions)
       "PHQ9_",     // Depression (9 questions)
@@ -1782,7 +1793,7 @@ export const getDailyComplianceData = query({
       "DBAS_",     // Dysfunctional Beliefs About Sleep (16 questions)
       "SH_",       // Sleep Hygiene (10 questions)
       "PSAS_",     // Pre-Sleep Arousal Scale (16 questions)
-      "PSQI_",     // Pittsburgh Sleep Quality Index (19 questions)
+      "PSQI_",     // Pittsburgh Sleep Quality Index (19 questions) - expansion only
       "DASS_",     // Depression Anxiety Stress Scale (21 questions)
       "BERLIN_",   // Berlin Questionnaire (10 questions)
       "FSS_",      // Fatigue Severity Scale (9 questions)
@@ -1835,7 +1846,14 @@ export const getDailyComplianceData = query({
         continue;
       }
 
-      // Check if expansion question
+      // Check if core assessment question that uses a standardized prefix (e.g., PSQI_1)
+      // These are answered during Days 1-5 and should count as core assessment, not expansion
+      if (coreAssessmentWithPrefixes.has(qId)) {
+        dayData[day].assessmentQuestions.add(qId);
+        continue;
+      }
+
+      // Check if expansion question (questionnaires triggered by gateways)
       const expansionPrefix = expansionPrefixes.find((prefix) => qId.startsWith(prefix));
       if (expansionPrefix) {
         dayData[day].expansionQuestions.add(qId);
@@ -1847,7 +1865,7 @@ export const getDailyComplianceData = query({
         continue;
       }
 
-      // Otherwise it's a core assessment question
+      // Otherwise it's a core assessment question (numbered IDs like "1", "15", etc.)
       dayData[day].assessmentQuestions.add(qId);
     }
 
@@ -1887,8 +1905,9 @@ export const getDailyComplianceData = query({
         date,
         // Sleep log is complete if at least 5 sleep-related questions answered
         sleepLogCompleted: data ? data.sleepLogQuestions.size >= 5 : false,
-        // Assessment is complete if at least 1 non-sleep-log question answered
-        assessmentCompleted: data ? data.assessmentQuestions.size >= 1 : false,
+        // Assessment is complete if meaningful number of core questions answered
+        // Day 1 has ~25-30 questions, later days have fewer, so >= 8 is a reasonable threshold
+        assessmentCompleted: data ? data.assessmentQuestions.size >= 8 : false,
         // Expansion is complete if any module is fully answered on this day
         expansionCompleted: expansionComplete,
         responseCount: data?.responseCount ?? 0,
@@ -2022,6 +2041,14 @@ export const getModularComplianceData = query({
     // Sleep log prefixes
     const SLEEP_LOG_PREFIXES = ["CSD_", "SL_", "SD_"];
 
+    // Core assessment question IDs that use standardized prefixes (PSQI_, etc.)
+    // These are answered in Days 1-5 core assessment and should NOT be counted as expansion
+    const CORE_ASSESSMENT_WITH_PREFIXES = new Set(
+      CORE_TO_EXPANSION_MAPPING
+        .filter(m => m.coreQuestionId.includes("_")) // Only IDs with prefixes like PSQI_1
+        .map(m => m.coreQuestionId)
+    );
+
     // Get all responses for this user
     const responses = await ctx.db
       .query("user_assessment_responses")
@@ -2068,6 +2095,18 @@ export const getModularComplianceData = query({
           sleepLogQuestionsByDay[dayNum] = new Set();
         }
         sleepLogQuestionsByDay[dayNum].add(qId);
+        continue;
+      }
+
+      // Check if core assessment question that uses a standardized prefix (e.g., PSQI_1)
+      // These are answered during Days 1-5 and should count as core assessment, not expansion
+      if (CORE_ASSESSMENT_WITH_PREFIXES.has(qId)) {
+        coreQuestions.add(qId);
+        // Also track that this core question contributes to an expansion module
+        const mappings = CORE_TO_EXPANSION_MAPPING.filter(m => m.coreQuestionId === qId);
+        for (const mapping of mappings) {
+          coreContributionsByModule[mapping.expansionModuleId].add(qId);
+        }
         continue;
       }
 
@@ -3053,6 +3092,7 @@ export const calculatePatientScores = query({
       sleepApnea: v.boolean(),
       excessiveSleepiness: v.boolean(),
       pain: v.boolean(),
+      prostate: v.boolean(),
     }),
   }),
   handler: async (ctx, args) => {

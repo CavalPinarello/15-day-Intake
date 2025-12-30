@@ -535,17 +535,23 @@ struct MainDashboardView: View {
     }
 
     /// Check if there were gateways triggered that HAD expansion options (even if now completed)
+    /// NOTE: Expansion packs are ONLY served on Days 6-14, never on Days 1-5
     private var hadExpansionPackToday: Bool {
-        // Check if any triggered gateways have expansion modules available
-        let triggeredGateways = questionnaireManager.gatewayStates.filter { $0.triggered }
-        let expansionGateways = triggeredGateways.filter { state in
-            QuestionnaireManager.sameDayExpansionModules.keys.contains(state.gatewayType)
+        // Expansion packs are scheduled for Days 6-14, not shown immediately on Days 1-5
+        guard currentDay >= 6 else { return false }
+
+        // For Days 6+, check if there's a scheduled expansion for today
+        if let scheduled = questionnaireManager.scheduledExpansionForToday {
+            return !scheduled.modules.isEmpty
         }
-        return !expansionGateways.isEmpty && currentDay <= 5
+        return false
     }
 
-    /// Returns expansion pack info if gateways were triggered, assessment is done, AND expansion not completed
+    /// Returns expansion pack info if scheduled for today (Days 6+) and not completed
+    /// NOTE: Expansion packs are ONLY served on Days 6-14, never on Days 1-5
     private var availableExpansionPack: ExpansionPackInfo? {
+        // Expansion packs are scheduled for Days 6-14, not shown immediately on Days 1-5
+        guard currentDay >= 6 else { return nil }
         // Don't show if expansion already completed
         guard !expansionPackCompletedToday else { return nil }
         // Only show expansion pack after assessment is complete
@@ -553,15 +559,31 @@ struct MainDashboardView: View {
         return questionnaireManager.getExpansionPackForDay(currentDay)
     }
 
+    /// Get gateways that have been triggered and have expansion modules available
+    /// Used to show "Scheduled for Day 6+" banner on Days 1-5
+    private var triggeredGatewaysWithExpansion: [GatewayType] {
+        guard currentDay <= 5 else { return [] }
+        return questionnaireManager.gatewayStates.filter { state in
+            state.triggered && QuestionnaireManager.sameDayExpansionModules.keys.contains(state.gatewayType)
+        }.map { $0.gatewayType }
+    }
+
     private var todaysTasksCard: some View {
         VStack(spacing: Spacing.lg) {
             // Day Complete Celebration (only if no expansion pack available AND no expansion was done)
             if isDayComplete && availableExpansionPack == nil && !hadExpansionPackToday {
-                DayCompleteCelebrationView(
-                    currentDay: currentDay,
-                    isDebugMode: themeManager.debugMode,
-                    onAdvanceDay: advanceToNextDay
-                )
+                VStack(spacing: Spacing.md) {
+                    DayCompleteCelebrationView(
+                        currentDay: currentDay,
+                        isDebugMode: themeManager.debugMode,
+                        onAdvanceDay: advanceToNextDay
+                    )
+
+                    // Show triggered gateways notification on Days 1-5
+                    if currentDay <= 5 && !triggeredGatewaysWithExpansion.isEmpty {
+                        TriggeredGatewaysBanner(gateways: triggeredGatewaysWithExpansion)
+                    }
+                }
             } else if let expansionPack = availableExpansionPack {
                 // Show expansion pack card when gateways triggered and assessment done
                 VStack(spacing: Spacing.md) {
@@ -3062,6 +3084,100 @@ struct DayCompleteCelebrationView: View {
         } else {
             timeUntilUnlock = "\(seconds)s remaining"
         }
+    }
+}
+
+// MARK: - Triggered Gateways Banner
+
+/// Shows a notification when gateways are triggered on Days 1-5
+/// Informs the user that deeper assessments will be scheduled for Day 6+
+struct TriggeredGatewaysBanner: View {
+    let gateways: [GatewayType]
+
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.headline)
+                    .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
+                Text("Personalized Assessments Unlocked")
+                    .font(.system(size: Typography.subheadline, weight: .semibold, design: .rounded))
+                    .foregroundColor(theme.textOnCard)
+            }
+
+            // Explanation
+            Text("Based on your answers, we'll add deeper assessments starting Day 6:")
+                .font(.system(size: Typography.caption, design: .rounded))
+                .foregroundColor(theme.textOnCardSecondary)
+
+            // Gateway tags
+            FlowLayout(spacing: 6) {
+                ForEach(gateways, id: \.self) { gateway in
+                    Text(gateway.displayName)
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(QuestionnaireSection.expansionPack.accentColor)
+                        .cornerRadius(12)
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .fill(QuestionnaireSection.expansionPack.accentColor.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .stroke(QuestionnaireSection.expansionPack.accentColor.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+/// Simple flow layout for wrapping tags
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        return layout(sizes: sizes, containerWidth: proposal.width ?? .infinity).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let offsets = layout(sizes: sizes, containerWidth: bounds.width).offsets
+
+        for (subview, offset) in zip(subviews, offsets) {
+            subview.place(at: CGPoint(x: bounds.minX + offset.x, y: bounds.minY + offset.y), proposal: .unspecified)
+        }
+    }
+
+    private func layout(sizes: [CGSize], containerWidth: CGFloat) -> (offsets: [CGPoint], size: CGSize) {
+        var offsets: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        var maxWidth: CGFloat = 0
+
+        for size in sizes {
+            if currentX + size.width > containerWidth && currentX > 0 {
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
+            }
+            offsets.append(CGPoint(x: currentX, y: currentY))
+            lineHeight = max(lineHeight, size.height)
+            currentX += size.width + spacing
+            maxWidth = max(maxWidth, currentX - spacing)
+        }
+
+        return (offsets, CGSize(width: maxWidth, height: currentY + lineHeight))
     }
 }
 
