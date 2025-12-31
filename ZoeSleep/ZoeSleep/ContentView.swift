@@ -559,31 +559,16 @@ struct MainDashboardView: View {
         return questionnaireManager.getExpansionPackForDay(currentDay)
     }
 
-    /// Get gateways that have been triggered and have expansion modules available
-    /// Used to show "Scheduled for Day 6+" banner on Days 1-5
-    private var triggeredGatewaysWithExpansion: [GatewayType] {
-        guard currentDay <= 5 else { return [] }
-        return questionnaireManager.gatewayStates.filter { state in
-            state.triggered && QuestionnaireManager.sameDayExpansionModules.keys.contains(state.gatewayType)
-        }.map { $0.gatewayType }
-    }
-
     private var todaysTasksCard: some View {
         VStack(spacing: Spacing.lg) {
             // Day Complete Celebration (only if no expansion pack available AND no expansion was done)
             if isDayComplete && availableExpansionPack == nil && !hadExpansionPackToday {
-                VStack(spacing: Spacing.md) {
-                    DayCompleteCelebrationView(
-                        currentDay: currentDay,
-                        isDebugMode: themeManager.debugMode,
-                        onAdvanceDay: advanceToNextDay
-                    )
-
-                    // Show triggered gateways notification on Days 1-5
-                    if currentDay <= 5 && !triggeredGatewaysWithExpansion.isEmpty {
-                        TriggeredGatewaysBanner(gateways: triggeredGatewaysWithExpansion)
-                    }
-                }
+                DayCompleteCelebrationView(
+                    currentDay: currentDay,
+                    isDebugMode: themeManager.debugMode,
+                    onAdvanceDay: advanceToNextDay
+                )
+                // Note: Gateway notifications removed - "Upcoming Assessments" section shows this info with accurate day schedules
             } else if let expansionPack = availableExpansionPack {
                 // Show expansion pack card when gateways triggered and assessment done
                 VStack(spacing: Spacing.md) {
@@ -794,6 +779,14 @@ struct MainDashboardView: View {
 
                 if response.success {
                     await questionnaireManager.loadJourneyProgress()
+
+                    // CRITICAL: Reload expansion schedule for the NEW day to fix stale cache
+                    // Without this, "Today's Focus" shows previous day's expansion (e.g., Day 6 Insomnia on Day 7)
+                    if let newDay = response.newDay, newDay >= 6 {
+                        await questionnaireManager.loadExpansionScheduleForDay(newDay)
+                        await questionnaireManager.loadAssessmentQuestionCountForDay(newDay)
+                    }
+
                     await MainActor.run {
                         if let newDay = response.newDay {
                             withAnimation {
@@ -838,6 +831,13 @@ struct MainDashboardView: View {
 
                 if response.success {
                     await questionnaireManager.loadJourneyProgress()
+
+                    // CRITICAL: Reload expansion schedule for the NEW day to fix stale cache
+                    if let newDay = response.newDay, newDay >= 6 {
+                        await questionnaireManager.loadExpansionScheduleForDay(newDay)
+                        await questionnaireManager.loadAssessmentQuestionCountForDay(newDay)
+                    }
+
                     await MainActor.run {
                         if let newDay = response.newDay {
                             print("[iOS Debug] Updating UI to day \(newDay)")
@@ -945,10 +945,29 @@ struct MainDashboardView: View {
 
     @ViewBuilder
     private var gatewayStatusCard: some View {
-        // Get triggered gateways that haven't had their expansion completed yet
+        // Get triggered gateways that are scheduled for future days
         let completedExpansions = questionnaireManager.journeyProgress?.completedExpansionGateways ?? []
         let triggeredGateways = questionnaireManager.gatewayStates.filter { $0.triggered }
-        let pendingGateways = triggeredGateways.filter { !completedExpansions.contains($0.gatewayType) }
+
+        // Filter to only show gateways that:
+        // 1. Haven't been completed yet
+        // 2. Are scheduled for the current day or later (not past days)
+        // 3. Have a known scheduled day (excludes unscheduled gateways like "exercise")
+        let pendingGateways = triggeredGateways.filter { gateway in
+            // Must not be completed
+            guard !completedExpansions.contains(gateway.gatewayType) else { return false }
+
+            // Must have a scheduled day that's >= current day
+            guard let schedule = questionnaireManager.expansionScheduleSummary,
+                  let gatewaySchedule = schedule.gatewaySchedule,
+                  let scheduledDay = gatewaySchedule[gateway.gatewayType.rawValue] else {
+                // Gateway not in schedule (like "exercise") - don't show
+                return false
+            }
+
+            // Only show if scheduled for today or future
+            return scheduledDay >= currentDay
+        }
 
         // Only show if there are pending (upcoming) assessments
         if !pendingGateways.isEmpty {
@@ -974,7 +993,7 @@ struct MainDashboardView: View {
                             .font(.subheadline)
                             .foregroundColor(theme.textOnCard)  // HIGH CONTRAST - circadian-aware
                         Spacer()
-                        Text("Days 6-14")
+                        Text(scheduledDayText(for: gateway.gatewayType))
                             .font(.caption2)
                             .foregroundColor(theme.textOnCardSecondary)
                     }
@@ -984,6 +1003,24 @@ struct MainDashboardView: View {
             .background(GlassyCardBackground(opacity: 0.35, tint: theme.accent))
             .cornerRadius(12)
         }
+    }
+
+    /// Get the scheduled day text for a gateway type
+    /// Returns "Day X: Title" if schedule is known, otherwise "Days 6-14"
+    private func scheduledDayText(for gatewayType: GatewayType) -> String {
+        if let schedule = questionnaireManager.expansionScheduleSummary,
+           let gatewaySchedule = schedule.gatewaySchedule,
+           let scheduledDay = gatewaySchedule[gatewayType.rawValue] {
+            // Try to get the splash title for this day
+            if let dayAssignments = schedule.dayAssignments,
+               let dayInfo = dayAssignments.first(where: { $0.dayNumber == scheduledDay }),
+               let splashTitle = dayInfo.splashTitle {
+                return "Day \(scheduledDay): \(splashTitle)"
+            }
+            return "Day \(scheduledDay)"
+        }
+        // Fallback if schedule not loaded yet
+        return "Days 6-14"
     }
 
     // MARK: - Quick Actions Card
@@ -1003,24 +1040,29 @@ struct MainDashboardView: View {
                 }
             }
 
-            NavigationLink(destination: SleepDiaryHistoryView()) {
-                QuickActionRow(
-                    icon: "calendar",
-                    iconColor: theme.sleepDiary,
-                    title: "Sleep Diary History",
-                    subtitle: "View your sleep log entries"
-                )
-                .environmentObject(themeManager)
+            // Experimental features - enable via Debug Mode toggles
+            if themeManager.showSleepDiaryHistory {
+                NavigationLink(destination: SleepDiaryHistoryView()) {
+                    QuickActionRow(
+                        icon: "calendar",
+                        iconColor: theme.sleepDiary,
+                        title: "Sleep Diary History",
+                        subtitle: "View your sleep log entries"
+                    )
+                    .environmentObject(themeManager)
+                }
             }
 
-            NavigationLink(destination: InsightsView()) {
-                QuickActionRow(
-                    icon: "chart.line.uptrend.xyaxis",
-                    iconColor: theme.insights,
-                    title: "Sleep Insights",
-                    subtitle: "View patterns and recommendations"
-                )
-                .environmentObject(themeManager)
+            if themeManager.showSleepInsights {
+                NavigationLink(destination: InsightsView()) {
+                    QuickActionRow(
+                        icon: "chart.line.uptrend.xyaxis",
+                        iconColor: theme.insights,
+                        title: "Sleep Insights",
+                        subtitle: "View patterns and recommendations"
+                    )
+                    .environmentObject(themeManager)
+                }
             }
         }
     }
@@ -1041,25 +1083,17 @@ struct MainDashboardView: View {
             return "Assessment"
         }
 
-        // For expansion days (6-14), use the dynamic Convex schedule
+        // For expansion days (6-14), use the splashTitle from Convex FIXED_SCHEDULE
         if let scheduled = questionnaireManager.scheduledExpansionForToday,
-           !scheduled.modules.isEmpty {
-            // Show the first module's name or "Deep Dive" if multiple
-            if scheduled.modules.count == 1 {
-                return scheduled.modules[0].name
-            }
-            return "Deep Dive: \(scheduled.modules.count) Assessments"
+           let splashTitle = scheduled.splashTitle, !splashTitle.isEmpty {
+            return splashTitle
         }
 
-        // Fallback to static gateway check
-        let todayGateways = getTriggeredGatewaysForToday()
-        if todayGateways.isEmpty {
-            return "Assessment"  // Fallback
+        // Fallback to DaySplashLibrary (which matches FIXED_SCHEDULE)
+        if let splashInfo = DaySplashLibrary.info(for: currentDay) {
+            return splashInfo.title
         }
 
-        if todayGateways.count == 1 {
-            return "Deep Dive: \(todayGateways[0].shortName)"
-        }
         return "Deep Dive"
     }
 
@@ -1072,38 +1106,19 @@ struct MainDashboardView: View {
             return config.description
         }
 
-        // For expansion days (6-14), use the dynamic Convex schedule
+        // For expansion days (6-14), use splashSubtitle from Convex FIXED_SCHEDULE
         if let scheduled = questionnaireManager.scheduledExpansionForToday,
-           !scheduled.modules.isEmpty {
-            // Show the instruments being assessed
-            let instruments = scheduled.modules.map { $0.instrument }
-            if instruments.count == 1 {
-                return "Detailed \(instruments[0]) assessment"
-            } else if instruments.count <= 3 {
-                return instruments.joined(separator: ", ") + " assessments"
-            } else {
-                return "\(instruments.prefix(2).joined(separator: ", ")) + \(instruments.count - 2) more"
-            }
+           let splashSubtitle = scheduled.splashSubtitle, !splashSubtitle.isEmpty {
+            return splashSubtitle
         }
 
-        // Fallback to static gateway check
-        let todayGateways = getTriggeredGatewaysForToday()
-        if todayGateways.isEmpty {
-            return "No additional assessments today"
+        // Fallback to DaySplashLibrary (which matches FIXED_SCHEDULE)
+        if let splashInfo = DaySplashLibrary.info(for: currentDay) {
+            return splashInfo.missionStatement
         }
 
-        // Show what areas are being assessed (without times - duration field handles that)
-        if todayGateways.count == 1 {
-            return "Detailed \(todayGateways[0].shortName.lowercased()) assessment"
-        } else {
-            // List areas: "Pain, Nutrition assessment"
-            let names = todayGateways.prefix(3).map { $0.shortName }
-            if todayGateways.count <= 2 {
-                return "\(names.joined(separator: " & ")) assessment"
-            } else {
-                return "\(names.dropLast().joined(separator: ", ")) & \(names.last!) assessment"
-            }
-        }
+        // Final fallback
+        return "Complete today's assessment"
     }
 
     private func loadProgress() {
@@ -1120,6 +1135,9 @@ struct MainDashboardView: View {
                 // Load actual assessment question count (source of truth for hasAssessmentToday)
                 await questionnaireManager.loadAssessmentQuestionCountForDay(progress.currentDay)
             }
+
+            // Load expansion schedule summary (for gateway -> day mapping in Upcoming Assessments)
+            await questionnaireManager.loadExpansionScheduleSummary()
 
             // Load missed days for catch-up feature
             await loadMissedDays()
@@ -3084,100 +3102,6 @@ struct DayCompleteCelebrationView: View {
         } else {
             timeUntilUnlock = "\(seconds)s remaining"
         }
-    }
-}
-
-// MARK: - Triggered Gateways Banner
-
-/// Shows a notification when gateways are triggered on Days 1-5
-/// Informs the user that deeper assessments will be scheduled for Day 6+
-struct TriggeredGatewaysBanner: View {
-    let gateways: [GatewayType]
-
-    @ObservedObject private var themeManager = ThemeManager.shared
-    private var theme: ColorTheme { themeManager.currentTheme }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.headline)
-                    .foregroundColor(QuestionnaireSection.expansionPack.accentColor)
-                Text("Personalized Assessments Unlocked")
-                    .font(.system(size: Typography.subheadline, weight: .semibold, design: .rounded))
-                    .foregroundColor(theme.textOnCard)
-            }
-
-            // Explanation
-            Text("Based on your answers, we'll add deeper assessments starting Day 6:")
-                .font(.system(size: Typography.caption, design: .rounded))
-                .foregroundColor(theme.textOnCardSecondary)
-
-            // Gateway tags
-            FlowLayout(spacing: 6) {
-                ForEach(gateways, id: \.self) { gateway in
-                    Text(gateway.displayName)
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(QuestionnaireSection.expansionPack.accentColor)
-                        .cornerRadius(12)
-                }
-            }
-        }
-        .padding(Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: CornerRadius.medium)
-                .fill(QuestionnaireSection.expansionPack.accentColor.opacity(0.1))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.medium)
-                .stroke(QuestionnaireSection.expansionPack.accentColor.opacity(0.3), lineWidth: 1)
-        )
-    }
-}
-
-/// Simple flow layout for wrapping tags
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
-        return layout(sizes: sizes, containerWidth: proposal.width ?? .infinity).size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
-        let offsets = layout(sizes: sizes, containerWidth: bounds.width).offsets
-
-        for (subview, offset) in zip(subviews, offsets) {
-            subview.place(at: CGPoint(x: bounds.minX + offset.x, y: bounds.minY + offset.y), proposal: .unspecified)
-        }
-    }
-
-    private func layout(sizes: [CGSize], containerWidth: CGFloat) -> (offsets: [CGPoint], size: CGSize) {
-        var offsets: [CGPoint] = []
-        var currentX: CGFloat = 0
-        var currentY: CGFloat = 0
-        var lineHeight: CGFloat = 0
-        var maxWidth: CGFloat = 0
-
-        for size in sizes {
-            if currentX + size.width > containerWidth && currentX > 0 {
-                currentX = 0
-                currentY += lineHeight + spacing
-                lineHeight = 0
-            }
-            offsets.append(CGPoint(x: currentX, y: currentY))
-            lineHeight = max(lineHeight, size.height)
-            currentX += size.width + spacing
-            maxWidth = max(maxWidth, currentX - spacing)
-        }
-
-        return (offsets, CGSize(width: maxWidth, height: currentY + lineHeight))
     }
 }
 

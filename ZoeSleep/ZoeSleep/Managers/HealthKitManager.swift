@@ -7,6 +7,7 @@
 
 import Foundation
 import HealthKit
+import UIKit
 
 /// Demographics data fetched from Apple Health
 struct HealthKitDemographics {
@@ -63,11 +64,58 @@ struct SourcedSleepSample {
     let endTime: Date
 }
 
+/// Sync progress tracking for UI feedback
+struct HealthKitSyncProgress {
+    enum Step: String, CaseIterable {
+        case idle = "Ready"
+        case fetchingSleep = "Fetching sleep data..."
+        case fetchingHeartRate = "Fetching heart rate..."
+        case fetchingHRV = "Fetching HRV data..."
+        case fetchingActivity = "Fetching activity..."
+        case uploadingSleep = "Uploading sleep data..."
+        case uploadingHeartRate = "Uploading heart rate..."
+        case uploadingActivity = "Uploading activity..."
+        case complete = "Sync complete!"
+        case failed = "Sync failed"
+
+        var stepNumber: Int {
+            switch self {
+            case .idle: return 0
+            case .fetchingSleep: return 1
+            case .fetchingHeartRate: return 2
+            case .fetchingHRV: return 3
+            case .fetchingActivity: return 4
+            case .uploadingSleep: return 5
+            case .uploadingHeartRate: return 6
+            case .uploadingActivity: return 7
+            case .complete, .failed: return 8
+            }
+        }
+
+        static var totalSteps: Int { 7 }
+    }
+
+    var currentStep: Step = .idle
+    var progress: Double = 0.0 // 0.0 to 1.0
+    var statusMessage: String = ""
+    var recordsFetched: Int = 0
+    var recordsUploaded: Int = 0
+    var isActive: Bool = false
+
+    mutating func update(step: Step, message: String? = nil) {
+        currentStep = step
+        progress = Double(step.stepNumber) / Double(Step.totalSteps)
+        statusMessage = message ?? step.rawValue
+        isActive = step != .idle && step != .complete && step != .failed
+    }
+}
+
 @MainActor
 class HealthKitManager: ObservableObject {
     let healthStore = HKHealthStore()
     @Published var isAuthorized = false
     @Published var demographics: HealthKitDemographics = HealthKitDemographics()
+    @Published var syncProgress = HealthKitSyncProgress()
 
     // API Configuration
     private let apiService = APIService.shared
@@ -491,18 +539,24 @@ class HealthKitManager: ObservableObject {
 
     /// Deduplicates overlapping sleep samples by prioritizing higher-priority sources
     /// Priority: Apple Watch (1) > iPhone native (2) > Third-party apps (3)
+    ///
+    /// IMPORTANT: This function groups by "sleep night" not calendar day.
+    /// A sleep session is defined by when you WAKE UP, not when you go to bed.
+    /// This ensures overnight sleep (11pm-7am) is properly deduplicated as one session.
     private nonisolated func deduplicateSleepSamples(_ samples: [SourcedSleepSample]) -> [SourcedSleepSample] {
-        // Group by date first
         let calendar = Calendar.current
-        let byDate = Dictionary(grouping: samples) { sample in
-            calendar.startOfDay(for: sample.startTime)
+
+        // Group by "sleep night" - use the END time to determine which night's sleep this belongs to
+        // Sleep ending at 7am Dec 31 = Dec 31's sleep, even if it started at 11pm Dec 30
+        let byNight = Dictionary(grouping: samples) { sample in
+            calendar.startOfDay(for: sample.endTime)
         }
 
         var result: [SourcedSleepSample] = []
 
-        for (_, dateSamples) in byDate {
+        for (_, nightSamples) in byNight {
             // Sort by start time
-            let sorted = dateSamples.sorted { $0.startTime < $1.startTime }
+            let sorted = nightSamples.sorted { $0.startTime < $1.startTime }
             var deduped: [SourcedSleepSample] = []
 
             for sample in sorted {
@@ -555,11 +609,13 @@ class HealthKitManager: ObservableObject {
         let deduplicatedSamples = deduplicateSleepSamples(sourcedSamples)
 
         // Step 3: Track unique sources per date for metadata
+        // Use END time to determine the "sleep night" - this ensures overnight sleep is attributed
+        // to the day you wake up (e.g., sleep 11pm Dec 30 to 7am Dec 31 = Dec 31's sleep)
         var sourcesByDate: [String: Set<String>] = [:]
         var primarySourceByDate: [String: SleepDataSource] = [:]
 
         for sample in deduplicatedSamples {
-            let dateKey = String(dateFormatter.string(from: sample.startTime).prefix(10))
+            let dateKey = String(dateFormatter.string(from: sample.endTime).prefix(10))
             sourcesByDate[dateKey, default: Set()].insert(sample.source.name)
 
             // Track the highest priority source as primary
@@ -573,9 +629,10 @@ class HealthKitManager: ObservableObject {
         }
 
         // Step 4: Convert to processed stages format
+        // Use END time to group by sleep night (when you wake up)
         var processedStages: [[String: Any]] = []
         for sample in deduplicatedSamples {
-            let dateKey = String(dateFormatter.string(from: sample.startTime).prefix(10))
+            let dateKey = String(dateFormatter.string(from: sample.endTime).prefix(10))
             processedStages.append([
                 "date": dateKey,
                 "start_time": dateFormatter.string(from: sample.startTime),
@@ -949,129 +1006,263 @@ class HealthKitManager: ObservableObject {
         healthStore.execute(query)
     }
     
-    // MARK: - API Sync
-    
+    // MARK: - API Sync (Convex Backend)
+
     func syncAllHealthData(completion: @escaping (Result<[String: Any], Error>) -> Void) {
         Task { @MainActor in
-            guard let authManager = authManager, let token = authManager.getAuthToken() else {
-            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated. Please sign in first."])))
-            return
-        }
-        
-        let group = DispatchGroup()
-        var sleepData: [[String: Any]] = []
-        var sleepStages: [[String: Any]] = []
-        var heartRateData: [[String: Any]] = []
-        var hrvData: [[String: Any]] = []
-        var activityData: [[String: Any]] = []
-        var syncError: Error?
-        
-        // Fetch sleep data
-        group.enter()
-        fetchSleepData { result in
-            switch result {
-            case .success(let data):
-                // Separate sleep data and stages
-                let _ = data.flatMap { sleepDay -> [[String: Any]] in
-                    // Extract stages from sleep data processing
-                    return []
-                }
-                sleepData = data
-            case .failure(let error):
-                syncError = error
-            }
-            group.leave()
-        }
-        
-        // Fetch heart rate data
-        group.enter()
-        fetchHeartRateData { result in
-            switch result {
-            case .success(let data):
-                heartRateData = data
-            case .failure(let error):
-                if syncError == nil { syncError = error }
-            }
-            group.leave()
-        }
-        
-        // Fetch HRV data
-        group.enter()
-        fetchHRVData { result in
-            switch result {
-            case .success(let data):
-                hrvData = data
-            case .failure(let error):
-                if syncError == nil { syncError = error }
-            }
-            group.leave()
-        }
-        
-        // Fetch activity data
-        group.enter()
-        fetchActivityData { result in
-            switch result {
-            case .success(let data):
-                activityData = data
-            case .failure(let error):
-                if syncError == nil { syncError = error }
-            }
-            group.leave()
-        }
-        
-        // Wait for all fetches to complete
-        group.notify(queue: .main) {
-            if let error = syncError {
-                completion(.failure(error))
+            // Reset progress
+            syncProgress = HealthKitSyncProgress()
+
+            // Use ConvexService for sync (the primary backend)
+            guard ConvexService.shared.isAuthenticated else {
+                syncProgress.update(step: .failed, message: "Not authenticated")
+                completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated. Please sign in first."])))
                 return
             }
-            
+
+            // Get device ID for sync
+            let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+
+            var sleepData: [[String: Any]] = []
+            var heartRateData: [[String: Any]] = []
+            var hrvData: [[String: Any]] = []
+            var activityData: [[String: Any]] = []
+
+            // Step 1: Fetch sleep data
+            syncProgress.update(step: .fetchingSleep, message: "Fetching sleep data (up to 6 months)...")
+            do {
+                sleepData = try await withCheckedThrowingContinuation { continuation in
+                    fetchSleepData { result in
+                        switch result {
+                        case .success(let data):
+                            continuation.resume(returning: data)
+                        case .failure(let error):
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                }
+                syncProgress.recordsFetched += sleepData.count
+                print("[HealthKit] Fetched \(sleepData.count) days of sleep data")
+            } catch {
+                print("[HealthKit] Sleep fetch error: \(error.localizedDescription)")
+                // Continue with empty data - don't fail entire sync
+            }
+
+            // Step 2: Fetch heart rate data
+            syncProgress.update(step: .fetchingHeartRate, message: "Fetching heart rate data...")
+            do {
+                heartRateData = try await withCheckedThrowingContinuation { continuation in
+                    fetchHeartRateData { result in
+                        switch result {
+                        case .success(let data):
+                            continuation.resume(returning: data)
+                        case .failure(let error):
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                }
+                syncProgress.recordsFetched += heartRateData.count
+            } catch {
+                print("[HealthKit] Heart rate fetch error: \(error.localizedDescription)")
+            }
+
+            // Step 3: Fetch HRV data
+            syncProgress.update(step: .fetchingHRV, message: "Fetching HRV data...")
+            do {
+                hrvData = try await withCheckedThrowingContinuation { continuation in
+                    fetchHRVData { result in
+                        switch result {
+                        case .success(let data):
+                            continuation.resume(returning: data)
+                        case .failure(let error):
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                }
+                syncProgress.recordsFetched += hrvData.count
+            } catch {
+                print("[HealthKit] HRV fetch error: \(error.localizedDescription)")
+            }
+
+            // Step 4: Fetch activity data
+            syncProgress.update(step: .fetchingActivity, message: "Fetching activity data...")
+            do {
+                activityData = try await withCheckedThrowingContinuation { continuation in
+                    fetchActivityData { result in
+                        switch result {
+                        case .success(let data):
+                            continuation.resume(returning: data)
+                        case .failure(let error):
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                }
+                syncProgress.recordsFetched += activityData.count
+            } catch {
+                print("[HealthKit] Activity fetch error: \(error.localizedDescription)")
+            }
+
             // Merge HRV data into heart rate data
             var mergedHeartRateData = heartRateData
             for hrv in hrvData {
-                if let index = mergedHeartRateData.firstIndex(where: { $0["date"] as! String == hrv["date"] as! String }) {
+                if let hrvDate = hrv["date"] as? String,
+                   let index = mergedHeartRateData.firstIndex(where: { $0["date"] as? String == hrvDate }) {
                     mergedHeartRateData[index]["hrv_morning"] = hrv["hrv_morning"]
                     mergedHeartRateData[index]["hrv_avg"] = hrv["hrv_avg"]
                 } else {
                     mergedHeartRateData.append(hrv)
                 }
             }
-            
-            // Sync to API using new authentication system
-            self.syncToAPIWithAuth(
+
+            syncProgress.update(step: .uploadingSleep, message: "Fetched \(syncProgress.recordsFetched) records. Uploading...")
+
+            // Sync to Convex backend with progress updates
+            syncToConvexWithProgress(
+                deviceId: deviceId,
                 sleepData: sleepData,
-                sleepStages: sleepStages,
                 heartRateData: mergedHeartRateData,
                 activityData: activityData,
-                token: token,
                 completion: completion
             )
         }
-        }
     }
-    
-    private func syncToAPIWithAuth(
+
+    /// Sync to Convex with progress tracking
+    private func syncToConvexWithProgress(
+        deviceId: String,
         sleepData: [[String: Any]],
-        sleepStages: [[String: Any]],
         heartRateData: [[String: Any]],
         activityData: [[String: Any]],
-        token: String,
         completion: @escaping (Result<[String: Any], Error>) -> Void
     ) {
-        let payload: [String: Any] = [
-            "sleepData": sleepData,
-            "sleepStages": sleepStages,
-            "heartRateData": heartRateData,
-            "activityData": activityData
-        ]
-
-        Task {
+        Task { @MainActor in
             do {
-                let result = try await apiService.syncHealthData(payload, token: token)
-                completion(.success(result))
+                var results: [String: Any] = [:]
+                var totalRecords = 0
+
+                // Step 5: Upload sleep data
+                if !sleepData.isEmpty {
+                    syncProgress.update(step: .uploadingSleep, message: "Uploading \(sleepData.count) sleep records...")
+                    let transformedSleep = transformSleepDataForConvex(sleepData)
+                    print("[HealthKit] Syncing \(transformedSleep.count) sleep records")
+                    let sleepResult = try await ConvexService.shared.syncSleepData(
+                        deviceId: deviceId,
+                        sleepData: transformedSleep
+                    )
+                    results["sleepData"] = ["synced": sleepResult.recordsSynced ?? sleepData.count]
+                    totalRecords += sleepResult.recordsSynced ?? sleepData.count
+                    syncProgress.recordsUploaded += sleepResult.recordsSynced ?? sleepData.count
+                }
+
+                // Step 6: Upload heart rate data
+                if !heartRateData.isEmpty {
+                    syncProgress.update(step: .uploadingHeartRate, message: "Uploading \(heartRateData.count) heart rate records...")
+                    let transformedHR = transformHeartRateDataForConvex(heartRateData)
+                    let hrResult = try await ConvexService.shared.syncHeartRateData(
+                        deviceId: deviceId,
+                        heartRateData: transformedHR
+                    )
+                    results["heartRateData"] = ["synced": hrResult.recordsSynced ?? heartRateData.count]
+                    totalRecords += hrResult.recordsSynced ?? heartRateData.count
+                    syncProgress.recordsUploaded += hrResult.recordsSynced ?? heartRateData.count
+                }
+
+                // Step 7: Upload activity data
+                if !activityData.isEmpty {
+                    syncProgress.update(step: .uploadingActivity, message: "Uploading \(activityData.count) activity records...")
+                    let transformedActivity = transformActivityDataForConvex(activityData)
+                    let activityResult = try await ConvexService.shared.syncActivityData(
+                        deviceId: deviceId,
+                        activityData: transformedActivity
+                    )
+                    results["activityData"] = ["synced": activityResult.recordsSynced ?? activityData.count]
+                    totalRecords += activityResult.recordsSynced ?? activityData.count
+                    syncProgress.recordsUploaded += activityResult.recordsSynced ?? activityData.count
+                }
+
+                results["totalRecordsSynced"] = totalRecords
+                syncProgress.update(step: .complete, message: "Sync complete! \(totalRecords) records uploaded.")
+                completion(.success(results))
+
             } catch {
+                print("[HealthKit] Convex sync error: \(error)")
+                syncProgress.update(step: .failed, message: "Upload failed: \(error.localizedDescription)")
                 completion(.failure(error))
             }
+        }
+    }
+
+    /// Transform sleep data keys from snake_case to camelCase for Convex
+    /// Also converts ISO8601 time strings to Unix timestamps in milliseconds
+    private func transformSleepDataForConvex(_ data: [[String: Any]]) -> [[String: Any]] {
+        let iso8601Formatter = ISO8601DateFormatter()
+        iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        // Helper to convert ISO8601 string to Unix timestamp (ms)
+        func toTimestamp(_ value: Any?) -> Int? {
+            guard let str = value as? String, !str.isEmpty else { return nil }
+            if let date = iso8601Formatter.date(from: str) {
+                return Int(date.timeIntervalSince1970 * 1000)
+            }
+            return nil
+        }
+
+        return data.map { entry in
+            var transformed: [String: Any] = [:]
+            transformed["date"] = entry["date"]
+            // Convert time strings to Unix timestamps (ms)
+            if let ts = toTimestamp(entry["in_bed_time"]) {
+                transformed["inBedTime"] = ts
+            }
+            if let ts = toTimestamp(entry["asleep_time"]) {
+                transformed["asleepTime"] = ts
+            }
+            if let ts = toTimestamp(entry["wake_time"]) {
+                transformed["wakeTime"] = ts
+            }
+            transformed["totalSleepMins"] = entry["total_sleep_mins"]
+            transformed["sleepEfficiency"] = entry["sleep_efficiency"]
+            transformed["deepSleepMins"] = entry["deep_sleep_mins"]
+            transformed["lightSleepMins"] = entry["light_sleep_mins"]
+            transformed["remSleepMins"] = entry["rem_sleep_mins"]
+            transformed["awakeMins"] = entry["awake_mins"]
+            transformed["interruptionsCount"] = entry["interruptions_count"]
+            transformed["sleepLatencyMins"] = entry["sleep_latency_mins"]
+            // Source tracking fields
+            transformed["primarySource"] = entry["primary_source"]
+            transformed["sourceBundleId"] = entry["source_bundle_id"]
+            if let allSources = entry["all_sources"] as? [String],
+               let jsonData = try? JSONSerialization.data(withJSONObject: allSources) {
+                transformed["allSourcesJson"] = String(data: jsonData, encoding: .utf8)
+            }
+            transformed["isMultiSource"] = entry["is_multi_source"]
+            return transformed
+        }
+    }
+
+    /// Transform heart rate data keys from snake_case to camelCase for Convex
+    private func transformHeartRateDataForConvex(_ data: [[String: Any]]) -> [[String: Any]] {
+        return data.map { entry in
+            var transformed: [String: Any] = [:]
+            transformed["date"] = entry["date"]
+            transformed["restingHr"] = entry["resting_hr"]
+            transformed["avgHr"] = entry["avg_hr"]
+            transformed["hrvMorning"] = entry["hrv_morning"]
+            transformed["hrvAvg"] = entry["hrv_avg"]
+            return transformed
+        }
+    }
+
+    /// Transform activity data keys from snake_case to camelCase for Convex
+    private func transformActivityDataForConvex(_ data: [[String: Any]]) -> [[String: Any]] {
+        return data.map { entry in
+            var transformed: [String: Any] = [:]
+            transformed["date"] = entry["date"]
+            transformed["steps"] = entry["steps"]
+            transformed["activeMins"] = entry["active_mins"]
+            transformed["exerciseMins"] = entry["exercise_mins"]
+            transformed["caloriesBurned"] = entry["calories_burned"]
+            return transformed
         }
     }
 

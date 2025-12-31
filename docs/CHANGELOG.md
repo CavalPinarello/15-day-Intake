@@ -4,6 +4,40 @@
 
 ## December 2025
 
+### Dec 31, 2025
+
+#### Profile Settings UI Cleanup
+Simplified accessibility settings in Profile by removing unused options.
+
+**Changes:**
+- Removed "High Contrast" toggle (was not implemented)
+- Removed "Reduce Motion" toggle (was not implemented)
+- Removed "Large Icons Mode" toggle (covered by Enhanced Readability)
+- Kept only "Enhanced Readability" and "Haptic Feedback" toggles
+- Text Size slider remains available
+
+**Files changed:** `ProfileSettingsView.swift`
+
+#### Experimental Features System
+Added system to hide incomplete features behind debug toggles.
+
+**Features hidden:**
+- Sleep Diary History - view past sleep log entries
+- Sleep Insights - patterns and recommendations
+
+**Implementation:**
+- Added `showSleepDiaryHistory` and `showSleepInsights` toggles to ThemeManager (persisted in UserDefaults)
+- Wrapped features in ContentView with conditional visibility
+- Added "Experimental Features" section to UnifiedDebugPanel
+
+**How to enable:**
+1. Profile → Enable Debug Mode
+2. Developer → Debug Tools
+3. Scroll to "Experimental Features" section
+4. Toggle on desired features
+
+**Files changed:** `ThemeManager.swift`, `ContentView.swift`, `UnifiedDebugPanel.swift`
+
 ### Dec 30, 2025
 
 #### Fix Expansion Pack Scheduling Bug

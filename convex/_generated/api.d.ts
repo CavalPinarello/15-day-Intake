@@ -26,6 +26,7 @@ import type * as crossPlatformValidator from "../crossPlatformValidator.js";
 import type * as days from "../days.js";
 import type * as encouragement from "../encouragement.js";
 import type * as expansionScheduler from "../expansionScheduler.js";
+import type * as fixedSchedule from "../fixedSchedule.js";
 import type * as gamification from "../gamification.js";
 import type * as healthKitSimulator from "../healthKitSimulator.js";
 import type * as healthkit from "../healthkit.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   days: typeof days;
   encouragement: typeof encouragement;
   expansionScheduler: typeof expansionScheduler;
+  fixedSchedule: typeof fixedSchedule;
   gamification: typeof gamification;
   healthKitSimulator: typeof healthKitSimulator;
   healthkit: typeof healthkit;

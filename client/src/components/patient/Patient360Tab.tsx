@@ -297,19 +297,26 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
     // Use daily compliance query with per-day completion flags
     if (complianceDataQuery && complianceDataQuery.length > 0) {
       return complianceDataQuery.map((d: ComplianceEntry) => {
-        // Count tasks complete for this day
+        // Count only tasks that actually exist for this day
+        const hasAssessment = d.hasAssessmentTask ?? (d.dayNumber <= 5);
+        const hasExpansion = d.hasExpansionTask ?? false;
+
         const tasksComplete = (d.sleepLogCompleted ? 1 : 0) +
-          (d.assessmentCompleted ? 1 : 0) +
-          (d.expansionCompleted ? 1 : 0);
+          (hasAssessment && d.assessmentCompleted ? 1 : 0) +
+          (hasExpansion && d.expansionCompleted ? 1 : 0);
+
+        const tasksTotal = 1 + (hasAssessment ? 1 : 0) + (hasExpansion ? 1 : 0);
 
         return {
           date: d.date,
           day: d.dayNumber,
           tasksCompleted: tasksComplete,
-          tasksTotal: 3, // Sleep Log + Assessment + Expansion
+          tasksTotal,
           sleepLogCompleted: d.sleepLogCompleted,
           assessmentCompleted: d.assessmentCompleted,
           expansionCompleted: d.expansionCompleted,
+          hasExpansionTask: d.hasExpansionTask,
+          hasAssessmentTask: d.hasAssessmentTask,
         };
       });
     }
@@ -317,14 +324,17 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
     // Fallback - show empty progress
     const days = [];
     for (let i = 1; i <= patient.user.current_day; i++) {
+      const hasAssessment = i <= 5; // Days 1-5 have core assessment
       days.push({
         date: new Date(patient.user.started_at + (i - 1) * 86400000).toISOString().split("T")[0],
         day: i,
         tasksCompleted: 0,
-        tasksTotal: 3,
+        tasksTotal: hasAssessment ? 2 : 1, // Sleep Log + Assessment for Days 1-5, just Sleep Log for 6-14
         sleepLogCompleted: false,
         assessmentCompleted: false,
         expansionCompleted: false,
+        hasExpansionTask: false,
+        hasAssessmentTask: hasAssessment,
       });
     }
     return days;

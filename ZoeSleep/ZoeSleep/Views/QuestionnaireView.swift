@@ -40,6 +40,9 @@ struct QuestionnaireView: View {
     @State private var assessmentResponses: [String: Any] = [:]
     @State private var assessmentUserInteracted: Set<String> = []  // Track which questions user actually touched
 
+    // Expansion Modules (for dynamic splash screens)
+    @State private var currentDayExpansionModules: [String] = []  // Module IDs for expansion splash
+
     // HealthKit
     @State private var healthKitSleepSummary: HealthKitSleepSummary?
     @State private var isLoadingHealthKit: Bool = false
@@ -303,6 +306,19 @@ struct QuestionnaireView: View {
                 // Navigation Buttons
                 navigationButtons
             }
+
+            // Debug Auto-Complete FAB (only in debug mode)
+            if themeManager.debugMode {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        DebugAutoCompleteButton(onTap: debugAutoCompleteAndSubmit)
+                            .padding(.trailing, 20)
+                            .padding(.bottom, 100)
+                    }
+                }
+            }
         }
     }
 
@@ -313,21 +329,13 @@ struct QuestionnaireView: View {
         SectionQuestionCard(section: currentSection, question: question) {
             switch question.questionType {
             case .scale:
-                // Use discrete buttons for validated questionnaires with small scales (≤5 options)
-                // This provides better UX with labeled options like "Not at all" → "Nearly every day"
-                if shouldUseDiscreteScale(for: question) {
-                    DiscreteScaleInput(
-                        question: question,
-                        value: binding(for: question.id, default: ScaleInput.smartDefault(for: question)),
-                        theme: theme
-                    )
-                } else {
-                    ScaleInput(
-                        question: question,
-                        value: binding(for: question.id, default: ScaleInput.smartDefault(for: question)),
-                        theme: theme
-                    )
-                }
+                // UNIFIED 1-10 SCALE: All scale questions use the same slider
+                // User sees 1-10, internally mapped to clinical scale (0-3, 0-4, 1-5, etc.)
+                ScaleInput(
+                    question: question,
+                    value: binding(for: question.id, default: ScaleInput.smartDefault(for: question)),
+                    theme: theme
+                )
 
             case .yesNo, .yesNoDontKnow:
                 YesNoInput(
@@ -452,43 +460,9 @@ struct QuestionnaireView: View {
         }
     }
 
-    // MARK: - Scale Type Detection
-
-    /// Determine whether to use discrete buttons vs slider for a scale question
-    /// Use discrete buttons for validated questionnaires with ≤5 options
-    private func shouldUseDiscreteScale(for question: Question) -> Bool {
-        let scaleRange = (question.scaleMax ?? 10) - (question.scaleMin ?? 0)
-
-        // Only use discrete for small scales (5 or fewer options)
-        guard scaleRange <= 5 else { return false }
-
-        // Detect validated questionnaires by ID prefix
-        let id = question.id.uppercased()
-        let validatedPrefixes = [
-            "ISI",      // Insomnia Severity Index (0-4)
-            "PHQ",      // PHQ-9 (0-3)
-            "GAD",      // GAD-7 (0-3)
-            "DASS",     // DASS-21 (0-3)
-            "ESS",      // Epworth Sleepiness Scale (0-3)
-            "PSAS",     // Pre-Sleep Arousal Scale (1-5)
-            "SHI",      // Sleep Hygiene Index (0-4)
-            "FOSQ",     // Functional Outcomes (1-4)
-            "PSQI"      // Pittsburgh Sleep Quality Index
-        ]
-
-        for prefix in validatedPrefixes {
-            if id.hasPrefix(prefix) { return true }
-        }
-
-        // Also check group field
-        if let group = question.group?.uppercased() {
-            for prefix in validatedPrefixes {
-                if group.contains(prefix) { return true }
-            }
-        }
-
-        return false
-    }
+    // MARK: - Scale Type Detection (DEPRECATED)
+    // NOTE: shouldUseDiscreteScale is no longer used - all scales now use unified 1-10 slider
+    // The ScaleMapper handles conversion between display (1-10) and clinical values
 
     // MARK: - Binding Helpers
 
@@ -1164,6 +1138,79 @@ struct QuestionnaireView: View {
 
     // MARK: - Actions
 
+    // MARK: Debug Auto-Complete
+
+    /// Debug mode: Auto-complete all questions in current section and submit
+    /// Generates gateway-triggering answers for assessment questions
+    private func debugAutoCompleteAndSubmit() {
+        guard themeManager.debugMode else { return }
+
+        print("[Debug] Auto-completing \(currentSection.rawValue) section for Day \(currentDay)")
+
+        // Create generator that forces all gateways to trigger
+        let generator = MockDataGenerator(forceAllGateways: true)
+        let questions = currentSection == .sleepLog ? sleepLogQuestions : assessmentQuestions
+        var filledCount = 0
+
+        for question in questions {
+            let answer = generator.generateAnswer(for: question, dayNumber: currentDay)
+
+            // Check if we have any value to set
+            let hasValue = answer.stringValue != nil || answer.numberValue != nil ||
+                           answer.arrayValue != nil || answer.objectValue != nil
+
+            guard hasValue else {
+                // Skip questions where generator returns nil (e.g., name fields)
+                print("[Debug] Skipping \(question.id) - no generated value")
+                continue
+            }
+
+            // Fill response dictionary based on current section
+            if currentSection == .sleepLog {
+                if let str = answer.stringValue {
+                    sleepLogResponses[question.id] = str
+                } else if let num = answer.numberValue {
+                    sleepLogResponses[question.id] = num
+                } else if let arr = answer.arrayValue {
+                    sleepLogResponses[question.id] = arr
+                } else if let obj = answer.objectValue {
+                    sleepLogResponses[question.id] = obj
+                }
+                sleepLogUserInteracted.insert(question.id)
+            } else {
+                if let str = answer.stringValue {
+                    assessmentResponses[question.id] = str
+                } else if let num = answer.numberValue {
+                    assessmentResponses[question.id] = num
+                } else if let arr = answer.arrayValue {
+                    assessmentResponses[question.id] = arr
+                } else if let obj = answer.objectValue {
+                    assessmentResponses[question.id] = obj
+                }
+                assessmentUserInteracted.insert(question.id)
+            }
+            filledCount += 1
+        }
+
+        print("[Debug] Filled \(filledCount) of \(questions.count) questions, saving and completing section...")
+
+        // Capture values needed for async work before dismissing
+        let sectionToComplete = currentSection
+        let responsesToSave = currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
+        let questionsForSave = questions
+
+        // Save locally to QuestionnaireManager (synchronous)
+        for (questionId, value) in responsesToSave {
+            saveResponseFromDictionary(questionId: questionId, value: value, questions: questionsForSave)
+        }
+
+        // Complete section in background (async) - will continue after view dismisses
+        completeSectionInBackground(section: sectionToComplete)
+
+        // Dismiss immediately - background task is fire-and-forget
+        presentationMode.wrappedValue.dismiss()
+    }
+
     private func loadQuestions() {
         // Update HealthKit demographics cache BEFORE loading questions
         // This ensures shouldSkipDemographicQuestion() has access to HealthKit data
@@ -1178,16 +1225,15 @@ struct QuestionnaireView: View {
         // Use async task to fetch questions from Convex (THE SINGLE SOURCE OF TRUTH)
         Task {
             do {
-                // Inject demographic responses from profile on Day 1 (before loading questions)
-                // This ensures scoring calculations have the data they need
-                if currentDay == 1 {
-                    do {
-                        try await ConvexService.shared.injectProfileResponses(dayNumber: 1)
-                        print("[iOS] Injected demographic responses from profile for Day 1")
-                    } catch {
-                        print("[iOS] Warning: Failed to inject demographic responses: \(error.localizedDescription)")
-                        // Continue anyway - profile update will retry
-                    }
+                // Inject demographic responses from profile BEFORE loading questions (any day)
+                // This ensures scoring calculations and conditional logic (e.g., gender-specific questions)
+                // have the data they need. The backend will only update if profile data exists.
+                do {
+                    try await ConvexService.shared.injectProfileResponses(dayNumber: currentDay)
+                    print("[iOS] Injected demographic responses from profile for Day \(currentDay)")
+                } catch {
+                    print("[iOS] Warning: Failed to inject demographic responses: \(error.localizedDescription)")
+                    // Continue anyway - conditional logic will exclude questions if demographics missing
                 }
 
                 print("[iOS] Fetching questions from Convex for Day \(currentDay)...")
@@ -1239,13 +1285,24 @@ struct QuestionnaireView: View {
                         }
                     }
 
-                    // Show day splash for ALL days (hero-framed intro)
-                    // For assessment section: show for both core and expansion days
+                    // Store expansion modules for this day (used by splash screens and proceedToAssessment)
+                    let expansionModules = questionsResponse.metadata.modules?.filter { $0.hasPrefix("expansion_") } ?? []
+                    currentDayExpansionModules = expansionModules
+                    print("[iOS] Day \(currentDay) expansion modules: \(expansionModules.isEmpty ? "none" : expansionModules.joined(separator: ", "))")
+
+                    // Show appropriate splash for assessment section
                     if startSection == .assessment && !assessmentQuestions.isEmpty {
-                        checkAndShowDaySplash(
-                            questionCount: assessmentQuestions.count,
-                            estimatedMinutes: questionsResponse.metadata.totalMinutes
-                        )
+                        if !expansionModules.isEmpty && currentDay >= 6 {
+                            // Show detailed expansion splash with questionnaire info (DASS-21, PHQ-9, etc.)
+                            print("[iOS] Day \(currentDay) has \(expansionModules.count) expansion modules - showing expansion splash")
+                            checkAndShowExpansionSplash(modules: expansionModules)
+                        } else {
+                            // Show hero-framed day splash for core days (1-5) or days without expansion
+                            checkAndShowDaySplash(
+                                questionCount: assessmentQuestions.count,
+                                estimatedMinutes: questionsResponse.metadata.totalMinutes
+                            )
+                        }
                     }
 
                     // Load saved progress from Convex (cross-device sync)
@@ -1388,6 +1445,16 @@ struct QuestionnaireView: View {
             print("[iOS] Question \(cq.id) has NO conditionalLogic")
         }
 
+        // Fallback options for known multiSelect questions if Convex options are missing
+        var resolvedOptions = cq.options
+        if questionType == .multiSelect && (resolvedOptions == nil || resolvedOptions?.isEmpty == true) {
+            // Hardcoded fallback for Q33D - sleep aids
+            if cq.id == "33D" {
+                print("[iOS] WARNING: Q33D has no options from Convex, using fallback options")
+                resolvedOptions = ["None", "Melatonin", "Prescription sleep medication", "Over-the-counter sleep aid", "Antihistamines (Benadryl, etc.)", "Herbal supplements (valerian, chamomile, etc.)", "CBD or cannabis", "Alcohol", "Other"]
+            }
+        }
+
         return Question(
             id: cq.id,
             text: cq.text,
@@ -1396,7 +1463,7 @@ struct QuestionnaireView: View {
             questionType: questionType,
             estimatedMinutes: 0.5,
             required: cq.required,
-            options: cq.options,
+            options: resolvedOptions,
             scaleMin: scaleMin,
             scaleMax: scaleMax,
             scaleMinLabel: scaleMinLabel,
@@ -1411,6 +1478,7 @@ struct QuestionnaireView: View {
             maxImperial: maxImperial,
             defaultImperial: defaultImperial,
             helpText: cq.helpText,
+            helpTextImperial: cq.helpTextImperial,
             isGateway: false,
             conditionalLogic: conditionalLogic,
             group: isSleepLog ? "sleep_log" : nil
@@ -1430,6 +1498,7 @@ struct QuestionnaireView: View {
         logic.greaterThanOrEqual = convexLogic.greaterThanOrEqual
         logic.lessThanOrEqual = convexLogic.lessThanOrEqual
         logic.contains = convexLogic.contains
+        logic.inValues = convexLogic.inValues
 
         // Copy age-based conditions
         logic.ageUnder = convexLogic.ageUnder
@@ -1877,6 +1946,25 @@ struct QuestionnaireView: View {
             return false
         }
 
+        // Check inValues condition (value must be in the array of allowed values)
+        if let inValues = condition.inValues {
+            let responseStr: String
+            if let stringResponse = dependentResponse as? String {
+                responseStr = stringResponse
+            } else if let intResponse = dependentResponse as? Int {
+                responseStr = String(intResponse)
+            } else if let doubleResponse = dependentResponse as? Double {
+                responseStr = String(Int(doubleResponse))
+            } else {
+                print("[iOS] evaluateCondition(\(questionId)): Response type not supported for 'in' check")
+                return false
+            }
+
+            let matches = inValues.contains { $0.lowercased() == responseStr.lowercased() }
+            print("[iOS] evaluateCondition(\(questionId)): '\(responseStr)' IN [\(inValues.joined(separator: ", "))] => \(matches)")
+            return matches
+        }
+
         return true
     }
 
@@ -2022,14 +2110,21 @@ struct QuestionnaireView: View {
                     assessmentIndex = 0
                     questionStartTime = Date()
 
-                    // Check if we should show the day splash screen for the assessment
+                    // Check if we should show a splash screen for the assessment
                     // This ensures the splash appears when proceeding from Sleep Log completion
                     print("[iOS] proceedToAssessment: assessmentQuestions.count = \(assessmentQuestions.count)")
                     if !assessmentQuestions.isEmpty {
-                        let estimatedMinutes = max(5, assessmentQuestions.count * 1) // ~1 min per question, min 5
-                        print("[iOS] proceedToAssessment: Calling checkAndShowDaySplash with \(assessmentQuestions.count) questions, ~\(estimatedMinutes) min")
-                        checkAndShowDaySplash(questionCount: assessmentQuestions.count, estimatedMinutes: estimatedMinutes)
-                        print("[iOS] proceedToAssessment: After checkAndShowDaySplash - showingDaySplash = \(showingDaySplash)")
+                        let estimatedMinutes = max(3, (assessmentQuestions.count + 1) / 2) // ~30 seconds per question, min 3
+
+                        // Use expansion splash for expansion days, day splash for core days
+                        if !currentDayExpansionModules.isEmpty && currentDay >= 6 {
+                            print("[iOS] proceedToAssessment: Day \(currentDay) has expansion modules - showing expansion splash")
+                            checkAndShowExpansionSplash(modules: currentDayExpansionModules)
+                        } else {
+                            print("[iOS] proceedToAssessment: Calling checkAndShowDaySplash with \(assessmentQuestions.count) questions, ~\(estimatedMinutes) min")
+                            checkAndShowDaySplash(questionCount: assessmentQuestions.count, estimatedMinutes: estimatedMinutes)
+                        }
+                        print("[iOS] proceedToAssessment: After splash setup - showingDaySplash=\(showingDaySplash), showingExpansionSplash=\(showingExpansionSplash)")
                     }
 
                     // Dismiss the completion view AFTER potentially setting up the splash
@@ -2884,11 +2979,11 @@ struct QuestionnaireView: View {
         showingDaySplash = true
     }
 
-    // MARK: - Legacy Expansion Splash Screen Logic
+    // MARK: - Expansion Splash Screen Logic
 
     /// Check if we should show an expansion pack splash screen and populate the info
+    /// Shows detailed clinical questionnaire info (DASS-21, PHQ-9, etc.) for expansion days (Day 6+)
     /// Only shows once per day when user first enters the assessment section
-    /// NOTE: This is the detailed clinical questionnaire info splash (legacy)
     private func checkAndShowExpansionSplash(modules: [String]) {
         // Get the key for tracking if splash was shown for this day
         let splashKey = "expansionSplashShown_day\(currentDay)"

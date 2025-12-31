@@ -78,6 +78,16 @@ struct QuestionCard<Content: View>: View {
         self.content = content
     }
 
+    /// Returns the appropriate help text based on user's unit preference
+    /// Uses imperial help text if user prefers imperial and it's available
+    private var currentHelpText: String? {
+        let useImperial = OnboardingManager.shared.profile.measurementSystem == MeasurementSystem.imperial.rawValue
+        if useImperial, let imperialText = question.helpTextImperial {
+            return imperialText
+        }
+        return question.helpText
+    }
+
     var body: some View {
         VStack(spacing: Spacing.xl) {
             // Question text - large, centered, friendly
@@ -88,8 +98,8 @@ struct QuestionCard<Content: View>: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
-                // Help text - tap to expand
-                if let helpText = question.helpText {
+                // Help text - tap to expand (uses unit-aware text based on user preference)
+                if let helpText = currentHelpText {
                     Button {
                         withAnimation(.spring(response: 0.3)) {
                             showHelpText.toggle()
@@ -127,159 +137,160 @@ struct QuestionCard<Content: View>: View {
     }
 }
 
-// MARK: - Scale Input
+// MARK: - Scale Input (Unified 1-10 Scale)
 
+/// Unified slider component that presents 1-10 scale to users
+/// Internally maps to clinical scale values for accurate scoring
 struct ScaleInput: View {
     let question: Question
-    @Binding var value: Double
+    @Binding var value: Double  // Clinical value (stored/sent to backend)
     var theme: ColorTheme = ColorTheme.shared
-    // NOTE: Smart defaults are now handled by the binding getter in QuestionnaireView
-    // This component should NOT set values on appear, as that would incorrectly
-    // mark the question as user-interacted before the user actually touches the slider
 
-    /// Detect questionnaire type from question ID for standardized labels
-    private var detectedQuestionnaire: String? {
-        let id = question.id.uppercased()
-        if id.hasPrefix("ISI") { return "ISI" }
-        if id.hasPrefix("DBAS") { return "DBAS-16" }
-        if id.hasPrefix("ESS") { return "ESS" }
-        if id.hasPrefix("FSS") { return "FSS" }
-        if id.hasPrefix("PHQ") { return "PHQ-9" }
-        if id.hasPrefix("GAD") { return "GAD-7" }
-        if id.hasPrefix("DASS") { return "DASS-21" }
-        if id.hasPrefix("PSAS") { return "PSAS" }
-        if id.hasPrefix("SHI") { return "SHI" }
-        if id.hasPrefix("FOSQ") { return "FOSQ-10" }
-        if id.hasPrefix("BPI") { return "BPI" }
-        if id.hasPrefix("PSQI") { return "PSQI" }
-        if id.hasPrefix("MEQ") { return "MEQ" }
-        // Check group field for questionnaire identification
-        if let group = question.group?.uppercased() {
-            if group.contains("ISI") { return "ISI" }
-            if group.contains("DBAS") { return "DBAS-16" }
-            if group.contains("PHQ") { return "PHQ-9" }
-            if group.contains("GAD") { return "GAD-7" }
-            if group.contains("DASS") { return "DASS-21" }
-        }
-        return nil
+    // Internal display value (always 1-10 for user)
+    @State private var displayValue: Double = 5.0
+    @State private var hasInitialized: Bool = false
+
+    // Clinical scale bounds from question
+    private var clinicalMin: Int { question.scaleMin ?? 0 }
+    private var clinicalMax: Int { question.scaleMax ?? 10 }
+
+    /// Get semantic label for current display value
+    private var currentValueLabel: String {
+        ScaleMapper.getLabel(
+            displayValue: Int(displayValue),
+            questionId: question.id,
+            clinicalMin: clinicalMin,
+            clinicalMax: clinicalMax
+        )
     }
 
-    /// Get standardized label for current value
-    /// Uses question-specific labels when available (e.g., ISI has different labels per question)
-    private var currentValueLabel: String? {
-        // First try question-specific labels
-        if let labels = StandardizedAnswerLabels.labels(forQuestion: question.id) {
-            return labels[Int(value)]
-        }
-        // Fall back to questionnaire-level labels
-        guard let questionnaire = detectedQuestionnaire else { return nil }
-        guard let labels = StandardizedAnswerLabels.labels(for: questionnaire) else { return nil }
-        return labels[Int(value)]
-    }
-
-    /// Get min/max labels from standardized system
-    private var standardizedMinLabel: String {
-        if let explicit = question.scaleMinLabel { return explicit }
-        if let questionnaire = detectedQuestionnaire,
-           let minMax = StandardizedAnswerLabels.minMaxLabels(for: questionnaire) {
-            return minMax.min
-        }
-        return "\(question.scaleMin ?? 0)"
-    }
-
-    private var standardizedMaxLabel: String {
-        if let explicit = question.scaleMaxLabel { return explicit }
-        if let questionnaire = detectedQuestionnaire,
-           let minMax = StandardizedAnswerLabels.minMaxLabels(for: questionnaire) {
-            return minMax.max
-        }
-        return "\(question.scaleMax ?? 10)"
+    /// Get min/max labels for the 1-10 slider
+    private var endpointLabels: (min: String, max: String) {
+        ScaleMapper.getMinMaxLabels(
+            questionId: question.id,
+            clinicalMin: clinicalMin,
+            clinicalMax: clinicalMax
+        )
     }
 
     var body: some View {
         VStack(spacing: 12) {
-            // Min/Max labels with standardized descriptors
+            // Min/Max labels (semantic labels for 1 and 10)
             HStack {
-                Text(standardizedMinLabel)
-                    .font(.caption)
-                    .foregroundColor(CircadianColors.secondary)
-                    .multilineTextAlignment(.leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("1")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(CircadianColors.secondary)
+                    Text(endpointLabels.min)
+                        .font(.caption2)
+                        .foregroundColor(CircadianColors.secondary.opacity(0.8))
+                }
                 Spacer()
-                Text(standardizedMaxLabel)
-                    .font(.caption)
-                    .foregroundColor(CircadianColors.secondary)
-                    .multilineTextAlignment(.trailing)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("10")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(CircadianColors.secondary)
+                    Text(endpointLabels.max)
+                        .font(.caption2)
+                        .foregroundColor(CircadianColors.secondary.opacity(0.8))
+                }
             }
 
+            // Unified 1-10 slider
             Slider(
-                value: $value,
-                in: Double(question.scaleMin ?? 1)...Double(question.scaleMax ?? 10),
+                value: $displayValue,
+                in: 1...10,
                 step: 1
             )
             .accentColor(question.pillar.themeColor)
 
             // Current value with semantic label
             VStack(spacing: 4) {
-                Text("\(Int(value))")
+                Text("\(Int(displayValue))")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(question.pillar.themeColor)
 
-                // Show semantic label if available
-                if let label = currentValueLabel {
-                    Text(label)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(CircadianColors.primary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(question.pillar.themeColor.opacity(0.15))
-                        )
+                // Show semantic label
+                Text(currentValueLabel)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(CircadianColors.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(question.pillar.themeColor.opacity(0.15))
+                    )
+            }
+        }
+        .onAppear {
+            // Convert stored clinical value to display value (1-10)
+            if !hasInitialized {
+                displayValue = ScaleMapper.mapToDisplayValue(
+                    clinicalValue: value,
+                    clinicalMin: clinicalMin,
+                    clinicalMax: clinicalMax
+                )
+                hasInitialized = true
+            }
+        }
+        .onChange(of: displayValue) { newDisplayValue in
+            // Map display value (1-10) to clinical value before storing
+            let newClinicalValue = ScaleMapper.mapToClinicalScale(
+                displayValue: newDisplayValue,
+                clinicalMin: clinicalMin,
+                clinicalMax: clinicalMax
+            )
+            // Only update if different to avoid loops
+            if abs(value - newClinicalValue) > 0.01 {
+                value = newClinicalValue
+
+                // Haptic feedback - intensity scales with slider value
+                // Value 1 → 0.1 intensity (barely perceptible)
+                // Value 10 → 1.0 intensity (full strength)
+                if ThemeManager.shared.hapticFeedbackEnabled {
+                    let intensity = (newDisplayValue - 1) / 9.0 * 0.9 + 0.1
+                    HapticManager.shared.scaledImpact(intensity: CGFloat(intensity))
                 }
             }
         }
-        // REMOVED: .onAppear that was setting smart defaults
-        // This was causing values to be saved before user interaction
     }
 
     /// Static helper to compute smart default for a question
-    /// Call this from the binding's default parameter
-    /// Returns a value relative to the question's actual scale range
+    /// Returns the clinical value that the binding will store
+    /// This value will be converted to display (1-10) when the slider appears
     static func smartDefault(for question: Question) -> Double {
-        let minVal = Double(question.scaleMin ?? 1)
-        let maxVal = Double(question.scaleMax ?? 10)
-        let range = maxVal - minVal
+        let clinicalMin = question.scaleMin ?? 0
+        let clinicalMax = question.scaleMax ?? 10
 
-        // Helper to convert percentage (0-1) to scale value
-        func percentToValue(_ percent: Double) -> Double {
-            return minVal + (range * percent)
-        }
-
-        // Default to middle of range (50%)
-        let middleValue = percentToValue(0.5)
+        // Determine desired display position (1-10)
+        var desiredDisplayValue: Double = 5.0  // Default to middle
 
         switch question.id {
-        // Known question IDs with specific defaults
         case "SL_QUALITY", "1":
-            // Sleep quality - slightly above middle (60%)
-            return round(percentToValue(0.6))
+            desiredDisplayValue = 6.0  // Slightly above middle for sleep quality
         default:
-            // Smart inference based on question text
             let lowerText = question.text.lowercased()
             if lowerText.contains("quality") && lowerText.contains("sleep") {
-                return round(percentToValue(0.6))  // Sleep quality - slightly above middle
+                desiredDisplayValue = 6.0  // Sleep quality - slightly above middle
             } else if lowerText.contains("stress") {
-                return round(percentToValue(0.5))  // Stress level - middle
+                desiredDisplayValue = 5.0  // Stress level - middle
             } else if lowerText.contains("pain") {
-                return round(percentToValue(0.2))  // Pain level - low (optimistic)
+                desiredDisplayValue = 2.0  // Pain level - low (optimistic)
             } else if lowerText.contains("energy") || lowerText.contains("refreshed") {
-                return round(percentToValue(0.6))  // Energy/refreshed - slightly above middle
+                desiredDisplayValue = 6.0  // Energy/refreshed - slightly above middle
             }
-            // Default to middle of range
-            return round(middleValue)
         }
+
+        // Convert display value to clinical value for storage
+        return ScaleMapper.mapToClinicalScale(
+            displayValue: desiredDisplayValue,
+            clinicalMin: clinicalMin,
+            clinicalMax: clinicalMax
+        )
     }
 }
 

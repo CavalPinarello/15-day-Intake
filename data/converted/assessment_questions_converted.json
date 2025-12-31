@@ -1151,7 +1151,6 @@
         { "ageUnder": 55 }
       ]
     },
-    "help_text": "Only shown for women of reproductive age",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -1213,7 +1212,6 @@
         { "ageUnder": 55 }
       ]
     },
-    "help_text": "Only shown for women of reproductive age",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -5714,7 +5712,8 @@
       "min": 15,
       "max": 28
     },
-    "help_text": "Ideal sleep temperature is 16-19°C (60-67°F). Most bedrooms are between 18-24°C (64-75°F).",
+    "help_text": "Ideal sleep temperature is 16-19°C. Most bedrooms are between 18-24°C.",
+    "help_text_imperial": "Ideal sleep temperature is 60-67°F. Most bedrooms are between 64-75°F.",
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,
     "updated_at": 1763104572236
@@ -6834,15 +6833,20 @@
     "answer_format": "number_input",
     "format_config": {
       "min": 0,
-      "max": 1000,
+      "max": 100,
       "step": 1,
       "decimalPlaces": 0,
-      "inputMode": "numeric"
+      "inputMode": "numeric",
+      "defaultValue": 2
     },
     "validation_rules": {
-      "required": true,
+      "required": false,
       "min": 0,
-      "max": 1000
+      "max": 100
+    },
+    "conditional_logic": {
+      "questionId": "32",
+      "equals": "yes"
     },
     "estimated_time_seconds": 30,
     "created_at": 1763104572236,

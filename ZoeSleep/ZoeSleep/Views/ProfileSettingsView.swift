@@ -367,52 +367,20 @@ struct ProfileSettingsView: View {
                 .padding(.vertical, 4)
             }
 
-            // Individual settings (shown but disabled when enhanced mode is on)
+            // Individual settings
             Group {
-                // Large Icons Mode
-                Toggle(isOn: $themeManager.largeIconsMode) {
+                // Haptic Feedback
+                Toggle(isOn: $themeManager.hapticFeedbackEnabled) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Label("Large Icons Mode", systemImage: "textformat.size.larger")
+                        Label("Haptic Feedback", systemImage: "hand.tap")
                             .font(.headline)
-                        Text("Makes buttons & text 30% larger")
+                        Text("Gentle vibration on sliders")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
                 .tint(themeManager.accentColor)
                 .accessibleTapTarget()
-                .disabled(themeManager.enhancedReadabilityMode)
-                .opacity(themeManager.enhancedReadabilityMode ? 0.6 : 1.0)
-
-                // High Contrast
-                Toggle(isOn: $themeManager.highContrast) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("High Contrast", systemImage: "circle.lefthalf.filled")
-                            .font(.headline)
-                        Text("Bolder colors, clearer borders")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .tint(themeManager.accentColor)
-                .accessibleTapTarget()
-                .disabled(themeManager.enhancedReadabilityMode)
-                .opacity(themeManager.enhancedReadabilityMode ? 0.6 : 1.0)
-
-                // Reduce Motion
-                Toggle(isOn: $themeManager.reduceMotion) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("Reduce Motion", systemImage: "figure.walk")
-                            .font(.headline)
-                        Text("Minimizes animations")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .tint(themeManager.accentColor)
-                .accessibleTapTarget()
-                .disabled(themeManager.enhancedReadabilityMode)
-                .opacity(themeManager.enhancedReadabilityMode ? 0.6 : 1.0)
 
                 // Text Size Slider
                 VStack(alignment: .leading, spacing: 8) {

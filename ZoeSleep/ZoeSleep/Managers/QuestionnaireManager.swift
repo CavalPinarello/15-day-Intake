@@ -30,6 +30,9 @@ class QuestionnaireManager: ObservableObject {
     // Cached expansion schedule from Convex (for Days 6+)
     @Published var scheduledExpansionForToday: ExpansionDayInfo?
 
+    // Full expansion schedule summary (includes gateway -> day mapping)
+    @Published var expansionScheduleSummary: ExpansionScheduleSummary?
+
     // Actual assessment question count for today (loaded from getQuestionsForUserDay)
     // This is the source of truth for whether there's an assessment to show
     @Published var assessmentQuestionCountForToday: Int = 0
@@ -149,21 +152,26 @@ class QuestionnaireManager: ObservableObject {
 
     // MARK: - Day Configuration
 
+    // IMPORTANT: This must match convex/fixedSchedule.ts EXACTLY!
+    // Days 1-5: Core Assessment (always shown)
+    // Days 6-14: Expansion Packs (gateway-triggered)
     static let dayConfigurations: [DayConfiguration] = [
-        DayConfiguration(id: 1, dayNumber: 1, title: "Demographics & Sleep Quality", description: "About you and your sleep habits", estimatedMinutes: 12, moduleIds: ["core_social", "core_metabolic", "core_sleep_quality_part1"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 2, dayNumber: 2, title: "PSQI & Sleep Patterns", description: "Sleep patterns and quality assessment", estimatedMinutes: 11, moduleIds: ["core_sleep_quality_part2", "core_sleep_quantity", "core_sleep_regularity"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 3, dayNumber: 3, title: "Sleep Timing & Mental Health", description: "Light, screens, and wellbeing", estimatedMinutes: 8, moduleIds: ["core_sleep_timing", "gateway_mental_health"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 4, dayNumber: 4, title: "Physical Health & Metabolic", description: "Physical health and activity", estimatedMinutes: 9, moduleIds: ["core_physical", "gateway_physical"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 5, dayNumber: 5, title: "Nutritional & Social", description: "Diet, substances, and social factors", estimatedMinutes: 7, moduleIds: ["core_nutritional", "core_social_part2"], isExpansionDay: false, requiredGateways: nil),
-        DayConfiguration(id: 6, dayNumber: 6, title: "ISI - Insomnia Severity", description: "Insomnia severity assessment", estimatedMinutes: 8, moduleIds: ["expansion_isi"], isExpansionDay: true, requiredGateways: [.insomnia, .poorSleepQuality]),
-        DayConfiguration(id: 7, dayNumber: 7, title: "DBAS-16 Part 1", description: "Sleep beliefs assessment (part 1)", estimatedMinutes: 8, moduleIds: ["expansion_dbas_part1"], isExpansionDay: true, requiredGateways: [.insomnia]),
-        DayConfiguration(id: 8, dayNumber: 8, title: "DBAS-16 Part 2 & Sleep Hygiene", description: "Sleep beliefs and habits", estimatedMinutes: 14, moduleIds: ["expansion_dbas_part2", "expansion_sleep_hygiene_part1"], isExpansionDay: true, requiredGateways: [.insomnia]),
-        DayConfiguration(id: 9, dayNumber: 9, title: "Sleep Hygiene & PSAS Part 1", description: "Habits and pre-sleep arousal", estimatedMinutes: 13, moduleIds: ["expansion_sleep_hygiene_part2", "expansion_psas_part1"], isExpansionDay: true, requiredGateways: [.insomnia]),
-        DayConfiguration(id: 10, dayNumber: 10, title: "PSAS Part 2 & ESS", description: "Arousal and daytime sleepiness", estimatedMinutes: 16, moduleIds: ["expansion_psas_part2", "expansion_ess"], isExpansionDay: true, requiredGateways: [.insomnia, .excessiveSleepiness]),
-        DayConfiguration(id: 11, dayNumber: 11, title: "FSS & FOSQ-10 Part 1", description: "Fatigue and daily functioning", estimatedMinutes: 14, moduleIds: ["expansion_fss", "expansion_fosq_part1"], isExpansionDay: true, requiredGateways: [.excessiveSleepiness]),
-        DayConfiguration(id: 12, dayNumber: 12, title: "FOSQ-10 Part 2 & PHQ-9 & GAD-7", description: "Mental health screening", estimatedMinutes: 14, moduleIds: ["expansion_fosq_part2", "expansion_phq9", "expansion_gad7_part1"], isExpansionDay: true, requiredGateways: [.depression, .anxiety]),
-        DayConfiguration(id: 13, dayNumber: 13, title: "GAD-7 Part 2 & DASS-21 & PROMIS", description: "Anxiety and cognitive function", estimatedMinutes: 16, moduleIds: ["expansion_gad7_part2", "expansion_dass21_part1", "expansion_promis_cognitive"], isExpansionDay: true, requiredGateways: [.anxiety, .cognitive]),
-        DayConfiguration(id: 14, dayNumber: 14, title: "Final Assessments", description: "Final assessments to complete your profile", estimatedMinutes: 35, moduleIds: ["expansion_dass21_part2", "expansion_stop_bang", "expansion_berlin", "expansion_bpi", "expansion_medas", "expansion_meq"], isExpansionDay: true, requiredGateways: [.osa, .pain, .dietImpact, .sleepTiming])
+        // Core Assessment Phase (Days 1-5)
+        DayConfiguration(id: 1, dayNumber: 1, title: "Let's Get to Know You", description: "Demographics, sleep history, and environment", estimatedMinutes: 8, moduleIds: ["core_social"], isExpansionDay: false, requiredGateways: nil),
+        DayConfiguration(id: 2, dayNumber: 2, title: "Your Sleep Quality", description: "Sleep patterns, quality ratings, and satisfaction", estimatedMinutes: 8, moduleIds: ["core_sleep_quality_1", "core_sleep_quality_2"], isExpansionDay: false, requiredGateways: nil),
+        DayConfiguration(id: 3, dayNumber: 3, title: "Mind & Mood", description: "Mental health, daytime function, and concentration", estimatedMinutes: 8, moduleIds: ["gateway_mental_health", "gateway_cognitive"], isExpansionDay: false, requiredGateways: nil),
+        DayConfiguration(id: 4, dayNumber: 4, title: "Body & Health", description: "Physical health, breathing, pain, and activity", estimatedMinutes: 8, moduleIds: ["core_physical"], isExpansionDay: false, requiredGateways: nil),
+        DayConfiguration(id: 5, dayNumber: 5, title: "Daily Habits", description: "Caffeine, alcohol, meals, screens, and stress", estimatedMinutes: 8, moduleIds: ["core_nutritional", "core_metabolic"], isExpansionDay: false, requiredGateways: nil),
+        // Expansion Pack Phase (Days 6-14) - Gateway Triggered
+        DayConfiguration(id: 6, dayNumber: 6, title: "Sleep & Work Patterns", description: "Insomnia severity and shift work assessment", estimatedMinutes: 8, moduleIds: ["expansion_isi", "expansion_swdsq"], isExpansionDay: true, requiredGateways: [.insomnia, .poorSleepQuality, .shiftWork]),
+        DayConfiguration(id: 7, dayNumber: 7, title: "Mood & Thinking", description: "Depression screening and cognitive function", estimatedMinutes: 10, moduleIds: ["expansion_phq9", "expansion_promis_cognitive"], isExpansionDay: true, requiredGateways: [.depression, .cognitive]),
+        DayConfiguration(id: 8, dayNumber: 8, title: "Anxiety & Sleep Habits", description: "Anxiety screening and sleep hygiene assessment", estimatedMinutes: 12, moduleIds: ["expansion_gad7", "expansion_sleep_hygiene_part1", "expansion_sleep_hygiene_part2"], isExpansionDay: true, requiredGateways: [.anxiety, .insomnia, .poorSleepQuality]),
+        DayConfiguration(id: 9, dayNumber: 9, title: "Sleep Apnea Screening", description: "STOP-BANG sleep apnea risk assessment", estimatedMinutes: 5, moduleIds: ["expansion_stop_bang"], isExpansionDay: true, requiredGateways: [.osa]),
+        DayConfiguration(id: 10, dayNumber: 10, title: "Daytime Energy", description: "Sleepiness and fatigue severity assessment", estimatedMinutes: 12, moduleIds: ["expansion_ess", "expansion_fss"], isExpansionDay: true, requiredGateways: [.excessiveSleepiness]),
+        DayConfiguration(id: 11, dayNumber: 11, title: "Beliefs & Pain (Part 1)", description: "Sleep beliefs and pain severity assessment", estimatedMinutes: 8, moduleIds: ["expansion_dbas6", "expansion_bpi_part1"], isExpansionDay: true, requiredGateways: [.insomnia, .pain]),
+        DayConfiguration(id: 12, dayNumber: 12, title: "Pain Impact", description: "Pain interference with daily activities", estimatedMinutes: 5, moduleIds: ["expansion_bpi_part2"], isExpansionDay: true, requiredGateways: [.pain]),
+        DayConfiguration(id: 13, dayNumber: 13, title: "Sleep Arousal & Function", description: "Pre-sleep arousal and functional outcomes", estimatedMinutes: 18, moduleIds: ["expansion_psas_cognitive", "expansion_psas_somatic", "expansion_fosq_part1", "expansion_fosq_part2"], isExpansionDay: true, requiredGateways: [.insomnia, .anxiety, .excessiveSleepiness]),
+        DayConfiguration(id: 14, dayNumber: 14, title: "Diet & Chronotype", description: "Diet assessment and sleep timing patterns", estimatedMinutes: 22, moduleIds: ["expansion_medas", "expansion_meq_part1", "expansion_meq_part2"], isExpansionDay: true, requiredGateways: [.dietImpact, .sleepTiming])
     ]
 
     // MARK: - Consensus Sleep Diary Questions (Asked Every Day)
@@ -2369,8 +2377,33 @@ class QuestionnaireManager: ObservableObject {
 
             let triggeredCount = gatewayStates.filter { $0.triggered }.count
             print("[iOS] Loaded \(serverGatewayStates.count) gateway states from server, \(triggeredCount) triggered")
+
+            // Also load expansion schedule summary if there are triggered gateways
+            if triggeredCount > 0 {
+                await loadExpansionScheduleSummary()
+            }
         } catch {
             print("[iOS] Error loading gateway states: \(error.localizedDescription)")
+        }
+    }
+
+    /// Load the full expansion schedule summary from Convex
+    /// This includes the gateway -> scheduled day mapping
+    @MainActor
+    func loadExpansionScheduleSummary() async {
+        guard convexService.isAuthenticated else {
+            print("[iOS] loadExpansionScheduleSummary: Not authenticated, skipping")
+            return
+        }
+
+        do {
+            let summary = try await convexService.getExpansionScheduleSummary()
+            self.expansionScheduleSummary = summary
+            if let gatewaySchedule = summary.gatewaySchedule {
+                print("[iOS] Loaded expansion schedule summary: \(gatewaySchedule.count) gateways mapped to days")
+            }
+        } catch {
+            print("[iOS] Error loading expansion schedule summary: \(error.localizedDescription)")
         }
     }
 }

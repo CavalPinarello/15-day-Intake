@@ -11,7 +11,16 @@
 import { query, mutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 import { validateIOSSession } from "./auth";
+import {
+  FIXED_SCHEDULE,
+  getDayConfig,
+  shouldShowExpansion,
+  getModuleIdsForDay,
+  THEME_TO_MODULE_IDS,
+  PACK_TO_MODULE_IDS,
+} from "./fixedSchedule";
 
 // ============================================
 // Derivable Questions Configuration
@@ -110,10 +119,245 @@ const DERIVABLE_QUESTIONS = {
       return null;
     }
   },
+
+  // ============================================
+  // Derivations from OTHER Assessment Questions
+  // These reduce duplicate questions while preserving clinical scores
+  // ============================================
+
+  // Question 43: "When have you usually gotten up in the morning?"
+  // Derived from: SD_FINAL_WAKE (sleep diary wake time)
+  "43": {
+    sources: ["SD_FINAL_WAKE"],
+    derive: (responses: Map<string, { value?: string; number?: number }>) => {
+      return responses.get("SD_FINAL_WAKE")?.value ?? null;
+    }
+  },
+
+  // Question 12A: "How many times do you typically wake up during the night?"
+  // Derived from: SD_AWAKENINGS_COUNT (sleep diary)
+  "12A": {
+    sources: ["SD_AWAKENINGS_COUNT"],
+    derive: (responses: Map<string, { value?: string; number?: number }>) => {
+      return responses.get("SD_AWAKENINGS_COUNT")?.number ?? null;
+    }
+  },
+
+  // Question 12C: "When you wake up during the night, how long does it typically take to fall back asleep?"
+  // Derived from: SD_AWAKENINGS_DURATION / SD_AWAKENINGS_COUNT
+  "12C": {
+    sources: ["SD_AWAKENINGS_DURATION", "SD_AWAKENINGS_COUNT"],
+    derive: (responses: Map<string, { value?: string; number?: number }>) => {
+      const duration = responses.get("SD_AWAKENINGS_DURATION")?.number ?? 0;
+      const count = responses.get("SD_AWAKENINGS_COUNT")?.number ?? 1;
+      if (count === 0) return 0;
+      return Math.round(duration / count);
+    }
+  },
+
+  // Question 54C: DUPLICATE of Q31 - "What time do you typically have your last caffeinated beverage?"
+  // Derived directly from Q31 (same question)
+  "54C": {
+    sources: ["31"],
+    derive: (responses: Map<string, { value?: string; number?: number }>) => {
+      return responses.get("31")?.value ?? null;
+    }
+  },
+
+  // Question 55: DUPLICATE of Q1 - "Rate your sleep quality overall" (PSQI Component 1)
+  // Derived from Q1 with scale conversion: 1-10 → 0-3 (PSQI scale)
+  "55": {
+    sources: ["1"],
+    derive: (responses: Map<string, { value?: string; number?: number }>) => {
+      const q1 = responses.get("1")?.number;
+      if (q1 === undefined || q1 === null) return null;
+      // Convert 1-10 scale to 0-3 PSQI scale
+      // 1-3 → 0 (Very bad), 4-5 → 1 (Fairly bad), 6-7 → 2 (Fairly good), 8-10 → 3 (Very good)
+      if (q1 <= 3) return 0;
+      if (q1 <= 5) return 1;
+      if (q1 <= 7) return 2;
+      return 3;
+    }
+  },
+
+  // Question 200: DUPLICATE of Q27 - "Do you have high blood pressure?" (Berlin Category 2)
+  // Derived directly from Q27 (same question asked on Day 5)
+  "200": {
+    sources: ["27"],
+    derive: (responses: Map<string, { value?: string; number?: number }>) => {
+      return responses.get("27")?.value ?? null;
+    }
+  },
 } as const;
 
 // Set of all derivable question IDs for quick lookup
 const DERIVABLE_QUESTION_IDS = new Set(Object.keys(DERIVABLE_QUESTIONS));
+
+// ============================================
+// Always Hidden Duplicates (assessment-to-assessment)
+// ============================================
+// These are semantic duplicates of other assessment questions
+// They should NEVER be shown to users - always filtered unconditionally
+// Their values are derived from the source question for clinical scoring
+const ALWAYS_HIDDEN_DUPLICATE_IDS = new Set([
+  "55",   // Duplicate of Q1 - "Rate your sleep quality overall" (PSQI) → derived from Q1
+  "54C",  // Duplicate of Q31 - "Last caffeinated beverage time" → derived from Q31
+  "200",  // Duplicate of Q27 - "High blood pressure" (Berlin) → derived from Q27
+]);
+
+// ============================================
+// Sleep Diary Average-Based Derivations (7+ days required)
+// ============================================
+
+/**
+ * Questions that can be derived from AVERAGED sleep diary data.
+ * These require 7+ days of sleep diary to have reliable averages.
+ *
+ * The derive function receives aggregated sleep diary stats.
+ */
+interface SleepDiaryAverages {
+  dayCount: number;
+  avgBedtime: string | null;       // Average bedtime (HH:MM)
+  avgWakeTime: string | null;      // Average wake time (HH:MM)
+  avgLatency: number | null;       // Average sleep latency (minutes)
+  avgAwakenings: number | null;    // Average number of awakenings
+  avgWASO: number | null;          // Average wake after sleep onset (minutes)
+  avgTotalSleep: number | null;    // Average total sleep time (hours)
+  avgQuality: number | null;       // Average sleep quality (1-10)
+  avgAlertness: number | null;     // Average morning alertness (1-10)
+  latencyOver30Pct: number | null; // % of nights with latency > 30 min
+  awakeningsPct: number | null;    // % of nights with awakenings > 0
+  lowAlertnessPct: number | null;  // % of nights with alertness ≤ 3
+}
+
+const AVERAGE_DERIVABLE_QUESTIONS: Record<string, {
+  minDays: number;
+  derive: (stats: SleepDiaryAverages) => string | number | null;
+}> = {
+  // Question 1: "How would you rate your overall sleep quality in the past month?"
+  // Scale: 1-10
+  "1": {
+    minDays: 7,
+    derive: (stats) => {
+      if (stats.avgQuality === null) return null;
+      return Math.round(stats.avgQuality);
+    }
+  },
+
+  // Question 2: "How often do you feel refreshed and rested after sleep?"
+  // Options: always, usually, sometimes, rarely, never
+  "2": {
+    minDays: 7,
+    derive: (stats) => {
+      if (stats.avgAlertness === null) return null;
+      // Map average alertness (1-10) to frequency
+      if (stats.avgAlertness >= 8) return "always";
+      if (stats.avgAlertness >= 6) return "usually";
+      if (stats.avgAlertness >= 4) return "sometimes";
+      if (stats.avgAlertness >= 2) return "rarely";
+      return "never";
+    }
+  },
+
+  // Question 12A: "How many times do you typically wake up during the night?"
+  // Number input
+  "12A": {
+    minDays: 7,
+    derive: (stats) => {
+      if (stats.avgAwakenings === null) return null;
+      return Math.round(stats.avgAwakenings);
+    }
+  },
+
+  // Question 12C: "When you wake up, how long does it typically take to fall back asleep?"
+  // Minutes input
+  "12C": {
+    minDays: 7,
+    derive: (stats) => {
+      if (stats.avgWASO === null || stats.avgAwakenings === null) return null;
+      if (stats.avgAwakenings === 0) return 0;
+      // Average WASO per awakening
+      return Math.round(stats.avgWASO / Math.max(1, stats.avgAwakenings));
+    }
+  },
+
+  // Question 41: "When have you usually gone to bed at night?"
+  // Time picker (HH:MM)
+  "41": {
+    minDays: 7,
+    derive: (stats) => stats.avgBedtime
+  },
+
+  // Question 42: "How many minutes did it typically take you to fall asleep?"
+  // Minutes input
+  "42": {
+    minDays: 7,
+    derive: (stats) => {
+      if (stats.avgLatency === null) return null;
+      return Math.round(stats.avgLatency);
+    }
+  },
+
+  // Question 43: "When have you usually gotten up in the morning?"
+  // Time picker (HH:MM)
+  "43": {
+    minDays: 7,
+    derive: (stats) => stats.avgWakeTime
+  },
+
+  // Question 44: "How many hours of actual sleep did you typically get at night?"
+  // Number input (hours)
+  "44": {
+    minDays: 7,
+    derive: (stats) => {
+      if (stats.avgTotalSleep === null) return null;
+      // Round to nearest 0.5 hour
+      return Math.round(stats.avgTotalSleep * 2) / 2;
+    }
+  },
+
+  // Question 45: "How often have you had trouble sleeping because you cannot get to sleep within 30 minutes?"
+  // Options: not_at_all, less_than_once_week, once_or_twice_week, three_or_more_week
+  "45": {
+    minDays: 7,
+    derive: (stats) => {
+      if (stats.latencyOver30Pct === null) return null;
+      // Map fraction to frequency category (values are 0.0 - 1.0)
+      if (stats.latencyOver30Pct < 0.05) return "not_at_all";       // <5% of nights
+      if (stats.latencyOver30Pct < 0.20) return "less_than_once_week"; // <20%
+      if (stats.latencyOver30Pct < 0.50) return "once_or_twice_week";  // <50%
+      return "three_or_more_week";  // 50%+ of nights
+    }
+  },
+
+  // Question 46: "How often have you had trouble sleeping because you wake up in the middle of the night?"
+  // Options: not_at_all, less_than_once_week, once_or_twice_week, three_or_more_week
+  "46": {
+    minDays: 7,
+    derive: (stats) => {
+      if (stats.awakeningsPct === null) return null;
+      // Map fraction to frequency category (values are 0.0 - 1.0)
+      if (stats.awakeningsPct < 0.05) return "not_at_all";          // <5% of nights
+      if (stats.awakeningsPct < 0.20) return "less_than_once_week"; // <20%
+      if (stats.awakeningsPct < 0.50) return "once_or_twice_week";  // <50%
+      return "three_or_more_week";  // 50%+ of nights
+    }
+  },
+
+  // Question 17: "Do you feel excessively tired or sleepy during the day?"
+  // Scale: 1-10 (slider)
+  "17": {
+    minDays: 7,
+    derive: (stats) => {
+      if (stats.avgAlertness === null) return null;
+      // Inverse of alertness - if alertness is low, tiredness is high
+      // Convert 1-10 alertness to 1-10 tiredness (10 - alertness + 1)
+      return Math.round(11 - stats.avgAlertness);
+    }
+  },
+};
+
+const AVERAGE_DERIVABLE_QUESTION_IDS = new Set(Object.keys(AVERAGE_DERIVABLE_QUESTIONS));
 
 // ============================================
 // Helper Functions
@@ -237,6 +481,264 @@ async function generateDerivedResponses(
     });
 
     console.log(`[Convex] Generated derived response for ${questionId}: ${derivedValue} (is_derived=true, isArray=${isArray})`);
+    derivedCount++;
+  }
+
+  return derivedCount;
+}
+
+/**
+ * Get averaged sleep diary metrics across all days with complete data.
+ * Used to derive assessment questions that ask about "typical" or "average" sleep patterns.
+ * Returns null if fewer than minDays of data available.
+ */
+async function getSleepDiaryAverages(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  userId: Id<"users">,
+  minDays: number = 7
+): Promise<SleepDiaryAverages | null> {
+  // Get all CSD_ responses for this user across all days
+  const allResponses = await ctx.db
+    .query("user_assessment_responses")
+    .withIndex("by_user", (q: { eq: (field: string, value: unknown) => unknown }) =>
+      q.eq("user_id", userId)
+    )
+    .filter((q: { field: (name: string) => unknown; gte: (a: unknown, b: string) => unknown }) =>
+      q.gte(q.field("question_id"), "CSD_")
+    )
+    .collect();
+
+  // Filter to only CSD_ questions
+  const csdResponses = allResponses.filter((r: { question_id: string }) =>
+    r.question_id.startsWith("CSD_")
+  );
+
+  // Group by day_number
+  const byDay = new Map<number, Map<string, { value?: string; number?: number }>>();
+  for (const r of csdResponses) {
+    const dayNum = r.day_number as number;
+    if (!byDay.has(dayNum)) {
+      byDay.set(dayNum, new Map());
+    }
+    byDay.get(dayNum)!.set(r.question_id as string, {
+      value: r.response_value ?? undefined,
+      number: r.response_number ?? undefined,
+    });
+  }
+
+  // Filter to days with complete essential data
+  const essentialQuestions = ["CSD_TRY_SLEEP", "CSD_FINAL_WAKE", "CSD_LATENCY", "CSD_WASO"];
+  const completeDays: Map<string, { value?: string; number?: number }>[] = [];
+
+  for (const [, dayResponses] of byDay) {
+    const hasEssential = essentialQuestions.every(qId => dayResponses.has(qId));
+    if (hasEssential) {
+      completeDays.push(dayResponses);
+    }
+  }
+
+  // Check minimum days requirement
+  if (completeDays.length < minDays) {
+    console.log(`[Convex] Sleep diary has ${completeDays.length}/${minDays} complete days, not enough for averaging`);
+    return null;
+  }
+
+  console.log(`[Convex] Calculating sleep diary averages from ${completeDays.length} complete days`);
+
+  // Parse time string to minutes since midnight
+  const parseTimeToMinutes = (timeStr: string | undefined): number | null => {
+    if (!timeStr) return null;
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+    const hours = parseInt(match[1], 10);
+    const mins = parseInt(match[2], 10);
+    return hours * 60 + mins;
+  };
+
+  // Convert minutes to HH:MM string
+  const minutesToTime = (totalMins: number): string => {
+    const normalizedMins = ((totalMins % 1440) + 1440) % 1440; // Handle negative/overflow
+    const h = Math.floor(normalizedMins / 60);
+    const m = normalizedMins % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  };
+
+  // Aggregate values
+  const bedtimes: number[] = [];
+  const wakeTimes: number[] = [];
+  const latencies: number[] = [];
+  const awakeningsCounts: number[] = [];
+  const wasos: number[] = [];
+  const qualities: number[] = [];
+  const alertnesses: number[] = [];
+  let latencyOver30Count = 0;
+  let hasAwakeningsCount = 0;
+  let lowAlertnessCount = 0;
+
+  for (const dayResponses of completeDays) {
+    // Bedtime (CSD_TRY_SLEEP)
+    const bedtimeMins = parseTimeToMinutes(dayResponses.get("CSD_TRY_SLEEP")?.value);
+    if (bedtimeMins !== null) {
+      // Normalize bedtime: if after 12PM but before midnight, treat as same day
+      // if before 12PM, treat as "next day" (early morning)
+      const normalizedBedtime = bedtimeMins < 720 ? bedtimeMins + 1440 : bedtimeMins;
+      bedtimes.push(normalizedBedtime);
+    }
+
+    // Wake time (CSD_FINAL_WAKE)
+    const wakeMins = parseTimeToMinutes(dayResponses.get("CSD_FINAL_WAKE")?.value);
+    if (wakeMins !== null) {
+      wakeTimes.push(wakeMins);
+    }
+
+    // Sleep latency (CSD_LATENCY)
+    const latency = dayResponses.get("CSD_LATENCY")?.number;
+    if (latency !== undefined && latency !== null) {
+      latencies.push(latency);
+      if (latency > 30) latencyOver30Count++;
+    }
+
+    // Awakenings count (CSD_AWAKENINGS)
+    const awakenings = dayResponses.get("CSD_AWAKENINGS")?.number;
+    if (awakenings !== undefined && awakenings !== null) {
+      awakeningsCounts.push(awakenings);
+      if (awakenings > 0) hasAwakeningsCount++;
+    }
+
+    // WASO (CSD_WASO)
+    const waso = dayResponses.get("CSD_WASO")?.number;
+    if (waso !== undefined && waso !== null) {
+      wasos.push(waso);
+    }
+
+    // Quality (CSD_QUALITY) - scale 1-10
+    const quality = dayResponses.get("CSD_QUALITY")?.number;
+    if (quality !== undefined && quality !== null) {
+      qualities.push(quality);
+    }
+
+    // Alertness (CSD_ALERTNESS) - scale 1-10 where 10 is most alert
+    const alertness = dayResponses.get("CSD_ALERTNESS")?.number;
+    if (alertness !== undefined && alertness !== null) {
+      alertnesses.push(alertness);
+      if (alertness <= 4) lowAlertnessCount++; // Low alertness = excessive sleepiness
+    }
+  }
+
+  // Calculate averages
+  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+
+  // Calculate average bedtime (handling the normalization)
+  const avgBedtimeMins = avg(bedtimes);
+  const avgBedtime = avgBedtimeMins !== null ? minutesToTime(avgBedtimeMins) : null;
+
+  // Calculate total sleep time for each day
+  const totalSleepTimes: number[] = [];
+  for (const dayResponses of completeDays) {
+    const bedtimeMins = parseTimeToMinutes(dayResponses.get("CSD_TRY_SLEEP")?.value);
+    const wakeMins = parseTimeToMinutes(dayResponses.get("CSD_FINAL_WAKE")?.value);
+    const latency = dayResponses.get("CSD_LATENCY")?.number ?? 0;
+    const waso = dayResponses.get("CSD_WASO")?.number ?? 0;
+
+    if (bedtimeMins !== null && wakeMins !== null) {
+      // Calculate time in bed (handling midnight crossing)
+      let timeInBed: number;
+      if (wakeMins < bedtimeMins) {
+        timeInBed = (1440 - bedtimeMins) + wakeMins;
+      } else {
+        timeInBed = wakeMins - bedtimeMins;
+      }
+      // Total sleep = time in bed - latency - WASO
+      const totalSleep = Math.max(0, timeInBed - latency - waso);
+      totalSleepTimes.push(totalSleep / 60); // Convert to hours
+    }
+  }
+
+  const avgTotalSleep = avg(totalSleepTimes);
+  const avgWakeTimeMins = avg(wakeTimes);
+
+  return {
+    dayCount: completeDays.length,
+    avgBedtime,
+    avgWakeTime: avgWakeTimeMins !== null ? minutesToTime(avgWakeTimeMins) : null,
+    avgLatency: avg(latencies),
+    avgAwakenings: avg(awakeningsCounts),
+    avgWASO: avg(wasos),
+    avgTotalSleep,
+    avgQuality: avg(qualities),
+    avgAlertness: avg(alertnesses),
+    latencyOver30Pct: latencies.length > 0 ? latencyOver30Count / latencies.length : null,
+    awakeningsPct: awakeningsCounts.length > 0 ? hasAwakeningsCount / awakeningsCounts.length : null,
+    lowAlertnessPct: alertnesses.length > 0 ? lowAlertnessCount / alertnesses.length : null,
+  };
+}
+
+/**
+ * Generate and save derived responses for questions that can be calculated from
+ * AVERAGED sleep diary data (7+ days of entries).
+ * This is different from single-day derivations - these represent "typical" values.
+ */
+async function generateAverageDerivedResponses(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  dayNumber: number
+): Promise<number> {
+  // Get averaged sleep diary stats
+  const stats = await getSleepDiaryAverages(ctx, userId, 7);
+
+  if (!stats) {
+    console.log(`[Convex] Not enough sleep diary data to generate average-derived responses`);
+    return 0;
+  }
+
+  const now = Date.now();
+  let derivedCount = 0;
+
+  // Generate derived responses for each average-derivable question
+  for (const [questionId, config] of Object.entries(AVERAGE_DERIVABLE_QUESTIONS)) {
+    // Check if this question requires a specific minimum days
+    if (stats.dayCount < config.minDays) {
+      continue;
+    }
+
+    // Check if response already exists for this question (any day)
+    const existingResponse = await ctx.db
+      .query("user_assessment_responses")
+      .withIndex("by_user_question", (q) =>
+        q.eq("user_id", userId).eq("question_id", questionId)
+      )
+      .first();
+
+    if (existingResponse) {
+      console.log(`[Convex] Average-derived response for ${questionId} already exists, skipping`);
+      continue;
+    }
+
+    // Derive the value from averaged stats
+    const derivedValue = config.derive(stats);
+
+    if (derivedValue === null) {
+      console.log(`[Convex] Could not derive averaged value for ${questionId}`);
+      continue;
+    }
+
+    // Save the derived response
+    const isNumeric = typeof derivedValue === "number";
+
+    await ctx.db.insert("user_assessment_responses", {
+      user_id: userId,
+      question_id: questionId,
+      response_value: isNumeric ? undefined : String(derivedValue),
+      response_number: isNumeric ? derivedValue : undefined,
+      day_number: dayNumber,
+      is_derived: true,
+      response_source: "sleep_diary_average", // Track source for audit
+      created_at: now,
+      updated_at: now,
+    });
+
+    console.log(`[Convex] Generated average-derived response for ${questionId}: ${derivedValue}`);
     derivedCount++;
   }
 
@@ -381,6 +883,218 @@ async function computeSleepMetricsForDay(
     console.log(
       `[computeSleepMetrics] Created sleep data for ${date}: ${totalSleepMins} mins, ${sleepEfficiency}% efficiency`
     );
+  }
+}
+
+/**
+ * Gateway trigger question IDs and their evaluation logic.
+ * Used for server-side gateway evaluation when responses are saved.
+ */
+const GATEWAY_TRIGGER_QUESTIONS: Record<string, string[]> = {
+  insomnia: ["3", "PSQI_2", "PSQI_5a", "PSQI_5b"],
+  poor_sleep_quality: ["1", "3"], // Also inherits from insomnia
+  depression: ["15"],
+  anxiety: ["16"],
+  excessive_sleepiness: ["17"],
+  cognitive: ["18"],
+  osa: ["19", "20", "48", "49"], // Q48/49 are follow-ups
+  pain: ["22", "23", "53"], // Q53 is follow-up
+  sleep_timing: ["REG_2", "7", "9"],
+  diet_impact: ["34"],
+  shift_work: ["53B", "47"], // Q47 is prostate follow-up that might indicate shift work
+};
+
+/**
+ * Evaluate and update gateway states based on saved responses.
+ * Called automatically when responses are saved to ensure gateway states stay in sync.
+ */
+async function evaluateAndUpdateGatewayStates(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  savedQuestionIds: string[]
+): Promise<void> {
+  // Check if any saved questions are gateway triggers
+  const relevantGateways = new Set<string>();
+  for (const [gateway, triggerQuestions] of Object.entries(GATEWAY_TRIGGER_QUESTIONS)) {
+    if (triggerQuestions.some(q => savedQuestionIds.includes(q))) {
+      relevantGateways.add(gateway);
+    }
+  }
+
+  if (relevantGateways.size === 0) {
+    return; // No gateway-triggering questions were saved
+  }
+
+  console.log(`[Gateway Evaluation] Checking gateways: ${[...relevantGateways].join(", ")}`);
+
+  // Get ALL user responses for evaluation
+  const allResponses = await ctx.db
+    .query("user_assessment_responses")
+    .withIndex("by_user", (q) => q.eq("user_id", userId))
+    .collect();
+
+  // Build response map
+  const responseMap = new Map<string, { value?: string; number?: number }>();
+  for (const r of allResponses) {
+    responseMap.set(r.question_id, {
+      value: r.response_value ?? undefined,
+      number: r.response_number ?? undefined,
+    });
+  }
+
+  // Helper to get option index from text (0-indexed)
+  const getOptionIndex = (value: string | undefined, options: string[]): number => {
+    if (!value) return -1;
+    // Try direct match first
+    const idx = options.findIndex(o => o.toLowerCase() === value.toLowerCase());
+    if (idx >= 0) return idx;
+    // Try numeric string (e.g., "2" means index 2)
+    const numIdx = parseInt(value);
+    if (!isNaN(numIdx) && numIdx >= 0 && numIdx < options.length) return numIdx;
+    return -1;
+  };
+
+  // Frequency options for Q15, Q16, Q17
+  const frequencyOptions = ["Not at all", "Several days", "More than half the days", "Nearly every day"];
+
+  // Evaluate each relevant gateway
+  const gatewayResults: Record<string, boolean> = {};
+
+  for (const gateway of relevantGateways) {
+    let triggered = false;
+
+    switch (gateway) {
+      case "insomnia": {
+        // Q3 = "Yes" OR PSQI_2 > 30 mins OR PSQI_5a >= index 2 OR PSQI_5b >= index 2
+        const q3 = responseMap.get("3");
+        if (q3?.value?.toLowerCase() === "yes") triggered = true;
+        const psqi2 = responseMap.get("PSQI_2");
+        if ((psqi2?.number ?? 0) > 30) triggered = true;
+        // PSQI_5a/5b frequency options: ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"]
+        const psqiOptions = ["Not during the past month", "Less than once a week", "Once or twice a week", "Three or more times a week"];
+        const psqi5a = responseMap.get("PSQI_5a");
+        if (getOptionIndex(psqi5a?.value, psqiOptions) >= 2) triggered = true;
+        const psqi5b = responseMap.get("PSQI_5b");
+        if (getOptionIndex(psqi5b?.value, psqiOptions) >= 2) triggered = true;
+        break;
+      }
+      case "poor_sleep_quality": {
+        // Q1 <= 5 OR insomnia triggered
+        const q1 = responseMap.get("1");
+        if ((q1?.number ?? 10) <= 5) triggered = true;
+        // Also check insomnia condition
+        const q3 = responseMap.get("3");
+        if (q3?.value?.toLowerCase() === "yes") triggered = true;
+        break;
+      }
+      case "depression": {
+        // Q15 >= index 2 ("More than half the days")
+        const q15 = responseMap.get("15");
+        if (getOptionIndex(q15?.value, frequencyOptions) >= 2) triggered = true;
+        // Also handle numeric value
+        if (q15?.number !== undefined && q15.number >= 2) triggered = true;
+        break;
+      }
+      case "anxiety": {
+        // Q16 >= index 2 ("More than half the days")
+        const q16 = responseMap.get("16");
+        if (getOptionIndex(q16?.value, frequencyOptions) >= 2) triggered = true;
+        // Also handle numeric value
+        if (q16?.number !== undefined && q16.number >= 2) triggered = true;
+        break;
+      }
+      case "excessive_sleepiness": {
+        // Q17 >= index 3 ("Nearly every day" or "Often")
+        const q17 = responseMap.get("17");
+        const sleepinessOptions = ["Never", "Rarely", "Sometimes", "Often", "Always"];
+        if (getOptionIndex(q17?.value, sleepinessOptions) >= 3) triggered = true;
+        break;
+      }
+      case "cognitive": {
+        // Q18 = "Yes"
+        const q18 = responseMap.get("18");
+        if (q18?.value?.toLowerCase() === "yes") triggered = true;
+        break;
+      }
+      case "osa": {
+        // Q19 = "Yes" OR Q20 = "Yes" OR Q48 = "Yes" OR Q49 = "Yes"
+        const q19 = responseMap.get("19");
+        const q20 = responseMap.get("20");
+        const q48 = responseMap.get("48");
+        const q49 = responseMap.get("49");
+        if (q19?.value?.toLowerCase() === "yes") triggered = true;
+        if (q20?.value?.toLowerCase() === "yes") triggered = true;
+        if (q48?.value?.toLowerCase() === "yes") triggered = true;
+        if (q49?.value?.toLowerCase() === "yes") triggered = true;
+        break;
+      }
+      case "pain": {
+        // Q22 = "Yes" AND Q23 >= 4, OR Q53 indicates chronic pain
+        const q22 = responseMap.get("22");
+        const q23 = responseMap.get("23");
+        if (q22?.value?.toLowerCase() === "yes" && (q23?.number ?? 0) >= 4) triggered = true;
+        const q53 = responseMap.get("53");
+        if (q53?.value?.toLowerCase() === "yes") triggered = true;
+        break;
+      }
+      case "sleep_timing": {
+        // REG_2 >= index 3 OR weekday-weekend difference > 60 mins
+        const reg2 = responseMap.get("REG_2");
+        const timingOptions = ["Very regular", "Somewhat regular", "Somewhat irregular", "Very irregular"];
+        if (getOptionIndex(reg2?.value, timingOptions) >= 3) triggered = true;
+        // Note: Time difference calculation would require parsing time strings - skip for now
+        break;
+      }
+      case "diet_impact": {
+        // Q34 >= index 2 ("Moderately" or higher)
+        const q34 = responseMap.get("34");
+        const impactOptions = ["Not at all", "Slightly", "Moderately", "Very much", "Extremely"];
+        if (getOptionIndex(q34?.value, impactOptions) >= 2) triggered = true;
+        break;
+      }
+      case "shift_work": {
+        // Q53B = "yes"
+        const q53b = responseMap.get("53B");
+        if (q53b?.value?.toLowerCase() === "yes") triggered = true;
+        const q47 = responseMap.get("47");
+        if (q47?.value?.toLowerCase() === "yes") triggered = true; // Prostate issues can indicate night waking
+        break;
+      }
+    }
+
+    gatewayResults[gateway] = triggered;
+  }
+
+  // Update gateway states in database
+  const now = Date.now();
+  for (const [gateway, triggered] of Object.entries(gatewayResults)) {
+    const existing = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user_gateway", (q) =>
+        q.eq("user_id", userId).eq("gateway_id", gateway)
+      )
+      .first();
+
+    if (existing) {
+      // Only update if different to avoid unnecessary writes
+      if (existing.triggered !== triggered) {
+        await ctx.db.patch(existing._id, {
+          triggered,
+          last_evaluated_at: now,
+          triggered_at: triggered ? now : existing.triggered_at,
+        });
+        console.log(`[Gateway Evaluation] ${gateway}: ${triggered ? "TRIGGERED" : "cleared"}`);
+      }
+    } else {
+      await ctx.db.insert("user_gateway_states", {
+        user_id: userId,
+        gateway_id: gateway,
+        triggered,
+        triggered_at: triggered ? now : undefined,
+        last_evaluated_at: now,
+      });
+      console.log(`[Gateway Evaluation] ${gateway}: ${triggered ? "TRIGGERED" : "not triggered"} (new)`);
+    }
   }
 }
 
@@ -995,6 +1709,15 @@ export const completeSection = mutation({
       const derivedCount = await generateDerivedResponses(ctx, args.userId, args.dayNumber);
       if (derivedCount > 0) {
         console.log(`[Convex] Generated ${derivedCount} derived responses from sleep log for day ${args.dayNumber}`);
+      }
+
+      // On Day 7+, attempt to generate average-derived responses from 7+ days of sleep diary
+      // These are "typical" values calculated from all sleep log entries
+      if (args.dayNumber >= 7) {
+        const avgDerivedCount = await generateAverageDerivedResponses(ctx, args.userId, args.dayNumber);
+        if (avgDerivedCount > 0) {
+          console.log(`[Convex] Generated ${avgDerivedCount} average-derived responses from sleep diary history`);
+        }
       }
     }
 
@@ -1776,6 +2499,11 @@ export const saveResponses = mutation({
       if (response.isDerived) derivedCount++;
     }
 
+    // Auto-evaluate gateway states based on saved responses
+    // This ensures expansion packs show correctly on Days 6-14 even if iOS sync failed
+    const savedQuestionIds = args.responses.map(r => r.questionId);
+    await evaluateAndUpdateGatewayStates(ctx, args.userId, savedQuestionIds);
+
     return {
       success: true,
       savedCount,
@@ -2121,6 +2849,7 @@ export const getQuestionsForUserDay = query({
         required: boolean;
         options?: string[];
         helpText?: string;
+        helpTextImperial?: string;
         formatConfig?: Record<string, unknown>;
         conditionalLogic?: { question_id: string; equals?: string; greater_than?: number };
       }>;
@@ -2131,6 +2860,7 @@ export const getQuestionsForUserDay = query({
         required: boolean;
         options?: string[];
         helpText?: string;
+        helpTextImperial?: string;
         moduleName?: string;
         formatConfig?: Record<string, unknown>;
         conditionalLogic?: { question_id: string; equals?: string; greater_than?: number };
@@ -2216,6 +2946,7 @@ export const getQuestionsForUserDay = query({
         type: mapAnswerFormatToType(q.answer_format),
         required: true,
         helpText: q.help_text ?? undefined,
+        helpTextImperial: q.help_text_imperial ?? undefined,
         formatConfig: q.format_config ? JSON.parse(q.format_config) : undefined,
         options: q.format_config ? parseOptions(q.format_config) : undefined,
         conditionalLogic: q.conditional_logic ? parseConditionalLogic(q.conditional_logic) : undefined,
@@ -2240,88 +2971,64 @@ export const getQuestionsForUserDay = query({
 
       console.log(`[Convex] User ${args.userId} has ${userResponsesForEval.length} previous responses for conditional logic`);
 
-      // Get all modules assigned to this day from static day_modules table
-      const dayModules = await ctx.db
-        .query("day_modules")
-        .withIndex("by_day", (q) => q.eq("day_number", args.dayNumber))
-        .collect();
+      // ========== FIXED SCHEDULE MODULE LOOKUP ==========
+      // Use the fixed schedule to determine which modules to load for this day
+      // - Days 1-5: Core assessment by pillar/theme
+      // - Days 6-14: Expansion packs based on triggered gateways
+      const triggeredGatewaysList = [...triggeredGatewayIds];
+      const moduleIdsForDay = getModuleIdsForDay(args.dayNumber, triggeredGatewaysList);
+      const dayConfig = getDayConfig(args.dayNumber);
 
-      // Sort modules by order
-      dayModules.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+      console.log(`[Convex] Day ${args.dayNumber} fixed schedule - Type: ${dayConfig?.type || "unknown"}, Modules: ${moduleIdsForDay.join(", ") || "none"}`);
 
-      // ========== EXPANSION SCHEDULE CHECK (Days 6+) ==========
-      // For Days 6-14, also check user_expansion_schedules for dynamically scheduled modules
-      // This handles expansion packs triggered by gateways (e.g., shift_work -> expansion_swdsq)
-      let expansionModuleIds: string[] = [];
-      if (args.dayNumber >= 6) {
-        const expansionSchedule = await ctx.db
-          .query("user_expansion_schedules")
-          .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-          .first();
-
-        if (expansionSchedule) {
-          const dayAssignment = expansionSchedule.day_assignments.find(
-            (d: { day_number: number }) => d.day_number === args.dayNumber
-          );
-          if (dayAssignment) {
-            expansionModuleIds = dayAssignment.module_ids || [];
-            console.log(`[Convex] Day ${args.dayNumber} expansion modules from schedule: ${expansionModuleIds.join(", ")}`);
-          }
-        }
+      // For expansion days (6+), check if any gateways are triggered
+      if (dayConfig?.type === "expansion" && moduleIdsForDay.length === 0) {
+        console.log(`[Convex] Day ${args.dayNumber} is expansion day but no gateways triggered - Sleep Log only`);
       }
 
       let totalSeconds = 0;
 
-      // Process static day_modules first
-      for (const dayModule of dayModules) {
+      // ========== COLLECT SAME-DAY QUESTION IDS ==========
+      // First, collect all question IDs that will be shown today.
+      // This allows us to differentiate between same-day conditional dependencies
+      // (which iOS should evaluate dynamically) vs cross-day dependencies
+      // (which we should evaluate server-side).
+      const sameDayQuestionIds = new Set<string>();
+
+      for (const moduleId of moduleIdsForDay) {
+        const moduleQuestions = await ctx.db
+          .query("module_questions")
+          .withIndex("by_module", (q) => q.eq("module_id", moduleId))
+          .collect();
+        for (const mq of moduleQuestions) {
+          sameDayQuestionIds.add(mq.question_id);
+        }
+      }
+
+      console.log(`[Convex] Day ${args.dayNumber} has ${sameDayQuestionIds.size} same-day question IDs for conditional logic`);
+
+      // ========== PROCESS MODULES FROM FIXED SCHEDULE ==========
+      for (const moduleId of moduleIdsForDay) {
         // Get module info
         const module = await ctx.db
           .query("assessment_modules")
-          .withIndex("by_module_id", (q) => q.eq("module_id", dayModule.module_id))
+          .withIndex("by_module_id", (q) => q.eq("module_id", moduleId))
           .first();
 
-        if (!module) continue;
-
-        // Check if this is an expansion module that requires a gateway trigger
-        if (module.tier === "expansion" || module.tier === "specialized") {
-          // Get all gateway definitions to find which gateways trigger this module
-          const allGateways = await ctx.db
-            .query("module_gateways")
-            .collect();
-
-          // Find if ANY triggered gateway includes this module in its target_modules
-          let isModuleTriggered = false;
-          for (const gateway of allGateways) {
-            // Check if this gateway is triggered
-            if (triggeredGatewayIds.has(gateway.gateway_id)) {
-              // Parse target modules for this gateway
-              try {
-                const targetModules = JSON.parse(gateway.target_modules_json || "[]") as string[];
-                if (targetModules.includes(dayModule.module_id)) {
-                  isModuleTriggered = true;
-                  console.log(`[Convex] Module ${dayModule.module_id} triggered by gateway ${gateway.gateway_id}`);
-                  break;
-                }
-              } catch {
-                console.log(`[Convex] Warning: Could not parse target_modules_json for gateway ${gateway.gateway_id}`);
-              }
-            }
-          }
-
-          // If no triggered gateway includes this module, skip it
-          if (!isModuleTriggered) {
-            console.log(`[Convex] Skipping module ${dayModule.module_id} - no triggered gateway targets it`);
-            continue;
-          }
+        if (!module) {
+          console.log(`[Convex] Warning: Module ${moduleId} not found in assessment_modules`);
+          continue;
         }
 
+        console.log(`[Convex] Processing module ${moduleId} (${module.name})`);
+
         // Track this module as included
-        result.metadata.modules.push(dayModule.module_id);
+        result.metadata.modules.push(moduleId);
 
         // Get questions in this module
         const moduleQuestions = await ctx.db
           .query("module_questions")
-          .withIndex("by_module", (q) => q.eq("module_id", dayModule.module_id))
+          .withIndex("by_module", (q) => q.eq("module_id", moduleId))
           .collect();
 
         // Sort by order_index
@@ -2336,11 +3043,13 @@ export const getQuestionsForUserDay = query({
 
           if (question) {
             // Check conditional logic (e.g., gender-specific questions like pregnancy)
+            // Pass sameDayQuestionIds so same-day follow-ups are included for iOS evaluation
             if (question.conditional_logic) {
               const shouldShow = evaluateConditionalLogic(
                 question.conditional_logic,
                 userResponsesForEval,
-                question.question_id
+                question.question_id,
+                sameDayQuestionIds
               );
               if (!shouldShow) {
                 console.log(`[Convex] Skipping question ${question.question_id} - conditional logic not met`);
@@ -2354,6 +3063,7 @@ export const getQuestionsForUserDay = query({
               type: mapAnswerFormatToType(question.answer_format),
               required: true,
               helpText: question.help_text ?? undefined,
+              helpTextImperial: question.help_text_imperial ?? undefined,
               moduleName: module.name,
               formatConfig: question.format_config ? JSON.parse(question.format_config) : undefined,
               options: question.format_config ? parseOptions(question.format_config) : undefined,
@@ -2365,75 +3075,17 @@ export const getQuestionsForUserDay = query({
         }
       }
 
-      // ========== PROCESS EXPANSION MODULES FROM SCHEDULE (Days 6+) ==========
-      // These are dynamically computed based on triggered gateways
-      for (const expansionModuleId of expansionModuleIds) {
-        // Skip if already processed from day_modules
-        if (result.metadata.modules.includes(expansionModuleId)) {
-          console.log(`[Convex] Skipping expansion module ${expansionModuleId} - already processed from day_modules`);
-          continue;
-        }
-
-        // Get module info
-        const module = await ctx.db
-          .query("assessment_modules")
-          .withIndex("by_module_id", (q) => q.eq("module_id", expansionModuleId))
-          .first();
-
-        if (!module) {
-          console.log(`[Convex] Warning: Expansion module ${expansionModuleId} not found in assessment_modules`);
-          continue;
-        }
-
-        console.log(`[Convex] Processing expansion module ${expansionModuleId} (${module.name})`);
-
-        // Track this module as included
-        result.metadata.modules.push(expansionModuleId);
-
-        // Get questions in this module
-        const moduleQuestions = await ctx.db
-          .query("module_questions")
-          .withIndex("by_module", (q) => q.eq("module_id", expansionModuleId))
-          .collect();
-
-        // Sort by order_index
-        moduleQuestions.sort((a, b) => a.order_index - b.order_index);
-
-        // Get full question data
-        for (const mq of moduleQuestions) {
-          const question = await ctx.db
-            .query("assessment_questions")
-            .withIndex("by_question_id", (q) => q.eq("question_id", mq.question_id))
-            .first();
-
-          if (question) {
-            // Check conditional logic for expansion questions too
-            if (question.conditional_logic) {
-              const shouldShow = evaluateConditionalLogic(
-                question.conditional_logic,
-                userResponsesForEval,
-                question.question_id
-              );
-              if (!shouldShow) {
-                console.log(`[Convex] Skipping expansion question ${question.question_id} - conditional logic not met`);
-                continue;
-              }
-            }
-
-            result.assessment.push({
-              id: question.question_id,
-              text: question.question_text,
-              type: mapAnswerFormatToType(question.answer_format),
-              required: true,
-              helpText: question.help_text ?? undefined,
-              moduleName: module.name,
-              formatConfig: question.format_config ? JSON.parse(question.format_config) : undefined,
-              options: question.format_config ? parseOptions(question.format_config) : undefined,
-              conditionalLogic: question.conditional_logic ? parseConditionalLogic(question.conditional_logic) : undefined,
-            });
-
-            totalSeconds += question.estimated_time_seconds || 30;
-          }
+      // ========== FILTER ALWAYS-HIDDEN DUPLICATES ==========
+      // These are semantic duplicates that should NEVER be shown
+      // (e.g., Q55 is duplicate of Q1, Q54C duplicate of Q31)
+      {
+        const originalCount = result.assessment.length;
+        result.assessment = result.assessment.filter(
+          (q) => !ALWAYS_HIDDEN_DUPLICATE_IDS.has(q.id)
+        );
+        const filteredCount = originalCount - result.assessment.length;
+        if (filteredCount > 0) {
+          console.log(`[Convex] Filtered ${filteredCount} duplicate questions (always hidden)`);
         }
       }
 
@@ -2450,6 +3102,25 @@ export const getQuestionsForUserDay = query({
         const filteredCount = originalCount - result.assessment.length;
         if (filteredCount > 0) {
           console.log(`[Convex] Filtered ${filteredCount} derivable questions (user has sleep log data for day ${args.dayNumber})`);
+        }
+      }
+
+      // ========== FILTER AVERAGE-DERIVABLE QUESTIONS ==========
+      // If user has 7+ days of sleep diary data, filter out questions that can be
+      // derived from averaged sleep metrics (e.g., "typical" bedtime, sleep quality)
+      // These questions are Day 2+ questions so only check if on Day 7+
+      if (args.dayNumber >= 7) {
+        const sleepDiaryStats = await getSleepDiaryAverages(ctx, args.userId, 7);
+
+        if (sleepDiaryStats) {
+          const originalCount = result.assessment.length;
+          result.assessment = result.assessment.filter(
+            (q) => !AVERAGE_DERIVABLE_QUESTION_IDS.has(q.id)
+          );
+          const filteredCount = originalCount - result.assessment.length;
+          if (filteredCount > 0) {
+            console.log(`[Convex] Filtered ${filteredCount} average-derivable questions (user has ${sleepDiaryStats.dayCount} days of sleep diary)`);
+          }
         }
       }
 
@@ -2547,27 +3218,60 @@ function parseOptions(formatConfig: string): string[] | undefined {
 /**
  * Parse conditional logic from format_config JSON
  * Returns a normalized structure for the iOS app
+ *
+ * Supports:
+ * - Direct: {"question_id": "35", "equals": "yes"}
+ * - Direct: {"questionId": "35", "equals": "yes"}
+ * - show_if wrapper: {"show_if": {"question_id": "35", "value": "yes"}}
+ * - in operator: {"show_if": {"question_id": "44K", "operator": "in", "value": ["1", "2", "3", "4"]}}
  */
-function parseConditionalLogic(conditionalLogicJson: string): { question_id: string; equals?: string; greater_than?: number } | undefined {
+function parseConditionalLogic(conditionalLogicJson: string): {
+  question_id: string;
+  equals?: string;
+  greater_than?: number;
+  in_values?: string[];
+} | undefined {
   try {
     const logic = JSON.parse(conditionalLogicJson);
 
-    // Handle direct format: {"question_id": "35", "equals": "yes"}
-    if (logic.question_id) {
+    // Handle direct format: {"question_id": "35", "equals": "yes"} or {"questionId": "35", "equals": "yes"}
+    const directQuestionId = logic.question_id || logic.questionId;
+    if (directQuestionId) {
       return {
-        question_id: logic.question_id,
+        question_id: directQuestionId,
         equals: logic.equals,
         greater_than: logic.greater_than,
       };
     }
 
-    // Handle show_if wrapper format: {"show_if": {"question_id": "35", "value": "yes"}}
+    // Handle show_if wrapper format
     if (logic.show_if) {
-      return {
-        question_id: logic.show_if.question_id,
-        equals: logic.show_if.value,
-        greater_than: logic.show_if.operator === "greater_than" ? Number(logic.show_if.value) : undefined,
-      };
+      const showIf = logic.show_if;
+      const questionId = showIf.question_id || showIf.questionId;
+
+      // Handle "in" operator: {"show_if": {"question_id": "44K", "operator": "in", "value": ["1", "2", "3", "4"]}}
+      if (showIf.operator === "in" && Array.isArray(showIf.value)) {
+        return {
+          question_id: questionId,
+          in_values: showIf.value.map((v: string | number) => String(v)),
+        };
+      }
+
+      // Handle "equals" via operator or direct value
+      if (showIf.operator === "equals" || !showIf.operator) {
+        return {
+          question_id: questionId,
+          equals: typeof showIf.value === "string" ? showIf.value : String(showIf.value),
+        };
+      }
+
+      // Handle "greater_than" operator
+      if (showIf.operator === "greater_than") {
+        return {
+          question_id: questionId,
+          greater_than: Number(showIf.value),
+        };
+      }
     }
 
     return undefined;
@@ -2589,12 +3293,17 @@ interface UserResponse {
  * - all: Array of conditions (all must be true)
  * - any: Array of conditions (at least one must be true)
  * - questionId + equals: Check if answer matches
+ * - questionId + operator "in" + value array: Check if answer is in array
  * - ageUnder/ageOver: Check user's age (requires D2 date of birth response)
+ *
+ * @param sameDayQuestionIds - Set of question IDs that are in the same day's assessment.
+ *   If a conditional references one of these, we include the question and let iOS evaluate dynamically.
  */
 function evaluateConditionalLogic(
   conditionalLogicJson: string,
   userResponses: UserResponse[],
-  questionId: string
+  questionId: string,
+  sameDayQuestionIds?: Set<string>
 ): boolean {
   try {
     const logic = JSON.parse(conditionalLogicJson);
@@ -2605,7 +3314,7 @@ function evaluateConditionalLogic(
       responseMap.set(r.question_id, r.response_value);
     }
 
-    return evaluateLogicNode(logic, responseMap, questionId);
+    return evaluateLogicNode(logic, responseMap, questionId, sameDayQuestionIds);
   } catch (error) {
     console.log(`[Convex] Error evaluating conditional logic for ${questionId}: ${error}`);
     // On error, default to showing the question
@@ -2615,16 +3324,21 @@ function evaluateConditionalLogic(
 
 /**
  * Recursively evaluate a logic node
+ *
+ * IMPORTANT: For same-day conditional questions (like follow-ups), we return true
+ * to INCLUDE the question. iOS will evaluate the condition dynamically as the user
+ * answers questions. We only pre-filter for cross-day conditions (like gender/age).
  */
 function evaluateLogicNode(
   node: Record<string, unknown>,
   responseMap: Map<string, string | number | null>,
-  questionId: string
+  questionId: string,
+  sameDayQuestionIds?: Set<string>
 ): boolean {
   // Handle compound AND conditions
   if (node.all && Array.isArray(node.all)) {
     const results = node.all.map((condition: Record<string, unknown>) =>
-      evaluateLogicNode(condition, responseMap, questionId)
+      evaluateLogicNode(condition, responseMap, questionId, sameDayQuestionIds)
     );
     const result = results.every(Boolean);
     console.log(`[Convex] Question ${questionId}: ALL conditions [${results.join(', ')}] => ${result}`);
@@ -2634,7 +3348,7 @@ function evaluateLogicNode(
   // Handle compound OR conditions
   if (node.any && Array.isArray(node.any)) {
     const results = node.any.map((condition: Record<string, unknown>) =>
-      evaluateLogicNode(condition, responseMap, questionId)
+      evaluateLogicNode(condition, responseMap, questionId, sameDayQuestionIds)
     );
     const result = results.some(Boolean);
     console.log(`[Convex] Question ${questionId}: ANY conditions [${results.join(', ')}] => ${result}`);
@@ -2664,27 +3378,88 @@ function evaluateLogicNode(
     return result;
   }
 
-  // Handle single question condition
-  if (typeof node.questionId === 'string') {
-    const userValue = responseMap.get(node.questionId);
+  // Handle single question condition - support both questionId (camelCase) and question_id (snake_case)
+  const refQuestionId = typeof node.questionId === 'string'
+    ? node.questionId
+    : typeof node.question_id === 'string'
+      ? node.question_id
+      : null;
+
+  if (refQuestionId) {
+    const userValue = responseMap.get(refQuestionId);
+
+    // If the referenced question already has a response, evaluate server-side
+    // (even if it's a same-day question - the user already answered it)
+    // Only defer to iOS if there's no response AND it's a same-day question
+    if (sameDayQuestionIds?.has(refQuestionId) && (userValue === null || userValue === undefined)) {
+      console.log(`[Convex] Question ${questionId}: References same-day question ${refQuestionId} with no response yet, including for iOS evaluation`);
+      return true;
+    }
+
+    // Handle "in" operator - check if value is in array
+    if (node.operator === 'in' && Array.isArray(node.value)) {
+      if (userValue === null || userValue === undefined) {
+        // For demographic questions, exclude if not set
+        const demographicQuestionIds = new Set(["D2", "D4", "D5", "D6"]);
+        if (demographicQuestionIds.has(refQuestionId)) {
+          console.log(`[Convex] Question ${questionId}: ${refQuestionId} IN [${node.value}] - DEMOGRAPHIC not set, EXCLUDING question`);
+          return false;
+        }
+        console.log(`[Convex] Question ${questionId}: ${refQuestionId} IN [${node.value}] - no response yet, including for iOS evaluation`);
+        return true;
+      }
+      const userValueStr = String(userValue);
+      const result = (node.value as (string | number)[]).some(v => String(v) === userValueStr);
+      console.log(`[Convex] Question ${questionId}: ${refQuestionId}="${userValue}" IN [${node.value}] => ${result}`);
+      return result;
+    }
+
+    // Handle "notIn" operator - check if value is NOT in array
+    if (node.operator === 'notIn' && Array.isArray(node.value)) {
+      if (userValue === null || userValue === undefined) {
+        // For demographic questions, exclude if not set
+        const demographicQuestionIds = new Set(["D2", "D4", "D5", "D6"]);
+        if (demographicQuestionIds.has(refQuestionId)) {
+          console.log(`[Convex] Question ${questionId}: ${refQuestionId} NOT_IN [${node.value}] - DEMOGRAPHIC not set, EXCLUDING question`);
+          return false;
+        }
+        console.log(`[Convex] Question ${questionId}: ${refQuestionId} NOT_IN [${node.value}] - no response yet, including for iOS evaluation`);
+        return true;
+      }
+      const userValueStr = String(userValue);
+      const result = !(node.value as (string | number)[]).some(v => String(v) === userValueStr);
+      console.log(`[Convex] Question ${questionId}: ${refQuestionId}="${userValue}" NOT_IN [${node.value}] => ${result}`);
+      return result;
+    }
 
     if (typeof node.equals === 'string') {
       if (userValue === null || userValue === undefined) {
-        console.log(`[Convex] Question ${questionId}: ${node.questionId}="${node.equals}" - no response yet, hiding`);
-        return false; // No response yet, hide the question
+        // For demographic questions (D2=DOB, D4=Sex, D5=Height, D6=Weight),
+        // if there's no response, EXCLUDE the question - these are profile fields
+        // that should have been injected. Don't show gender-conditional questions
+        // to users who haven't completed their profile.
+        const demographicQuestionIds = new Set(["D2", "D4", "D5", "D6"]);
+        if (demographicQuestionIds.has(refQuestionId)) {
+          console.log(`[Convex] Question ${questionId}: ${refQuestionId}="${node.equals}" - DEMOGRAPHIC not set, EXCLUDING question`);
+          return false; // Exclude question - demographic profile incomplete
+        }
+        console.log(`[Convex] Question ${questionId}: ${refQuestionId}="${node.equals}" - no response yet, including for iOS evaluation`);
+        return true; // Include question, let iOS evaluate dynamically
       }
       const result = String(userValue).toLowerCase() === String(node.equals).toLowerCase();
-      console.log(`[Convex] Question ${questionId}: ${node.questionId}="${userValue}" equals "${node.equals}" => ${result}`);
+      console.log(`[Convex] Question ${questionId}: ${refQuestionId}="${userValue}" equals "${node.equals}" => ${result}`);
       return result;
     }
 
     if (typeof node.greaterThan === 'number') {
+      if (userValue === null || userValue === undefined) return true;
       const numValue = Number(userValue);
       if (isNaN(numValue)) return false;
       return numValue > node.greaterThan;
     }
 
     if (typeof node.lessThan === 'number') {
+      if (userValue === null || userValue === undefined) return true;
       const numValue = Number(userValue);
       if (isNaN(numValue)) return false;
       return numValue < node.lessThan;
@@ -2693,7 +3468,7 @@ function evaluateLogicNode(
 
   // Handle show_if wrapper format
   if (node.show_if && typeof node.show_if === 'object') {
-    return evaluateLogicNode(node.show_if as Record<string, unknown>, responseMap, questionId);
+    return evaluateLogicNode(node.show_if as Record<string, unknown>, responseMap, questionId, sameDayQuestionIds);
   }
 
   // Unknown format - default to showing
@@ -2781,6 +3556,14 @@ export const updateGatewayState = mutation({
     }
 
     console.log(`[Convex] Gateway ${args.gatewayId} for user ${args.userId}: ${args.isTriggered ? "TRIGGERED" : "not triggered"}`);
+
+    // When a gateway is triggered, recompute the expansion schedule
+    // This ensures expansion packs are properly scheduled for Days 6-14
+    if (args.isTriggered) {
+      await ctx.scheduler.runAfter(0, api.expansionScheduler.computeAndStoreSchedule, {
+        userId: args.userId,
+      });
+    }
 
     return { success: true, gatewayId: args.gatewayId, isTriggered: args.isTriggered };
   },
@@ -3280,22 +4063,54 @@ export const removeSleepOnsetQuestion = mutation({
 // ============================================
 
 // Module metadata for expansion schedule display
+// MUST match FIXED_SCHEDULE packs in fixedSchedule.ts
 const EXPANSION_MODULE_METADATA: Record<string, { name: string; instrument: string; description: string; icon: string }> = {
+  // Day 6: Sleep & Work Patterns (insomnia, poor_sleep_quality, shift_work)
   expansion_isi: { name: "Insomnia Severity", instrument: "ISI", description: "Assess insomnia severity and impact", icon: "moon.zzz.fill" },
+  expansion_swdsq: { name: "Shift Work Disorder", instrument: "SWDSQ", description: "Screen for shift work sleep disorder", icon: "clock.badge.exclamationmark.fill" },
+
+  // Day 7: Mood & Thinking (depression, cognitive)
   expansion_phq9: { name: "Depression Screen", instrument: "PHQ-9", description: "Screen for depression symptoms", icon: "heart.fill" },
+  expansion_promis_cognitive: { name: "Cognitive Function", instrument: "PROMIS", description: "Assess cognitive function", icon: "lightbulb.fill" },
+
+  // Day 8: Anxiety & Sleep Habits (anxiety, insomnia, poor_sleep_quality)
   expansion_gad7: { name: "Anxiety Screen", instrument: "GAD-7", description: "Screen for anxiety symptoms", icon: "bolt.heart.fill" },
+  expansion_sleep_hygiene_part1: { name: "Sleep Hygiene (Part 1)", instrument: "Sleep Hygiene", description: "Evaluate sleep habits", icon: "bed.double.fill" },
+  expansion_sleep_hygiene_part2: { name: "Sleep Hygiene (Part 2)", instrument: "Sleep Hygiene", description: "Evaluate sleep habits", icon: "bed.double.fill" },
+
+  // Day 9: Sleep Apnea Screening (osa)
   expansion_stop_bang: { name: "Sleep Apnea Screen", instrument: "STOP-BANG", description: "Screen for sleep apnea risk", icon: "lungs.fill" },
+
+  // Day 10: Daytime Energy (excessive_sleepiness)
   expansion_ess: { name: "Sleepiness Scale", instrument: "ESS", description: "Measure daytime sleepiness", icon: "sun.max.fill" },
+  expansion_fss: { name: "Fatigue Scale", instrument: "FSS", description: "Assess fatigue severity", icon: "battery.25" },
+
+  // Day 11: Beliefs & Pain Part 1 (insomnia, pain)
+  expansion_dbas6: { name: "Sleep Beliefs", instrument: "DBAS-6", description: "Assess dysfunctional beliefs about sleep", icon: "brain.head.profile" },
+  expansion_bpi_part1: { name: "Pain Severity", instrument: "BPI", description: "Assess pain severity", icon: "bandage.fill" },
+
+  // Day 12: Pain Impact (pain)
+  expansion_bpi_part2: { name: "Pain Interference", instrument: "BPI", description: "Assess pain interference with daily life", icon: "bandage.fill" },
+
+  // Day 13: Sleep Arousal & Function (insomnia, anxiety, excessive_sleepiness)
+  expansion_psas_cognitive: { name: "Cognitive Arousal", instrument: "PSAS", description: "Measure pre-sleep cognitive arousal", icon: "brain" },
+  expansion_psas_somatic: { name: "Somatic Arousal", instrument: "PSAS", description: "Measure pre-sleep physical arousal", icon: "figure.mind.and.body" },
+  expansion_fosq_part1: { name: "Functional Outcomes (Part 1)", instrument: "FOSQ-10", description: "Measure sleep impact on function", icon: "figure.walk" },
+  expansion_fosq_part2: { name: "Functional Outcomes (Part 2)", instrument: "FOSQ-10", description: "Measure sleep impact on function", icon: "figure.walk" },
+
+  // Day 14: Diet & Chronotype (diet_impact, sleep_timing)
+  expansion_medas: { name: "Diet Assessment", instrument: "MEDAS", description: "Evaluate Mediterranean diet adherence", icon: "fork.knife" },
+  expansion_meq_part1: { name: "Chronotype (Part 1)", instrument: "MEQ", description: "Determine your sleep-wake preference", icon: "clock.fill" },
+  expansion_meq_part2: { name: "Chronotype (Part 2)", instrument: "MEQ", description: "Determine your sleep-wake preference", icon: "clock.fill" },
+
+  // Legacy modules (kept for backwards compatibility)
   expansion_berlin: { name: "Berlin Questionnaire", instrument: "Berlin", description: "Additional sleep apnea screening", icon: "waveform.path.ecg" },
   expansion_dbas: { name: "Sleep Beliefs", instrument: "DBAS-16", description: "Assess beliefs about sleep", icon: "brain.head.profile" },
   expansion_sleep_hygiene: { name: "Sleep Hygiene", instrument: "Sleep Hygiene", description: "Evaluate sleep habits", icon: "bed.double.fill" },
   expansion_psas: { name: "Pre-Sleep Arousal", instrument: "PSAS", description: "Measure pre-sleep arousal", icon: "figure.mind.and.body" },
-  expansion_fss: { name: "Fatigue Scale", instrument: "FSS", description: "Assess fatigue severity", icon: "battery.25" },
   expansion_fosq: { name: "Functional Outcomes", instrument: "FOSQ-10", description: "Measure sleep impact on function", icon: "figure.walk" },
   expansion_dass21: { name: "Stress & Anxiety", instrument: "DASS-21", description: "Comprehensive mental health screen", icon: "brain" },
-  expansion_promis_cognitive: { name: "Cognitive Function", instrument: "PROMIS", description: "Assess cognitive function", icon: "lightbulb.fill" },
   expansion_bpi: { name: "Pain Inventory", instrument: "BPI", description: "Assess pain and sleep", icon: "bandage.fill" },
-  expansion_medas: { name: "Diet Assessment", instrument: "MEDAS", description: "Evaluate diet impact on sleep", icon: "fork.knife" },
   expansion_meq: { name: "Chronotype", instrument: "MEQ", description: "Determine your sleep-wake preference", icon: "clock.fill" },
 };
 
@@ -3345,6 +4160,7 @@ export const getExpansionSchedule = query({
 /**
  * Get expansion modules for a specific day.
  * Used by iOS/web to show expansion tasks in Today's Focus.
+ * FIXED: Now uses FIXED_SCHEDULE instead of old user_expansion_schedules table.
  */
 export const getExpansionForDay = query({
   args: {
@@ -3352,37 +4168,77 @@ export const getExpansionForDay = query({
     dayNumber: v.number(),
   },
   handler: async (ctx, args) => {
-    const schedule = await ctx.db
-      .query("user_expansion_schedules")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .first();
-
-    if (!schedule) {
-      return { hasExpansion: false, modules: [], questionCount: 0, estimatedMinutes: 0 };
+    // Days 1-5 are core assessments, not expansion
+    if (args.dayNumber < 6 || args.dayNumber > 14) {
+      return { hasExpansion: false, modules: [], questionCount: 0, estimatedMinutes: 0, splashTitle: "" };
     }
 
-    const dayAssignment = schedule.day_assignments.find(
-      (d) => d.day_number === args.dayNumber
-    );
+    // Get day config from FIXED_SCHEDULE
+    const config = FIXED_SCHEDULE[args.dayNumber];
+    if (!config || config.type !== "expansion") {
+      return { hasExpansion: false, modules: [], questionCount: 0, estimatedMinutes: 0, splashTitle: "" };
+    }
 
-    if (!dayAssignment) {
-      return { hasExpansion: false, modules: [], questionCount: 0, estimatedMinutes: 0 };
+    // Get user's triggered gateways from user_gateway_states (the authoritative table)
+    const gatewayStates = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+    const triggeredGatewayIds = gatewayStates
+      .filter(g => g.triggered)
+      .map(g => g.gateway_id);
+
+    // Check if ANY of this day's gateways are triggered
+    if (!shouldShowExpansion(args.dayNumber, triggeredGatewayIds)) {
+      return { hasExpansion: false, modules: [], questionCount: 0, estimatedMinutes: 0, splashTitle: "" };
+    }
+
+    // Get module IDs from FIXED_SCHEDULE packs
+    const moduleIds: string[] = [];
+    for (const packId of config.packs) {
+      const packModules = PACK_TO_MODULE_IDS[packId];
+      if (packModules) {
+        moduleIds.push(...packModules);
+      }
     }
 
     // Get module details
-    const modules = dayAssignment.module_ids.map((id) => {
+    const modules = moduleIds.map((id) => {
       const meta = EXPANSION_MODULE_METADATA[id];
       return meta
         ? { id, name: meta.name, instrument: meta.instrument, description: meta.description, icon: meta.icon }
         : { id, name: id, instrument: "", description: "", icon: "questionmark.circle" };
     });
 
+    // Check if this day's expansion is completed by checking gateway states
+    // A day's expansion is complete if ALL triggered gateways for that day have expansion_completed=true
+    const relevantGatewayIds = config.gateways.filter(g => triggeredGatewayIds.includes(g));
+    let expansionCompleted = false;
+
+    if (relevantGatewayIds.length > 0) {
+      const completionChecks = await Promise.all(
+        relevantGatewayIds.map(async (gatewayId) => {
+          const state = await ctx.db
+            .query("user_gateway_states")
+            .withIndex("by_user_gateway", (q) =>
+              q.eq("user_id", args.userId).eq("gateway_id", gatewayId)
+            )
+            .first();
+          return state?.expansion_completed ?? false;
+        })
+      );
+      expansionCompleted = completionChecks.every(c => c);
+    }
+
     return {
       hasExpansion: true,
       modules,
-      questionCount: dayAssignment.question_count,
-      estimatedMinutes: dayAssignment.estimated_minutes,
-      completed: dayAssignment.completed || false,
+      questionCount: config.totalQuestions,
+      estimatedMinutes: config.estimatedMinutes,
+      splashTitle: config.splashTitle,
+      splashSubtitle: config.splashSubtitle,
+      gateways: config.gateways,
+      completed: expansionCompleted,
     };
   },
 });

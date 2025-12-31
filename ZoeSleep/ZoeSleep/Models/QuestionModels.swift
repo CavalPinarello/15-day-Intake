@@ -1735,6 +1735,7 @@ struct Question: Identifiable, Codable {
 
     // Help text
     var helpText: String?
+    var helpTextImperial: String?
 
     // Gateway configuration
     var isGateway: Bool
@@ -1777,6 +1778,7 @@ struct Question: Identifiable, Codable {
         maxImperial: Int? = nil,
         defaultImperial: Int? = nil,
         helpText: String? = nil,
+        helpTextImperial: String? = nil,
         isGateway: Bool = false,
         gatewayType: GatewayType? = nil,
         gatewayThreshold: Double? = nil,
@@ -1808,6 +1810,7 @@ struct Question: Identifiable, Codable {
         self.maxImperial = maxImperial
         self.defaultImperial = defaultImperial
         self.helpText = helpText
+        self.helpTextImperial = helpTextImperial
         self.isGateway = isGateway
         self.gatewayType = gatewayType
         self.gatewayThreshold = gatewayThreshold
@@ -1839,6 +1842,9 @@ struct ConditionalLogic: Codable {
     // Array condition: Check if array response contains a value
     var contains: String?
 
+    // "In" operator: Check if response value is in this array
+    var inValues: [String]?
+
     // Age-based condition (calculated from D2 birth date)
     var ageUnder: Int?
     var ageOver: Int?
@@ -1850,7 +1856,7 @@ struct ConditionalLogic: Codable {
     var any: [ConditionalLogic]?
 
     // Simple initializer for single condition
-    init(questionId: String, equals: String? = nil, greaterThan: Double? = nil, lessThan: Double? = nil, greaterThanOrEqual: Double? = nil, lessThanOrEqual: Double? = nil, contains: String? = nil) {
+    init(questionId: String, equals: String? = nil, greaterThan: Double? = nil, lessThan: Double? = nil, greaterThanOrEqual: Double? = nil, lessThanOrEqual: Double? = nil, contains: String? = nil, inValues: [String]? = nil) {
         self.questionId = questionId
         self.equals = equals
         self.greaterThan = greaterThan
@@ -1858,6 +1864,7 @@ struct ConditionalLogic: Codable {
         self.greaterThanOrEqual = greaterThanOrEqual
         self.lessThanOrEqual = lessThanOrEqual
         self.contains = contains
+        self.inValues = inValues
     }
 
     // Initializer for compound conditions

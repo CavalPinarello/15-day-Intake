@@ -76,6 +76,17 @@ final class HapticManager {
         generator.selectionChanged()
     }
 
+    // MARK: - Scaled Impact Feedback
+
+    /// Intensity-scaled impact for slider feedback
+    /// Uses .light style for gentleness even at full intensity
+    /// - Parameter intensity: 0.0 to 1.0, where higher = stronger vibration
+    func scaledImpact(intensity: CGFloat) {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred(intensity: intensity)
+    }
+
     // MARK: - Custom Patterns
 
     /// Question answered - light tap

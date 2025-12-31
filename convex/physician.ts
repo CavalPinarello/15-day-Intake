@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { validatePhysicianRole, validateIOSSession } from "./auth";
+import { shouldShowExpansion } from "./fixedSchedule";
 
 // ============================================
 // Question Definitions - Single Source of Truth
@@ -429,9 +430,11 @@ function calculatePSQI(responses: Map<string, number>): QuestionnaireScore {
   return { name: "Pittsburgh Sleep Quality Index", abbreviation: "PSQI", score: null, maxScore: 21, interpretation, severity, questionsAnswered: componentsCalculated, questionsRequired: 7 };
 }
 
-// DBAS-16 (Dysfunctional Beliefs and Attitudes about Sleep) - 16 questions, each 0-10
-function calculateDBAS16(responses: Map<string, number>): QuestionnaireScore {
-  const dbasQuestions = Array.from({ length: 16 }, (_, i) => `DBAS_${i + 1}`);
+// DBAS-6 (Dysfunctional Beliefs and Attitudes about Sleep) - 6-item version (2024)
+// Machine learning derived abbreviated version with R²=0.90 predicting DBAS-16 total score
+// Items: 4, 5, 7, 11, 13, 15 from original DBAS-16
+function calculateDBAS6(responses: Map<string, number>): QuestionnaireScore {
+  const dbasQuestions = ["DBAS_4", "DBAS_5", "DBAS_7", "DBAS_11", "DBAS_13", "DBAS_15"];
   let total = 0;
   let answered = 0;
 
@@ -446,20 +449,20 @@ function calculateDBAS16(responses: Map<string, number>): QuestionnaireScore {
   let interpretation = "Not enough data";
   let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";
 
-  if (answered >= 12) {
-    // Average score (total / answered, then scaled to 0-10)
+  if (answered >= 4) {
+    // Average score (total / answered, 0-10 scale)
     const avgScore = total / answered;
-    const score = Math.round(avgScore * 10) / 10; // One decimal place
 
-    if (score <= 3) { interpretation = "Low dysfunctional beliefs about sleep"; severity = "normal"; }
-    else if (score <= 5) { interpretation = "Moderate dysfunctional beliefs"; severity = "mild"; }
-    else if (score <= 7) { interpretation = "Elevated dysfunctional beliefs"; severity = "moderate"; }
+    // Same thresholds as DBAS-16 since it's an average on the same 0-10 scale
+    if (avgScore <= 3) { interpretation = "Low dysfunctional beliefs about sleep"; severity = "normal"; }
+    else if (avgScore <= 5) { interpretation = "Moderate dysfunctional beliefs"; severity = "mild"; }
+    else if (avgScore <= 7) { interpretation = "Elevated dysfunctional beliefs"; severity = "moderate"; }
     else { interpretation = "High dysfunctional beliefs about sleep"; severity = "severe"; }
 
-    return { name: "Dysfunctional Beliefs and Attitudes about Sleep", abbreviation: "DBAS-16", score: Math.round(total), maxScore: 160, interpretation, severity, questionsAnswered: answered, questionsRequired: 16 };
+    return { name: "Dysfunctional Beliefs and Attitudes about Sleep", abbreviation: "DBAS-6", score: Math.round(avgScore * 10) / 10, maxScore: 10, interpretation, severity, questionsAnswered: answered, questionsRequired: 6 };
   }
 
-  return { name: "Dysfunctional Beliefs and Attitudes about Sleep", abbreviation: "DBAS-16", score: null, maxScore: 160, interpretation, severity, questionsAnswered: answered, questionsRequired: 16 };
+  return { name: "Dysfunctional Beliefs and Attitudes about Sleep", abbreviation: "DBAS-6", score: null, maxScore: 10, interpretation, severity, questionsAnswered: answered, questionsRequired: 6 };
 }
 
 // Berlin Questionnaire (Sleep Apnea Risk) - 3 categories
@@ -1752,6 +1755,8 @@ export const getDailyComplianceData = query({
       sleepLogCompleted: v.boolean(),
       assessmentCompleted: v.boolean(),
       expansionCompleted: v.boolean(),
+      hasExpansionTask: v.boolean(), // Whether a Deeper Dive was assigned for this day
+      hasAssessmentTask: v.boolean(), // Whether core assessment questions exist for this day (Days 1-5)
       responseCount: v.number(),
       // Additional fields for granular tracking
       sleepLogQuestionsAnswered: v.number(),
@@ -1763,11 +1768,75 @@ export const getDailyComplianceData = query({
     const user = await ctx.db.get(args.userId);
     if (!user) return [];
 
-    // Get all responses for this user
+    // Get all responses for this user (for question counting)
     const responses = await ctx.db
       .query("user_assessment_responses")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
+
+    // Get user_progress entries - THIS IS THE SOURCE OF TRUTH for task completion
+    const progressEntries = await ctx.db
+      .query("user_progress")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Get days table to map day_id to day_number
+    const days = await ctx.db.query("days").collect();
+    const dayIdToNumber: Record<string, number> = {};
+    for (const day of days) {
+      dayIdToNumber[day._id] = day.day_number;
+    }
+
+    // Build progress map by day number from user_progress table
+    const progressByDay: Record<number, {
+      sleepLogCompleted: boolean;
+      assessmentCompleted: boolean;
+      expansionPackCompleted: boolean;
+    }> = {};
+    for (const progress of progressEntries) {
+      const dayNum = dayIdToNumber[progress.day_id];
+      if (dayNum) {
+        progressByDay[dayNum] = {
+          sleepLogCompleted: progress.sleep_log_completed ?? false,
+          assessmentCompleted: progress.assessment_completed ?? false,
+          expansionPackCompleted: progress.expansion_pack_completed ?? false,
+        };
+      }
+    }
+
+    // Get triggered gateways to determine which days have expansion tasks
+    // Using fixed schedule instead of dynamic user_expansion_schedules table
+    const userGateways = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    const triggeredGateways = userGateways
+      .filter((g) => g.triggered)
+      .map((g) => g.gateway_id);
+
+    // Build map of days that have expansion tasks based on FIXED SCHEDULE
+    // Days 6-14 have expansion if ANY of their gateways are triggered
+    const daysWithExpansionTask = new Set<number>();
+    for (let day = 6; day <= 14; day++) {
+      if (shouldShowExpansion(day, triggeredGateways)) {
+        daysWithExpansionTask.add(day);
+      }
+    }
+
+    // Get completion status from progressByDay (already loaded above)
+    const expansionCompletedByDay: Record<number, boolean> = {};
+    for (const [dayNum, progress] of Object.entries(progressByDay)) {
+      if (progress.expansionPackCompleted) {
+        expansionCompletedByDay[Number(dayNum)] = true;
+      }
+    }
+
+    // For Days 1-5, also check for same-day triggered gateways (insomnia, depression, anxiety, osa)
+    const sameDayGateways = ["insomnia", "depression", "anxiety", "osa"];
+    const hasSameDayTriggeredGateway = userGateways.some(
+      (g) => g.triggered && sameDayGateways.includes(g.gateway_id)
+    );
 
     // Sleep log question IDs (CSD = Consensus Sleep Diary, SL = Sleep Log, SD = Sleep Diary)
     const sleepLogPrefixes = ["CSD_", "SL_", "SD_"];
@@ -1790,12 +1859,12 @@ export const getDailyComplianceData = query({
       "GAD7_",     // Anxiety (7 questions)
       "SB_",       // STOP-BANG Sleep Apnea (8 questions)
       "ESS_",      // Epworth Sleepiness Scale (8 questions)
-      "DBAS_",     // Dysfunctional Beliefs About Sleep (16 questions)
+      "DBAS_",     // Dysfunctional Beliefs About Sleep - DBAS-6 (6 questions)
       "SH_",       // Sleep Hygiene (10 questions)
       "PSAS_",     // Pre-Sleep Arousal Scale (16 questions)
       "PSQI_",     // Pittsburgh Sleep Quality Index (19 questions) - expansion only
       "DASS_",     // Depression Anxiety Stress Scale (21 questions)
-      "BERLIN_",   // Berlin Questionnaire (10 questions)
+      // "BERLIN_", - Berlin removed, STOP-BANG has 93% sensitivity for OSA
       "FSS_",      // Fatigue Severity Scale (9 questions)
       "FOSQ_",     // Functional Outcomes of Sleep (10 questions)
       "PROMIS_",   // Cognitive Function (15 questions)
@@ -1807,8 +1876,9 @@ export const getDailyComplianceData = query({
     // Expansion module sizes for completion detection
     const expansionModuleSizes: Record<string, number> = {
       "ISI_": 7, "PHQ9_": 9, "GAD7_": 7, "SB_": 8, "ESS_": 8,
-      "DBAS_": 16, "SH_": 10, "PSAS_": 16, "PSQI_": 19, "DASS_": 21,
-      "BERLIN_": 10, "FSS_": 9, "FOSQ_": 10, "PROMIS_": 15,
+      "DBAS_": 6, "SH_": 10, "PSAS_": 16, "PSQI_": 19, "DASS_": 21, // DBAS-6 replaces DBAS-16
+      // "BERLIN_": 10, - Berlin removed, STOP-BANG has 93% sensitivity for OSA
+      "FSS_": 9, "FOSQ_": 10, "PROMIS_": 15,
       "BPI_": 11, "MEQ_": 19, "SWDSQ_": 4,
     };
 
@@ -1876,6 +1946,8 @@ export const getDailyComplianceData = query({
       sleepLogCompleted: boolean;
       assessmentCompleted: boolean;
       expansionCompleted: boolean;
+      hasExpansionTask: boolean;
+      hasAssessmentTask: boolean;
       responseCount: number;
       sleepLogQuestionsAnswered: number;
       assessmentQuestionsAnswered: number;
@@ -1900,16 +1972,43 @@ export const getDailyComplianceData = query({
         }
       }
 
+      // Get completion status from user_progress (source of truth)
+      const dayProgress = progressByDay[day];
+
+      // Determine if this day has an expansion task assigned
+      // Only use explicit sources of truth:
+      // 1. Check explicit schedule (from user_expansion_schedules.day_assignments)
+      // 2. Check if user_progress shows expansion completed (catches same-day triggers)
+      // NOTE: We do NOT use "questions answered" as a signal because questions can be
+      // partially answered without the task being formally assigned for that day
+      const hasScheduledExpansion = daysWithExpansionTask.has(day);
+      const progressShowsExpansion = dayProgress?.expansionPackCompleted ?? false;
+      const hasExpansionTask = hasScheduledExpansion || progressShowsExpansion;
+
+      // Use user_progress as source of truth for completion, with fallback to question counts
+      const sleepLogCompleted = dayProgress?.sleepLogCompleted ?? (data ? data.sleepLogQuestions.size >= 5 : false);
+      const assessmentCompleted = dayProgress?.assessmentCompleted ?? (data ? data.assessmentQuestions.size >= 8 : false);
+
+      // Expansion is complete if:
+      // 1. user_progress.expansion_pack_completed is true, OR
+      // 2. user_expansion_schedules.day_assignments[day].completed is true, OR
+      // 3. Question-based check (any module fully answered)
+      const expansionFromProgress = progressShowsExpansion;
+      const expansionFromSchedule = expansionCompletedByDay[day] ?? false;
+      const expansionIsComplete = expansionFromProgress || expansionFromSchedule || expansionComplete;
+
+      // Days 1-5 have core assessment questions, Days 6-14 do not
+      // On Days 6-14, only Sleep Log and (optionally) Expansion Pack are assigned
+      const hasAssessmentTask = day <= 5;
+
       result.push({
         dayNumber: day,
         date,
-        // Sleep log is complete if at least 5 sleep-related questions answered
-        sleepLogCompleted: data ? data.sleepLogQuestions.size >= 5 : false,
-        // Assessment is complete if meaningful number of core questions answered
-        // Day 1 has ~25-30 questions, later days have fewer, so >= 8 is a reasonable threshold
-        assessmentCompleted: data ? data.assessmentQuestions.size >= 8 : false,
-        // Expansion is complete if any module is fully answered on this day
-        expansionCompleted: expansionComplete,
+        sleepLogCompleted,
+        assessmentCompleted,
+        expansionCompleted: expansionIsComplete,
+        hasExpansionTask,
+        hasAssessmentTask,
         responseCount: data?.responseCount ?? 0,
         // Actual question counts for granular progress
         sleepLogQuestionsAnswered: data ? data.sleepLogQuestions.size : 0,
@@ -2301,9 +2400,9 @@ export const getPillarResponses = query({
 
     // Map pillar names to questionnaire names for clinical scores
     const pillarToQuestionnaire: Record<string, string[]> = {
-      "Mental Health": ["PHQ-9", "GAD-7"],
+      "Mental Health": ["PHQ-9", "GAD-7", "DBAS-6"], // DBAS-6 maps to Mental Health
       "Sleep Quality": ["ISI", "PSQI"],
-      Cognitive: ["DBAS-16"],
+      Cognitive: ["PROMIS"], // Cognitive uses PROMIS
     };
 
     const relevantQuestionnaires = pillarToQuestionnaire[args.pillarName];
@@ -3183,8 +3282,8 @@ export const calculatePatientScores = query({
       calculateESS(responseMap),
       calculateSTOPBANG(responseMap, demographics),
       calculatePSQI(responseMap),
-      calculateDBAS16(responseMap),
-      calculateBerlin(responseMap, { bmi: demographics.bmi }),
+      calculateDBAS6(responseMap), // DBAS-6 (2024) replaces DBAS-16
+      // Berlin removed - STOP-BANG has 93% sensitivity for OSA
       calculateFSS(responseMap),
       calculateFOSQ10(responseMap),
       calculateMEDAS(responseMap),
@@ -3363,8 +3462,8 @@ export const persistCalculatedScores = mutation({
       calculateESS(responseMap),
       calculateSTOPBANG(responseMap, demographics),
       calculatePSQI(responseMap),
-      calculateDBAS16(responseMap),
-      calculateBerlin(responseMap, { bmi: demographics.bmi }),
+      calculateDBAS6(responseMap), // DBAS-6 (2024) replaces DBAS-16
+      // Berlin removed - STOP-BANG has 93% sensitivity for OSA
       calculateFSS(responseMap),
       calculateFOSQ10(responseMap),
       calculateMEDAS(responseMap),

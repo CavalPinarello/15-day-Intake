@@ -23,7 +23,11 @@ class MockDataGenerator {
 
     // MARK: - Initialization
 
-    init(config: MockGeneratorConfig = MockGeneratorConfig()) {
+    /// Initialize with optional config and gateway forcing mode
+    /// - Parameters:
+    ///   - config: Configuration for data generation
+    ///   - forceAllGateways: When true, all gateways will be triggered (for debug auto-complete)
+    init(config: MockGeneratorConfig = MockGeneratorConfig(), forceAllGateways: Bool = false) {
         self.config = config
 
         if let seed = config.randomSeed {
@@ -32,10 +36,16 @@ class MockDataGenerator {
             self.randomGenerator = SystemRandomNumberGenerator()
         }
 
-        // Pre-determine which gateways will trigger (for consistency)
-        for gateway in GatewayType.allCases {
-            if Double.random(in: 0...1, using: &randomGenerator) < config.gatewayTriggerProbability {
-                gatewaysToTrigger.insert(gateway)
+        // Pre-determine which gateways will trigger
+        if forceAllGateways {
+            // Force ALL gateways to trigger - for debug auto-complete
+            gatewaysToTrigger = Set(GatewayType.allCases)
+        } else {
+            // Random gateway triggering based on probability
+            for gateway in GatewayType.allCases {
+                if Double.random(in: 0...1, using: &randomGenerator) < config.gatewayTriggerProbability {
+                    gatewaysToTrigger.insert(gateway)
+                }
             }
         }
     }

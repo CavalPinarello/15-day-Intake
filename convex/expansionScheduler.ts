@@ -1,23 +1,29 @@
 /**
- * Dynamic Expansion Pack Scheduler
+ * Expansion Pack Scheduler
  *
- * This module computes an optimal distribution of expansion questionnaires
- * based on which gateways were triggered during the core assessment (Days 1-2).
+ * Simplified to use the FIXED_SCHEDULE from fixedSchedule.ts.
+ * No more dynamic bin-packing - each day has predetermined content.
  *
- * Key principles:
- * 1. All gateway trigger questions are asked by Day 2
- * 2. Expansion schedule is computed when Day 2 completes
- * 3. Modules are distributed across Days 6-14 with target of 12-15 questions/day
- * 4. Clinical priority modules come first (ISI, PHQ-9, GAD-7)
- * 5. Related modules are grouped when possible
+ * This file provides:
+ * - Module metadata (EXPANSION_MODULES)
+ * - Schedule summary queries for iOS display
+ * - Legacy queries for backward compatibility
  */
 
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
+import {
+  FIXED_SCHEDULE,
+  getDayConfig,
+  shouldShowExpansion,
+  getUpcomingAssessmentDays,
+  PACK_TO_MODULE_IDS,
+  type ExpansionPackId,
+} from "./fixedSchedule";
 
 // ============================================
-// Expansion Module Definitions
+// Expansion Module Metadata
+// (Kept for reference and splash screen info)
 // ============================================
 
 export interface ExpansionModule {
@@ -26,13 +32,12 @@ export interface ExpansionModule {
   instrument: string;
   questionCount: number;
   estimatedMinutes: number;
-  requiredGateways: string[];  // ANY of these gateways triggers this module
-  priority: number;  // 1 = highest (clinical urgency), 5 = lowest
-  groupWith?: string[];  // Module IDs that should stay together if possible
+  requiredGateways: string[];
+  priority: number;
 }
 
 export const EXPANSION_MODULES: ExpansionModule[] = [
-  // Priority 1: Clinical urgency - these inform immediate treatment decisions
+  // Priority 1: Clinical urgency
   {
     id: "expansion_isi",
     name: "Insomnia Severity Index",
@@ -59,7 +64,25 @@ export const EXPANSION_MODULES: ExpansionModule[] = [
     estimatedMinutes: 5,
     requiredGateways: ["anxiety"],
     priority: 1,
-    // Note: We combine GAD-7 Part 1 (4) + Part 2 (3) = 7 total
+  },
+  // Legacy split modules kept for backwards compatibility
+  {
+    id: "expansion_gad7_part1",
+    name: "Anxiety Screen (Part 1)",
+    instrument: "GAD-7",
+    questionCount: 4,
+    estimatedMinutes: 3,
+    requiredGateways: ["anxiety"],
+    priority: 1,
+  },
+  {
+    id: "expansion_gad7_part2",
+    name: "Anxiety Screen (Part 2)",
+    instrument: "GAD-7",
+    questionCount: 3,
+    estimatedMinutes: 2,
+    requiredGateways: ["anxiety"],
+    priority: 1,
   },
   {
     id: "expansion_stop_bang",
@@ -71,7 +94,7 @@ export const EXPANSION_MODULES: ExpansionModule[] = [
     priority: 1,
   },
 
-  // Priority 2: Sleep-specific assessments
+  // Priority 2: Sleep-specific
   {
     id: "expansion_ess",
     name: "Epworth Sleepiness Scale",
@@ -90,40 +113,83 @@ export const EXPANSION_MODULES: ExpansionModule[] = [
     requiredGateways: ["osa"],
     priority: 2,
   },
-
-  // Priority 3: Behavioral & cognitive assessments
   {
-    id: "expansion_dbas",
-    name: "Sleep Beliefs Assessment",
-    instrument: "DBAS-16",
-    questionCount: 16,
-    estimatedMinutes: 12,
+    id: "expansion_swdsq",
+    name: "Shift Work Disorder Screening",
+    instrument: "SWDSQ",
+    questionCount: 4,
+    estimatedMinutes: 3,
+    requiredGateways: ["shift_work"],
+    priority: 2,
+  },
+
+  // Priority 3: Behavioral & cognitive
+  {
+    id: "expansion_dbas6",
+    name: "Sleep Beliefs (DBAS-6)",
+    instrument: "DBAS-6",
+    questionCount: 6,
+    estimatedMinutes: 4,
     requiredGateways: ["insomnia"],
     priority: 3,
-    // Combined Part 1 (8) + Part 2 (8) = 16 total
+  },
+  // Legacy DBAS-16 split modules kept for backwards compatibility
+  {
+    id: "expansion_dbas_part1",
+    name: "Sleep Beliefs (Part 1)",
+    instrument: "DBAS-16",
+    questionCount: 8,
+    estimatedMinutes: 6,
+    requiredGateways: ["insomnia"],
+    priority: 3,
   },
   {
-    id: "expansion_sleep_hygiene",
-    name: "Sleep Hygiene Assessment",
+    id: "expansion_dbas_part2",
+    name: "Sleep Beliefs (Part 2)",
+    instrument: "DBAS-16",
+    questionCount: 8,
+    estimatedMinutes: 6,
+    requiredGateways: ["insomnia"],
+    priority: 3,
+  },
+  {
+    id: "expansion_sleep_hygiene_part1",
+    name: "Sleep Hygiene (Part 1)",
     instrument: "Sleep Hygiene",
-    questionCount: 10,
-    estimatedMinutes: 7,
+    questionCount: 5,
+    estimatedMinutes: 4,
     requiredGateways: ["insomnia", "poor_sleep_quality"],
     priority: 3,
-    // Combined Part 1 (5) + Part 2 (5) = 10 total
   },
   {
-    id: "expansion_psas",
-    name: "Pre-Sleep Arousal Scale",
-    instrument: "PSAS",
-    questionCount: 16,
-    estimatedMinutes: 10,
-    requiredGateways: ["insomnia"],
+    id: "expansion_sleep_hygiene_part2",
+    name: "Sleep Hygiene (Part 2)",
+    instrument: "Sleep Hygiene",
+    questionCount: 5,
+    estimatedMinutes: 4,
+    requiredGateways: ["insomnia", "poor_sleep_quality"],
     priority: 3,
-    // Combined Cognitive (8) + Somatic (8) = 16 total
+  },
+  {
+    id: "expansion_psas_cognitive",
+    name: "Pre-Sleep Arousal (Cognitive)",
+    instrument: "PSAS",
+    questionCount: 8,
+    estimatedMinutes: 5,
+    requiredGateways: ["insomnia", "anxiety"],
+    priority: 3,
+  },
+  {
+    id: "expansion_psas_somatic",
+    name: "Pre-Sleep Arousal (Somatic)",
+    instrument: "PSAS",
+    questionCount: 8,
+    estimatedMinutes: 5,
+    requiredGateways: ["insomnia", "anxiety"],
+    priority: 3,
   },
 
-  // Priority 4: Functional & fatigue assessments
+  // Priority 4: Functional & fatigue
   {
     id: "expansion_fss",
     name: "Fatigue Severity Scale",
@@ -134,28 +200,26 @@ export const EXPANSION_MODULES: ExpansionModule[] = [
     priority: 4,
   },
   {
-    id: "expansion_fosq",
-    name: "Functional Outcomes of Sleep",
+    id: "expansion_fosq_part1",
+    name: "Functional Outcomes (Part 1)",
     instrument: "FOSQ-10",
-    questionCount: 10,
-    estimatedMinutes: 7,
+    questionCount: 5,
+    estimatedMinutes: 4,
     requiredGateways: ["excessive_sleepiness"],
     priority: 4,
-    // Combined Part 1 (5) + Part 2 (5) = 10 total
   },
   {
-    id: "expansion_dass21",
-    name: "Depression Anxiety Stress Scale",
-    instrument: "DASS-21",
-    questionCount: 21,
-    estimatedMinutes: 15,
-    requiredGateways: ["depression", "anxiety"],
+    id: "expansion_fosq_part2",
+    name: "Functional Outcomes (Part 2)",
+    instrument: "FOSQ-10",
+    questionCount: 5,
+    estimatedMinutes: 4,
+    requiredGateways: ["excessive_sleepiness"],
     priority: 4,
-    // Combined Part 1 (11) + Part 2 (10) = 21 total
   },
   {
     id: "expansion_promis_cognitive",
-    name: "Cognitive Function Assessment",
+    name: "Cognitive Function",
     instrument: "PROMIS Cognitive",
     questionCount: 6,
     estimatedMinutes: 4,
@@ -163,13 +227,22 @@ export const EXPANSION_MODULES: ExpansionModule[] = [
     priority: 4,
   },
 
-  // Priority 5: Lifestyle & secondary assessments
+  // Priority 5: Lifestyle
   {
-    id: "expansion_bpi",
-    name: "Brief Pain Inventory",
+    id: "expansion_bpi_part1",
+    name: "Brief Pain Inventory (Part 1)",
     instrument: "BPI",
-    questionCount: 11,
-    estimatedMinutes: 8,
+    questionCount: 6,
+    estimatedMinutes: 4,
+    requiredGateways: ["pain"],
+    priority: 5,
+  },
+  {
+    id: "expansion_bpi_part2",
+    name: "Brief Pain Inventory (Part 2)",
+    instrument: "BPI",
+    questionCount: 5,
+    estimatedMinutes: 4,
     requiredGateways: ["pain"],
     priority: 5,
   },
@@ -183,135 +256,34 @@ export const EXPANSION_MODULES: ExpansionModule[] = [
     priority: 5,
   },
   {
-    id: "expansion_meq",
-    name: "Chronotype Assessment",
+    id: "expansion_meq_part1",
+    name: "Chronotype (Part 1)",
     instrument: "MEQ",
-    questionCount: 19,
-    estimatedMinutes: 12,
+    questionCount: 10,
+    estimatedMinutes: 6,
     requiredGateways: ["sleep_timing"],
     priority: 5,
   },
-  // Priority 2: Shift Work - clinical urgency for occupational health
   {
-    id: "expansion_swdsq",
-    name: "Shift Work Disorder Screening",
-    instrument: "SWDSQ",
-    questionCount: 4,
-    estimatedMinutes: 3,
-    requiredGateways: ["shift_work"],
-    priority: 2,
+    id: "expansion_meq_part2",
+    name: "Chronotype (Part 2)",
+    instrument: "MEQ",
+    questionCount: 9,
+    estimatedMinutes: 6,
+    requiredGateways: ["sleep_timing"],
+    priority: 5,
   },
 ];
 
 // ============================================
-// Schedule Computation
-// ============================================
-
-interface DayAssignment {
-  dayNumber: number;
-  moduleIds: string[];
-  questionCount: number;
-  estimatedMinutes: number;
-}
-
-/**
- * Compute the optimal expansion schedule based on triggered gateways.
- *
- * Algorithm:
- * 1. Filter modules to only those triggered by user's gateways
- * 2. Sort by priority (clinical urgency first)
- * 3. Distribute across available days (6-14 = 9 days)
- * 4. Target 12-15 questions per day, never exceed 18
- * 5. Keep total daily time under 15 minutes
- */
-export function computeExpansionSchedule(triggeredGateways: string[]): DayAssignment[] {
-  const TARGET_QUESTIONS_PER_DAY = 14;
-  const MAX_QUESTIONS_PER_DAY = 18;
-  const EXPANSION_START_DAY = 6;  // Start expansions on Day 6 (core days 1-5)
-  const TOTAL_DAYS = 14;
-
-  // 1. Get modules triggered by user's gateways
-  const triggeredModules = EXPANSION_MODULES.filter(module =>
-    module.requiredGateways.some(gateway => triggeredGateways.includes(gateway))
-  );
-
-  if (triggeredModules.length === 0) {
-    return [];
-  }
-
-  // 2. Sort by priority (lower = higher priority)
-  const sortedModules = [...triggeredModules].sort((a, b) => {
-    if (a.priority !== b.priority) return a.priority - b.priority;
-    // Same priority: put smaller modules first for better packing
-    return a.questionCount - b.questionCount;
-  });
-
-  // 3. Calculate total questions and ideal distribution
-  const totalQuestions = sortedModules.reduce((sum, m) => sum + m.questionCount, 0);
-  const availableDays = TOTAL_DAYS - EXPANSION_START_DAY + 1; // Days 6-14 = 9 days
-  const idealQuestionsPerDay = Math.ceil(totalQuestions / availableDays);
-
-  // 4. Distribute modules across days using bin-packing
-  const dayAssignments: DayAssignment[] = [];
-  let currentDay = EXPANSION_START_DAY;
-  let currentDayModules: ExpansionModule[] = [];
-  let currentDayQuestions = 0;
-
-  for (const module of sortedModules) {
-    // Check if adding this module exceeds the day limit
-    if (currentDayQuestions + module.questionCount > MAX_QUESTIONS_PER_DAY && currentDayModules.length > 0) {
-      // Save current day and start a new one
-      dayAssignments.push({
-        dayNumber: currentDay,
-        moduleIds: currentDayModules.map(m => m.id),
-        questionCount: currentDayQuestions,
-        estimatedMinutes: currentDayModules.reduce((sum, m) => sum + m.estimatedMinutes, 0),
-      });
-      currentDay++;
-      currentDayModules = [];
-      currentDayQuestions = 0;
-    }
-
-    // Add module to current day
-    currentDayModules.push(module);
-    currentDayQuestions += module.questionCount;
-
-    // If we've reached a good stopping point (near target), start new day
-    if (currentDayQuestions >= TARGET_QUESTIONS_PER_DAY && currentDay < TOTAL_DAYS) {
-      dayAssignments.push({
-        dayNumber: currentDay,
-        moduleIds: currentDayModules.map(m => m.id),
-        questionCount: currentDayQuestions,
-        estimatedMinutes: currentDayModules.reduce((sum, m) => sum + m.estimatedMinutes, 0),
-      });
-      currentDay++;
-      currentDayModules = [];
-      currentDayQuestions = 0;
-    }
-  }
-
-  // Don't forget the last day
-  if (currentDayModules.length > 0) {
-    dayAssignments.push({
-      dayNumber: currentDay,
-      moduleIds: currentDayModules.map(m => m.id),
-      questionCount: currentDayQuestions,
-      estimatedMinutes: currentDayModules.reduce((sum, m) => sum + m.estimatedMinutes, 0),
-    });
-  }
-
-  return dayAssignments;
-}
-
-// ============================================
-// Convex Mutations & Queries
+// Schedule Queries (Using Fixed Schedule)
 // ============================================
 
 /**
- * Compute and store the expansion schedule for a user.
- * Called automatically when Day 2 is completed (all gateways known).
+ * Get expansion schedule summary for a user.
+ * Now uses FIXED_SCHEDULE instead of dynamic computation.
  */
-export const computeAndStoreSchedule = mutation({
+export const getScheduleSummary = query({
   args: {
     userId: v.id("users"),
   },
@@ -323,199 +295,10 @@ export const computeAndStoreSchedule = mutation({
       .collect();
 
     const triggeredGateways = gatewayStates
-      .filter(g => g.triggered)
-      .map(g => g.gateway_id);
+      .filter((g) => g.triggered)
+      .map((g) => g.gateway_id);
 
-    console.log(`[ExpansionScheduler] Computing schedule for user ${args.userId}`);
-    console.log(`[ExpansionScheduler] Triggered gateways: ${triggeredGateways.join(", ")}`);
-
-    // Compute optimal schedule
-    const dayAssignments = computeExpansionSchedule(triggeredGateways);
-
-    // Calculate totals
-    const totalQuestions = dayAssignments.reduce((sum, d) => sum + d.questionCount, 0);
-    const totalMinutes = dayAssignments.reduce((sum, d) => sum + d.estimatedMinutes, 0);
-
-    console.log(`[ExpansionScheduler] Schedule: ${dayAssignments.length} expansion days, ${totalQuestions} questions, ~${totalMinutes} minutes`);
-
-    // Check for existing schedule
-    const existing = await ctx.db
-      .query("user_expansion_schedules")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .first();
-
-    const scheduleData = {
-      user_id: args.userId,
-      computed_at: Date.now(),
-      triggered_gateways: triggeredGateways,
-      day_assignments: dayAssignments.map(d => ({
-        day_number: d.dayNumber,
-        module_ids: d.moduleIds,
-        question_count: d.questionCount,
-        estimated_minutes: d.estimatedMinutes,
-        completed: false,
-      })),
-      total_expansion_questions: totalQuestions,
-      total_estimated_minutes: totalMinutes,
-    };
-
-    if (existing) {
-      await ctx.db.patch(existing._id, scheduleData);
-      console.log(`[ExpansionScheduler] Updated existing schedule`);
-    } else {
-      await ctx.db.insert("user_expansion_schedules", scheduleData);
-      console.log(`[ExpansionScheduler] Created new schedule`);
-    }
-
-    return {
-      triggeredGateways,
-      dayAssignments,
-      totalQuestions,
-      totalMinutes,
-    };
-  },
-});
-
-/**
- * Get the expansion schedule for a user.
- */
-export const getSchedule = query({
-  args: {
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const schedule = await ctx.db
-      .query("user_expansion_schedules")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .first();
-
-    if (!schedule) {
-      return null;
-    }
-
-    // Enrich with module metadata
-    const enrichedDays = schedule.day_assignments.map(day => {
-      const modules = day.module_ids.map(id => {
-        const module = EXPANSION_MODULES.find(m => m.id === id);
-        return module ? {
-          id: module.id,
-          name: module.name,
-          instrument: module.instrument,
-          questionCount: module.questionCount,
-          estimatedMinutes: module.estimatedMinutes,
-        } : null;
-      }).filter(Boolean);
-
-      return {
-        ...day,
-        modules,
-      };
-    });
-
-    return {
-      ...schedule,
-      day_assignments: enrichedDays,
-    };
-  },
-});
-
-/**
- * Get expansion modules for a specific day.
- * Returns the module IDs and question counts for Today's Focus.
- */
-export const getExpansionForDay = query({
-  args: {
-    userId: v.id("users"),
-    dayNumber: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const schedule = await ctx.db
-      .query("user_expansion_schedules")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .first();
-
-    if (!schedule) {
-      return null;
-    }
-
-    const dayAssignment = schedule.day_assignments.find(
-      (d) => d.day_number === args.dayNumber
-    );
-
-    if (!dayAssignment) {
-      return null;
-    }
-
-    // Get module details
-    const modules = dayAssignment.module_ids.map((id) => {
-      const module = EXPANSION_MODULES.find(m => m.id === id);
-      return module ? {
-        id: module.id,
-        name: module.name,
-        instrument: module.instrument,
-        questionCount: module.questionCount,
-        estimatedMinutes: module.estimatedMinutes,
-        priority: module.priority,
-      } : null;
-    }).filter(Boolean);
-
-    return {
-      dayNumber: args.dayNumber,
-      modules,
-      totalQuestions: dayAssignment.question_count,
-      estimatedMinutes: dayAssignment.estimated_minutes,
-      completed: dayAssignment.completed || false,
-    };
-  },
-});
-
-/**
- * Mark expansion modules as completed for a day.
- */
-export const markDayExpansionCompleted = mutation({
-  args: {
-    userId: v.id("users"),
-    dayNumber: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const schedule = await ctx.db
-      .query("user_expansion_schedules")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .first();
-
-    if (!schedule) {
-      throw new Error("No expansion schedule found for user");
-    }
-
-    const updatedAssignments = schedule.day_assignments.map((d) => {
-      if (d.day_number === args.dayNumber) {
-        return { ...d, completed: true };
-      }
-      return d;
-    });
-
-    await ctx.db.patch(schedule._id, {
-      day_assignments: updatedAssignments,
-    });
-
-    return { success: true };
-  },
-});
-
-/**
- * Get a summary of the expansion schedule for dashboard display.
- */
-export const getScheduleSummary = query({
-  args: {
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const schedule = await ctx.db
-      .query("user_expansion_schedules")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .first();
-
-    if (!schedule) {
+    if (triggeredGateways.length === 0) {
       return {
         hasSchedule: false,
         triggeredGateways: [],
@@ -524,59 +307,342 @@ export const getScheduleSummary = query({
         totalMinutes: 0,
         completedDays: 0,
         remainingDays: 0,
+        gatewaySchedule: {},
+        dayAssignments: [],
       };
     }
 
-    const completedDays = schedule.day_assignments.filter((d) => d.completed).length;
+    // Use fixed schedule to determine which days have content
+    const upcomingDays = getUpcomingAssessmentDays(triggeredGateways);
+
+    // Build gateway -> day mapping from fixed schedule
+    const gatewaySchedule: Record<string, number> = {};
+    for (const item of upcomingDays) {
+      if (!gatewaySchedule[item.gateway]) {
+        gatewaySchedule[item.gateway] = item.dayNumber;
+      }
+    }
+
+    // Build day assignments from fixed schedule
+    const dayAssignments: {
+      dayNumber: number;
+      questionCount: number;
+      estimatedMinutes: number;
+      completed: boolean;
+      splashTitle: string;
+    }[] = [];
+
+    // Get user's day completion status from user_progress table
+    // Note: user_progress uses day_id (from days table), so we need to look up days first
+    const days = await ctx.db.query("days").collect();
+    const dayIdToNumber = new Map(days.map((d) => [d._id.toString(), d.day_number]));
+
+    const progressRecords = await ctx.db
+      .query("user_progress")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    const completedDayNumbers = new Set(
+      progressRecords
+        .filter((p) => p.completed)
+        .map((p) => dayIdToNumber.get(p.day_id.toString()))
+        .filter((n): n is number => n !== undefined)
+    );
+
+    for (let day = 6; day <= 14; day++) {
+      if (shouldShowExpansion(day, triggeredGateways)) {
+        const config = FIXED_SCHEDULE[day];
+        if (config && config.type === "expansion") {
+          dayAssignments.push({
+            dayNumber: day,
+            questionCount: config.totalQuestions,
+            estimatedMinutes: config.estimatedMinutes,
+            completed: completedDayNumbers.has(day),
+            splashTitle: config.splashTitle,
+          });
+        }
+      }
+    }
+
+    const totalQuestions = dayAssignments.reduce((sum, d) => sum + d.questionCount, 0);
+    const totalMinutes = dayAssignments.reduce((sum, d) => sum + d.estimatedMinutes, 0);
+    const completedDays = dayAssignments.filter((d) => d.completed).length;
 
     return {
-      hasSchedule: true,
-      triggeredGateways: schedule.triggered_gateways,
-      totalDays: schedule.day_assignments.length,
-      totalQuestions: schedule.total_expansion_questions,
-      totalMinutes: schedule.total_estimated_minutes,
+      hasSchedule: dayAssignments.length > 0,
+      triggeredGateways,
+      totalDays: dayAssignments.length,
+      totalQuestions,
+      totalMinutes,
       completedDays,
-      remainingDays: schedule.day_assignments.length - completedDays,
-      dayAssignments: schedule.day_assignments.map((d) => ({
-        dayNumber: d.day_number,
-        questionCount: d.question_count,
-        estimatedMinutes: d.estimated_minutes,
-        completed: d.completed || false,
-      })),
+      remainingDays: dayAssignments.length - completedDays,
+      gatewaySchedule,
+      dayAssignments,
     };
   },
 });
 
 /**
- * Debug: Get the computed schedule without storing (for testing)
+ * Get expansion info for a specific day using fixed schedule.
  */
-export const previewSchedule = query({
+export const getExpansionForDay = query({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const config = getDayConfig(args.dayNumber);
+    if (!config || config.type !== "expansion") {
+      return null;
+    }
+
+    // Get user's triggered gateways
+    const gatewayStates = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    const triggeredGateways = gatewayStates
+      .filter((g) => g.triggered)
+      .map((g) => g.gateway_id);
+
+    // Check if this day should show for user
+    if (!shouldShowExpansion(args.dayNumber, triggeredGateways)) {
+      return null;
+    }
+
+    // Get module details for the packs
+    const modules: {
+      id: string;
+      name: string;
+      instrument: string;
+      questionCount: number;
+      estimatedMinutes: number;
+    }[] = [];
+
+    for (const packId of config.packs) {
+      const moduleIds = PACK_TO_MODULE_IDS[packId as ExpansionPackId] || [];
+      for (const moduleId of moduleIds) {
+        const module = EXPANSION_MODULES.find((m) => m.id === moduleId);
+        if (module) {
+          modules.push({
+            id: module.id,
+            name: module.name,
+            instrument: module.instrument,
+            questionCount: module.questionCount,
+            estimatedMinutes: module.estimatedMinutes,
+          });
+        }
+      }
+    }
+
+    // Check completion status using user_progress table
+    const days = await ctx.db.query("days").collect();
+    const dayRecord = days.find((d) => d.day_number === args.dayNumber);
+
+    let completed = false;
+    if (dayRecord) {
+      const progress = await ctx.db
+        .query("user_progress")
+        .withIndex("by_user_day", (q) =>
+          q.eq("user_id", args.userId).eq("day_id", dayRecord._id)
+        )
+        .first();
+      completed = progress?.completed ?? false;
+    }
+
+    return {
+      dayNumber: args.dayNumber,
+      splashTitle: config.splashTitle,
+      splashSubtitle: config.splashSubtitle,
+      modules,
+      totalQuestions: config.totalQuestions,
+      estimatedMinutes: config.estimatedMinutes,
+      completed,
+      gateways: config.gateways,
+    };
+  },
+});
+
+/**
+ * Get the fixed schedule for a specific day.
+ * Useful for splash screens and UI display.
+ */
+export const getDayScheduleInfo = query({
+  args: {
+    dayNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const config = getDayConfig(args.dayNumber);
+    if (!config) {
+      return null;
+    }
+
+    return {
+      dayNumber: args.dayNumber,
+      type: config.type,
+      splashTitle: config.splashTitle,
+      splashSubtitle: config.splashSubtitle,
+      estimatedMinutes: config.estimatedMinutes,
+      ...(config.type === "expansion" && {
+        packs: config.packs,
+        gateways: config.gateways,
+        totalQuestions: config.totalQuestions,
+      }),
+      ...(config.type === "core" && {
+        theme: config.theme,
+      }),
+    };
+  },
+});
+
+/**
+ * Preview the full fixed schedule (for debugging).
+ */
+export const previewFixedSchedule = query({
   args: {
     triggeredGateways: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const dayAssignments = computeExpansionSchedule(args.triggeredGateways);
+    const schedule: {
+      dayNumber: number;
+      type: string;
+      splashTitle: string;
+      hasContent: boolean;
+      packs?: string[];
+      theme?: string;
+    }[] = [];
 
-    // Enrich with module names
-    const enrichedDays = dayAssignments.map(day => ({
-      ...day,
-      modules: day.moduleIds.map(id => {
-        const module = EXPANSION_MODULES.find(m => m.id === id);
-        return module ? { id, name: module.name, instrument: module.instrument } : { id, name: "Unknown" };
-      }),
-    }));
+    for (let day = 1; day <= 14; day++) {
+      const config = getDayConfig(day);
+      if (!config) continue;
 
-    const totalQuestions = dayAssignments.reduce((sum, d) => sum + d.questionCount, 0);
-    const totalMinutes = dayAssignments.reduce((sum, d) => sum + d.estimatedMinutes, 0);
+      if (config.type === "core") {
+        schedule.push({
+          dayNumber: day,
+          type: "core",
+          splashTitle: config.splashTitle,
+          hasContent: true,
+          theme: config.theme,
+        });
+      } else {
+        const hasContent = shouldShowExpansion(day, args.triggeredGateways);
+        schedule.push({
+          dayNumber: day,
+          type: "expansion",
+          splashTitle: config.splashTitle,
+          hasContent,
+          packs: config.packs,
+        });
+      }
+    }
 
     return {
       triggeredGateways: args.triggeredGateways,
-      dayAssignments: enrichedDays,
-      totalQuestions,
-      totalMinutes,
-      averageQuestionsPerDay: dayAssignments.length > 0
-        ? Math.round(totalQuestions / dayAssignments.length)
-        : 0,
+      schedule,
+      activeDays: schedule.filter((s) => s.hasContent).length,
     };
+  },
+});
+
+// ============================================
+// Legacy Mutations (Deprecated)
+// ============================================
+
+/**
+ * @deprecated - No longer needed with fixed schedule
+ * Kept for backward compatibility but does nothing
+ */
+export const computeAndStoreSchedule = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    console.log(
+      `[ExpansionScheduler] computeAndStoreSchedule called for user ${args.userId} - now using fixed schedule, no computation needed`
+    );
+    return {
+      message: "Using fixed schedule - no dynamic computation needed",
+      triggeredGateways: [],
+      dayAssignments: [],
+      totalQuestions: 0,
+      totalMinutes: 0,
+    };
+  },
+});
+
+/**
+ * @deprecated - Legacy query, kept for backward compatibility
+ */
+export const getSchedule = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Redirect to new getScheduleSummary
+    const gatewayStates = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    const triggeredGateways = gatewayStates
+      .filter((g) => g.triggered)
+      .map((g) => g.gateway_id);
+
+    if (triggeredGateways.length === 0) {
+      return null;
+    }
+
+    const dayAssignments: {
+      day_number: number;
+      module_ids: string[];
+      question_count: number;
+      estimated_minutes: number;
+      completed: boolean;
+    }[] = [];
+
+    for (let day = 6; day <= 14; day++) {
+      if (shouldShowExpansion(day, triggeredGateways)) {
+        const config = FIXED_SCHEDULE[day];
+        if (config && config.type === "expansion") {
+          const moduleIds: string[] = [];
+          for (const packId of config.packs) {
+            const packModules = PACK_TO_MODULE_IDS[packId as ExpansionPackId] || [];
+            moduleIds.push(...packModules);
+          }
+          dayAssignments.push({
+            day_number: day,
+            module_ids: moduleIds,
+            question_count: config.totalQuestions,
+            estimated_minutes: config.estimatedMinutes,
+            completed: false,
+          });
+        }
+      }
+    }
+
+    return {
+      triggered_gateways: triggeredGateways,
+      day_assignments: dayAssignments,
+      total_expansion_questions: dayAssignments.reduce((s, d) => s + d.question_count, 0),
+      total_estimated_minutes: dayAssignments.reduce((s, d) => s + d.estimated_minutes, 0),
+    };
+  },
+});
+
+/**
+ * @deprecated - Legacy mutation, kept for backward compatibility
+ */
+export const markDayExpansionCompleted = mutation({
+  args: {
+    userId: v.id("users"),
+    dayNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    console.log(
+      `[ExpansionScheduler] markDayExpansionCompleted called for user ${args.userId} day ${args.dayNumber}`
+    );
+    // Day completion is now tracked in user_day_completions table
+    return { success: true };
   },
 });

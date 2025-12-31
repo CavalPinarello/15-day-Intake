@@ -175,7 +175,10 @@ struct UnifiedDebugPanel: View {
                 // MARK: - Section 6: Journey Controls
                 journeyControlsSection
 
-                // MARK: - Section 7: Repair Tools
+                // MARK: - Section 7: Experimental Features
+                experimentalFeaturesSection
+
+                // MARK: - Section 8: Repair Tools
                 repairToolsSection
             }
             .listStyle(.insetGrouped)
@@ -671,6 +674,48 @@ struct UnifiedDebugPanel: View {
         }
     }
 
+    // MARK: - Experimental Features Section
+
+    private var experimentalFeaturesSection: some View {
+        Section {
+            Toggle(isOn: $themeManager.showSleepDiaryHistory) {
+                HStack {
+                    Image(systemName: "calendar")
+                        .foregroundColor(.green)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Sleep Diary History")
+                            .font(.subheadline)
+                        Text("View past sleep log entries")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .tint(.green)
+
+            Toggle(isOn: $themeManager.showSleepInsights) {
+                HStack {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Sleep Insights")
+                            .font(.subheadline)
+                        Text("Patterns and recommendations")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .tint(.blue)
+        } header: {
+            Label("Experimental Features", systemImage: "flask")
+        } footer: {
+            Text("These features are still in development. Enable to test them on the main dashboard.")
+        }
+    }
+
     private func jumpToDay() {
         print("[Debug Panel] jumpToDay called, targetDay: \(jumpTargetDay)")
         isJumpingToDay = true
@@ -715,6 +760,15 @@ struct UnifiedDebugPanel: View {
 
     private var repairToolsSection: some View {
         Section {
+            // Detailed HealthKit Data View (NEW)
+            NavigationLink {
+                HealthKitDetailedDebugView()
+                    .environmentObject(themeManager)
+            } label: {
+                Label("HealthKit Data (6 Months)", systemImage: "waveform.path.ecg.rectangle")
+                    .foregroundColor(.cyan)
+            }
+
             // Verify HealthKit Data
             Button {
                 verifyHealthKitData()

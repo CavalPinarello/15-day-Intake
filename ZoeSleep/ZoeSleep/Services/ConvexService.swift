@@ -1213,6 +1213,7 @@ struct ConvexQuestion: Codable {
     let required: Bool
     let options: [String]?
     let helpText: String?
+    let helpTextImperial: String?
     let moduleName: String?
     let formatConfig: [String: AnyCodable]?
     let conditionalLogic: ConvexConditionalLogic?
@@ -1229,6 +1230,7 @@ struct ConvexConditionalLogic: Codable {
     var greaterThanOrEqual: Double?
     var lessThanOrEqual: Double?
     var contains: String?
+    var inValues: [String]?  // "in" operator - value must be one of these
 
     // Age-based conditions (calculated from D2 birth date)
     var ageUnder: Int?
@@ -1246,6 +1248,7 @@ struct ConvexConditionalLogic: Codable {
         case greaterThanOrEqual
         case lessThanOrEqual
         case contains
+        case inValues = "in_values"
         case ageUnder
         case ageOver
         case all
@@ -1269,6 +1272,7 @@ struct ConvexConditionalLogic: Codable {
         greaterThanOrEqual: Double? = nil,
         lessThanOrEqual: Double? = nil,
         contains: String? = nil,
+        inValues: [String]? = nil,
         ageUnder: Int? = nil,
         ageOver: Int? = nil,
         all: [ConvexConditionalLogic]? = nil,
@@ -1281,6 +1285,7 @@ struct ConvexConditionalLogic: Codable {
         self.greaterThanOrEqual = greaterThanOrEqual
         self.lessThanOrEqual = lessThanOrEqual
         self.contains = contains
+        self.inValues = inValues
         self.ageUnder = ageUnder
         self.ageOver = ageOver
         self.all = all
@@ -1339,6 +1344,9 @@ struct ConvexConditionalLogic: Codable {
         // Decode contains
         self.contains = try? container.decodeIfPresent(String.self, forKey: .contains)
 
+        // Decode inValues (for "in" operator)
+        self.inValues = try? container.decodeIfPresent([String].self, forKey: .inValues)
+
         // Decode age conditions (try both camelCase and snake_case)
         self.ageUnder = (try? container.decodeIfPresent(Int.self, forKey: .ageUnder))
             ?? (try? container.decodeIfPresent(Int.self, forKey: .ageUnderSnake))
@@ -1359,6 +1367,7 @@ struct ConvexConditionalLogic: Codable {
         try container.encodeIfPresent(greaterThanOrEqual, forKey: .greaterThanOrEqual)
         try container.encodeIfPresent(lessThanOrEqual, forKey: .lessThanOrEqual)
         try container.encodeIfPresent(contains, forKey: .contains)
+        try container.encodeIfPresent(inValues, forKey: .inValues)
         try container.encodeIfPresent(ageUnder, forKey: .ageUnder)
         try container.encodeIfPresent(ageOver, forKey: .ageOver)
         try container.encodeIfPresent(all, forKey: .all)
@@ -1969,6 +1978,9 @@ struct ExpansionDayInfo: Codable {
     let totalQuestions: Int
     let estimatedMinutes: Int
     let completed: Bool
+    let splashTitle: String?      // From FIXED_SCHEDULE
+    let splashSubtitle: String?   // From FIXED_SCHEDULE
+    let gateways: [String]?       // Gateway IDs that trigger this day
 }
 
 struct ExpansionScheduleSummary: Codable {
@@ -1979,6 +1991,7 @@ struct ExpansionScheduleSummary: Codable {
     let totalMinutes: Int?
     let completedDays: Int
     let remainingDays: Int
+    let gatewaySchedule: [String: Int]?  // Maps gateway -> scheduled day number
     let dayAssignments: [DayAssignmentSummary]?
 
     struct DayAssignmentSummary: Codable {
@@ -1986,6 +1999,7 @@ struct ExpansionScheduleSummary: Codable {
         let questionCount: Int
         let estimatedMinutes: Int
         let completed: Bool
+        let splashTitle: String?  // Fixed schedule splash title for this day
     }
 }
 

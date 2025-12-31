@@ -149,6 +149,13 @@ class ThemeManager: ObservableObject {
         }
     }
 
+    /// Haptic feedback for slider questions - intensity scales with value
+    @Published var hapticFeedbackEnabled: Bool = true {
+        didSet {
+            UserDefaults.standard.set(hapticFeedbackEnabled, forKey: "hapticFeedbackEnabled")
+        }
+    }
+
     @Published var textSizeMultiplier: Double = 1.0 {
         didSet {
             UserDefaults.standard.set(textSizeMultiplier, forKey: "textSizeMultiplier")
@@ -178,6 +185,20 @@ class ThemeManager: ObservableObject {
     @Published var unlockTimeOverride: Bool = false {
         didSet {
             UserDefaults.standard.set(unlockTimeOverride, forKey: "unlockTimeOverride")
+        }
+    }
+
+    /// Show Sleep Diary History feature (debug feature - hidden by default)
+    @Published var showSleepDiaryHistory: Bool = false {
+        didSet {
+            UserDefaults.standard.set(showSleepDiaryHistory, forKey: "showSleepDiaryHistory")
+        }
+    }
+
+    /// Show Sleep Insights feature (debug feature - hidden by default)
+    @Published var showSleepInsights: Bool = false {
+        didSet {
+            UserDefaults.standard.set(showSleepInsights, forKey: "showSleepInsights")
         }
     }
 
@@ -264,6 +285,7 @@ class ThemeManager: ObservableObject {
         self.largeIconsMode = UserDefaults.standard.bool(forKey: "largeIconsMode")
         self.highContrast = UserDefaults.standard.bool(forKey: "highContrast")
         self.reduceMotion = UserDefaults.standard.bool(forKey: "reduceMotion")
+        self.hapticFeedbackEnabled = UserDefaults.standard.object(forKey: "hapticFeedbackEnabled") as? Bool ?? true
 
         let savedTextSize = UserDefaults.standard.double(forKey: "textSizeMultiplier")
         self.textSizeMultiplier = savedTextSize > 0 ? savedTextSize : 1.0
@@ -273,6 +295,10 @@ class ThemeManager: ObservableObject {
 
         // Load unlock time override
         self.unlockTimeOverride = UserDefaults.standard.bool(forKey: "unlockTimeOverride")
+
+        // Load experimental feature toggles (hidden by default)
+        self.showSleepDiaryHistory = UserDefaults.standard.bool(forKey: "showSleepDiaryHistory")
+        self.showSleepInsights = UserDefaults.standard.bool(forKey: "showSleepInsights")
 
         // Load enhanced readability mode (load last so it can override other settings)
         self.enhancedReadabilityMode = UserDefaults.standard.bool(forKey: "enhancedReadabilityMode")

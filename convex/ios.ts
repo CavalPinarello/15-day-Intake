@@ -13,6 +13,45 @@ import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { validateIOSSession, validateUserOwnership } from "./auth";
+import { FIXED_SCHEDULE, PACK_TO_MODULE_IDS, shouldShowExpansion, type DayConfig } from "./fixedSchedule";
+
+// ============================================
+// Module to Question Prefix Mapping
+// ============================================
+// Maps expansion module IDs to their actual question ID prefixes.
+// This is needed because module names don't always match question prefixes
+// (e.g., "expansion_promis_cognitive" has questions like "PROMIS_COG_1", not "PROMIS_COGNITIVE_1")
+const MODULE_TO_QUESTION_PREFIX: Record<string, string> = {
+  // Day 6: Insomnia + Shift Work
+  expansion_isi: "ISI_",
+  expansion_swdsq: "SWDSQ_",
+  // Day 7: Depression + Cognitive
+  expansion_phq9: "PHQ9_",
+  expansion_promis_cognitive: "PROMIS_COG_", // Not PROMIS_COGNITIVE_!
+  // Day 8: Anxiety + Sleep Hygiene
+  expansion_gad7: "GAD7_",
+  expansion_sleep_hygiene_part1: "SH_",
+  expansion_sleep_hygiene_part2: "SH_",
+  // Day 9: OSA
+  expansion_stop_bang: "SB_", // Not STOP_BANG_!
+  // Day 10: Excessive Sleepiness
+  expansion_ess: "ESS_",
+  expansion_fss: "FSS_",
+  // Day 11: Beliefs + Pain
+  expansion_dbas6: "DBAS_", // Not DBAS6_!
+  expansion_bpi_part1: "BPI_",
+  // Day 12: Pain Impact
+  expansion_bpi_part2: "BPI_",
+  // Day 13: Arousal + Function
+  expansion_psas_cognitive: "PSAS_",
+  expansion_psas_somatic: "PSAS_",
+  expansion_fosq_part1: "FOSQ_",
+  expansion_fosq_part2: "FOSQ_",
+  // Day 14: Diet + Chronotype
+  expansion_medas: "MEDAS_",
+  expansion_meq_part1: "MEQ_",
+  expansion_meq_part2: "MEQ_",
+};
 
 // ============================================
 // Inline Helper Functions (avoids internal.xxx bootstrap issues)
@@ -965,9 +1004,9 @@ export const syncSleepData = mutation({
     deviceId: v.string(),
     sleepData: v.array(v.object({
       date: v.string(), // YYYY-MM-DD
-      inBedTime: v.optional(v.number()),
-      asleepTime: v.optional(v.number()),
-      wakeTime: v.optional(v.number()),
+      inBedTime: v.optional(v.number()), // Unix timestamp (ms)
+      asleepTime: v.optional(v.number()), // Unix timestamp (ms)
+      wakeTime: v.optional(v.number()), // Unix timestamp (ms)
       totalSleepMins: v.optional(v.number()),
       sleepEfficiency: v.optional(v.number()),
       deepSleepMins: v.optional(v.number()),
@@ -1511,6 +1550,7 @@ export const getDailyCompletionStatus = query({
     }
 
     // Track incomplete expansion packs from previous days (Days 6-14)
+    // FIXED: Now uses FIXED_SCHEDULE instead of old user_expansion_schedules table
     const overdueExpansions: {
       dayNumber: number;
       triggeredGateways: string[];
@@ -1518,47 +1558,71 @@ export const getDailyCompletionStatus = query({
       questionCount: number;
       estimatedMinutes: number;
       answeredCount: number;
+      splashTitle: string;
     }[] = [];
 
-    // Get expansion schedule for this user
-    const expansionSchedule = await ctx.db
-      .query("user_expansion_schedules")
+    // Get user's triggered gateways from user_gateway_states (the authoritative table)
+    const gatewayStates = await ctx.db
+      .query("user_gateway_states")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .first();
+      .collect();
+    const triggeredGatewayIds = gatewayStates
+      .filter(g => g.triggered)
+      .map(g => g.gateway_id);
 
-    if (expansionSchedule && expansionSchedule.day_assignments) {
-      // Check each day assignment for incomplete expansion packs
-      for (const assignment of expansionSchedule.day_assignments) {
-        // Only check days that are before current day AND not completed
-        if (assignment.day_number < user.current_day && assignment.completed !== true) {
-          // Count how many expansion questions were answered for this day
-          const expansionPrefixes = assignment.module_ids.map(m => m.toUpperCase());
-          let answeredCount = 0;
+    // Check each expansion day (6-14) that's before the current day
+    for (let day = 6; day < user.current_day && day <= 14; day++) {
+      const config = FIXED_SCHEDULE[day];
+      if (!config || config.type !== "expansion") continue;
 
-          const dayResponses = dayData[assignment.day_number];
-          if (dayResponses) {
-            // Check assessment responses for expansion module questions
-            for (const qId of dayResponses.assessmentQuestions) {
-              const upperQId = qId.toUpperCase();
-              // Check if this response belongs to one of the expansion modules
-              if (expansionPrefixes.some(prefix => upperQId.startsWith(prefix))) {
-                answeredCount++;
-              }
-            }
-          }
+      // Check if this expansion should show based on triggered gateways
+      if (!shouldShowExpansion(day, triggeredGatewayIds)) continue;
 
-          // Only add to overdue if there are actually questions to complete
-          if (assignment.question_count > 0) {
-            overdueExpansions.push({
-              dayNumber: assignment.day_number,
-              triggeredGateways: expansionSchedule.triggered_gateways,
-              moduleIds: assignment.module_ids,
-              questionCount: assignment.question_count,
-              estimatedMinutes: assignment.estimated_minutes,
-              answeredCount,
-            });
+      // Get module IDs for this day's packs
+      const moduleIds: string[] = [];
+      for (const packId of config.packs) {
+        const packModules = PACK_TO_MODULE_IDS[packId];
+        if (packModules) {
+          moduleIds.push(...packModules);
+        }
+      }
+
+      // Count how many questions were answered for this day's expansion modules
+      let answeredCount = 0;
+      const dayResponses = dayData[day];
+      if (dayResponses) {
+        // Build a set of valid prefixes for this day's modules using the mapping
+        const validPrefixes: string[] = [];
+        for (const moduleId of moduleIds) {
+          const prefix = MODULE_TO_QUESTION_PREFIX[moduleId];
+          if (prefix && !validPrefixes.includes(prefix)) {
+            validPrefixes.push(prefix.toUpperCase());
           }
         }
+
+        // Check for expansion question IDs matching this day's module prefixes
+        for (const qId of dayResponses.assessmentQuestions) {
+          const upperQId = qId.toUpperCase();
+          // Check if this question starts with any of the valid prefixes
+          if (validPrefixes.some(prefix => upperQId.startsWith(prefix))) {
+            answeredCount++;
+          }
+        }
+      }
+
+      // Only add to overdue if user hasn't completed most questions
+      // (threshold: less than 80% of questions answered)
+      const completionThreshold = Math.floor(config.totalQuestions * 0.8);
+      if (answeredCount < completionThreshold) {
+        overdueExpansions.push({
+          dayNumber: day,
+          triggeredGateways: config.gateways,
+          moduleIds,
+          questionCount: config.totalQuestions,
+          estimatedMinutes: config.estimatedMinutes,
+          answeredCount,
+          splashTitle: config.splashTitle,
+        });
       }
     }
 

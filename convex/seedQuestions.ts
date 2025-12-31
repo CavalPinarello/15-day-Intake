@@ -17,6 +17,7 @@ const assessmentQuestionsData = assessmentQuestionsDataRaw as unknown as Array<{
   question_id: string;
   question_text: string;
   help_text?: string;
+  help_text_imperial?: string;
   pillar: string;
   tier: string;
   answer_format: string;
@@ -69,6 +70,7 @@ export const seedAssessmentQuestions = internalMutation({
           await ctx.db.patch(existing._id, {
             question_text: q.question_text,
             help_text: q.help_text,
+            help_text_imperial: q.help_text_imperial,
             pillar: q.pillar,
             tier: q.tier,
             answer_format: q.answer_format,
@@ -87,6 +89,7 @@ export const seedAssessmentQuestions = internalMutation({
             question_id: q.question_id,
             question_text: q.question_text,
             help_text: q.help_text,
+            help_text_imperial: q.help_text_imperial,
             pillar: q.pillar,
             tier: q.tier,
             answer_format: q.answer_format,
@@ -238,6 +241,43 @@ export const removeDateQuestion = mutation({
     }
 
     return { deleted: false, message: "SD_DATE question not found in database" };
+  },
+});
+
+/**
+ * Clear internal help_text from questions 44I and 44J
+ * These were accidentally exposed to users with "Only shown for women of reproductive age"
+ * Run with: npx convex run seedQuestions:clearInternalHelpText
+ */
+export const clearInternalHelpText = mutation({
+  args: {},
+  returns: v.object({
+    updated: v.number(),
+    message: v.string()
+  }),
+  handler: async (ctx) => {
+    const questionIds = ["44I", "44J"];
+    let updated = 0;
+
+    for (const questionId of questionIds) {
+      const question = await ctx.db
+        .query("assessment_questions")
+        .withIndex("by_question_id", (q) => q.eq("question_id", questionId))
+        .first();
+
+      if (question && question.help_text) {
+        await ctx.db.patch(question._id, { help_text: undefined });
+        updated++;
+        console.log(`[Migration] Cleared help_text from question ${questionId}`);
+      }
+    }
+
+    return {
+      updated,
+      message: updated > 0
+        ? `Cleared internal help_text from ${updated} questions (44I, 44J)`
+        : "No questions needed updating"
+    };
   },
 });
 

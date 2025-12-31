@@ -292,9 +292,9 @@ export default defineSchema({
     user_id: v.id("users"),
     date: v.string(), // ISO date string YYYY-MM-DD
     day_number: v.optional(v.number()), // Journey day number (1-14)
-    in_bed_time: v.optional(v.number()), // Unix timestamp
-    asleep_time: v.optional(v.number()), // Unix timestamp
-    wake_time: v.optional(v.number()), // Unix timestamp
+    in_bed_time: v.optional(v.number()), // Unix timestamp (ms)
+    asleep_time: v.optional(v.number()), // Unix timestamp (ms)
+    wake_time: v.optional(v.number()), // Unix timestamp (ms)
     total_sleep_mins: v.optional(v.number()),
     sleep_efficiency: v.optional(v.number()),
     deep_sleep_mins: v.optional(v.number()),
@@ -885,7 +885,8 @@ export default defineSchema({
   assessment_questions: defineTable({
     question_id: v.string(), // Text ID like "D1", "D2", etc.
     question_text: v.string(),
-    help_text: v.optional(v.string()), // Helper text shown below question
+    help_text: v.optional(v.string()), // Helper text shown below question (metric)
+    help_text_imperial: v.optional(v.string()), // Helper text for imperial units
     pillar: v.string(),
     tier: v.string(),
     
@@ -1029,6 +1030,7 @@ export default defineSchema({
     id: v.string(), // Text ID (primary key)
     question_text: v.string(),
     help_text: v.optional(v.string()),
+    help_text_imperial: v.optional(v.string()), // Helper text for imperial units
     group_key: v.optional(v.string()), // Groups related questions (e.g., "bedtime", "awakenings")
     
     // Answer Format Configuration (NEW - matches assessment_questions)

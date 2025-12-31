@@ -19,17 +19,16 @@ import { v } from "convex/values";
 
 // These should match QuestionnaireManager.swift
 const IOS_EXPECTED_MODULES = {
+  // Core modules - these match the actual seeded modules in Convex
+  // Note: Demographics (D2-D6) are now part of core_social and core_metabolic
+  // Redundant modules (core_sleep_quantity, core_sleep_regularity, core_sleep_timing) were cleaned up
   core: [
-    { id: "core_demographics", name: "Demographics", questionPrefix: "D", expectedQuestions: 6 },
-    { id: "core_social", name: "Social", questionPrefix: "35-39,53", expectedQuestions: 12 },
-    { id: "core_metabolic", name: "Metabolic", questionPrefix: "26-28,44", expectedQuestions: 14 },
+    { id: "core_social", name: "Social/Demographics", questionPrefix: "D,35-39,53", expectedQuestions: 20 },
+    { id: "core_metabolic", name: "Metabolic", questionPrefix: "D4-D6,26-28,44", expectedQuestions: 28 },
     { id: "core_sleep_quality_1", name: "Sleep Quality Part 1", questionPrefix: "1-3,12,41-46", expectedQuestions: 12 },
-    { id: "core_sleep_quality_2", name: "Sleep Quality Part 2", questionPrefix: "47-58", expectedQuestions: 11 },
-    { id: "core_sleep_quantity", name: "Sleep Quantity", questionPrefix: "4-6", expectedQuestions: 3 },
-    { id: "core_sleep_regularity", name: "Sleep Regularity", questionPrefix: "7-10", expectedQuestions: 4 },
-    { id: "core_sleep_timing", name: "Sleep Timing", questionPrefix: "11-18", expectedQuestions: 8 },
+    { id: "core_sleep_quality_2", name: "Sleep Quality Part 2", questionPrefix: "47-58", expectedQuestions: 13 },
     { id: "core_physical", name: "Physical", questionPrefix: "19-25,33", expectedQuestions: 11 },
-    { id: "core_nutritional", name: "Nutritional", questionPrefix: "29-34,54", expectedQuestions: 11 },
+    { id: "core_nutritional", name: "Nutritional", questionPrefix: "29-34,54", expectedQuestions: 12 },
   ],
   gateway: [
     { id: "gateway_mental_health", name: "Mental Health Gateway", questionIds: ["15", "16"], expectedQuestions: 2 },
@@ -38,25 +37,39 @@ const IOS_EXPECTED_MODULES = {
     { id: "gateway_physical", name: "Physical Gateway", questionIds: ["19", "20", "22-25"], expectedQuestions: 6 },
   ],
   expansion: [
+    // Day 6: Insomnia + Shift Work
     { id: "expansion_isi", name: "ISI", questionPrefix: "ISI_", expectedQuestions: 7 },
+    { id: "expansion_swdsq", name: "SWDSQ", questionPrefix: "SWDSQ_", expectedQuestions: 4 },
+    // Day 7: Depression + Cognitive
     { id: "expansion_phq9", name: "PHQ-9", questionPrefix: "PHQ9_", expectedQuestions: 9 },
+    { id: "expansion_promis_cognitive", name: "PROMIS Cognitive", questionPrefix: "PROMIS_", expectedQuestions: 6 },
+    // Day 8: Anxiety + Sleep Hygiene
     { id: "expansion_gad7", name: "GAD-7", questionPrefix: "GAD7_", expectedQuestions: 7 },
+    { id: "expansion_sleep_hygiene_part1", name: "Sleep Hygiene (Part 1)", questionPrefix: "SH_", expectedQuestions: 5 },
+    { id: "expansion_sleep_hygiene_part2", name: "Sleep Hygiene (Part 2)", questionPrefix: "SH_", expectedQuestions: 5 },
+    // Day 9: OSA - STOP-BANG only (93% sensitivity)
     { id: "expansion_stop_bang", name: "STOP-BANG", questionPrefix: "SB_", expectedQuestions: 8 },
+    // Day 10: Excessive Sleepiness
     { id: "expansion_ess", name: "ESS", questionPrefix: "ESS_", expectedQuestions: 8 },
-    { id: "expansion_dbas", name: "DBAS-16", questionPrefix: "DBAS_", expectedQuestions: 16 },
-    { id: "expansion_sleep_hygiene", name: "Sleep Hygiene", questionPrefix: "SH_", expectedQuestions: 10 },
-    { id: "expansion_psas", name: "PSAS", questionPrefix: "PSAS_", expectedQuestions: 16 },
-    { id: "expansion_psqi", name: "PSQI", questionPrefix: "PSQI_", expectedQuestions: 19 },
-    { id: "expansion_dass21", name: "DASS-21", questionPrefix: "DASS_", expectedQuestions: 21 },
-    { id: "expansion_berlin", name: "Berlin", questionPrefix: "BERLIN_", expectedQuestions: 10 },
     { id: "expansion_fss", name: "FSS", questionPrefix: "FSS_", expectedQuestions: 9 },
-    { id: "expansion_fosq", name: "FOSQ-10", questionPrefix: "FOSQ_", expectedQuestions: 10 },
-    { id: "expansion_promis", name: "PROMIS Cognitive", questionPrefix: "PROMIS_", expectedQuestions: 15 },
-    { id: "expansion_bpi", name: "BPI", questionPrefix: "BPI_", expectedQuestions: 11 },
-    { id: "expansion_meq", name: "MEQ", questionPrefix: "MEQ_", expectedQuestions: 19 },
+    // Day 11: Beliefs + Pain (Part 1)
+    { id: "expansion_dbas6", name: "DBAS-6", questionPrefix: "DBAS_", expectedQuestions: 6 }, // DBAS-6 (2024) - items 4, 5, 7, 11, 13, 15
+    { id: "expansion_bpi_part1", name: "BPI (Part 1)", questionPrefix: "BPI_", expectedQuestions: 6 },
+    // Day 12: Pain Impact
+    { id: "expansion_bpi_part2", name: "BPI (Part 2)", questionPrefix: "BPI_", expectedQuestions: 5 },
+    // Day 13: Arousal + Function
+    { id: "expansion_psas_cognitive", name: "PSAS Cognitive", questionPrefix: "PSAS_", expectedQuestions: 8 },
+    { id: "expansion_psas_somatic", name: "PSAS Somatic", questionPrefix: "PSAS_", expectedQuestions: 8 },
+    { id: "expansion_fosq_part1", name: "FOSQ-10 (Part 1)", questionPrefix: "FOSQ_", expectedQuestions: 5 },
+    { id: "expansion_fosq_part2", name: "FOSQ-10 (Part 2)", questionPrefix: "FOSQ_", expectedQuestions: 5 },
+    // Day 14: Diet + Chronotype
+    { id: "expansion_medas", name: "MEDAS", questionPrefix: "MEDAS_", expectedQuestions: 14 },
+    { id: "expansion_meq_part1", name: "MEQ (Part 1)", questionPrefix: "MEQ_", expectedQuestions: 10 },
+    { id: "expansion_meq_part2", name: "MEQ (Part 2)", questionPrefix: "MEQ_", expectedQuestions: 9 },
   ],
   sleepDiary: [
-    { id: "csd_sleep_log", name: "Consensus Sleep Diary", questionPrefix: "CSD_", expectedQuestions: 20 },
+    // CSD (Consensus Sleep Diary) - 8 core questions for daily sleep log
+    { id: "csd_sleep_log", name: "Consensus Sleep Diary", questionPrefix: "CSD_", expectedQuestions: 8 },
   ],
 };
 
@@ -119,8 +132,8 @@ const CLINICAL_SCORE_THRESHOLDS = {
       { min: 16, max: 21, severity: "severe", label: "Severe sleep disturbance" },
     ],
   },
-  "DBAS-16": {
-    maxScore: 160, // Average divided by 10
+  "DBAS-6": {
+    maxScore: 10, // Average score on 0-10 scale
     isAverage: true,
     thresholds: [
       { min: 0, max: 3, severity: "low", label: "Low dysfunctional beliefs" },
@@ -563,6 +576,68 @@ export const runFullCrossPlatformValidation = query({
         sleepDiary: IOS_EXPECTED_MODULES.sleepDiary.length,
       },
       clinicalQuestionnaires: Object.keys(CLINICAL_SCORE_THRESHOLDS),
+    };
+  },
+});
+
+/**
+ * Get all questions grouped by module for 14-day schedule display
+ */
+export const getAllQuestionsByModule = query({
+  args: {},
+  handler: async (ctx) => {
+    const questions = await ctx.db.query("assessment_questions").collect();
+    const moduleQuestions = await ctx.db.query("module_questions").collect();
+    const modules = await ctx.db.query("assessment_modules").collect();
+
+    // Create question lookup
+    const questionMap: Record<string, { text: string; format: string }> = {};
+    for (const q of questions) {
+      questionMap[q.question_id] = {
+        text: q.question_text,
+        format: q.answer_format,
+      };
+    }
+
+    // Create module lookup
+    const moduleMap: Record<string, { name: string; type: string }> = {};
+    for (const m of modules) {
+      moduleMap[m.module_id] = {
+        name: m.name,
+        type: m.module_type || "UNKNOWN",
+      };
+    }
+
+    // Group questions by module
+    const questionsByModule: Record<string, Array<{ id: string; text: string; format: string }>> = {};
+    for (const mq of moduleQuestions) {
+      if (!questionsByModule[mq.module_id]) {
+        questionsByModule[mq.module_id] = [];
+      }
+      const q = questionMap[mq.question_id];
+      questionsByModule[mq.module_id].push({
+        id: mq.question_id,
+        text: q?.text || `[${mq.question_id}]`,
+        format: q?.format || "unknown",
+      });
+    }
+
+    // Sort questions within each module by ID
+    for (const moduleId of Object.keys(questionsByModule)) {
+      questionsByModule[moduleId].sort((a, b) => {
+        // Sort numerically if both are numbers, otherwise alphabetically
+        const aNum = parseInt(a.id.replace(/\D/g, ""));
+        const bNum = parseInt(b.id.replace(/\D/g, ""));
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return aNum - bNum;
+        }
+        return a.id.localeCompare(b.id);
+      });
+    }
+
+    return {
+      moduleInfo: moduleMap,
+      questionsByModule,
     };
   },
 });

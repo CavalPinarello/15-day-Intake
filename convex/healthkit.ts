@@ -695,6 +695,18 @@ export const getSleepArchitecture = query({
 // ============================================
 
 /**
+ * Sanitize source names to be valid Convex field names.
+ * Convex requires field names to contain only non-control ASCII characters,
+ * so we replace apostrophes and other problematic characters.
+ */
+function sanitizeSourceName(source: string): string {
+  return source
+    .replace(/'/g, "") // Remove apostrophes (e.g., "Martin's" -> "Martins")
+    .replace(/[^\x20-\x7E]/g, "") // Remove non-printable ASCII
+    .trim();
+}
+
+/**
  * Get sleep data organized by source device for multi-wearable comparison.
  * Returns data grouped by source (Apple Watch, Oura, Fitbit, etc.) with
  * overlapping dates aligned for easy comparison charting.
@@ -729,8 +741,8 @@ export const getMultiSourceSleepData = query({
     for (const record of sleepData) {
       allDates.add(record.date);
 
-      // Add primary source data
-      const primarySource = record.primary_source || "Unknown";
+      // Add primary source data - sanitize to avoid invalid field name characters
+      const primarySource = sanitizeSourceName(record.primary_source || "Unknown");
       if (!sourceData[primarySource]) {
         sourceData[primarySource] = [];
       }
@@ -748,7 +760,7 @@ export const getMultiSourceSleepData = query({
       if (record.all_sources_json) {
         try {
           const allSources = JSON.parse(record.all_sources_json) as string[];
-          allSources.forEach(s => allSourcesSet.add(s));
+          allSources.forEach(s => allSourcesSet.add(sanitizeSourceName(s)));
         } catch {
           // Ignore parse errors
         }
@@ -846,7 +858,7 @@ export const getSourceDetails = query({
     }> = {};
 
     for (const record of sleepData) {
-      const source = record.primary_source || "Unknown";
+      const source = sanitizeSourceName(record.primary_source || "Unknown");
 
       if (!sourceCapabilities[source]) {
         sourceCapabilities[source] = {
@@ -873,7 +885,7 @@ export const getSourceDetails = query({
     // Check heart rate data
     if (hrData.length > 0) {
       // Assume heart rate comes from primary wearable
-      const primarySource = sleepData[0]?.primary_source || "Unknown";
+      const primarySource = sanitizeSourceName(sleepData[0]?.primary_source || "Unknown");
       if (sourceCapabilities[primarySource]) {
         sourceCapabilities[primarySource].hasHeartRate = hrData.some(h => h.resting_hr !== undefined);
         sourceCapabilities[primarySource].hasHrv = hrData.some(h => h.hrv_avg !== undefined);
@@ -899,7 +911,7 @@ export const getSourceDetails = query({
           : cap.qualityScore >= 2 ? "Fair"
           : "Limited",
       })),
-      primarySource: sleepData[0]?.primary_source || null,
+      primarySource: sleepData[0]?.primary_source ? sanitizeSourceName(sleepData[0].primary_source) : null,
       totalSources: Object.keys(sourceCapabilities).length,
     };
   },

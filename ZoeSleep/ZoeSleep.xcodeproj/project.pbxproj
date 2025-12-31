@@ -67,6 +67,8 @@
 		4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */; };
 		4A5E3C7A2C8E123456789M11 /* ExpansionSchedulerTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C7B2C8E123456789M12 /* ExpansionSchedulerTestView.swift */; };
 		4A5E3C7C2C8E123456789M13 /* UnifiedDebugPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */; };
+		4A5E3C7F2C8E123456789M16 /* HealthKitDetailedDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C7E2C8E123456789M15 /* HealthKitDetailedDebugView.swift */; };
+		4A5E3C8A2C8E123456789M17 /* DebugAutoCompleteButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C8B2C8E123456789M18 /* DebugAutoCompleteButton.swift */; };
 		4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C812C8E123456789N02 /* ZoeLogo.swift */; };
 		4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */; };
 		4A5E3DW0022C8E123456789W002 /* CheckInModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DW0012C8E123456789W001 /* CheckInModels.swift */; };
@@ -108,6 +110,7 @@
 		78819D6CD1E767284E8A2BD1 /* ProtocolCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3315DDF499A0993F301C5F8F /* ProtocolCardView.swift */; };
 		82ECFA1EB2E727053DA900A4 /* DaySplashLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA328882E23ED40DF40AA050 /* DaySplashLibrary.swift */; };
 		8920FCD6483EE743FCBA4F03 /* AnswerDerivationSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBBE1CCD02DCDC3C1643F536 /* AnswerDerivationSystem.swift */; };
+		SCMAP001ED24841599CCADD1 /* ScaleMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCMAP002ED24841599CCADD2 /* ScaleMapper.swift */; };
 		93D3EA4C6429DD6F6C27D6E1 /* ThemeManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B495D2EDDEAA550D2CC113D1 /* ThemeManagerTests.swift */; };
 		A2E61DC60CC9C77792E05AB7 /* MiddayCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025C43C0F7D4EA449A2B34ED /* MiddayCheckInView.swift */; };
 		AEB13F10E2D18979451DBF6E /* HealthKitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037F9206B99764D48FD1C894 /* HealthKitManagerTests.swift */; };
@@ -203,6 +206,8 @@
 		4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlaybackView.swift; sourceTree = "<group>"; };
 		4A5E3C7B2C8E123456789M12 /* ExpansionSchedulerTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpansionSchedulerTestView.swift; sourceTree = "<group>"; };
 		4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedDebugPanel.swift; sourceTree = "<group>"; };
+		4A5E3C7E2C8E123456789M15 /* HealthKitDetailedDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitDetailedDebugView.swift; sourceTree = "<group>"; };
+		4A5E3C8B2C8E123456789M18 /* DebugAutoCompleteButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugAutoCompleteButton.swift; sourceTree = "<group>"; };
 		4A5E3C812C8E123456789N02 /* ZoeLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoeLogo.swift; sourceTree = "<group>"; };
 		4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuroraBorealisView.swift; sourceTree = "<group>"; };
 		4A5E3DW0012C8E123456789W001 /* CheckInModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInModels.swift; sourceTree = "<group>"; };
@@ -251,6 +256,7 @@
 		C97DBCA01C582571D7064E4A /* CheckInManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CheckInManager.swift; path = Managers/CheckInManager.swift; sourceTree = "<group>"; };
 		CA328882E23ED40DF40AA050 /* DaySplashLibrary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DaySplashLibrary.swift; sourceTree = "<group>"; };
 		CBBE1CCD02DCDC3C1643F536 /* AnswerDerivationSystem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnswerDerivationSystem.swift; path = ../Models/AnswerDerivationSystem.swift; sourceTree = "<group>"; };
+		SCMAP002ED24841599CCADD2 /* ScaleMapper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScaleMapper.swift; sourceTree = "<group>"; };
 		CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyPhaseManager.swift; sourceTree = "<group>"; };
 		DF6080214D734AC815952E0F /* TestUtilities.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TestUtilities.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -484,6 +490,7 @@
 				300B6C4CE88E58106B1C0325 /* DaySplashInfo.swift */,
 				CA328882E23ED40DF40AA050 /* DaySplashLibrary.swift */,
 				CBBE1CCD02DCDC3C1643F536 /* AnswerDerivationSystem.swift */,
+				SCMAP002ED24841599CCADD2 /* ScaleMapper.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -528,6 +535,8 @@
 				4A5E3C772C8E123456789M08 /* MockPlaybackView.swift */,
 				4A5E3C7B2C8E123456789M12 /* ExpansionSchedulerTestView.swift */,
 				4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */,
+				4A5E3C7E2C8E123456789M15 /* HealthKitDetailedDebugView.swift */,
+				4A5E3C8B2C8E123456789M18 /* DebugAutoCompleteButton.swift */,
 			);
 			path = DevTools;
 			sourceTree = "<group>";
@@ -863,6 +872,8 @@
 				4A5E3C762C8E123456789M07 /* MockPlaybackView.swift in Sources */,
 				4A5E3C7A2C8E123456789M11 /* ExpansionSchedulerTestView.swift in Sources */,
 				4A5E3C7C2C8E123456789M13 /* UnifiedDebugPanel.swift in Sources */,
+				4A5E3C7F2C8E123456789M16 /* HealthKitDetailedDebugView.swift in Sources */,
+				4A5E3C8A2C8E123456789M17 /* DebugAutoCompleteButton.swift in Sources */,
 				4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */,
 				4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */,
 				5A316CC12EF4B1200098C762 /* GamificationManager.swift in Sources */,
@@ -890,6 +901,7 @@
 				82ECFA1EB2E727053DA900A4 /* DaySplashLibrary.swift in Sources */,
 				EDB3374EBA6CA9B6FB73B63F /* DaySplashView.swift in Sources */,
 				8920FCD6483EE743FCBA4F03 /* AnswerDerivationSystem.swift in Sources */,
+				SCMAP001ED24841599CCADD1 /* ScaleMapper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
