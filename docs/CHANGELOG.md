@@ -6,6 +6,26 @@
 
 ### Jan 2, 2026
 
+#### Parked XP/Gamification Feature
+
+Disabled the XP points and gamification system via a feature flag for future re-enablement.
+
+**Changes:**
+- Added `gamificationEnabled` flag to ThemeManager (default: `false`)
+- Guarded all gamification code in QuestionnaireView with feature flag check
+- Badge unlock and level up animations only show when enabled
+- `recordDayComplete()` calls wrapped in feature flag check
+- Added toggle in Debug Panel > Experimental Features for easy re-enablement
+
+**Why parked:**
+- XP status wasn't visible anywhere in the app UI
+- Feature didn't add much value in current state
+- Code preserved for potential future iteration
+
+**Files changed:** `ThemeManager.swift`, `QuestionnaireView.swift`, `UnifiedDebugPanel.swift`
+
+---
+
 #### Unified Time Format System (12-hour/24-hour)
 
 Fixed TimeFormatManager not being found by Xcode and updated all time pickers to respect the user's 12-hour/24-hour preference.

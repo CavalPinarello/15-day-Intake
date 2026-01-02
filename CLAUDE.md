@@ -88,6 +88,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
+**Jan 2:** Parked XP/Gamification feature - disabled via `gamificationEnabled` flag in ThemeManager (default false), toggle available in Debug Panel > Experimental Features, code preserved for future re-enablement
 **Jan 2:** Unified time format system - TimeFormatManager + locale override on all DatePickers to force 12/24-hour format, Watch time picker supports both modes, system auto-detects device preference with user override in Settings
 **Jan 2:** Notification message variety (100 rotating messages to prevent desensitization), Watch-style Energy/Mood/Focus check-in infrastructure on iOS, improved notification settings UI with scheduled time display
 **Jan 2:** App versioning system overhaul (v1.0.12) - single source of truth in `ZoeSleep/Shared/AppVersion.swift`, version history tracking in `docs/VERSION_HISTORY.md`, fixed date-based build display bug

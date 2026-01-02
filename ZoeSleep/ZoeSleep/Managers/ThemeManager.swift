@@ -216,6 +216,14 @@ class ThemeManager: ObservableObject {
         }
     }
 
+    /// Show Sleep Science Cards - the educational splash screens between questions
+    /// These explain the science behind each day's assessment
+    @Published var showSleepScienceCards: Bool = true {
+        didSet {
+            UserDefaults.standard.set(showSleepScienceCards, forKey: "showSleepScienceCards")
+        }
+    }
+
     // Circadian time period - triggers UI refresh when time period changes
     @Published private(set) var currentTimePeriod: TimePeriod = TimePeriod.current
 
@@ -315,6 +323,13 @@ class ThemeManager: ObservableObject {
         self.showSleepInsights = UserDefaults.standard.bool(forKey: "showSleepInsights")
         self.gamificationEnabled = UserDefaults.standard.bool(forKey: "gamificationEnabled")
         self.showWatchStyleCheckIns = UserDefaults.standard.bool(forKey: "showWatchStyleCheckIns")
+
+        // Load Sleep Science Cards setting (enabled by default)
+        if UserDefaults.standard.object(forKey: "showSleepScienceCards") == nil {
+            self.showSleepScienceCards = true  // Default to enabled for new users
+        } else {
+            self.showSleepScienceCards = UserDefaults.standard.bool(forKey: "showSleepScienceCards")
+        }
 
         // Load enhanced readability mode (load last so it can override other settings)
         self.enhancedReadabilityMode = UserDefaults.standard.bool(forKey: "enhancedReadabilityMode")

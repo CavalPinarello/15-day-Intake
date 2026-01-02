@@ -1764,8 +1764,8 @@ struct QuestionnaireView: View {
                     }
                 }
             } else {
-                // Check if reward should show BEFORE advancing
-                if rewardManager.shouldShowReward {
+                // Check if reward should show BEFORE advancing (respects Sleep Science Cards setting)
+                if themeManager.showSleepScienceCards && rewardManager.shouldShowReward {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                         showingRewardCard = true
                     }

@@ -28,6 +28,11 @@ enum NotificationType: String {
     case bedtimeReminder = "bedtime_reminder"
     case overdueTask = "overdue_task"
     case taskReminder = "task_reminder"
+
+    // Check-in nudge types (separate from daily task reminders)
+    case morningCheckInNudge = "checkin_nudge_morning"
+    case middayCheckInNudge = "checkin_nudge_midday"
+    case eveningCheckInNudge = "checkin_nudge_evening"
 }
 
 // MARK: - Varied Notification Messages
@@ -266,6 +271,250 @@ struct NotificationMessages {
     /// Get a random evening message
     static func randomEveningMessage() -> (title: String, body: String) {
         return eveningMessages.randomElement() ?? eveningMessages[0]
+    }
+}
+
+// MARK: - Check-In Nudge Messages (100 unique prompts)
+
+/// 100 varied check-in nudge messages for morning/midday/evening energy-mood-focus check-ins
+struct CheckInNudgeMessages {
+
+    // MARK: - Morning Check-In Prompts (35)
+    static let morningPrompts: [(title: String, body: String)] = [
+        // Energy-focused (1-12)
+        ("How's your battery?", "Quick energy check after last night's sleep."),
+        ("Energy level?", "Rate how charged you feel this morning."),
+        ("Morning energy check", "How's your tank after sleeping?"),
+        ("Feeling charged?", "10-second energy level check-in."),
+        ("Battery status?", "How energized are you this morning?"),
+        ("Energy report", "Quick check: how's your power level?"),
+        ("Rise & report", "Tell us about your morning energy."),
+        ("Morning vitality", "Quick check on your energy levels."),
+        ("Power check", "How's your energy right now?"),
+        ("Fuel gauge", "Rate your morning energy level."),
+        ("Energy snapshot", "Quick morning energy reading."),
+        ("Wake-up power", "How energized do you feel?"),
+
+        // Mood-focused (13-24)
+        ("Morning mood?", "Sunny or stormy? Quick check-in."),
+        ("How are you feeling?", "Morning mood check - takes 10 seconds."),
+        ("Mood check", "How's your emotional weather today?"),
+        ("Morning vibes", "What's your mood like right now?"),
+        ("Feeling check", "Quick mood snapshot for the morning."),
+        ("Emotional pulse", "How are you feeling this AM?"),
+        ("Sunrise mood", "Rate your morning emotional state."),
+        ("Morning outlook", "How optimistic are you feeling?"),
+        ("Mood meter", "Quick check on your feelings."),
+        ("AM mood check", "Tell us how you're feeling."),
+        ("Morning feels", "What's your mood this morning?"),
+        ("Emotional check-in", "Quick morning mood reading."),
+
+        // Focus-focused (25-35)
+        ("Mental clarity?", "How sharp is your focus this morning?"),
+        ("Focus check", "Rate your mental clarity level."),
+        ("Brain fog?", "Quick focus level check-in."),
+        ("Morning sharpness", "How clear is your thinking?"),
+        ("Clarity check", "Mental focus snapshot."),
+        ("Concentration level?", "How focused do you feel?"),
+        ("Mind check", "Rate your morning mental clarity."),
+        ("Focus fuel", "How's your concentration today?"),
+        ("Mental energy", "Quick focus level reading."),
+        ("Thinking clearly?", "Morning mental clarity check."),
+        ("Cognitive check", "How's your brain power?"),
+    ]
+
+    // MARK: - Midday Check-In Prompts (35)
+    static let middayPrompts: [(title: String, body: String)] = [
+        // Energy-focused (1-12)
+        ("Midday energy?", "How's your afternoon power level?"),
+        ("Afternoon slump?", "Quick energy check-in."),
+        ("Energy update", "How's your fuel holding up?"),
+        ("Post-lunch power", "Rate your current energy."),
+        ("Afternoon vitality", "Quick energy snapshot."),
+        ("Still going strong?", "Midday energy check."),
+        ("Energy status", "How charged do you feel now?"),
+        ("PM power check", "Rate your afternoon energy."),
+        ("Midday recharge?", "How's your energy level?"),
+        ("Afternoon battery", "Quick power level check."),
+        ("Sustained energy?", "Midday energy reading."),
+        ("Afternoon fuel", "How energized are you?"),
+
+        // Mood-focused (13-24)
+        ("Afternoon mood?", "Quick midday emotional check."),
+        ("How's the day going?", "Mood check for the afternoon."),
+        ("Midday feelings", "Rate your current mood."),
+        ("Afternoon vibes", "How are you feeling now?"),
+        ("PM mood check", "Quick emotional snapshot."),
+        ("Day so far?", "Tell us about your mood."),
+        ("Afternoon pulse", "How's your emotional state?"),
+        ("Midday outlook", "Still feeling positive?"),
+        ("Feelings update", "Quick afternoon mood check."),
+        ("Current mood?", "Midday emotional reading."),
+        ("Afternoon feels", "How are you feeling?"),
+        ("Mood snapshot", "Quick check on your feelings."),
+
+        // Focus-focused (25-35)
+        ("Afternoon focus?", "How's your concentration?"),
+        ("Still sharp?", "Midday mental clarity check."),
+        ("Focus holding?", "Rate your concentration level."),
+        ("Mental stamina", "How's your focus this afternoon?"),
+        ("Clarity update", "Quick focus snapshot."),
+        ("Concentration check", "How sharp are you feeling?"),
+        ("PM focus level", "Rate your mental clarity."),
+        ("Brain power?", "Afternoon focus reading."),
+        ("Thinking clearly?", "Midday concentration check."),
+        ("Mental energy?", "How's your focus holding up?"),
+        ("Cognitive status", "Quick clarity check-in."),
+    ]
+
+    // MARK: - Evening Check-In Prompts (30)
+    static let eveningPrompts: [(title: String, body: String)] = [
+        // Energy-focused (1-10)
+        ("Evening energy?", "How's your battery after today?"),
+        ("End of day power", "Rate your remaining energy."),
+        ("Winding down?", "Quick evening energy check."),
+        ("Today's toll?", "How much energy is left?"),
+        ("Evening fuel", "Rate your current power level."),
+        ("Day's end energy", "How depleted are you feeling?"),
+        ("Battery after today", "Quick energy reading."),
+        ("PM power level", "How energized do you feel?"),
+        ("Evening vitality", "Rate your remaining fuel."),
+        ("Tired yet?", "Quick evening energy check."),
+
+        // Mood-focused (11-20)
+        ("Evening mood?", "How are you feeling tonight?"),
+        ("Day's end feelings", "Quick mood check-in."),
+        ("How was today?", "Rate your evening mood."),
+        ("End-of-day vibes", "Tell us how you're feeling."),
+        ("Evening outlook", "Mood snapshot for tonight."),
+        ("Night feelings", "Quick emotional check-in."),
+        ("PM mood check", "How's your evening mood?"),
+        ("Sunset mood", "Rate your current feelings."),
+        ("Today's wrap-up", "How are you feeling now?"),
+        ("Evening pulse", "Quick mood reading."),
+
+        // Focus-focused (21-30)
+        ("Evening clarity?", "How's your mental state?"),
+        ("Still focused?", "End-of-day concentration check."),
+        ("Mental state?", "Rate your evening clarity."),
+        ("Brain tired?", "Quick focus level check."),
+        ("PM clarity", "How's your thinking tonight?"),
+        ("Evening focus", "Rate your mental energy."),
+        ("Cognitive wind-down", "Focus snapshot for tonight."),
+        ("Mind check", "How clear is your thinking?"),
+        ("Evening sharpness", "Quick concentration reading."),
+        ("Mental wrap-up", "How's your focus this evening?"),
+    ]
+
+    /// Get a random morning check-in prompt
+    static func randomMorningPrompt() -> (title: String, body: String) {
+        return morningPrompts.randomElement() ?? morningPrompts[0]
+    }
+
+    /// Get a random midday check-in prompt
+    static func randomMiddayPrompt() -> (title: String, body: String) {
+        return middayPrompts.randomElement() ?? middayPrompts[0]
+    }
+
+    /// Get a random evening check-in prompt
+    static func randomEveningPrompt() -> (title: String, body: String) {
+        return eveningPrompts.randomElement() ?? eveningPrompts[0]
+    }
+}
+
+// MARK: - Sleep Task Messages (50 unique prompts)
+
+/// 50 varied prompts for sleep log and assessment reminders
+struct SleepTaskMessages {
+
+    // MARK: - Sleep Log Prompts (25)
+    static let sleepLogPrompts: [(title: String, body: String)] = [
+        // Friendly (1-10)
+        ("Sleep log time!", "Record how you slept last night."),
+        ("Log your rest", "Quick sleep diary entry."),
+        ("Sleep diary", "How was last night's sleep?"),
+        ("Rest report", "Tell us about your sleep."),
+        ("Night recap", "Log your sleep quality."),
+        ("Sleep check", "Record your rest data."),
+        ("Morning log", "How did you sleep?"),
+        ("Sleep entry", "Add today's sleep data."),
+        ("Rest tracker", "Log your sleep now."),
+        ("Sleep snapshot", "Quick sleep log entry."),
+
+        // Question-based (11-18)
+        ("How'd you sleep?", "Log it while it's fresh."),
+        ("Sleep well?", "Record your rest quality."),
+        ("Good rest?", "Tell us about your night."),
+        ("Restful night?", "Log your sleep experience."),
+        ("Sleep through?", "Record any wake-ups."),
+        ("Dreams or disruptions?", "Log your sleep."),
+        ("Quality rest?", "Add your sleep data."),
+        ("Enough sleep?", "Log your hours and quality."),
+
+        // Motivational (19-25)
+        ("Track to improve", "Log your sleep patterns."),
+        ("Data drives better sleep", "Record last night."),
+        ("Consistency matters", "Log your sleep now."),
+        ("Better sleep starts here", "Add your log."),
+        ("One step to better rest", "Log your sleep."),
+        ("Building your sleep profile", "Add today's data."),
+        ("Progress through tracking", "Sleep log time."),
+    ]
+
+    // MARK: - Assessment Prompts (25)
+    static let assessmentPrompts: [(title: String, body: String)] = [
+        // Friendly (1-10)
+        ("Daily assessment", "Complete your questions."),
+        ("Quick questionnaire", "A few questions for today."),
+        ("Assessment time", "Help us learn more."),
+        ("Daily check-in", "Complete your assessment."),
+        ("Questions ready", "Your daily assessment awaits."),
+        ("Health check", "Complete today's questions."),
+        ("Wellness assessment", "Quick questionnaire."),
+        ("Progress check", "Daily questions ready."),
+        ("Insight builder", "Complete your assessment."),
+        ("Profile update", "Answer today's questions."),
+
+        // Purpose-focused (11-18)
+        ("Personalize your care", "Complete assessment."),
+        ("Help us help you", "Daily questions ready."),
+        ("Unlock insights", "Complete your assessment."),
+        ("Tailored guidance", "Answer today's questions."),
+        ("Better recommendations", "Assessment time."),
+        ("Understanding you", "Complete your questions."),
+        ("Customized care", "Daily assessment ready."),
+        ("Your sleep profile", "Add more insights."),
+
+        // Short (19-25)
+        ("Assessment!", "Quick questions for today."),
+        ("Questions ready!", "Complete your daily check."),
+        ("Check-in time!", "Daily assessment due."),
+        ("Your turn!", "Complete the assessment."),
+        ("Quick check!", "Daily questions waiting."),
+        ("Almost done!", "Just the assessment left."),
+        ("Last task!", "Complete your assessment."),
+    ]
+
+    /// Get a random sleep log prompt
+    static func randomSleepLogPrompt() -> (title: String, body: String) {
+        return sleepLogPrompts.randomElement() ?? sleepLogPrompts[0]
+    }
+
+    /// Get a random assessment prompt
+    static func randomAssessmentPrompt() -> (title: String, body: String) {
+        return assessmentPrompts.randomElement() ?? assessmentPrompts[0]
+    }
+
+    /// Get a combined task prompt (sleep log + assessment)
+    static func randomCombinedPrompt() -> (title: String, body: String) {
+        let combinedPrompts: [(title: String, body: String)] = [
+            ("Daily tasks ready", "Sleep log and assessment await."),
+            ("Morning to-do", "Log your sleep and complete assessment."),
+            ("Two quick tasks", "Sleep diary and daily questions."),
+            ("Complete your day", "Sleep log + assessment ready."),
+            ("Health check time", "Log sleep and answer questions."),
+        ]
+        return combinedPrompts.randomElement() ?? combinedPrompts[0]
     }
 }
 

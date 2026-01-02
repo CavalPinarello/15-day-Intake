@@ -445,6 +445,19 @@ struct ProfileSettingsView: View {
             } label: {
                 Label("Color Theme", systemImage: "paintbrush.fill")
             }
+
+            // Sleep Science Cards Toggle
+            Toggle(isOn: $themeManager.showSleepScienceCards) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Sleep Science Cards", systemImage: "lightbulb.fill")
+                        .font(.headline)
+                    Text("Show educational info before each day's assessment")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .tint(themeManager.accentColor)
+            .accessibleTapTarget()
         } header: {
             Text("Appearance")
         } footer: {
