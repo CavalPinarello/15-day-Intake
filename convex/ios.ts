@@ -2487,6 +2487,309 @@ export const speedRunFullJourney = mutation({
   },
 });
 
+// ============================================
+// Speed Test Mode - 15-Second Day Lockouts
+// ============================================
+
+const SPEED_TEST_DAY_DURATION_MS = 15 * 1000; // 15 seconds
+
+/**
+ * Enable speed test mode for accelerated testing
+ * When enabled, days unlock in 15 seconds instead of 24 hours
+ */
+export const enableSpeedTestMode = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(args.userId, {
+      speed_test_mode: true,
+      is_test_data: true, // Mark as test data for dashboard filtering
+    });
+
+    console.log(`[SpeedTestMode] Enabled for user ${user.username}`);
+
+    return {
+      success: true,
+      speedTestMode: true,
+      message: "Speed test mode enabled. Days now unlock in 15 seconds.",
+    };
+  },
+});
+
+/**
+ * Disable speed test mode
+ */
+export const disableSpeedTestMode = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(args.userId, {
+      speed_test_mode: false,
+      speed_test_day_unlocks_at: undefined,
+    });
+
+    console.log(`[SpeedTestMode] Disabled for user ${user.username}`);
+
+    return {
+      success: true,
+      speedTestMode: false,
+      message: "Speed test mode disabled. Normal 24-hour day cycles restored.",
+    };
+  },
+});
+
+/**
+ * Get speed test mode status including countdown
+ */
+export const getSpeedTestStatus = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const now = Date.now();
+    const speedTestMode = user.speed_test_mode || false;
+    const dayUnlocksAt = user.speed_test_day_unlocks_at;
+    const isTestData = user.is_test_data || false;
+
+    let secondsUntilUnlock = 0;
+    let canAdvance = false;
+
+    if (speedTestMode && dayUnlocksAt) {
+      const msRemaining = dayUnlocksAt - now;
+      secondsUntilUnlock = Math.max(0, Math.ceil(msRemaining / 1000));
+      canAdvance = msRemaining <= 0;
+    }
+
+    return {
+      speedTestMode,
+      isTestData,
+      currentDay: user.current_day || 1,
+      dayUnlocksAt: dayUnlocksAt || null,
+      secondsUntilUnlock,
+      canAdvance,
+      serverTime: now,
+    };
+  },
+});
+
+/**
+ * Complete the current day in speed test mode and set 15-second unlock timer
+ * This is the main action during speed testing - completes day and starts countdown
+ */
+export const speedTestCompleteDay = mutation({
+  args: {
+    userId: v.id("users"),
+    phenotype: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (!user.speed_test_mode) {
+      throw new Error("Speed test mode is not enabled");
+    }
+
+    const currentDay = user.current_day || 1;
+    const now = Date.now();
+    const phenotype = args.phenotype || "normal";
+
+    // Generate mock responses for this day
+    const sleepLogResponses = generateMockSleepLogResponses(currentDay, phenotype);
+    for (const response of sleepLogResponses) {
+      const existing = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_question", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", response.questionId)
+        )
+        .filter((q) => q.eq(q.field("day_number"), currentDay))
+        .first();
+
+      if (!existing) {
+        await ctx.db.insert("user_assessment_responses", {
+          user_id: args.userId,
+          question_id: response.questionId,
+          response_value: response.value.toString(),
+          response_number: typeof response.value === "number" ? response.value : undefined,
+          day_number: currentDay,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+    }
+
+    const assessmentResponses = generateMockAssessmentResponses(currentDay, phenotype);
+    for (const response of assessmentResponses) {
+      const existing = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_question", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", response.questionId)
+        )
+        .filter((q) => q.eq(q.field("day_number"), currentDay))
+        .first();
+
+      if (!existing) {
+        await ctx.db.insert("user_assessment_responses", {
+          user_id: args.userId,
+          question_id: response.questionId,
+          response_value: response.value?.toString(),
+          response_number: typeof response.value === "number" ? response.value : undefined,
+          response_array: response.array ? JSON.stringify(response.array) : undefined,
+          day_number: currentDay,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+    }
+
+    // Mark day as complete
+    const dayRecord = await ctx.db
+      .query("days")
+      .withIndex("by_day_number", (q) => q.eq("day_number", currentDay))
+      .first();
+
+    if (dayRecord) {
+      const existingProgress = await ctx.db
+        .query("user_progress")
+        .withIndex("by_user_day", (q) =>
+          q.eq("user_id", args.userId).eq("day_id", dayRecord._id)
+        )
+        .first();
+
+      if (existingProgress) {
+        await ctx.db.patch(existingProgress._id, {
+          completed: true,
+          completed_at: now,
+          sleep_log_completed: true,
+          assessment_completed: true,
+        });
+      } else {
+        await ctx.db.insert("user_progress", {
+          user_id: args.userId,
+          day_id: dayRecord._id,
+          completed: true,
+          completed_at: now,
+          created_at: now,
+          sleep_log_completed: true,
+          assessment_completed: true,
+        });
+      }
+    }
+
+    // Set the 15-second unlock timer
+    const unlockTime = now + SPEED_TEST_DAY_DURATION_MS;
+
+    await ctx.db.patch(args.userId, {
+      speed_test_day_unlocks_at: unlockTime,
+    });
+
+    console.log(`[SpeedTest] Day ${currentDay} completed, next day unlocks in 15 seconds`);
+
+    return {
+      success: true,
+      completedDay: currentDay,
+      phenotype,
+      dayUnlocksAt: unlockTime,
+      secondsUntilUnlock: 15,
+    };
+  },
+});
+
+/**
+ * Advance to next day after speed test countdown completes
+ */
+export const speedTestAdvanceDay = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (!user.speed_test_mode) {
+      throw new Error("Speed test mode is not enabled");
+    }
+
+    const now = Date.now();
+    const unlockTime = user.speed_test_day_unlocks_at;
+
+    // Check if countdown has completed
+    if (unlockTime && now < unlockTime) {
+      const secondsRemaining = Math.ceil((unlockTime - now) / 1000);
+      return {
+        success: false,
+        error: `Cannot advance yet. ${secondsRemaining} seconds remaining.`,
+        secondsUntilUnlock: secondsRemaining,
+      };
+    }
+
+    const currentDay = user.current_day || 1;
+    const newDay = Math.min(currentDay + 1, 14);
+
+    await ctx.db.patch(args.userId, {
+      current_day: newDay,
+      speed_test_day_unlocks_at: undefined, // Clear the timer
+    });
+
+    console.log(`[SpeedTest] Advanced from Day ${currentDay} to Day ${newDay}`);
+
+    return {
+      success: true,
+      previousDay: currentDay,
+      currentDay: newDay,
+      journeyComplete: newDay >= 14,
+    };
+  },
+});
+
+/**
+ * Clear test data flag (for converting test user to real patient)
+ */
+export const clearTestDataFlag = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(args.userId, {
+      is_test_data: false,
+      speed_test_mode: false,
+      speed_test_day_unlocks_at: undefined,
+    });
+
+    console.log(`[SpeedTestMode] Test data flag cleared for user ${user.username}`);
+
+    return {
+      success: true,
+      message: "User is now marked as real patient data.",
+    };
+  },
+});
+
 /**
  * Get current journey state (for debugging)
  */

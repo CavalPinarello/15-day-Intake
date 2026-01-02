@@ -54,6 +54,7 @@ struct MainDashboardView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var themeManager: ThemeManager
     @ObservedObject private var questionnaireManager = QuestionnaireManager.shared
+    @StateObject private var speedTestManager = SpeedTestManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var currentDay: Int = 1
@@ -99,6 +100,11 @@ struct MainDashboardView: View {
 
             ScrollView {
                 VStack(spacing: 16) {
+                    // Speed Test Mode Banner
+                    if speedTestManager.isSpeedTestMode {
+                        speedTestBanner
+                    }
+
                     // Header
                     headerView
 
@@ -276,6 +282,72 @@ struct MainDashboardView: View {
                 }
             }
             isRefreshing = false
+        }
+    }
+
+    // MARK: - Speed Test Mode Banner
+
+    private var speedTestBanner: some View {
+        HStack(spacing: 8) {
+            // Red calendar badge
+            ZStack {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.title3)
+                    .foregroundColor(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("SPEED TEST MODE")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+
+                if speedTestManager.secondsUntilUnlock > 0 {
+                    Text("Next day in \(speedTestManager.secondsUntilUnlock)s")
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.9))
+                        .monospacedDigit()
+                } else if speedTestManager.canAdvance {
+                    Text("Ready to advance!")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                } else {
+                    Text("15-second day lockouts active")
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+            }
+
+            Spacer()
+
+            // Countdown circle when counting down
+            if speedTestManager.secondsUntilUnlock > 0 {
+                ZStack {
+                    Circle()
+                        .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                        .frame(width: 28, height: 28)
+                    Circle()
+                        .trim(from: 0, to: CGFloat(speedTestManager.secondsUntilUnlock) / 15.0)
+                        .stroke(Color.white, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .frame(width: 28, height: 28)
+                        .rotationEffect(.degrees(-90))
+                    Text("\(speedTestManager.secondsUntilUnlock)")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.red)
+        )
+        .onAppear {
+            Task {
+                await speedTestManager.syncWithServer()
+            }
         }
     }
 

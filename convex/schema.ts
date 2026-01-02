@@ -44,6 +44,10 @@ export default defineSchema({
     clerk_id: v.optional(v.string()), // Clerk user ID for web authentication
     // Developer mode (for testers)
     developer_mode: v.optional(v.boolean()), // Enables fast-track testing (skip time gates, instant day unlock)
+    // Speed Test Mode - 15-second day lockouts for accelerated testing
+    speed_test_mode: v.optional(v.boolean()), // When true, days unlock in 15 seconds instead of 24 hours
+    speed_test_day_unlocks_at: v.optional(v.number()), // Unix timestamp when next day unlocks
+    is_test_data: v.optional(v.boolean()), // Flag to mark this user's data as test data (filtered from real patient views)
   })
     .index("by_username", ["username"])
     .index("by_email", ["email"])

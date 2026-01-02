@@ -926,6 +926,7 @@ export const getAllPatientsWithProgress = query({
     sessionToken: v.optional(v.string()), // Required for production, optional for backward compat
     statusFilter: v.optional(v.string()),
     searchTerm: v.optional(v.string()),
+    hideTestData: v.optional(v.boolean()), // If true, hide users marked as test data
   },
   returns: v.array(
     v.object({
@@ -941,6 +942,8 @@ export const getAllPatientsWithProgress = query({
       review_status: v.optional(v.string()),
       progress_percentage: v.number(),
       developer_mode: v.optional(v.boolean()),
+      is_test_data: v.optional(v.boolean()), // True if user's data is from speed test mode
+      speed_test_mode: v.optional(v.boolean()), // True if currently in speed test mode
     })
   ),
   handler: async (ctx, args) => {
@@ -956,9 +959,14 @@ export const getAllPatientsWithProgress = query({
     const users = await ctx.db.query("users").collect();
 
     // Filter out physicians and admins - only show patients
-    const patientUsers = users.filter(user =>
+    let patientUsers = users.filter(user =>
       user.role !== "physician" && user.role !== "admin"
     );
+
+    // Filter out test data users if requested
+    if (args.hideTestData) {
+      patientUsers = patientUsers.filter(user => !user.is_test_data);
+    }
 
     const patientsWithProgress = await Promise.all(
       patientUsers.map(async (user) => {
@@ -998,6 +1006,8 @@ export const getAllPatientsWithProgress = query({
           review_status: reviewStatus?.status,
           progress_percentage: progressPercentage,
           developer_mode: user.developer_mode,
+          is_test_data: user.is_test_data,
+          speed_test_mode: user.speed_test_mode,
         };
       })
     );

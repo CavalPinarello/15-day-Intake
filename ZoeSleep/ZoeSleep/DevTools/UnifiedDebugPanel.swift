@@ -116,6 +116,9 @@ struct UnifiedDebugPanel: View {
     @EnvironmentObject var questionnaireManager: QuestionnaireManager
     @Environment(\.dismiss) var dismiss
 
+    // Speed Test Manager
+    @StateObject private var speedTestManager = SpeedTestManager.shared
+
     // State
     @State private var selectedMode: DataGenerationMode = .fullRandom
     @State private var selectedGateways: Set<GatewayType> = []
@@ -178,7 +181,10 @@ struct UnifiedDebugPanel: View {
                 // MARK: - Section 7: Speed Run (Accelerated Testing)
                 speedRunSection
 
-                // MARK: - Section 8: Experimental Features
+                // MARK: - Section 8: Speed Test Mode (15-Second Lockouts)
+                speedTestModeSection
+
+                // MARK: - Section 9: Experimental Features
                 experimentalFeaturesSection
 
                 // MARK: - Section 8: Repair Tools
@@ -204,6 +210,7 @@ struct UnifiedDebugPanel: View {
             }
             .task {
                 await refreshPreview()
+                await speedTestManager.syncWithServer()
             }
             .onChange(of: selectedMode) { _, _ in
                 Task { await refreshPreview() }
@@ -806,6 +813,230 @@ struct UnifiedDebugPanel: View {
             Label("Speed Run (Accelerated Testing)", systemImage: "hare.fill")
         } footer: {
             Text("Auto-generates mock questionnaire answers based on selected phenotype. HealthKit data from your Watch is preserved. Use this to quickly test the full 14-day journey.")
+        }
+    }
+
+    // MARK: - Speed Test Mode Section (15-Second Lockouts)
+
+    @State private var speedTestPhenotypeSelection: String = "normal"
+
+    private var speedTestModeSection: some View {
+        Section {
+            // Speed Test Mode Toggle with Red Badge
+            HStack {
+                if speedTestManager.isSpeedTestMode {
+                    // Red calendar badge indicator
+                    ZStack {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.title2)
+                            .foregroundColor(.red)
+                        Circle()
+                            .fill(.red)
+                            .frame(width: 8, height: 8)
+                            .offset(x: 12, y: -10)
+                    }
+                } else {
+                    Image(systemName: "clock.arrow.2.circlepath")
+                        .font(.title2)
+                        .foregroundColor(.gray)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Speed Test Mode")
+                        .font(.headline)
+                    Text(speedTestManager.isSpeedTestMode ? "15-second day lockouts active" : "Normal 24-hour day cycles")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { speedTestManager.isSpeedTestMode },
+                    set: { newValue in
+                        Task {
+                            do {
+                                if newValue {
+                                    try await speedTestManager.enableSpeedTestMode()
+                                } else {
+                                    try await speedTestManager.disableSpeedTestMode()
+                                }
+                            } catch {
+                                statusMessage = "Error: \(error.localizedDescription)"
+                                statusIsError = true
+                            }
+                        }
+                    }
+                ))
+                .labelsHidden()
+            }
+
+            // Test Data Indicator
+            if speedTestManager.isTestData {
+                HStack {
+                    Image(systemName: "testtube.2")
+                        .foregroundColor(.orange)
+                    Text("This account is marked as test data")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Spacer()
+                    Button("Clear Flag") {
+                        Task {
+                            do {
+                                try await speedTestManager.clearTestDataFlag()
+                                statusMessage = "Test data flag cleared"
+                                statusIsError = false
+                            } catch {
+                                statusMessage = "Error: \(error.localizedDescription)"
+                                statusIsError = true
+                            }
+                        }
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .tint(.orange)
+                }
+            }
+
+            // Countdown Timer (when active)
+            if speedTestManager.isSpeedTestMode && speedTestManager.secondsUntilUnlock > 0 {
+                HStack {
+                    Image(systemName: "timer")
+                        .foregroundColor(.blue)
+                        .font(.title2)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Next Day Unlocks In")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text("\(speedTestManager.secondsUntilUnlock) seconds")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(.blue)
+                            .monospacedDigit()
+                    }
+
+                    Spacer()
+
+                    // Progress circle
+                    ZStack {
+                        Circle()
+                            .stroke(Color.blue.opacity(0.2), lineWidth: 4)
+                            .frame(width: 40, height: 40)
+                        Circle()
+                            .trim(from: 0, to: CGFloat(speedTestManager.secondsUntilUnlock) / 15.0)
+                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                            .frame(width: 40, height: 40)
+                            .rotationEffect(.degrees(-90))
+                        Text("\(speedTestManager.secondsUntilUnlock)")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                    }
+                }
+                .padding(.vertical, 8)
+                .listRowBackground(Color.blue.opacity(0.1))
+            }
+
+            // Speed Test Controls (when mode is enabled)
+            if speedTestManager.isSpeedTestMode {
+                // Phenotype Selector
+                HStack {
+                    Label("Phenotype", systemImage: "person.crop.rectangle")
+                        .foregroundColor(.indigo)
+                    Spacer()
+                    Picker("", selection: $speedTestPhenotypeSelection) {
+                        Text("Normal").tag("normal")
+                        Text("Insomnia").tag("insomnia")
+                        Text("OSA").tag("osa")
+                        Text("Anxiety").tag("anxiety")
+                        Text("Depression").tag("depression")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 130)
+                }
+
+                // Complete Day + Start Countdown
+                Button {
+                    Task {
+                        do {
+                            try await speedTestManager.completeDay(phenotype: speedTestPhenotypeSelection)
+                            statusMessage = "Day \(speedTestManager.currentDay) completed. Countdown started!"
+                            statusIsError = false
+                            await questionnaireManager.loadJourneyProgress()
+                        } catch {
+                            statusMessage = "Error: \(error.localizedDescription)"
+                            statusIsError = true
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Label("Complete Day \(questionnaireManager.currentDay)", systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Spacer()
+                        if speedTestManager.isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Mock answers + start 15s timer")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .disabled(speedTestManager.isLoading || speedTestManager.secondsUntilUnlock > 0 || questionnaireManager.currentDay > 14)
+
+                // Advance to Next Day (when countdown complete)
+                if speedTestManager.canAdvance {
+                    Button {
+                        Task {
+                            do {
+                                try await speedTestManager.advanceToNextDay()
+                                questionnaireManager.currentDay = speedTestManager.currentDay
+                                statusMessage = "Advanced to Day \(speedTestManager.currentDay)"
+                                statusIsError = false
+                                await questionnaireManager.loadJourneyProgress()
+                            } catch {
+                                statusMessage = "Error: \(error.localizedDescription)"
+                                statusIsError = true
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Label("Advance to Day \(min(questionnaireManager.currentDay + 1, 14))", systemImage: "arrow.right.circle.fill")
+                                .foregroundColor(.orange)
+                            Spacer()
+                            Text("Countdown complete!")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                        }
+                    }
+                    .listRowBackground(Color.green.opacity(0.1))
+                }
+            }
+        } header: {
+            HStack {
+                Label("Speed Test Mode", systemImage: "clock.badge.checkmark")
+                if speedTestManager.isSpeedTestMode {
+                    Spacer()
+                    Text("ACTIVE")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(.red))
+                }
+            }
+        } footer: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Simulates the full 14-day journey with 15-second lockouts instead of 24 hours.")
+                if speedTestManager.isSpeedTestMode {
+                    Text("Complete a day → 15 sec countdown → Advance → Repeat")
+                        .fontWeight(.medium)
+                }
+                Text("HealthKit data from your Apple Watch is preserved. Test data is marked and can be filtered on the Dashboard.")
+                    .foregroundColor(.secondary)
+            }
         }
     }
 

@@ -1073,6 +1073,108 @@ class ConvexService {
         ])
     }
 
+    // MARK: - Speed Test Mode (15-Second Day Lockouts)
+
+    struct SpeedTestStatusResponse: Codable {
+        let speedTestMode: Bool
+        let isTestData: Bool
+        let currentDay: Int
+        let dayUnlocksAt: Int?
+        let secondsUntilUnlock: Int
+        let canAdvance: Bool
+        let serverTime: Int
+    }
+
+    struct SpeedTestEnableResponse: Codable {
+        let success: Bool
+        let speedTestMode: Bool?
+        let message: String?
+    }
+
+    struct SpeedTestCompleteDayResponse: Codable {
+        let success: Bool
+        let completedDay: Int?
+        let phenotype: String?
+        let dayUnlocksAt: Int?
+        let secondsUntilUnlock: Int?
+    }
+
+    struct SpeedTestAdvanceResponse: Codable {
+        let success: Bool
+        let previousDay: Int?
+        let currentDay: Int?
+        let journeyComplete: Bool?
+        let error: String?
+        let secondsUntilUnlock: Int?
+    }
+
+    /// Enable speed test mode - 15-second day lockouts instead of 24 hours
+    func enableSpeedTestMode() async throws -> SpeedTestEnableResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:enableSpeedTestMode", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Disable speed test mode - return to normal 24-hour day cycles
+    func disableSpeedTestMode() async throws -> SpeedTestEnableResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:disableSpeedTestMode", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Get current speed test status including countdown timer
+    func getSpeedTestStatus() async throws -> SpeedTestStatusResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.query("ios:getSpeedTestStatus", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Complete current day in speed test mode (uses mock data) and start 15-second countdown
+    func speedTestCompleteDay(phenotype: String = "normal") async throws -> SpeedTestCompleteDayResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:speedTestCompleteDay", args: [
+            "userId": userId,
+            "phenotype": phenotype
+        ])
+    }
+
+    /// Advance to next day after speed test countdown completes
+    func speedTestAdvanceDay() async throws -> SpeedTestAdvanceResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:speedTestAdvanceDay", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Clear test data flag (convert test user to real patient)
+    func clearTestDataFlag() async throws -> SuccessResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:clearTestDataFlag", args: [
+            "userId": userId
+        ])
+    }
+
     /// Get debug information about the user's journey
     func getJourneyDebugInfo() async throws -> JourneyDebugInfo {
         guard let userId = currentUserId else {

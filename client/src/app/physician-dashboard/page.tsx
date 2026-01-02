@@ -21,6 +21,9 @@ import {
   List,
   Code,
   Shield,
+  FlaskConical,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
 
@@ -34,6 +37,8 @@ interface PatientData {
   progress_percentage: number;
   review_status?: string;
   developer_mode?: boolean;
+  is_test_data?: boolean;
+  speed_test_mode?: boolean;
 }
 
 type ReviewStatus =
@@ -86,10 +91,12 @@ export default function PhysicianDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
   const [statusFilter, setStatusFilter] = useState<ReviewStatus>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [hideTestData, setHideTestData] = useState(true); // Hide test data by default
 
   const patients = useQuery(api.physician.getAllPatientsWithProgress, {
     statusFilter: statusFilter === "all" ? undefined : statusFilter,
     searchTerm: searchTerm || undefined,
+    hideTestData,
   });
 
   const formatDate = (timestamp: number) => {
@@ -301,6 +308,30 @@ export default function PhysicianDashboard() {
                   <option value="interventions_active">Active Treatment</option>
                 </select>
               </div>
+
+              {/* Test Data Toggle */}
+              <button
+                onClick={() => setHideTestData(!hideTestData)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all ${
+                  hideTestData
+                    ? "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                    : "border-orange-300 bg-orange-50 text-orange-700"
+                }`}
+                title={hideTestData ? "Show test data" : "Hide test data"}
+              >
+                <FlaskConical className="w-5 h-5" />
+                {hideTestData ? (
+                  <>
+                    <EyeOff className="w-4 h-4" />
+                    <span className="text-sm">Test Hidden</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    <span className="text-sm">Showing Test</span>
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Patient List */}
@@ -372,6 +403,13 @@ export default function PhysicianDashboard() {
                             {patient.developer_mode && (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
                                 <Code className="w-3 h-3" />
+                              </span>
+                            )}
+                            {/* Test Data Badge */}
+                            {patient.is_test_data && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium" title="Test data from speed test mode">
+                                <FlaskConical className="w-3 h-3" />
+                                TEST
                               </span>
                             )}
                             <span
