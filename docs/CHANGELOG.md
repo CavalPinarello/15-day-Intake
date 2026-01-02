@@ -4,6 +4,44 @@
 
 ## January 2026
 
+### Jan 2, 2026
+
+#### Empty Assessment Handling Fix
+Fixed multiple issues where users could navigate to empty assessments or have expansion days incorrectly marked as "missed".
+
+**Problems Fixed:**
+1. Focus screen showed "1 of 0" questions when navigating to empty assessment
+2. "Catch Up" card incorrectly showed expansion days as "missed" even when no gateways were triggered
+3. Time estimates showed ~16 min for 17 questions instead of ~8 min (was using 1 min/question instead of 30 sec)
+4. DayCompletionView showed "Proceed to Assessment" button when no questions existed
+
+**Solutions:**
+
+1. **EmptyAssessmentView** (`QuestionnaireSections.swift`):
+   - New view shows "You're All Caught Up!" when user navigates to empty assessment
+   - Circadian-aware colors (warm amber at night)
+   - "Continue" button dismisses and returns to Focus screen
+
+2. **Backend Fix** (`convex/ios.ts`):
+   - `getDailyCompletionStatus` now checks `shouldShowExpansion(day, triggeredGatewayIds)` before marking expansion days as "missed"
+   - Only marks `missingAssessment = true` if day actually had assessment questions scheduled
+
+3. **Focus Screen Fix** (`ContentView.swift`):
+   - `getAssessmentMinutes()` now checks `scheduled.totalQuestions > 0` before returning minutes
+   - Returns 0 if no questions → shows `NoAssessmentTodayView()` instead of NavigationLink
+
+4. **Time Estimation Fix**:
+   - Unified formula: `(questionCount + 1) / 2` minutes (~30 seconds per question)
+   - Applied to all code paths: Focus screen, Splash screens, backend metadata
+
+5. **Removed INFO_NO_QUESTIONS Placeholder** (`convex/watch.ts`, `QuestionnaireManager.swift`, `MockPlaybackController.swift`):
+   - Was adding fake "info" question when assessment was empty, causing count to be 1 instead of 0
+   - iOS now properly handles empty assessments without placeholder
+
+**Files changed:** `QuestionnaireView.swift`, `QuestionnaireSections.swift`, `ContentView.swift`, `QuestionnaireManager.swift`, `MockPlaybackController.swift`, `convex/ios.ts`, `convex/watch.ts`
+
+---
+
 ### Jan 1, 2026
 
 #### Unified 1-10 Scale for All Slider Questions

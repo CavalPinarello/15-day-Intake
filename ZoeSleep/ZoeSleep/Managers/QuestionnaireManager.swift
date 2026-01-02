@@ -721,9 +721,9 @@ class QuestionnaireManager: ObservableObject {
     static let expansionQuestionsByModule: [String: [Question]] = [
         // ISI - Insomnia Severity Index (Day 6)
         "expansion_isi": [
-            Question(id: "ISI_1", text: "Difficulty falling asleep - rate severity (0-4)", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 4, scaleMinLabel: "None", scaleMaxLabel: "Very Severe"),
-            Question(id: "ISI_2", text: "Difficulty staying asleep - rate severity (0-4)", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 4, scaleMinLabel: "None", scaleMaxLabel: "Very Severe"),
-            Question(id: "ISI_3", text: "Problems waking up too early - rate severity (0-4)", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 4, scaleMinLabel: "None", scaleMaxLabel: "Very Severe"),
+            Question(id: "ISI_1", text: "Difficulty falling asleep", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 4, scaleMinLabel: "None", scaleMaxLabel: "Very Severe"),
+            Question(id: "ISI_2", text: "Difficulty staying asleep", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 4, scaleMinLabel: "None", scaleMaxLabel: "Very Severe"),
+            Question(id: "ISI_3", text: "Problems waking up too early", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 4, scaleMinLabel: "None", scaleMaxLabel: "Very Severe"),
             Question(id: "ISI_4", text: "How SATISFIED/dissatisfied are you with your current sleep pattern?", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 4, scaleMinLabel: "Very Satisfied", scaleMaxLabel: "Very Dissatisfied"),
             Question(id: "ISI_5", text: "How NOTICEABLE to others do you think your sleeping problem is in terms of impairing the quality of your life?", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 4, scaleMinLabel: "Not at all", scaleMaxLabel: "Very Much"),
             Question(id: "ISI_6", text: "How WORRIED/distressed are you about your current sleep problem?", pillar: .sleepQuality, tier: .expansion, questionType: .scale, scaleMin: 0, scaleMax: 4, scaleMinLabel: "Not at all", scaleMaxLabel: "Very Much"),
