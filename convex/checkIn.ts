@@ -206,6 +206,7 @@ export const getTodayCheckInStatus = query({
       sleepQuality: v.optional(v.number()),
       energyLevel: v.optional(v.number()),
       mood: v.optional(v.number()),
+      focusLevel: v.optional(v.number()),
     }),
     midday: v.object({
       completed: v.boolean(),
@@ -245,6 +246,7 @@ export const getTodayCheckInStatus = query({
         sleepQuality: morning?.sleep_quality,
         energyLevel: morning?.energy_level,
         mood: morning?.mood,
+        focusLevel: morning?.focus_level,
       },
       midday: {
         completed: midday?.completed ?? false,
@@ -284,6 +286,7 @@ export const getCheckInHistory = query({
       sleepQuality: v.optional(v.number()),
       morningEnergy: v.optional(v.number()),
       mood: v.optional(v.number()),
+      focusLevel: v.optional(v.number()),
       // Midday data
       middayEnergy: v.optional(v.number()),
       caffeineCups: v.optional(v.number()),
@@ -303,6 +306,7 @@ export const getCheckInHistory = query({
       sleepQuality?: number;
       morningEnergy?: number;
       mood?: number;
+      focusLevel?: number;
       middayEnergy?: number;
       caffeineCups?: number;
       napTaken?: boolean;
@@ -349,6 +353,7 @@ export const getCheckInHistory = query({
         sleepQuality: morning?.sleep_quality,
         morningEnergy: morning?.energy_level,
         mood: morning?.mood,
+        focusLevel: morning?.focus_level,
         middayEnergy: midday?.midday_energy,
         caffeineCups: midday?.caffeine_cups,
         napTaken: midday?.nap_taken,

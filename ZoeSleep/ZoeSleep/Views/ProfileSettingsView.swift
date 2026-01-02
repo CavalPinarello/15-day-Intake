@@ -13,10 +13,13 @@ struct ProfileSettingsView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @ObservedObject var onboardingManager = OnboardingManager.shared
     @ObservedObject var questionnaireManager = QuestionnaireManager.shared
+    @ObservedObject var watchConnectivity = iOSWatchConnectivityManager.shared
 
     @State private var showingSignOutConfirmation = false
     @State private var showingResetOnboardingConfirmation = false
     @State private var showingBodyMetricsEditor = false
+    @State private var isSyncingToWatch = false
+    @State private var watchSyncSuccess = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -30,6 +33,9 @@ struct ProfileSettingsView: View {
 
                 // MARK: - Apple Health Section
                 appleHealthSection
+
+                // MARK: - Apple Watch Section
+                watchSection
 
                 // MARK: - Personal Info Section
                 personalInfoSection
@@ -196,6 +202,102 @@ struct ProfileSettingsView: View {
         } footer: {
             if !healthKitManager.isAuthorized {
                 Text("Connect Apple Health to import sleep data and get personalized insights.")
+            }
+        }
+    }
+
+    // MARK: - Apple Watch Section
+
+    private var watchSection: some View {
+        Section {
+            // Connection status
+            HStack {
+                Image(systemName: "applewatch")
+                    .foregroundColor(watchConnectivity.isWatchConnected ? .blue : .secondary)
+                    .frame(width: 28)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Apple Watch")
+                        .font(.body)
+                    if watchConnectivity.isWatchAppInstalled {
+                        Text(watchConnectivity.isWatchConnected ? "Connected" : "Not reachable")
+                            .font(.caption)
+                            .foregroundColor(watchConnectivity.isWatchConnected ? .green : .orange)
+                    } else {
+                        Text("App not installed")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                if watchConnectivity.isWatchConnected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                }
+            }
+            .accessibleTapTarget()
+
+            // Sync button
+            if watchConnectivity.isWatchAppInstalled {
+                Button {
+                    syncToWatch()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .frame(width: 28)
+
+                        Text("Sync to Watch")
+
+                        Spacer()
+
+                        if isSyncingToWatch {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else if watchSyncSuccess {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        }
+                    }
+                }
+                .disabled(isSyncingToWatch)
+                .accessibleTapTarget()
+            }
+        } header: {
+            Text("Apple Watch")
+        } footer: {
+            if watchConnectivity.isWatchAppInstalled {
+                Text("Sync your account and progress to your Apple Watch. Your Watch can show light exposure, check-ins, and your garden progress.")
+            } else {
+                Text("Install the Zoe Sleep app on your Apple Watch to track sleep directly from your wrist.")
+            }
+        }
+    }
+
+    private func syncToWatch() {
+        guard let userId = ConvexService.shared.userId,
+              let username = KeychainHelper.load(forKey: "convex_username") else {
+            return
+        }
+
+        isSyncingToWatch = true
+        watchSyncSuccess = false
+
+        // Sync credentials
+        watchConnectivity.syncCredentialsToWatch(userId: userId, username: username)
+
+        // Also send current user data
+        watchConnectivity.sendUserDataToWatch()
+
+        // Simulate completion feedback
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            isSyncingToWatch = false
+            watchSyncSuccess = true
+
+            // Reset success indicator after 2 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                watchSyncSuccess = false
             }
         }
     }

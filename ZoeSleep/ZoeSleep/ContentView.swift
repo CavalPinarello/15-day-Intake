@@ -72,6 +72,10 @@ struct MainDashboardView: View {
     @State private var navigateToSleepDiary = false
     @State private var sleepDiarySelectedDay: Int? = nil
 
+    // Deep link navigation (from Watch or notifications)
+    @State private var navigateToSleepLog = false
+    @State private var navigateToAssessment = false
+
     // Motivational message - stored to prevent flickering on re-renders
     @State private var motivationalMessage: String = ""
 
@@ -150,6 +154,45 @@ struct MainDashboardView: View {
             }
             .hidden()
         )
+        // Hidden NavigationLinks for deep link navigation (from Watch)
+        .background(
+            NavigationLink(
+                destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true)
+                    .environmentObject(healthKitManager)
+                    .environmentObject(themeManager),
+                isActive: $navigateToSleepLog
+            ) {
+                EmptyView()
+            }
+            .hidden()
+        )
+        .background(
+            NavigationLink(
+                destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true)
+                    .environmentObject(healthKitManager)
+                    .environmentObject(themeManager),
+                isActive: $navigateToAssessment
+            ) {
+                EmptyView()
+            }
+            .hidden()
+        )
+        // Handle deep link navigation requests from Watch or notifications
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkNavigationRequest)) { notification in
+            guard let userInfo = notification.userInfo,
+                  let destination = userInfo["destination"] as? String else { return }
+
+            print("[ContentView] Deep link navigation to: \(destination)")
+
+            switch destination {
+            case "sleeplog":
+                navigateToSleepLog = true
+            case "assessment":
+                navigateToAssessment = true
+            default:
+                print("[ContentView] Unknown deep link destination: \(destination)")
+            }
+        }
         .onAppear {
             loadProgress()
             startRefreshTimer()
@@ -302,12 +345,7 @@ struct MainDashboardView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
 
-                if timeTravelManager.secondsUntilUnlock > 0 {
-                    Text("Next day in \(timeTravelManager.secondsUntilUnlock)s")
-                        .font(.caption2)
-                        .foregroundColor(.white.opacity(0.9))
-                        .monospacedDigit()
-                } else if timeTravelManager.canAdvance {
+                if timeTravelManager.canAdvanceToNextDay {
                     Text("Ready to advance!")
                         .font(.caption2)
                         .foregroundColor(.green)
@@ -320,22 +358,11 @@ struct MainDashboardView: View {
 
             Spacer()
 
-            // Countdown circle when counting down
-            if timeTravelManager.secondsUntilUnlock > 0 {
-                ZStack {
-                    Circle()
-                        .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                        .frame(width: 28, height: 28)
-                    Circle()
-                        .trim(from: 0, to: CGFloat(timeTravelManager.secondsUntilUnlock) / 5.0)
-                        .stroke(Color.white, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                        .frame(width: 28, height: 28)
-                        .rotationEffect(.degrees(-90))
-                    Text("\(timeTravelManager.secondsUntilUnlock)")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                }
+            // Advance indicator when ready
+            if timeTravelManager.canAdvanceToNextDay {
+                Image(systemName: "chevron.right.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.green)
             }
         }
         .padding(.horizontal, 16)

@@ -21,6 +21,7 @@ struct MorningCheckInView: View {
     @State private var sleepQuality: Int = 0
     @State private var energyLevel: Int = 0
     @State private var mood: Int = 0
+    @State private var focusLevel: Int = 0
     @State private var todaysTasks: [TodayTask] = []
     @State private var isLoading = true
     @State private var hasSubmitted = false
@@ -45,6 +46,9 @@ struct MorningCheckInView: View {
 
                     // Mood Section
                     moodSection
+
+                    // Focus Section
+                    focusSection
 
                     // Today's Tasks Preview
                     taskPreviewSection
@@ -266,6 +270,53 @@ struct MorningCheckInView: View {
         .cornerRadius(16)
     }
 
+    // MARK: - Focus Section
+
+    private var focusSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Mental clarity?")
+                .font(.headline)
+                .foregroundColor(theme.textOnCard)
+
+            HStack(spacing: 12) {
+                ForEach(FocusOption.allCases) { option in
+                    Button {
+                        withAnimation(.spring(response: 0.3)) {
+                            focusLevel = option.rawValue
+                        }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        VStack(spacing: 6) {
+                            Text(option.emoji)
+                                .font(.title)
+
+                            Text(option.label)
+                                .font(.caption)
+                                .foregroundColor(focusLevel == option.rawValue ? theme.textOnCard : .secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(focusLevel == option.rawValue ? option.color.opacity(0.2) : Color.gray.opacity(0.1))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(
+                                    focusLevel == option.rawValue ? option.color : Color.clear,
+                                    lineWidth: 2
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding()
+        .background(GlassyCardBackground(opacity: 0.5))
+        .cornerRadius(16)
+    }
+
     // MARK: - Task Preview Section
 
     private var taskPreviewSection: some View {
@@ -387,7 +438,7 @@ struct MorningCheckInView: View {
 
             // Validation message
             if !canSubmit && !isSubmitting {
-                Text("Please rate your sleep, energy, and mood")
+                Text("Please rate your sleep, energy, mood, and focus")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -395,7 +446,7 @@ struct MorningCheckInView: View {
     }
 
     private var canSubmit: Bool {
-        sleepQuality > 0 && energyLevel > 0 && mood > 0 && !isSubmitting
+        sleepQuality > 0 && energyLevel > 0 && mood > 0 && focusLevel > 0 && !isSubmitting
     }
 
     // MARK: - Helpers
@@ -446,7 +497,8 @@ struct MorningCheckInView: View {
                 try await ConvexService.shared.submitMorningCheckIn(
                     sleepQuality: sleepQuality,
                     energyLevel: energyLevel,
-                    mood: mood
+                    mood: mood,
+                    focusLevel: focusLevel
                 )
 
                 await MainActor.run {
@@ -515,6 +567,46 @@ enum MoodOption: Int, CaseIterable, Identifiable {
         case .neutral: return .yellow
         case .good: return .green
         case .great: return .mint
+        }
+    }
+}
+
+enum FocusOption: Int, CaseIterable, Identifiable {
+    case foggy = 1
+    case hazy = 2
+    case clearing = 3
+    case clear = 4
+    case sharp = 5
+
+    var id: Int { rawValue }
+
+    var emoji: String {
+        switch self {
+        case .foggy: return "🌫️"
+        case .hazy: return "☁️"
+        case .clearing: return "⛅"
+        case .clear: return "🧠"
+        case .sharp: return "💎"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .foggy: return "Foggy"
+        case .hazy: return "Hazy"
+        case .clearing: return "Okay"
+        case .clear: return "Clear"
+        case .sharp: return "Sharp"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .foggy: return .gray
+        case .hazy: return .blue.opacity(0.6)
+        case .clearing: return .teal
+        case .clear: return .cyan
+        case .sharp: return .purple
         }
     }
 }

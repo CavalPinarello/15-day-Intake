@@ -32,33 +32,37 @@ struct AnalysisPendingView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 32) {
-                    // Header
-                    headerSection
+            ZStack {
+                // Animated wave background (same as MainDashboardView)
+                DashboardWaveBackground()
 
-                    // Progress Animation
-                    progressAnimation
+                ScrollView {
+                    VStack(spacing: 32) {
+                        // Header
+                        headerSection
 
-                    // Stage Timeline
-                    stageTimeline
+                        // Progress Animation
+                        progressAnimation
 
-                    // Current Stage Detail
-                    currentStageCard
+                        // Stage Timeline
+                        stageTimeline
 
-                    // Encouragement Message
-                    encouragementCard
+                        // Current Stage Detail
+                        currentStageCard
 
-                    // Debug: Emergency Reset (for stuck states)
-                    #if DEBUG
-                    emergencyResetSection
-                    #endif
+                        // Encouragement Message
+                        encouragementCard
 
-                    Spacer(minLength: 40)
+                        // Debug: Emergency Reset (for stuck states)
+                        #if DEBUG
+                        emergencyResetSection
+                        #endif
+
+                        Spacer(minLength: 40)
+                    }
+                    .padding()
                 }
-                .padding()
             }
-            .background(theme.backgroundGradient)
             .alert("Reset Journey?", isPresented: $showingResetConfirm) {
                 Button("Cancel", role: .cancel) {}
                 Button("Reset", role: .destructive) {

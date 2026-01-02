@@ -350,4 +350,5 @@ extension Notification.Name {
     static let openQuestionnaire = Notification.Name("openQuestionnaire")
     static let openInsights = Notification.Name("openInsights")
     static let openBadges = Notification.Name("openBadges")
+    static let deepLinkNavigationRequest = Notification.Name("deepLinkNavigationRequest")
 }

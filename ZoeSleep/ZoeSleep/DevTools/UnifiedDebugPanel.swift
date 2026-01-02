@@ -597,60 +597,44 @@ struct UnifiedDebugPanel: View {
 
     // MARK: - Time Travel Mode Section
 
-    @State private var timeTravelStartDate: Date = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+    @State private var timeTravelSelectedDate: Date = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
 
     private var timeTravelModeSection: some View {
         Section {
-            // Time Travel Status Header
-            if timeTravelManager.isTimeTravelActive {
-                HStack {
-                    ZStack {
-                        Image(systemName: "clock.arrow.2.circlepath")
-                            .font(.title2)
+            // === INACTIVE STATE: Calendar Picker ===
+            if !timeTravelManager.isTimeTravelActive {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Select a past date to simulate as \"today\"")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    // Graphical calendar picker
+                    DatePicker("Simulated Date",
+                               selection: $timeTravelSelectedDate,
+                               in: timeTravelManager.minSelectableDate...timeTravelManager.maxSelectableDate,
+                               displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .tint(.cyan)
+
+                    // Show how many days ago
+                    HStack {
+                        Image(systemName: "calendar.badge.clock")
                             .foregroundColor(.cyan)
-                        Circle()
-                            .fill(.cyan)
-                            .frame(width: 8, height: 8)
-                            .offset(x: 12, y: -10)
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Time Travel Active")
-                            .font(.headline)
+                        Text("\(daysAgoForSelectedDate) days ago")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
                             .foregroundColor(.cyan)
-                        Text("Simulating: \(timeTravelManager.formattedSimulatedDate)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        Spacer()
                     }
-
-                    Spacer()
-
-                    Text("Day \(timeTravelManager.currentDay)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.cyan)
                 }
                 .padding(.vertical, 4)
-                .listRowBackground(Color.cyan.opacity(0.1))
-            }
 
-            // Date Picker (when not active)
-            if !timeTravelManager.isTimeTravelActive {
-                HStack {
-                    Label("Start Date", systemImage: "calendar")
-                        .foregroundColor(.cyan)
-                    Spacer()
-                    DatePicker("", selection: $timeTravelStartDate,
-                               in: Calendar.current.date(byAdding: .month, value: -3, to: Date())!...Date(),
-                               displayedComponents: .date)
-                        .labelsHidden()
-                }
-
+                // Start Time Travel Button
                 Button {
                     Task {
                         do {
-                            try await timeTravelManager.setup(startDate: timeTravelStartDate)
-                            statusMessage = "Time Travel started from \(timeTravelManager.formattedStartDate)"
+                            try await timeTravelManager.setup(simulatedDate: timeTravelSelectedDate)
+                            statusMessage = "Time Travel started - simulating \(timeTravelManager.formattedSimulatedDate)"
                             statusIsError = false
                             await questionnaireManager.loadJourneyProgress()
                         } catch {
@@ -675,117 +659,70 @@ struct UnifiedDebugPanel: View {
                 .disabled(timeTravelManager.isLoading)
             }
 
-            // Countdown Timer (when locked)
-            if timeTravelManager.isTimeTravelActive && timeTravelManager.isLocked {
-                HStack {
-                    Image(systemName: "timer")
-                        .foregroundColor(.blue)
-                        .font(.title2)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Next Day Unlocks In")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("\(timeTravelManager.secondsUntilUnlock) seconds")
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .foregroundColor(.blue)
-                            .monospacedDigit()
-                    }
-
-                    Spacer()
-
-                    // Progress circle
-                    ZStack {
-                        Circle()
-                            .stroke(Color.blue.opacity(0.2), lineWidth: 4)
-                            .frame(width: 40, height: 40)
-                        Circle()
-                            .trim(from: 0, to: CGFloat(timeTravelManager.secondsUntilUnlock) / 5.0)
-                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                            .frame(width: 40, height: 40)
-                            .rotationEffect(.degrees(-90))
-                        Text("\(timeTravelManager.secondsUntilUnlock)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                    }
-                }
-                .padding(.vertical, 8)
-                .listRowBackground(Color.blue.opacity(0.1))
-            }
-
-            // Time Travel Controls (when active)
+            // === ACTIVE STATE: Status & Controls ===
             if timeTravelManager.isTimeTravelActive {
-                // Complete Day Button
-                if !timeTravelManager.isLocked {
-                    Button {
-                        Task {
-                            do {
-                                try await timeTravelManager.completeDay()
-                                statusMessage = "Day \(timeTravelManager.currentDay) completed!"
-                                statusIsError = false
-                                await questionnaireManager.loadJourneyProgress()
-                            } catch {
-                                statusMessage = "Error: \(error.localizedDescription)"
-                                statusIsError = true
-                            }
+                // Status Header
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        ZStack {
+                            Image(systemName: "clock.arrow.2.circlepath")
+                                .font(.title2)
+                                .foregroundColor(.cyan)
+                            Circle()
+                                .fill(.cyan)
+                                .frame(width: 8, height: 8)
+                                .offset(x: 12, y: -10)
                         }
-                    } label: {
-                        HStack {
-                            Label("Complete Day \(timeTravelManager.currentDay)", systemImage: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                            Spacer()
-                            if timeTravelManager.isLoading {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            } else {
-                                Text("Mock answers + 5s lockout")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    .disabled(timeTravelManager.isLoading || timeTravelManager.currentDay > 14)
-                }
 
-                // Advance Button (when lockout complete)
-                if timeTravelManager.canAdvance {
-                    Button {
-                        Task {
-                            do {
-                                try await timeTravelManager.advanceToNextDay()
-                                questionnaireManager.currentDay = timeTravelManager.currentDay
-                                statusMessage = "Advanced to Day \(timeTravelManager.currentDay)"
-                                statusIsError = false
-                                await questionnaireManager.loadJourneyProgress()
-                            } catch {
-                                statusMessage = "Error: \(error.localizedDescription)"
-                                statusIsError = true
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Label("Advance to Day \(min(timeTravelManager.currentDay + 1, 14))", systemImage: "arrow.right.circle.fill")
-                                .foregroundColor(.orange)
-                            Spacer()
-                            Text("Lockout complete!")
+                        Text("Time Travel Active")
+                            .font(.headline)
+                            .foregroundColor(.cyan)
+
+                        Spacer()
+
+                        Text("Day \(timeTravelManager.currentDay)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.cyan)
+                    }
+
+                    // Prominent simulated date display
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Simulating:")
                                 .font(.caption)
-                                .foregroundColor(.green)
+                                .foregroundColor(.secondary)
+                            Text(timeTravelManager.formattedSimulatedDate)
+                                .font(.headline)
                         }
+                        Spacer()
+                        Text("\(timeTravelManager.daysAgo) days ago")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Color.secondary.opacity(0.15)))
                     }
-                    .listRowBackground(Color.green.opacity(0.1))
-                }
 
-                // Reset Journey Button
+                    // Day completion status
+                    HStack {
+                        Image(systemName: timeTravelManager.dayCompleted ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(timeTravelManager.dayCompleted ? .green : .secondary)
+                        Text(timeTravelManager.dayCompleted ? "Day \(timeTravelManager.currentDay) Completed" : "Day \(timeTravelManager.currentDay) In Progress")
+                            .font(.caption)
+                            .foregroundColor(timeTravelManager.dayCompleted ? .green : .secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+                .listRowBackground(Color.cyan.opacity(0.1))
+
+                // === ADVANCE BUTTON (Always Visible) ===
                 Button {
                     Task {
                         do {
-                            try await timeTravelManager.resetJourney()
-                            questionnaireManager.currentDay = 1
-                            clearSplashScreenTracking()
-                            // Reset journey phase back to intake
-                            JourneyPhaseManager.shared.currentPhase = .intake
-                            statusMessage = "Journey reset complete"
+                            try await timeTravelManager.advanceToNextDay()
+                            questionnaireManager.currentDay = timeTravelManager.currentDay
+                            statusMessage = "Advanced to Day \(timeTravelManager.currentDay) - \(timeTravelManager.formattedSimulatedDate)"
                             statusIsError = false
                             await questionnaireManager.loadJourneyProgress()
                         } catch {
@@ -795,8 +732,76 @@ struct UnifiedDebugPanel: View {
                     }
                 } label: {
                     HStack {
-                        Label("Reset Journey", systemImage: "arrow.counterclockwise")
-                            .foregroundColor(.red)
+                        Image(systemName: "arrow.right.circle.fill")
+                            .foregroundColor(timeTravelManager.canAdvanceToNextDay ? .orange : .secondary)
+                        Text("Advance to Next Day")
+                            .foregroundColor(timeTravelManager.canAdvanceToNextDay ? .primary : .secondary)
+                        Spacer()
+                        if let reason = timeTravelManager.advanceDisabledReason {
+                            Text(reason)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else if timeTravelManager.isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                    }
+                }
+                .disabled(!timeTravelManager.canAdvanceToNextDay || timeTravelManager.isLoading)
+                .listRowBackground(timeTravelManager.canAdvanceToNextDay ? Color.orange.opacity(0.15) : Color.secondary.opacity(0.05))
+
+                // === FILL WITH MOCK DATA (Optional Helper) ===
+                Button {
+                    Task {
+                        do {
+                            try await timeTravelManager.completeDay()
+                            statusMessage = "Day \(timeTravelManager.currentDay) filled with mock data"
+                            statusIsError = false
+                            await questionnaireManager.loadJourneyProgress()
+                        } catch {
+                            statusMessage = "Error: \(error.localizedDescription)"
+                            statusIsError = true
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "wand.and.stars")
+                            .foregroundColor(timeTravelManager.dayCompleted ? .secondary : .purple)
+                        Text("Fill Day with Mock Data")
+                            .foregroundColor(timeTravelManager.dayCompleted ? .secondary : .primary)
+                        Spacer()
+                        if timeTravelManager.dayCompleted {
+                            Text("Already completed")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else if timeTravelManager.isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                    }
+                }
+                .disabled(timeTravelManager.dayCompleted || timeTravelManager.isLoading)
+
+                // === RESET BUTTON ===
+                Button(role: .destructive) {
+                    Task {
+                        do {
+                            try await timeTravelManager.resetJourney()
+                            questionnaireManager.currentDay = 1
+                            clearSplashScreenTracking()
+                            JourneyPhaseManager.shared.currentPhase = .intake
+                            statusMessage = "Time Travel reset - all data cleared"
+                            statusIsError = false
+                            await questionnaireManager.loadJourneyProgress()
+                        } catch {
+                            statusMessage = "Error: \(error.localizedDescription)"
+                            statusIsError = true
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("Reset Time Travel")
                         Spacer()
                         if timeTravelManager.isLoading {
                             ProgressView()
@@ -853,13 +858,19 @@ struct UnifiedDebugPanel: View {
             }
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Pick a start date → Complete days with 5-second lockouts → All data timestamped historically.")
                 if timeTravelManager.isTimeTravelActive {
-                    Text("Complete Day → 5s lockout → Advance → Repeat")
-                        .fontWeight(.medium)
+                    Text("Advance moves the simulated date forward by 1 day. All responses are timestamped with the simulated date.")
+                } else {
+                    Text("Pick a past date as your simulated \"today\". Complete the journey day by day, advancing through time.")
                 }
             }
         }
+    }
+
+    /// Helper to calculate days ago for the selected date
+    private var daysAgoForSelectedDate: Int {
+        let components = Calendar.current.dateComponents([.day], from: timeTravelSelectedDate, to: Date())
+        return max(0, components.day ?? 0)
     }
 
     // MARK: - Journey Controls Section

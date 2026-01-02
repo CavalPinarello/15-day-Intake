@@ -204,151 +204,169 @@ struct MinimalTasksView: View {
         }
     }
 
-    // MARK: - Sleep Log Card (Info Only - Must complete on iPhone)
+    // MARK: - Sleep Log Card (Tappable - Opens iPhone app)
 
     private var sleepLogCard: some View {
-        HStack(spacing: 10) {
-            // Icon
-            ZStack {
-                Circle()
-                    .fill(localTaskStatus.sleepLogDone ? Color.green.opacity(0.2) : Color.purple.opacity(0.2))
-                    .frame(width: 36, height: 36)
-
-                if localTaskStatus.sleepLogDone {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.green)
-                } else {
-                    Image(systemName: "moon.zzz.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.purple)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Sleep Log")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(localTaskStatus.sleepLogDone ? .white.opacity(0.6) : .white)
-
-                Text(localTaskStatus.sleepLogDone ? "Completed" : "Complete on iPhone")
-                    .font(.system(size: 10))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-
-            Spacer()
-
+        Button {
             if !localTaskStatus.sleepLogDone {
-                Image(systemName: "iphone")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.6))
+                WKInterfaceDevice.current().play(.click)
+                WatchConnectivityManager.shared.openPhoneApp(action: "sleeplog")
             }
-        }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(cardBackground.opacity(localTaskStatus.sleepLogDone ? 0.5 : 1))
-        )
-        .opacity(localTaskStatus.sleepLogDone ? 0.7 : 1)
-    }
-
-    // MARK: - Assessment Card (Info Only - Must complete on iPhone)
-
-    private var assessmentCard: some View {
-        VStack(spacing: 0) {
-            // Main card content
+        } label: {
             HStack(spacing: 10) {
                 // Icon
                 ZStack {
                     Circle()
-                        .fill(localTaskStatus.assessmentDone ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
+                        .fill(localTaskStatus.sleepLogDone ? Color.green.opacity(0.2) : Color.purple.opacity(0.2))
                         .frame(width: 36, height: 36)
 
-                    if localTaskStatus.assessmentDone {
+                    if localTaskStatus.sleepLogDone {
                         Image(systemName: "checkmark")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.green)
                     } else {
-                        Image(systemName: "clipboard.fill")
+                        Image(systemName: "moon.zzz.fill")
                             .font(.system(size: 16))
-                            .foregroundColor(.blue)
+                            .foregroundColor(.purple)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    // Show questionnaire name (e.g., "PSQI Part 1")
-                    Text(dayConfig.questionnaire)
+                    Text("Sleep Log")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(localTaskStatus.assessmentDone ? .white.opacity(0.6) : .white)
+                        .foregroundColor(localTaskStatus.sleepLogDone ? .white.opacity(0.6) : .white)
 
-                    Text(localTaskStatus.assessmentDone ? "Completed" : "Complete on iPhone")
+                    Text(localTaskStatus.sleepLogDone ? "Completed" : "Tap to open iPhone")
                         .font(.system(size: 10))
                         .foregroundColor(.white.opacity(0.6))
                 }
 
                 Spacer()
 
-                if !localTaskStatus.assessmentDone {
-                    Image(systemName: "iphone")
+                if !localTaskStatus.sleepLogDone {
+                    Image(systemName: "arrow.up.forward.app.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(.purple.opacity(0.8))
                 }
             }
             .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(cardBackground.opacity(localTaskStatus.sleepLogDone ? 0.5 : 1))
+            )
+            .opacity(localTaskStatus.sleepLogDone ? 0.7 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(localTaskStatus.sleepLogDone)
+    }
 
-            // Mission statement (only show if not completed)
+    // MARK: - Assessment Card (Tappable - Opens iPhone app)
+
+    private var assessmentCard: some View {
+        Button {
             if !localTaskStatus.assessmentDone {
-                VStack(alignment: .leading, spacing: 6) {
-                    // Divider
-                    Rectangle()
-                        .fill(Color.white.opacity(0.1))
-                        .frame(height: 1)
-                        .padding(.horizontal, 8)
+                WKInterfaceDevice.current().play(.click)
+                WatchConnectivityManager.shared.openPhoneApp(action: "assessment")
+            }
+        } label: {
+            VStack(spacing: 0) {
+                // Main card content
+                HStack(spacing: 10) {
+                    // Icon
+                    ZStack {
+                        Circle()
+                            .fill(localTaskStatus.assessmentDone ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
+                            .frame(width: 36, height: 36)
 
-                    // Mission text
-                    Text(dayConfig.mission)
-                        .font(.system(size: 10))
-                        .foregroundColor(.white.opacity(0.7))
-                        .lineLimit(3)
+                        if localTaskStatus.assessmentDone {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.green)
+                        } else {
+                            Image(systemName: "clipboard.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.blue)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        // Show questionnaire name (e.g., "PSQI Part 1")
+                        Text(dayConfig.questionnaire)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(localTaskStatus.assessmentDone ? .white.opacity(0.6) : .white)
+
+                        Text(localTaskStatus.assessmentDone ? "Completed" : "Tap to open iPhone")
+                            .font(.system(size: 10))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+
+                    Spacer()
+
+                    if !localTaskStatus.assessmentDone {
+                        Image(systemName: "arrow.up.forward.app.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.blue.opacity(0.8))
+                    }
+                }
+                .padding(10)
+
+                // Mission statement (only show if not completed)
+                if !localTaskStatus.assessmentDone {
+                    VStack(alignment: .leading, spacing: 6) {
+                        // Divider
+                        Rectangle()
+                            .fill(Color.white.opacity(0.1))
+                            .frame(height: 1)
+                            .padding(.horizontal, 8)
+
+                        // Mission text
+                        Text(dayConfig.mission)
+                            .font(.system(size: 10))
+                            .foregroundColor(.white.opacity(0.7))
+                            .lineLimit(3)
+                            .padding(.horizontal, 10)
+                            .padding(.bottom, 8)
+
+                        // Stats row
+                        HStack(spacing: 8) {
+                            // Question count
+                            HStack(spacing: 3) {
+                                Image(systemName: "list.bullet")
+                                    .font(.system(size: 8))
+                                Text("\(dayConfig.questionCount) Q")
+                                    .font(.system(size: 9, weight: .medium))
+                            }
+                            .foregroundColor(.blue.opacity(0.8))
+
+                            // Time estimate
+                            HStack(spacing: 3) {
+                                Image(systemName: "clock")
+                                    .font(.system(size: 8))
+                                Text("~\(dayConfig.estimatedMinutes) min")
+                                    .font(.system(size: 9, weight: .medium))
+                            }
+                            .foregroundColor(.white.opacity(0.6))
+
+                            Spacer()
+
+                            // Day badge
+                            Text("Day \(convexService.currentDay)")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.orange)
+                        }
                         .padding(.horizontal, 10)
                         .padding(.bottom, 8)
-
-                    // Stats row
-                    HStack(spacing: 8) {
-                        // Question count
-                        HStack(spacing: 3) {
-                            Image(systemName: "list.bullet")
-                                .font(.system(size: 8))
-                            Text("\(dayConfig.questionCount) Q")
-                                .font(.system(size: 9, weight: .medium))
-                        }
-                        .foregroundColor(.blue.opacity(0.8))
-
-                        // Time estimate
-                        HStack(spacing: 3) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 8))
-                            Text("~\(dayConfig.estimatedMinutes) min")
-                                .font(.system(size: 9, weight: .medium))
-                        }
-                        .foregroundColor(.white.opacity(0.6))
-
-                        Spacer()
-
-                        // Day badge
-                        Text("Day \(convexService.currentDay)")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.orange)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 8)
                 }
             }
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(cardBackground.opacity(localTaskStatus.assessmentDone ? 0.5 : 1))
+            )
+            .opacity(localTaskStatus.assessmentDone ? 0.7 : 1)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(cardBackground.opacity(localTaskStatus.assessmentDone ? 0.5 : 1))
-        )
-        .opacity(localTaskStatus.assessmentDone ? 0.7 : 1)
+        .buttonStyle(.plain)
+        .disabled(localTaskStatus.assessmentDone)
     }
 
     // MARK: - Deeper Dive Card (Today's Expansion Pack)
@@ -371,133 +389,165 @@ struct MinimalTasksView: View {
     private var deeperDiveCard: some View {
         let isCompleted = convexService.expansionPackCompleted
 
-        return VStack(spacing: 0) {
-            // Main card content
-            HStack(spacing: 10) {
-                // Icon - sparkles for deeper dive
-                ZStack {
-                    Circle()
-                        .fill(isCompleted ? Color.green.opacity(0.2) : Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.2))
-                        .frame(width: 36, height: 36)
-
-                    if isCompleted {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.green)
-                    } else {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 16))
-                            .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25))
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Deeper Dive")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(isCompleted ? .white.opacity(0.6) : .white)
-
-                    Text(isCompleted ? "Completed" : deeperDiveDescription)
-                        .font(.system(size: 10))
-                        .foregroundColor(.white.opacity(0.6))
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                if !isCompleted {
-                    Image(systemName: "iphone")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.6))
-                }
-            }
-            .padding(10)
-
-            // Additional info (only show if not completed)
+        return Button {
             if !isCompleted {
-                VStack(alignment: .leading, spacing: 4) {
-                    // Divider
-                    Rectangle()
-                        .fill(Color.white.opacity(0.1))
-                        .frame(height: 1)
-                        .padding(.horizontal, 8)
+                WKInterfaceDevice.current().play(.click)
+                WatchConnectivityManager.shared.openPhoneApp(action: "assessment")
+            }
+        } label: {
+            VStack(spacing: 0) {
+                // Main card content
+                HStack(spacing: 10) {
+                    // Icon - sparkles for deeper dive
+                    ZStack {
+                        Circle()
+                            .fill(isCompleted ? Color.green.opacity(0.2) : Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.2))
+                            .frame(width: 36, height: 36)
 
-                    // Stats row
-                    HStack(spacing: 8) {
-                        // Time estimate
-                        HStack(spacing: 3) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 8))
-                            Text("~7 min")
-                                .font(.system(size: 9, weight: .medium))
+                        if isCompleted {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.green)
+                        } else {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 16))
+                                .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25))
                         }
-                        .foregroundColor(.white.opacity(0.6))
-
-                        Spacer()
-
-                        // Badge
-                        Text("Triggered by your answers")
-                            .font(.system(size: 8))
-                            .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25))
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 8)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Deeper Dive")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(isCompleted ? .white.opacity(0.6) : .white)
+
+                        Text(isCompleted ? "Completed" : "Tap to open iPhone")
+                            .font(.system(size: 10))
+                            .foregroundColor(.white.opacity(0.6))
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    if !isCompleted {
+                        Image(systemName: "arrow.up.forward.app.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.8))
+                    }
+                }
+                .padding(10)
+
+                // Additional info (only show if not completed)
+                if !isCompleted {
+                    VStack(alignment: .leading, spacing: 4) {
+                        // Divider
+                        Rectangle()
+                            .fill(Color.white.opacity(0.1))
+                            .frame(height: 1)
+                            .padding(.horizontal, 8)
+
+                        // Stats row
+                        HStack(spacing: 8) {
+                            // Question count
+                            if convexService.expansionQuestionCount > 0 {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "list.bullet")
+                                        .font(.system(size: 8))
+                                    Text("\(convexService.expansionQuestionCount) Q")
+                                        .font(.system(size: 9, weight: .medium))
+                                }
+                                .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.8))
+                            }
+
+                            // Time estimate
+                            HStack(spacing: 3) {
+                                Image(systemName: "clock")
+                                    .font(.system(size: 8))
+                                Text("~7 min")
+                                    .font(.system(size: 9, weight: .medium))
+                            }
+                            .foregroundColor(.white.opacity(0.6))
+
+                            Spacer()
+
+                            // Badge
+                            Text("Triggered by your answers")
+                                .font(.system(size: 8))
+                                .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 8)
+                    }
                 }
             }
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(cardBackground.opacity(isCompleted ? 0.5 : 1))
+                    .overlay(
+                        isCompleted ? nil : RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.3), lineWidth: 1)
+                    )
+            )
+            .opacity(isCompleted ? 0.7 : 1)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(cardBackground.opacity(isCompleted ? 0.5 : 1))
-                .overlay(
-                    isCompleted ? nil : RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.3), lineWidth: 1)
-                )
-        )
-        .opacity(isCompleted ? 0.7 : 1)
+        .buttonStyle(.plain)
+        .disabled(isCompleted)
     }
 
     // MARK: - Expansion Pack Card (Pending/Overdue Deep Dives)
 
     private var expansionPackCard: some View {
-        HStack(spacing: 10) {
-            // Icon
-            ZStack {
-                Circle()
-                    .fill(Color.orange.opacity(0.2))
-                    .frame(width: 36, height: 36)
+        Button {
+            WKInterfaceDevice.current().play(.click)
+            WatchConnectivityManager.shared.openPhoneApp(action: "assessment")
+        } label: {
+            HStack(spacing: 10) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.2))
+                        .frame(width: 36, height: 36)
 
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.orange)
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.orange)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Deep Dive Pending")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+
+                    Text("Tap to open iPhone")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+
+                Spacer()
+
+                // Badge showing count + arrow
+                HStack(spacing: 6) {
+                    Text("\(overdueExpansionsCount)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 18, height: 18)
+                        .background(Circle().fill(Color.orange))
+
+                    Image(systemName: "arrow.up.forward.app.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.orange.opacity(0.8))
+                }
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Deep Dive Pending")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-
-                Text("\(overdueExpansionsCount) questionnaire\(overdueExpansionsCount == 1 ? "" : "s") on iPhone")
-                    .font(.system(size: 10))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-
-            Spacer()
-
-            // Badge showing count
-            Text("\(overdueExpansionsCount)")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.white)
-                .frame(width: 18, height: 18)
-                .background(Circle().fill(Color.orange))
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(cardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                    )
+            )
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                )
-        )
+        .buttonStyle(.plain)
     }
 
     // MARK: - Protocol Section

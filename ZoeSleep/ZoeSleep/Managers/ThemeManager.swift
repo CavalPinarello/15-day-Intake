@@ -202,6 +202,13 @@ class ThemeManager: ObservableObject {
         }
     }
 
+    /// Gamification/XP system (PARKED - disabled by default, can re-enable for future use)
+    @Published var gamificationEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(gamificationEnabled, forKey: "gamificationEnabled")
+        }
+    }
+
     // Circadian time period - triggers UI refresh when time period changes
     @Published private(set) var currentTimePeriod: TimePeriod = TimePeriod.current
 

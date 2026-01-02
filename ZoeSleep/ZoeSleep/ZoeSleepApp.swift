@@ -52,6 +52,44 @@ struct ZoeSleepApp: App {
                         refreshJourneyState()
                     }
                 }
+                .onOpenURL { url in
+                    handleDeepLink(url)
+                }
+        }
+    }
+
+    /// Handle deep links from Watch or other sources
+    /// URL format: zoesleep://[action]?[parameters]
+    /// Examples:
+    ///   zoesleep://sleeplog - Open sleep log questionnaire
+    ///   zoesleep://assessment - Open assessment questionnaire
+    ///   zoesleep://home - Open home/dashboard
+    private func handleDeepLink(_ url: URL) {
+        print("[iOS] Received deep link: \(url)")
+
+        guard url.scheme == "zoesleep" else { return }
+
+        let action = url.host ?? ""
+
+        switch action {
+        case "sleeplog":
+            // Post notification to navigate to sleep log
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": "sleeplog"]
+            )
+        case "assessment":
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": "assessment"]
+            )
+        case "home", "":
+            // Just opening the app - no specific navigation needed
+            print("[iOS] Deep link to home - app opened")
+        default:
+            print("[iOS] Unknown deep link action: \(action)")
         }
     }
 

@@ -2488,20 +2488,20 @@ export const speedRunFullJourney = mutation({
 });
 
 // ============================================
-// Time Travel Mode - Simplified Testing
-// Pick a start date, complete days with 5-second lockouts
+// Time Travel Mode - Calendar-Based Testing
+// Pick a past date to simulate, advance day by day
+// All dates stay in the past, never go into the future
 // ============================================
 
-const TIME_TRAVEL_LOCKOUT_MS = 5 * 1000; // 5 seconds between days
-
 /**
- * Set up Time Travel Mode - pick a historical start date
- * All journey data will be backdated to this period
+ * Set up Time Travel Mode - pick a past date as "simulated today"
+ * User picks Dec 3 (30 days ago) → that becomes Day 1's simulated date
+ * Advance button moves to Dec 4 (29 days ago), etc.
  */
 export const timeTravelSetup = mutation({
   args: {
     userId: v.id("users"),
-    startDate: v.number(), // Unix timestamp for Day 1
+    simulatedDate: v.number(), // Unix timestamp for "today" in the simulation
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -2509,36 +2509,47 @@ export const timeTravelSetup = mutation({
       throw new Error("User not found");
     }
 
+    const now = Date.now();
+
     // Validate date is within last 3 months
-    const threeMonthsAgo = Date.now() - (90 * 24 * 60 * 60 * 1000);
-    if (args.startDate < threeMonthsAgo) {
-      throw new Error("Start date must be within the last 3 months");
+    const threeMonthsAgo = now - (90 * 24 * 60 * 60 * 1000);
+    if (args.simulatedDate < threeMonthsAgo) {
+      throw new Error("Date must be within the last 3 months");
     }
-    if (args.startDate > Date.now()) {
-      throw new Error("Start date cannot be in the future");
+
+    // Cannot simulate future dates
+    if (args.simulatedDate > now) {
+      throw new Error("Simulated date cannot be in the future");
     }
 
     await ctx.db.patch(args.userId, {
-      started_at: args.startDate,
-      current_day: 1,
-      speed_test_mode: true, // Enables fast lockouts
+      // New Time Travel fields
+      time_travel_active: true,
+      time_travel_simulated_date: args.simulatedDate,
+      time_travel_current_day: 1,
+      time_travel_day_completed: false,
       is_test_data: true,
+      // Also set legacy fields for compatibility
+      started_at: args.simulatedDate,
+      current_day: 1,
+      // Clear old speed test fields
+      speed_test_mode: undefined,
       speed_test_day_unlocks_at: undefined,
     });
 
-    console.log(`[TimeTravel] Setup for user ${user.username}, Day 1 = ${new Date(args.startDate).toISOString()}`);
+    console.log(`[TimeTravel] Setup for user ${user.username}, simulating ${new Date(args.simulatedDate).toDateString()} as Day 1`);
 
     return {
       success: true,
-      startDate: args.startDate,
+      simulatedDate: args.simulatedDate,
       currentDay: 1,
-      simulatedDate: args.startDate,
     };
   },
 });
 
 /**
- * Get Time Travel status - current day, lockout countdown, simulated dates
+ * Get Time Travel status - simulated date, journey day, completion status
+ * No more timer/lockout logic - advance button is always available
  */
 export const timeTravelStatus = query({
   args: {
@@ -2551,45 +2562,43 @@ export const timeTravelStatus = query({
     }
 
     const now = Date.now();
-    const startedAt = user.started_at || now;
-    const currentDay = user.current_day || 1;
-    const isTimeTravelActive = user.speed_test_mode || false;
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    // Use new Time Travel fields (fall back to legacy for backwards compat)
+    const isTimeTravelActive = user.time_travel_active || user.speed_test_mode || false;
     const isTestData = user.is_test_data || false;
-    const dayUnlocksAt = user.speed_test_day_unlocks_at;
 
-    // Calculate simulated date for current day
-    const simulatedDate = startedAt + ((currentDay - 1) * 24 * 60 * 60 * 1000);
+    // Simulated date is stored directly (not calculated from start + day)
+    const simulatedDate = user.time_travel_simulated_date || user.started_at || now;
+    const currentDay = user.time_travel_current_day || user.current_day || 1;
+    const dayCompleted = user.time_travel_day_completed || false;
 
-    let secondsUntilUnlock = 0;
-    let canAdvance = false;
-    let isLocked = false;
+    // Calculate if we can advance:
+    // 1. Simulated date + 1 day must not exceed today's date
+    // 2. Must not be past Day 14
+    const nextSimulatedDate = simulatedDate + DAY_MS;
+    const canAdvance = isTimeTravelActive && nextSimulatedDate <= now && currentDay < 14;
 
-    if (isTimeTravelActive && dayUnlocksAt) {
-      const msRemaining = dayUnlocksAt - now;
-      if (msRemaining > 0) {
-        secondsUntilUnlock = Math.ceil(msRemaining / 1000);
-        isLocked = true;
-      } else {
-        canAdvance = true;
-      }
-    }
+    // Calculate days ago for display
+    const daysAgo = Math.floor((now - simulatedDate) / DAY_MS);
 
     return {
       isTimeTravelActive,
       isTestData,
-      startedAt,
-      currentDay,
       simulatedDate,
-      dayUnlocksAt: dayUnlocksAt || null,
-      secondsUntilUnlock,
+      currentDay,
+      dayCompleted,
       canAdvance,
-      isLocked,
+      daysAgo,
+      journeyComplete: currentDay >= 14,
     };
   },
 });
 
 /**
- * Complete current day with mock data and start 5-second lockout
+ * Complete current day with mock data (optional helper)
+ * Uses the simulated date as the historical timestamp
+ * No more lockout timer - advance is always available after this
  */
 export const timeTravelCompleteDay = mutation({
   args: {
@@ -2601,12 +2610,12 @@ export const timeTravelCompleteDay = mutation({
       throw new Error("User not found");
     }
 
-    const currentDay = user.current_day || 1;
-    const startedAt = user.started_at || Date.now();
-    const now = Date.now();
+    // Use new Time Travel fields with fallback
+    const currentDay = user.time_travel_current_day || user.current_day || 1;
+    const simulatedDate = user.time_travel_simulated_date || user.started_at || Date.now();
 
-    // Calculate historical timestamp for this day's data
-    const historicalTimestamp = startedAt + ((currentDay - 1) * 24 * 60 * 60 * 1000);
+    // Use the simulated date directly as the historical timestamp
+    const historicalTimestamp = simulatedDate;
 
     // Generate mock responses with historical timestamps
     const sleepLogResponses = generateMockSleepLogResponses(currentDay, "normal");
@@ -2690,25 +2699,24 @@ export const timeTravelCompleteDay = mutation({
       }
     }
 
-    // Start 5-second lockout
-    const unlockTime = now + TIME_TRAVEL_LOCKOUT_MS;
+    // Mark day as completed in Time Travel state (no lockout timer)
     await ctx.db.patch(args.userId, {
-      speed_test_day_unlocks_at: unlockTime,
+      time_travel_day_completed: true,
     });
 
-    console.log(`[TimeTravel] Day ${currentDay} completed (dated ${new Date(historicalTimestamp).toDateString()}), unlocks in 5s`);
+    console.log(`[TimeTravel] Day ${currentDay} completed (dated ${new Date(historicalTimestamp).toDateString()})`);
 
     return {
       success: true,
       completedDay: currentDay,
       historicalDate: historicalTimestamp,
-      secondsUntilUnlock: 5,
     };
   },
 });
 
 /**
- * Advance to next day after lockout expires
+ * Advance to next day - moves simulated date forward by 1 day
+ * Guards: Cannot advance past today's real date, cannot advance past Day 14
  */
 export const timeTravelAdvanceDay = mutation({
   args: {
@@ -2721,39 +2729,57 @@ export const timeTravelAdvanceDay = mutation({
     }
 
     const now = Date.now();
-    const unlockTime = user.speed_test_day_unlocks_at;
+    const DAY_MS = 24 * 60 * 60 * 1000;
 
-    // Check if still locked
-    if (unlockTime && now < unlockTime) {
-      const secondsRemaining = Math.ceil((unlockTime - now) / 1000);
+    // Use new Time Travel fields with fallback
+    const currentDay = user.time_travel_current_day || user.current_day || 1;
+    const simulatedDate = user.time_travel_simulated_date || user.started_at || now;
+
+    // Guard: Cannot advance past Day 14
+    if (currentDay >= 14) {
       return {
         success: false,
-        error: `Locked for ${secondsRemaining} more seconds`,
-        secondsUntilUnlock: secondsRemaining,
+        error: "Journey complete (Day 14 reached)",
       };
     }
 
-    const currentDay = user.current_day || 1;
-    const newDay = Math.min(currentDay + 1, 14);
+    // Calculate next simulated date
+    const nextSimulatedDate = simulatedDate + DAY_MS;
+
+    // Guard: Cannot advance past today's real date
+    if (nextSimulatedDate > now) {
+      return {
+        success: false,
+        error: "Cannot advance past today's date",
+      };
+    }
+
+    const newDay = currentDay + 1;
 
     await ctx.db.patch(args.userId, {
+      // Update new fields
+      time_travel_simulated_date: nextSimulatedDate,
+      time_travel_current_day: newDay,
+      time_travel_day_completed: false, // New day = not completed
+      // Also update legacy fields for compatibility
       current_day: newDay,
-      speed_test_day_unlocks_at: undefined,
+      started_at: user.started_at, // Keep original start date
     });
 
-    console.log(`[TimeTravel] Advanced to Day ${newDay}`);
+    console.log(`[TimeTravel] Advanced to Day ${newDay}, simulating ${new Date(nextSimulatedDate).toDateString()}`);
 
     return {
       success: true,
       previousDay: currentDay,
       currentDay: newDay,
+      simulatedDate: nextSimulatedDate,
       journeyComplete: newDay >= 14,
     };
   },
 });
 
 /**
- * Reset Time Travel - clears all data and returns to Day 1
+ * Reset Time Travel - clears all data and exits Time Travel mode
  */
 export const timeTravelReset = mutation({
   args: {
@@ -2810,9 +2836,15 @@ export const timeTravelReset = mutation({
       await ctx.db.delete(r._id);
     }
 
-    // Reset user to Day 1
+    // Reset user to Day 1 and exit Time Travel mode
     const now = Date.now();
     await ctx.db.patch(args.userId, {
+      // Reset new Time Travel fields
+      time_travel_active: false,
+      time_travel_simulated_date: undefined,
+      time_travel_current_day: undefined,
+      time_travel_day_completed: undefined,
+      // Reset legacy fields
       current_day: 1,
       started_at: now,
       speed_test_mode: false,
@@ -2832,6 +2864,7 @@ export const timeTravelReset = mutation({
 
 /**
  * Clear test data flag (convert to real patient)
+ * Also exits Time Travel mode
  */
 export const clearTestDataFlag = mutation({
   args: {
@@ -2845,6 +2878,12 @@ export const clearTestDataFlag = mutation({
 
     await ctx.db.patch(args.userId, {
       is_test_data: false,
+      // Clear new Time Travel fields
+      time_travel_active: false,
+      time_travel_simulated_date: undefined,
+      time_travel_current_day: undefined,
+      time_travel_day_completed: undefined,
+      // Clear legacy fields
       speed_test_mode: false,
       speed_test_day_unlocks_at: undefined,
     });

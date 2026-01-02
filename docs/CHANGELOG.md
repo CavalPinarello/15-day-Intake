@@ -6,6 +6,28 @@
 
 ### Jan 2, 2026
 
+#### Unit-Aware Help Text for Temperature Question
+
+Added support for imperial-specific help text on questions with unit switching (temperature Q33A).
+
+**Problem:**
+- Temperature question (Q33A) showed both °C and °F in help text regardless of user's preference
+- Example: "Ideal sleep temperature is 16-19°C (60-67°F)" when user had Imperial selected
+
+**Solution:**
+- Added `helpTextImperial` field to Question model and Convex schema
+- QuestionCard now checks user's `measurementSystem` preference and shows appropriate help text
+- Q33A help text now shows only the relevant unit based on preference
+
+**Changes:**
+- **iOS:** Added `helpTextImperial` to `Question` struct, `ConvexQuestion`, and `QuestionCard`
+- **Convex:** Added `help_text_imperial` field to `assessment_questions` and `sleep_diary_questions` tables
+- **Data:** Updated Q33A with separate metric ("16-19°C") and imperial ("60-67°F") help texts
+
+**Files changed:** `QuestionModels.swift`, `QuestionComponents.swift`, `ConvexService.swift`, `QuestionnaireView.swift`, `schema.ts`, `watch.ts`, `seedQuestions.ts`, `assessment_questions_converted.json`
+
+---
+
 #### Glassy Card UI & Dashboard Polish
 
 Implemented frosted glass effect for all cards with circadian-aware styling, plus fixed dashboard margins.

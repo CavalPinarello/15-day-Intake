@@ -1157,9 +1157,11 @@ export const resetUserComplete = mutation({
 
     for (const tableName of allTables) {
       try {
-        // @ts-ignore - dynamic table access
-        await deleteFromTable(tableName,
-          ctx.db.query(tableName).withIndex("by_user", (q: any) => q.eq("user_id", userId)));
+        // @ts-expect-error - dynamic table access for bulk deletion
+        const records = await ctx.db.query(tableName).withIndex("by_user", (q: any) => q.eq("user_id", userId)).collect();
+        for (const record of records) {
+          await ctx.db.delete(record._id);
+        }
       } catch (e) {
         // Table might not have by_user index or might not exist, skip silently
         console.log(`Skipping table ${tableName}: ${e}`);

@@ -358,13 +358,159 @@ class NotificationManager: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Custom Sleep Reminders
+    // MARK: - Daily Task Reminder (Intelligent)
 
-    /// Notification identifiers for sleep reminders
+    /// Notification identifier for daily task reminder
+    private static let dailyTaskReminderID = "daily_task_reminder"
+
+    /// UserDefaults keys for notification settings
+    static let dailyReminderEnabledKey = "dailyReminderEnabled"
+    static let dailyReminderHourKey = "dailyReminderHour"
+    static let dailyReminderMinuteKey = "dailyReminderMinute"
+
+    /// Schedule an intelligent daily task reminder
+    /// The notification content is customized based on which tasks are still incomplete
+    func scheduleDailyTaskReminder(enabled: Bool, hour: Int, minute: Int) async {
+        guard isAuthorized else {
+            print("[Notifications] Not authorized, skipping daily reminder")
+            return
+        }
+
+        // Cancel existing daily reminder first
+        cancelDailyTaskReminder()
+
+        guard enabled else {
+            print("[Notifications] Daily reminder disabled")
+            return
+        }
+
+        // Save settings to UserDefaults
+        UserDefaults.standard.set(enabled, forKey: Self.dailyReminderEnabledKey)
+        UserDefaults.standard.set(hour, forKey: Self.dailyReminderHourKey)
+        UserDefaults.standard.set(minute, forKey: Self.dailyReminderMinuteKey)
+
+        let content = UNMutableNotificationContent()
+        content.title = "Daily Tasks Reminder"
+        content.body = "Time to check in! Complete your sleep log and daily tasks."
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.morningCheckIn.rawValue
+        // Add user info so we can update content dynamically when notification fires
+        content.userInfo = ["type": "daily_task_reminder"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: dateComponents,
+            repeats: true
+        )
+
+        let request = UNNotificationRequest(
+            identifier: Self.dailyTaskReminderID,
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await notificationCenter.add(request)
+            print("[Notifications] Scheduled daily reminder at \(hour):\(String(format: "%02d", minute))")
+        } catch {
+            print("[Notifications] Error scheduling daily reminder: \(error)")
+        }
+
+        await updatePendingCount()
+    }
+
+    /// Schedule the daily reminder using saved settings from UserDefaults
+    /// Call this on app launch to restore notification schedule
+    func scheduleFromSavedSettings() async {
+        let defaults = UserDefaults.standard
+        let enabled = defaults.object(forKey: Self.dailyReminderEnabledKey) as? Bool ?? true
+        let hour = defaults.object(forKey: Self.dailyReminderHourKey) as? Int ?? 9
+        let minute = defaults.object(forKey: Self.dailyReminderMinuteKey) as? Int ?? 0
+
+        print("[Notifications] Scheduling from saved settings - enabled: \(enabled), time: \(hour):\(String(format: "%02d", minute))")
+        await scheduleDailyTaskReminder(enabled: enabled, hour: hour, minute: minute)
+    }
+
+    /// Cancel daily task reminder
+    func cancelDailyTaskReminder() {
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.dailyTaskReminderID])
+        print("[Notifications] Cancelled daily task reminder")
+    }
+
+    /// Send an immediate smart notification based on current task completion status
+    /// Call this to send a notification that's aware of what tasks are incomplete
+    func sendSmartDailyNotification(
+        sleepLogCompleted: Bool,
+        assessmentCompleted: Bool,
+        hasExpansionPack: Bool,
+        expansionCompleted: Bool
+    ) async {
+        guard isAuthorized else { return }
+
+        // If everything is completed, don't send notification
+        let expansionIncomplete = hasExpansionPack && !expansionCompleted
+        let hasIncompleteTasks = !sleepLogCompleted || !assessmentCompleted || expansionIncomplete
+
+        guard hasIncompleteTasks else {
+            print("[Notifications] All tasks completed, skipping notification")
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.morningCheckIn.rawValue
+
+        // Build smart message based on what's incomplete
+        var incompleteTasks: [String] = []
+        if !sleepLogCompleted {
+            incompleteTasks.append("sleep log")
+        }
+        if !assessmentCompleted {
+            incompleteTasks.append("assessment")
+        }
+        if expansionIncomplete {
+            incompleteTasks.append("expansion pack")
+        }
+
+        // Customize title and body based on incomplete tasks
+        if incompleteTasks.count == 1 {
+            let task = incompleteTasks[0]
+            content.title = "Complete your \(task)"
+            content.body = "You still need to finish your \(task) for today."
+        } else {
+            content.title = "Daily Tasks Reminder"
+            let taskList = incompleteTasks.joined(separator: ", ")
+            content.body = "You have \(incompleteTasks.count) tasks remaining: \(taskList)."
+        }
+
+        // Trigger immediately
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+
+        let request = UNNotificationRequest(
+            identifier: "smart_daily_\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await notificationCenter.add(request)
+            print("[Notifications] Sent smart notification for incomplete tasks: \(incompleteTasks)")
+        } catch {
+            print("[Notifications] Error sending smart notification: \(error)")
+        }
+    }
+
+    // MARK: - Legacy Sleep Reminders (Deprecated)
+
+    /// Notification identifiers for sleep reminders (deprecated, kept for migration)
     private static let morningSleepReminderID = "sleep_morning_reminder"
     private static let eveningSleepReminderID = "sleep_evening_reminder"
 
     /// Schedule custom morning and evening sleep reminders with user-defined times
+    /// @deprecated Use scheduleDailyTaskReminder instead
     func scheduleSleepReminders(
         morningEnabled: Bool,
         morningHour: Int,
@@ -373,82 +519,14 @@ class NotificationManager: NSObject, ObservableObject {
         eveningHour: Int,
         eveningMinute: Int
     ) async {
-        guard isAuthorized else {
-            print("[Notifications] Not authorized, skipping sleep reminders")
-            return
-        }
-
-        // Cancel existing sleep reminders first
-        cancelSleepReminders()
-
-        // Schedule morning reminder if enabled
-        if morningEnabled {
-            let morningContent = UNMutableNotificationContent()
-            morningContent.title = "Good morning!"
-            morningContent.body = "Time to log how you slept last night."
-            morningContent.sound = .default
-            morningContent.categoryIdentifier = NotificationType.morningCheckIn.rawValue
-
-            var morningComponents = DateComponents()
-            morningComponents.hour = morningHour
-            morningComponents.minute = morningMinute
-
-            let morningTrigger = UNCalendarNotificationTrigger(
-                dateMatching: morningComponents,
-                repeats: true
-            )
-
-            let morningRequest = UNNotificationRequest(
-                identifier: Self.morningSleepReminderID,
-                content: morningContent,
-                trigger: morningTrigger
-            )
-
-            do {
-                try await notificationCenter.add(morningRequest)
-                print("[Notifications] Scheduled morning reminder at \(morningHour):\(String(format: "%02d", morningMinute))")
-            } catch {
-                print("[Notifications] Error scheduling morning reminder: \(error)")
-            }
-        }
-
-        // Schedule evening reminder if enabled
-        if eveningEnabled {
-            let eveningContent = UNMutableNotificationContent()
-            eveningContent.title = "Evening check-in"
-            eveningContent.body = "Don't forget to complete your daily assessment."
-            eveningContent.sound = .default
-            eveningContent.categoryIdentifier = NotificationType.eveningReminder.rawValue
-
-            var eveningComponents = DateComponents()
-            eveningComponents.hour = eveningHour
-            eveningComponents.minute = eveningMinute
-
-            let eveningTrigger = UNCalendarNotificationTrigger(
-                dateMatching: eveningComponents,
-                repeats: true
-            )
-
-            let eveningRequest = UNNotificationRequest(
-                identifier: Self.eveningSleepReminderID,
-                content: eveningContent,
-                trigger: eveningTrigger
-            )
-
-            do {
-                try await notificationCenter.add(eveningRequest)
-                print("[Notifications] Scheduled evening reminder at \(eveningHour):\(String(format: "%02d", eveningMinute))")
-            } catch {
-                print("[Notifications] Error scheduling evening reminder: \(error)")
-            }
-        }
-
-        await updatePendingCount()
+        // Migrate to new single daily reminder system
+        // Use morning time as the daily reminder time
+        await scheduleDailyTaskReminder(enabled: morningEnabled, hour: morningHour, minute: morningMinute)
     }
 
     /// Cancel all custom sleep reminders
     func cancelSleepReminders() {
-        let identifiers = [Self.morningSleepReminderID, Self.eveningSleepReminderID]
+        let identifiers = [Self.morningSleepReminderID, Self.eveningSleepReminderID, Self.dailyTaskReminderID]
         notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
         print("[Notifications] Cancelled sleep reminders")
     }

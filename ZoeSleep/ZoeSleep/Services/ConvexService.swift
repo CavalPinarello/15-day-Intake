@@ -819,12 +819,24 @@ class ConvexService {
             throw ConvexError.notAuthenticated
         }
 
-        return try await client.mutation("watch:completeSection", args: [
+        let result: CompleteSectionResponse = try await client.mutation("watch:completeSection", args: [
             "userId": userId,
             "dayNumber": dayNumber,
             "section": section,
             "source": "ios"
         ])
+
+        // Notify Apple Watch of section completion so it can refresh its state
+        await MainActor.run {
+            iOSWatchConnectivityManager.shared.notifyWatchSectionCompleted(
+                section: section,
+                dayNumber: dayNumber,
+                sleepLogCompleted: result.sleepLogCompleted,
+                assessmentCompleted: result.assessmentCompleted
+            )
+        }
+
+        return result
     }
 
     /// Response from injectProfileResponses mutation
@@ -1073,41 +1085,38 @@ class ConvexService {
         ])
     }
 
-    // MARK: - Time Travel Mode (5-Second Day Lockouts)
+    // MARK: - Time Travel Mode (Calendar-Based Testing)
 
     struct TimeTravelStatusResponse: Codable {
         let isTimeTravelActive: Bool
         let isTestData: Bool
-        let startedAt: Double
-        let currentDay: Int
-        let simulatedDate: Double
-        let dayUnlocksAt: Double?
-        let secondsUntilUnlock: Int
-        let canAdvance: Bool
-        let isLocked: Bool
+        let simulatedDate: Double    // Unix timestamp of "today" in simulation
+        let currentDay: Int          // Journey day (1-14)
+        let dayCompleted: Bool       // Whether current day is done
+        let canAdvance: Bool         // Whether can advance to next day
+        let daysAgo: Int             // How many days ago the simulated date is
+        let journeyComplete: Bool    // Whether journey is complete (Day 14)
     }
 
     struct TimeTravelSetupResponse: Codable {
         let success: Bool
-        let startDate: Double?
-        let currentDay: Int?
         let simulatedDate: Double?
+        let currentDay: Int?
     }
 
     struct TimeTravelCompleteDayResponse: Codable {
         let success: Bool
         let completedDay: Int?
         let historicalDate: Double?
-        let secondsUntilUnlock: Int?
     }
 
     struct TimeTravelAdvanceResponse: Codable {
         let success: Bool
         let previousDay: Int?
         let currentDay: Int?
+        let simulatedDate: Double?   // New simulated date after advance
         let journeyComplete: Bool?
         let error: String?
-        let secondsUntilUnlock: Int?
     }
 
     struct TimeTravelResetResponse: Codable {
@@ -1116,20 +1125,20 @@ class ConvexService {
         let startedAt: Double?
     }
 
-    /// Set up Time Travel Mode - pick a historical start date for Day 1
-    /// All journey data will be backdated to this period
-    func timeTravelSetup(startDate: Date) async throws -> TimeTravelSetupResponse {
+    /// Set up Time Travel Mode - pick a past date as "simulated today"
+    /// User picks Dec 3 (30 days ago) → that becomes Day 1's simulated date
+    func timeTravelSetup(simulatedDate: Date) async throws -> TimeTravelSetupResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
         return try await client.mutation("ios:timeTravelSetup", args: [
             "userId": userId,
-            "startDate": startDate.timeIntervalSince1970 * 1000 // Unix timestamp in ms
+            "simulatedDate": simulatedDate.timeIntervalSince1970 * 1000 // Unix timestamp in ms
         ])
     }
 
-    /// Get Time Travel status - current day, lockout countdown, simulated dates
+    /// Get Time Travel status - simulated date, journey day, completion status
     func getTimeTravelStatus() async throws -> TimeTravelStatusResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
@@ -1140,7 +1149,7 @@ class ConvexService {
         ])
     }
 
-    /// Complete current day with mock data and start 5-second lockout
+    /// Complete current day with mock data (optional helper)
     func timeTravelCompleteDay() async throws -> TimeTravelCompleteDayResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
@@ -1151,7 +1160,7 @@ class ConvexService {
         ])
     }
 
-    /// Advance to next day after lockout expires
+    /// Advance to next day - moves simulated date forward by 1 day
     func timeTravelAdvanceDay() async throws -> TimeTravelAdvanceResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
@@ -1162,7 +1171,7 @@ class ConvexService {
         ])
     }
 
-    /// Reset Time Travel - clears all data and returns to Day 1
+    /// Reset Time Travel - clears all data and exits Time Travel mode
     func timeTravelReset() async throws -> TimeTravelResetResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
@@ -2543,19 +2552,26 @@ extension ConvexService {
         sleepQuality: Int,
         energyLevel: Int,
         mood: Int,
+        focusLevel: Int? = nil,
         deviceType: String = "ios"
     ) async throws {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
-        let _: CheckInSubmitResponse = try await client.mutation("checkIn:submitMorningCheckIn", args: [
+        var args: [String: Any] = [
             "userId": userId,
             "sleepQuality": sleepQuality,
             "energyLevel": energyLevel,
             "mood": mood,
             "deviceType": deviceType
-        ])
+        ]
+
+        if let focus = focusLevel {
+            args["focusLevel"] = focus
+        }
+
+        let _: CheckInSubmitResponse = try await client.mutation("checkIn:submitMorningCheckIn", args: args)
     }
 
     /// Submit midday check-in data (energy, caffeine, naps)

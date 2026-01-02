@@ -5069,9 +5069,10 @@ export const getPatientActivityAndCircadian = query({
       // Find circadian for this date
       const circadian = circadianData.find((c) => c.date === dateStr);
 
-      // Find outdoor workouts for this date
+      // Find outdoor workouts for this date (inferred from workout type)
+      const outdoorWorkoutTypes = ["walking", "running", "cycling", "hiking", "outdoor", "trail"];
       const outdoorWorkouts = workoutData.filter(
-        (w) => w.date === dateStr && w.was_outdoor === true
+        (w) => w.date === dateStr && outdoorWorkoutTypes.some(t => w.workout_type?.toLowerCase().includes(t))
       );
       const outdoorWorkoutMins = outdoorWorkouts.reduce((sum, w) => sum + (w.duration_mins || 0), 0);
 

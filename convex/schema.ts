@@ -44,10 +44,15 @@ export default defineSchema({
     clerk_id: v.optional(v.string()), // Clerk user ID for web authentication
     // Developer mode (for testers)
     developer_mode: v.optional(v.boolean()), // Enables fast-track testing (skip time gates, instant day unlock)
-    // Speed Test Mode - 15-second day lockouts for accelerated testing
-    speed_test_mode: v.optional(v.boolean()), // When true, days unlock in 15 seconds instead of 24 hours
-    speed_test_day_unlocks_at: v.optional(v.number()), // Unix timestamp when next day unlocks
+    // Speed Test Mode - LEGACY (kept for backwards compatibility)
+    speed_test_mode: v.optional(v.boolean()), // Deprecated - use time_travel_active
+    speed_test_day_unlocks_at: v.optional(v.number()), // Deprecated - no longer used
     is_test_data: v.optional(v.boolean()), // Flag to mark this user's data as test data (filtered from real patient views)
+    // Time Travel Mode - Calendar-based testing (new system)
+    time_travel_active: v.optional(v.boolean()), // Whether Time Travel mode is active
+    time_travel_simulated_date: v.optional(v.number()), // Unix timestamp of "today" in the simulation
+    time_travel_current_day: v.optional(v.number()), // Journey day (1-14) in Time Travel mode
+    time_travel_day_completed: v.optional(v.boolean()), // Whether current day's tasks are done
   })
     .index("by_username", ["username"])
     .index("by_email", ["email"])

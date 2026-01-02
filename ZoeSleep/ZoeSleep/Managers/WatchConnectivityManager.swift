@@ -144,7 +144,7 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
 
     /// Notify Watch that day was advanced
     func notifyWatchDayAdvanced(newDay: Int) {
-        guard let session = session, session.isReachable else { return }
+        guard let session = session else { return }
 
         let message: [String: Any] = [
             "action": "dayAdvanced",
@@ -152,8 +152,38 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             "timestamp": Date().timeIntervalSince1970
         ]
 
-        session.sendMessage(message, replyHandler: nil) { error in
-            print("Failed to notify Watch of day advance: \(error.localizedDescription)")
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                print("Failed to notify Watch of day advance: \(error.localizedDescription)")
+            }
+        } else {
+            // Queue for later delivery
+            session.transferUserInfo(message)
+            print("[iOS] Queued day advance notification for Watch")
+        }
+    }
+
+    /// Notify Watch that a section was completed on iPhone
+    func notifyWatchSectionCompleted(section: String, dayNumber: Int, sleepLogCompleted: Bool, assessmentCompleted: Bool) {
+        guard let session = session else { return }
+
+        let message: [String: Any] = [
+            "action": "iPhoneSectionCompleted",
+            "section": section,
+            "dayNumber": dayNumber,
+            "sleepLogCompleted": sleepLogCompleted,
+            "assessmentCompleted": assessmentCompleted,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                print("Failed to notify Watch of section completion: \(error.localizedDescription)")
+            }
+        } else {
+            // Queue for later delivery - Watch will refresh when it receives this
+            session.transferUserInfo(message)
+            print("[iOS] Queued section completion for Watch: \(section)")
         }
     }
 

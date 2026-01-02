@@ -2,10 +2,10 @@
 //  TimeTravelManager.swift
 //  ZoeSleep
 //
-//  Manages Time Travel Mode for streamlined journey testing
-//  - Pick a historical start date for Day 1
-//  - 5-second lockouts to test day unlocking
-//  - Historical timestamps on all data
+//  Manages Time Travel Mode for calendar-based journey testing
+//  - Pick a past date as "simulated today"
+//  - Advance day-by-day through the journey
+//  - All dates stay in the past
 //
 
 import Foundation
@@ -20,26 +20,19 @@ class TimeTravelManager: ObservableObject {
 
     @Published var isTimeTravelActive: Bool = false
     @Published var isTestData: Bool = false
-    @Published var startedAt: Date = Date()
-    @Published var currentDay: Int = 1
-    @Published var simulatedDate: Date = Date()
-    @Published var secondsUntilUnlock: Int = 0
-    @Published var canAdvance: Bool = false
-    @Published var isLocked: Bool = false
+    @Published var simulatedDate: Date = Date()      // "Today" in the simulation
+    @Published var currentDay: Int = 1               // Journey day (1-14)
+    @Published var dayCompleted: Bool = false        // Whether current day is done
     @Published var isLoading: Bool = false
     @Published var error: String?
 
-    // MARK: - Private State
+    // MARK: - UserDefaults keys for persistence
 
-    private var countdownTimer: Timer?
-    private var dayUnlocksAt: Date?
-
-    // UserDefaults keys for persistence
     private static let timeTravelActiveKey = "timeTravelActive"
-    private static let startedAtKey = "timeTravelStartedAt"
-    private static let dayUnlocksAtKey = "timeTravelDayUnlocksAt"
-    private static let isTestDataKey = "timeTravelIsTestData"
+    private static let simulatedDateKey = "timeTravelSimulatedDate"
     private static let currentDayKey = "timeTravelCurrentDay"
+    private static let dayCompletedKey = "timeTravelDayCompleted"
+    private static let isTestDataKey = "timeTravelIsTestData"
 
     // MARK: - Initialization
 
@@ -47,85 +40,78 @@ class TimeTravelManager: ObservableObject {
         loadPersistedState()
     }
 
+    // MARK: - Computed Properties
+
+    /// Whether we can advance to the next day
+    /// - Must be in Time Travel mode
+    /// - Next simulated date must not exceed today's real date
+    /// - Must not be past Day 14
+    var canAdvanceToNextDay: Bool {
+        guard isTimeTravelActive else { return false }
+        guard currentDay < 14 else { return false }
+
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: simulatedDate) ?? simulatedDate
+        return tomorrow <= Date()
+    }
+
+    /// How many days ago the simulated date is
+    var daysAgo: Int {
+        let components = Calendar.current.dateComponents([.day], from: simulatedDate, to: Date())
+        return max(0, components.day ?? 0)
+    }
+
+    /// Why the advance button is disabled (for UI)
+    var advanceDisabledReason: String? {
+        guard isTimeTravelActive else { return nil }
+        if currentDay >= 14 { return "Journey Complete" }
+        if !canAdvanceToNextDay { return "At today's date" }
+        return nil
+    }
+
+    /// Minimum selectable date (3 months ago)
+    var minSelectableDate: Date {
+        Calendar.current.date(byAdding: .month, value: -3, to: Date()) ?? Date()
+    }
+
+    /// Maximum selectable date (yesterday - need at least 1 day to test)
+    var maxSelectableDate: Date {
+        Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+    }
+
+    /// Formatted simulated date for display
+    var formattedSimulatedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: simulatedDate)
+    }
+
+    /// Whether the journey is complete (Day 14)
+    var journeyComplete: Bool {
+        currentDay >= 14
+    }
+
     // MARK: - Persistence
 
     private func loadPersistedState() {
         isTimeTravelActive = UserDefaults.standard.bool(forKey: Self.timeTravelActiveKey)
         isTestData = UserDefaults.standard.bool(forKey: Self.isTestDataKey)
+        dayCompleted = UserDefaults.standard.bool(forKey: Self.dayCompletedKey)
         currentDay = UserDefaults.standard.integer(forKey: Self.currentDayKey)
         if currentDay == 0 { currentDay = 1 }
 
-        if let startedAtTimestamp = UserDefaults.standard.object(forKey: Self.startedAtKey) as? Double {
-            startedAt = Date(timeIntervalSince1970: startedAtTimestamp / 1000)
-            updateSimulatedDate()
+        if let simulatedTimestamp = UserDefaults.standard.object(forKey: Self.simulatedDateKey) as? Double {
+            simulatedDate = Date(timeIntervalSince1970: simulatedTimestamp / 1000)
         }
 
-        if let unlockTimestamp = UserDefaults.standard.object(forKey: Self.dayUnlocksAtKey) as? Double {
-            dayUnlocksAt = Date(timeIntervalSince1970: unlockTimestamp / 1000)
-            updateCountdown()
-
-            // Start timer if we're in time travel mode with active countdown
-            if isTimeTravelActive && secondsUntilUnlock > 0 {
-                startCountdownTimer()
-            }
-        }
-
-        print("[TimeTravel] Loaded persisted state: active=\(isTimeTravelActive), day=\(currentDay), countdown=\(secondsUntilUnlock)s")
+        print("[TimeTravel] Loaded state: active=\(isTimeTravelActive), day=\(currentDay), simDate=\(formattedSimulatedDate)")
     }
 
     private func persistState() {
         UserDefaults.standard.set(isTimeTravelActive, forKey: Self.timeTravelActiveKey)
         UserDefaults.standard.set(isTestData, forKey: Self.isTestDataKey)
+        UserDefaults.standard.set(dayCompleted, forKey: Self.dayCompletedKey)
         UserDefaults.standard.set(currentDay, forKey: Self.currentDayKey)
-        UserDefaults.standard.set(startedAt.timeIntervalSince1970 * 1000, forKey: Self.startedAtKey)
-
-        if let unlockDate = dayUnlocksAt {
-            UserDefaults.standard.set(unlockDate.timeIntervalSince1970 * 1000, forKey: Self.dayUnlocksAtKey)
-        } else {
-            UserDefaults.standard.removeObject(forKey: Self.dayUnlocksAtKey)
-        }
-    }
-
-    private func updateSimulatedDate() {
-        // Simulated date = started_at + (currentDay - 1) days
-        simulatedDate = Calendar.current.date(byAdding: .day, value: currentDay - 1, to: startedAt) ?? startedAt
-    }
-
-    // MARK: - Countdown Timer
-
-    private func startCountdownTimer() {
-        countdownTimer?.invalidate()
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.updateCountdown()
-            }
-        }
-    }
-
-    private func stopCountdownTimer() {
-        countdownTimer?.invalidate()
-        countdownTimer = nil
-    }
-
-    private func updateCountdown() {
-        guard let unlockDate = dayUnlocksAt else {
-            secondsUntilUnlock = 0
-            canAdvance = false
-            isLocked = false
-            return
-        }
-
-        let remaining = unlockDate.timeIntervalSinceNow
-        if remaining <= 0 {
-            secondsUntilUnlock = 0
-            canAdvance = true
-            isLocked = false
-            stopCountdownTimer()
-        } else {
-            secondsUntilUnlock = Int(ceil(remaining))
-            canAdvance = false
-            isLocked = true
-        }
+        UserDefaults.standard.set(simulatedDate.timeIntervalSince1970 * 1000, forKey: Self.simulatedDateKey)
     }
 
     // MARK: - Public API
@@ -140,53 +126,34 @@ class TimeTravelManager: ObservableObject {
             isTimeTravelActive = status.isTimeTravelActive
             isTestData = status.isTestData
             currentDay = status.currentDay
-            secondsUntilUnlock = status.secondsUntilUnlock
-            canAdvance = status.canAdvance
-            isLocked = status.isLocked
-            startedAt = Date(timeIntervalSince1970: status.startedAt / 1000)
+            dayCompleted = status.dayCompleted
             simulatedDate = Date(timeIntervalSince1970: status.simulatedDate / 1000)
-
-            if let unlockAt = status.dayUnlocksAt {
-                dayUnlocksAt = Date(timeIntervalSince1970: unlockAt / 1000)
-            } else {
-                dayUnlocksAt = nil
-            }
 
             persistState()
 
-            // Start timer if needed
-            if isTimeTravelActive && secondsUntilUnlock > 0 {
-                startCountdownTimer()
-            } else {
-                stopCountdownTimer()
-            }
-
-            print("[TimeTravel] Synced with server: active=\(isTimeTravelActive), day=\(currentDay), countdown=\(secondsUntilUnlock)s")
+            print("[TimeTravel] Synced: active=\(isTimeTravelActive), day=\(currentDay), simDate=\(formattedSimulatedDate), daysAgo=\(daysAgo)")
         } catch {
-            print("[TimeTravel] Failed to sync with server: \(error)")
+            print("[TimeTravel] Failed to sync: \(error)")
         }
     }
 
-    /// Set up Time Travel with a specific start date
-    func setup(startDate: Date) async throws {
+    /// Set up Time Travel with a specific simulated date
+    /// - Parameter simulatedDate: The past date to use as "today" in the simulation
+    func setup(simulatedDate: Date) async throws {
         isLoading = true
         error = nil
 
         do {
-            let response = try await ConvexService.shared.timeTravelSetup(startDate: startDate)
+            let response = try await ConvexService.shared.timeTravelSetup(simulatedDate: simulatedDate)
 
             if response.success {
                 isTimeTravelActive = true
                 isTestData = true
                 currentDay = response.currentDay ?? 1
-                startedAt = startDate
-                updateSimulatedDate()
-                dayUnlocksAt = nil
-                secondsUntilUnlock = 0
-                canAdvance = false
-                isLocked = false
+                self.simulatedDate = simulatedDate
+                dayCompleted = false
                 persistState()
-                print("[TimeTravel] Setup complete, Day 1 = \(startDate)")
+                print("[TimeTravel] Setup complete, simulating \(formattedSimulatedDate) as Day 1")
             } else {
                 throw NSError(domain: "TimeTravel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to set up time travel"])
             }
@@ -198,7 +165,7 @@ class TimeTravelManager: ObservableObject {
         isLoading = false
     }
 
-    /// Complete current day with mock data and start 5-second countdown
+    /// Complete current day with mock data
     func completeDay() async throws {
         isLoading = true
         error = nil
@@ -210,17 +177,9 @@ class TimeTravelManager: ObservableObject {
                 if let completedDay = response.completedDay {
                     currentDay = completedDay
                 }
-
-                // Start 5-second lockout
-                dayUnlocksAt = Date().addingTimeInterval(5)
-                secondsUntilUnlock = response.secondsUntilUnlock ?? 5
-                canAdvance = false
-                isLocked = true
-                startCountdownTimer()
-
+                dayCompleted = true
                 persistState()
-                updateSimulatedDate()
-                print("[TimeTravel] Completed Day \(currentDay), lockout started")
+                print("[TimeTravel] Day \(currentDay) completed")
             } else {
                 throw NSError(domain: "TimeTravel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to complete day"])
             }
@@ -232,10 +191,11 @@ class TimeTravelManager: ObservableObject {
         isLoading = false
     }
 
-    /// Advance to next day after countdown completes
+    /// Advance to next day - moves simulated date forward by 1 day
     func advanceToNextDay() async throws {
-        guard canAdvance else {
-            throw NSError(domain: "TimeTravel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Cannot advance yet. \(secondsUntilUnlock) seconds remaining."])
+        guard canAdvanceToNextDay else {
+            let reason = advanceDisabledReason ?? "Cannot advance"
+            throw NSError(domain: "TimeTravel", code: -1, userInfo: [NSLocalizedDescriptionKey: reason])
         }
 
         isLoading = true
@@ -248,13 +208,15 @@ class TimeTravelManager: ObservableObject {
                 if let newDay = response.currentDay {
                     currentDay = newDay
                 }
-                dayUnlocksAt = nil
-                secondsUntilUnlock = 0
-                canAdvance = false
-                isLocked = false
+                if let newSimDate = response.simulatedDate {
+                    simulatedDate = Date(timeIntervalSince1970: newSimDate / 1000)
+                } else {
+                    // Fallback: advance locally
+                    simulatedDate = Calendar.current.date(byAdding: .day, value: 1, to: simulatedDate) ?? simulatedDate
+                }
+                dayCompleted = false
                 persistState()
-                updateSimulatedDate()
-                print("[TimeTravel] Advanced to Day \(currentDay)")
+                print("[TimeTravel] Advanced to Day \(currentDay), simulating \(formattedSimulatedDate)")
             } else if let errorMsg = response.error {
                 throw NSError(domain: "TimeTravel", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
             }
@@ -266,7 +228,7 @@ class TimeTravelManager: ObservableObject {
         isLoading = false
     }
 
-    /// Reset journey - clears all data and returns to Day 1
+    /// Reset journey - clears all data and exits Time Travel mode
     func resetJourney() async throws {
         isLoading = true
         error = nil
@@ -278,13 +240,8 @@ class TimeTravelManager: ObservableObject {
                 isTimeTravelActive = false
                 isTestData = false
                 currentDay = 1
-                startedAt = Date()
                 simulatedDate = Date()
-                dayUnlocksAt = nil
-                secondsUntilUnlock = 0
-                canAdvance = false
-                isLocked = false
-                stopCountdownTimer()
+                dayCompleted = false
                 persistState()
                 print("[TimeTravel] Journey reset complete")
             } else {
@@ -307,11 +264,7 @@ class TimeTravelManager: ObservableObject {
             let _ = try await ConvexService.shared.clearTestDataFlag()
             isTestData = false
             isTimeTravelActive = false
-            dayUnlocksAt = nil
-            secondsUntilUnlock = 0
-            canAdvance = false
-            isLocked = false
-            stopCountdownTimer()
+            dayCompleted = false
             persistState()
             print("[TimeTravel] Test data flag cleared")
         } catch {
@@ -324,36 +277,17 @@ class TimeTravelManager: ObservableObject {
 
     /// Reset all local state (for signout)
     func reset() {
-        stopCountdownTimer()
         isTimeTravelActive = false
         isTestData = false
-        secondsUntilUnlock = 0
-        canAdvance = false
-        isLocked = false
         currentDay = 1
-        dayUnlocksAt = nil
-        startedAt = Date()
         simulatedDate = Date()
+        dayCompleted = false
         error = nil
 
         UserDefaults.standard.removeObject(forKey: Self.timeTravelActiveKey)
-        UserDefaults.standard.removeObject(forKey: Self.startedAtKey)
-        UserDefaults.standard.removeObject(forKey: Self.dayUnlocksAtKey)
-        UserDefaults.standard.removeObject(forKey: Self.isTestDataKey)
+        UserDefaults.standard.removeObject(forKey: Self.simulatedDateKey)
         UserDefaults.standard.removeObject(forKey: Self.currentDayKey)
-    }
-
-    // MARK: - Computed Properties
-
-    var formattedSimulatedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: simulatedDate)
-    }
-
-    var formattedStartDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: startedAt)
+        UserDefaults.standard.removeObject(forKey: Self.dayCompletedKey)
+        UserDefaults.standard.removeObject(forKey: Self.isTestDataKey)
     }
 }

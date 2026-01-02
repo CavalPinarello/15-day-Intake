@@ -2251,6 +2251,9 @@ class QuestionnaireManager: ObservableObject {
             let result = try await convexService.completeDay(dayNumber: dayNumber)
             currentDay = result.newDay
 
+            // Notify Apple Watch of day advancement
+            iOSWatchConnectivityManager.shared.notifyWatchDayAdvanced(newDay: result.newDay)
+
             // Update journey progress
             if var progress = journeyProgress {
                 if !progress.completedDays.contains(dayNumber) {

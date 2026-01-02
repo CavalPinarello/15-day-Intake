@@ -7,18 +7,21 @@
 //
 
 import WatchConnectivity
+import WatchKit
 import Foundation
 import Combine
 
 @MainActor
 class WatchConnectivityManager: NSObject, ObservableObject {
+    static let shared = WatchConnectivityManager()
+
     @Published var isConnected = false
     @Published var isUserAuthenticated = false
     @Published var currentUserDay = 1
-    
+
     private var session: WCSession?
     private var pendingCallbacks: [String: (Any?) -> Void] = [:]
-    
+
     override init() {
         super.init()
         setupWatchConnectivity()
@@ -35,8 +38,28 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         }
     }
     
+    // MARK: - Open iPhone App
+
+    /// Open the iPhone app to a specific screen
+    /// - Parameter action: The deep link action (sleeplog, assessment, home)
+    func openPhoneApp(action: String = "home") {
+        guard let url = URL(string: "zoesleep://\(action)") else {
+            print("[Watch] Invalid deep link URL for action: \(action)")
+            return
+        }
+
+        // Note: WKExtension.shared().openSystemURL() is deprecated in watchOS 9+
+        // For watchOS 9+, we use WKApplication.shared().openSystemURL()
+        if #available(watchOS 9.0, *) {
+            WKApplication.shared().openSystemURL(url)
+        } else {
+            WKExtension.shared().openSystemURL(url)
+        }
+        print("[Watch] Requested iPhone app open with action: \(action)")
+    }
+
     // MARK: - Data Requests
-    
+
     func requestDataFromiPhone() {
         guard let session = session, session.isReachable else { return }
         
@@ -488,10 +511,21 @@ extension WatchConnectivityManager: WCSessionDelegate {
         case "dayAdvanced":
             if let newDay = message["newDay"] as? Int {
                 currentUserDay = newDay
+                print("[Watch] Received day advance from iPhone: Day \(newDay)")
                 // Also update Convex service
                 Task {
                     await WatchConvexService.shared.refreshFromConvex()
                 }
+            }
+            replyHandler?(["received": true])
+
+        case "iPhoneSectionCompleted":
+            // iPhone completed a section - refresh our state
+            let section = message["section"] as? String ?? "unknown"
+            let dayNumber = message["dayNumber"] as? Int ?? 0
+            print("[Watch] iPhone completed section '\(section)' for day \(dayNumber) - refreshing state")
+            Task {
+                await WatchConvexService.shared.refreshFromConvex()
             }
             replyHandler?(["received": true])
 
