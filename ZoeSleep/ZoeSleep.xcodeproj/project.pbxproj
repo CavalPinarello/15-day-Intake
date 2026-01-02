@@ -134,6 +134,11 @@
 		SLPMON007012C8E123456789M7 /* SleepStageClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLPMON008012C8E123456789M8 /* SleepStageClassifier.swift */; };
 		SLPMON009012C8E123456789M9 /* FalsePositiveEliminator.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLPMON00A012C8E123456789MA /* FalsePositiveEliminator.swift */; };
 		ACCEL001012C8E123456789AC1 /* ACCELAlgorithm.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACCEL002012C8E123456789AC2 /* ACCELAlgorithm.swift */; };
+		WSCHKB01012C8E123456789CB1 /* SharedCheckInModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSCHK001012C8E123456789CK1 /* SharedCheckInModels.swift */; };
+		WSCHKB02012C8E123456789CB2 /* IntensityPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSCHK002012C8E123456789CK2 /* IntensityPickerView.swift */; };
+		WSCHKB03012C8E123456789CB3 /* WatchStyleCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSCHK003012C8E123456789CK3 /* WatchStyleCheckInView.swift */; };
+		WSCHKB04012C8E123456789CB4 /* CheckInSuccessOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSCHK004012C8E123456789CK4 /* CheckInSuccessOverlay.swift */; };
+		WSCHKB05012C8E123456789CB5 /* QuickCheckInWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSCHK005012C8E123456789CK5 /* QuickCheckInWidget.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -293,6 +298,11 @@
 		SLPMON008012C8E123456789M8 /* SleepStageClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepStageClassifier.swift; sourceTree = "<group>"; };
 		SLPMON00A012C8E123456789MA /* FalsePositiveEliminator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FalsePositiveEliminator.swift; sourceTree = "<group>"; };
 		ACCEL002012C8E123456789AC2 /* ACCELAlgorithm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACCELAlgorithm.swift; sourceTree = "<group>"; };
+		WSCHK001012C8E123456789CK1 /* SharedCheckInModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedCheckInModels.swift; sourceTree = "<group>"; };
+		WSCHK002012C8E123456789CK2 /* IntensityPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IntensityPickerView.swift; path = Views/CheckIn/IntensityPickerView.swift; sourceTree = "<group>"; };
+		WSCHK003012C8E123456789CK3 /* WatchStyleCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchStyleCheckInView.swift; path = Views/CheckIn/WatchStyleCheckInView.swift; sourceTree = "<group>"; };
+		WSCHK004012C8E123456789CK4 /* CheckInSuccessOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CheckInSuccessOverlay.swift; path = Views/CheckIn/CheckInSuccessOverlay.swift; sourceTree = "<group>"; };
+		WSCHK005012C8E123456789CK5 /* QuickCheckInWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCheckInWidget.swift; path = Views/CheckIn/QuickCheckInWidget.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -529,6 +539,7 @@
 				CA328882E23ED40DF40AA050 /* DaySplashLibrary.swift */,
 				CBBE1CCD02DCDC3C1643F536 /* AnswerDerivationSystem.swift */,
 				SCMAP002ED24841599CCADD2 /* ScaleMapper.swift */,
+				WSCHK001012C8E123456789CK1 /* SharedCheckInModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -721,6 +732,10 @@
 			isa = PBXGroup;
 			children = (
 				025C43C0F7D4EA449A2B34ED /* MiddayCheckInView.swift */,
+				WSCHK002012C8E123456789CK2 /* IntensityPickerView.swift */,
+				WSCHK003012C8E123456789CK3 /* WatchStyleCheckInView.swift */,
+				WSCHK004012C8E123456789CK4 /* CheckInSuccessOverlay.swift */,
+				WSCHK005012C8E123456789CK5 /* QuickCheckInWidget.swift */,
 			);
 			name = CheckIn;
 			sourceTree = "<group>";
@@ -983,6 +998,11 @@
 				8920FCD6483EE743FCBA4F03 /* AnswerDerivationSystem.swift in Sources */,
 				SCMAP001ED24841599CCADD1 /* ScaleMapper.swift in Sources */,
 				TFMGR001ED24841599CCADD1 /* TimeFormatManager.swift in Sources */,
+				WSCHKB01012C8E123456789CB1 /* SharedCheckInModels.swift in Sources */,
+				WSCHKB02012C8E123456789CB2 /* IntensityPickerView.swift in Sources */,
+				WSCHKB03012C8E123456789CB3 /* WatchStyleCheckInView.swift in Sources */,
+				WSCHKB04012C8E123456789CB4 /* CheckInSuccessOverlay.swift in Sources */,
+				WSCHKB05012C8E123456789CB5 /* QuickCheckInWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

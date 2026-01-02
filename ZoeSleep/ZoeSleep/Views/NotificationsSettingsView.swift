@@ -15,6 +15,19 @@ struct NotificationsSettingsView: View {
     @State private var eveningReminderEnabled = true
     @State private var eveningTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date()
     @State private var showingPermissionAlert = false
+    @ObservedObject private var timeFormatManager = TimeFormatManager.shared
+
+    // Force DatePicker to use 12-hour or 24-hour format based on user preference
+    private var pickerLocale: Locale {
+        switch timeFormatManager.preference {
+        case .system:
+            return Locale.current
+        case .hour12:
+            return Locale(identifier: "en_US")
+        case .hour24:
+            return Locale(identifier: "en_GB")
+        }
+    }
 
     var body: some View {
         List {
@@ -57,6 +70,7 @@ struct NotificationsSettingsView: View {
 
                     if morningReminderEnabled {
                         DatePicker("Time", selection: $morningTime, displayedComponents: .hourAndMinute)
+                            .environment(\.locale, pickerLocale)
                             .onChange(of: morningTime) { _, _ in
                                 saveAndScheduleMorningReminder()
                             }
@@ -85,6 +99,7 @@ struct NotificationsSettingsView: View {
 
                     if eveningReminderEnabled {
                         DatePicker("Time", selection: $eveningTime, displayedComponents: .hourAndMinute)
+                            .environment(\.locale, pickerLocale)
                             .onChange(of: eveningTime) { _, _ in
                                 saveAndScheduleEveningReminder()
                             }

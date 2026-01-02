@@ -741,10 +741,23 @@ struct TimeInput: View {
     var previousBedtime: Date? = nil  // Used to calculate smart defaults for wake/asleep times
     var onValueChange: ((Date) -> Void)? = nil  // Called whenever value changes (initial or user scroll)
     @ObservedObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var timeFormatManager = TimeFormatManager.shared
 
     // Circadian-aware check
     private var isEvening: Bool {
         TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    // Force DatePicker to use 12-hour or 24-hour format based on user preference
+    private var pickerLocale: Locale {
+        switch timeFormatManager.preference {
+        case .system:
+            return Locale.current
+        case .hour12:
+            return Locale(identifier: "en_US")  // US uses 12-hour
+        case .hour24:
+            return Locale(identifier: "en_GB")  // UK uses 24-hour
+        }
     }
 
     var body: some View {
@@ -756,6 +769,7 @@ struct TimeInput: View {
             )
             .datePickerStyle(.wheel)
             .labelsHidden()
+            .environment(\.locale, pickerLocale)  // Force 12-hour or 24-hour based on user preference
             .frame(height: themeManager.largeIconsMode ? 180 : 150)
             .scaleEffect(themeManager.largeIconsMode ? 1.15 : 1.0)
             // Apply circadian-aware styling to picker text
@@ -1266,6 +1280,7 @@ struct NapDetailsInput: View {
     @Binding var napEntries: [NapEntry]
     let napCount: Int
     var theme: ColorTheme = ColorTheme.shared
+    @ObservedObject private var timeFormatManager = TimeFormatManager.shared
 
     // Duration options as quick-select buttons
     private let durationOptions: [(Int, String)] = [
@@ -1280,6 +1295,18 @@ struct NapDetailsInput: View {
     // Circadian-aware check
     private var isEvening: Bool {
         TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    // Force DatePicker to use 12-hour or 24-hour format based on user preference
+    private var pickerLocale: Locale {
+        switch timeFormatManager.preference {
+        case .system:
+            return Locale.current
+        case .hour12:
+            return Locale(identifier: "en_US")
+        case .hour24:
+            return Locale(identifier: "en_GB")
+        }
     }
 
     private var pillarColor: Color { question.pillar.themeColor }
@@ -1332,6 +1359,7 @@ struct NapDetailsInput: View {
                 )
                 .datePickerStyle(.wheel)
                 .labelsHidden()
+                .environment(\.locale, pickerLocale)  // Force 12-hour or 24-hour based on user preference
                 .frame(height: 100)
                 .colorScheme(isEvening ? .dark : .light)
                 .tint(isEvening ? Color(red: 0.988, green: 0.827, blue: 0.302) : nil)

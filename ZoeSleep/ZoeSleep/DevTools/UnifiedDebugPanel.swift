@@ -958,6 +958,22 @@ struct UnifiedDebugPanel: View {
                 }
             }
             .tint(.yellow)
+
+            Toggle(isOn: $themeManager.showWatchStyleCheckIns) {
+                HStack {
+                    Image(systemName: "heart.text.square.fill")
+                        .foregroundColor(.orange)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Watch-Style Check-Ins")
+                            .font(.subheadline)
+                        Text("Energy, Mood, Focus tracking")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .tint(.orange)
         } header: {
             Label("Experimental Features", systemImage: "flask")
         } footer: {

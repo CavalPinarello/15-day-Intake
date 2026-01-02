@@ -233,7 +233,8 @@ struct ProfileSettingsView: View {
 
                 Spacer()
 
-                if watchConnectivity.isWatchConnected {
+                // Only show checkmark when app is installed AND connected
+                if watchConnectivity.isWatchAppInstalled && watchConnectivity.isWatchConnected {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
                 }

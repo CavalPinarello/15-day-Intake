@@ -68,16 +68,18 @@ export const submitMorningCheckIn = mutation({
 
 /**
  * Submit midday check-in
- * Records energy level, caffeine intake, and nap status
+ * Records energy level, caffeine intake, nap status, and optional mood/focus (Watch-style)
  */
 export const submitMiddayCheckIn = mutation({
   args: {
     userId: v.id("users"),
-    energyLevel: v.number(),              // 1-4
+    energyLevel: v.number(),              // 1-6 (Watch: animal icons)
     caffeineCups: v.number(),             // 0-10
     caffeineLastTime: v.optional(v.string()), // HH:MM format
     napTaken: v.boolean(),
     napDurationMins: v.optional(v.number()),
+    moodLevel: v.optional(v.number()),    // 1-6 (Watch: weather icons)
+    focusLevel: v.optional(v.number()),   // 1-5 (Watch: clarity icons)
     deviceType: v.optional(v.string()),
   },
   returns: v.id("daily_checkins"),
@@ -101,6 +103,8 @@ export const submitMiddayCheckIn = mutation({
         caffeine_last_time: args.caffeineLastTime,
         nap_taken: args.napTaken,
         nap_duration_mins: args.napDurationMins,
+        mood: args.moodLevel,
+        focus_level: args.focusLevel,
         completed: true,
         completed_at: now,
         device_type: args.deviceType,
@@ -121,6 +125,8 @@ export const submitMiddayCheckIn = mutation({
       caffeine_last_time: args.caffeineLastTime,
       nap_taken: args.napTaken,
       nap_duration_mins: args.napDurationMins,
+      mood: args.moodLevel,
+      focus_level: args.focusLevel,
       device_type: args.deviceType,
       created_at: now,
       updated_at: now,
@@ -130,7 +136,7 @@ export const submitMiddayCheckIn = mutation({
 
 /**
  * Submit evening check-in
- * Records day rating, reflection, and missed task reasons
+ * Records day rating, reflection, missed task reasons, and optional energy/mood/focus (Watch-style)
  */
 export const submitEveningCheckIn = mutation({
   args: {
@@ -138,6 +144,9 @@ export const submitEveningCheckIn = mutation({
     overallDayRating: v.number(),              // 1-5
     reflectionText: v.optional(v.string()),
     missedTasksReasons: v.optional(v.array(v.string())),
+    energyLevel: v.optional(v.number()),      // 1-6 (Watch: animal icons)
+    moodLevel: v.optional(v.number()),        // 1-6 (Watch: weather icons)
+    focusLevel: v.optional(v.number()),       // 1-5 (Watch: clarity icons)
     deviceType: v.optional(v.string()),
   },
   returns: v.id("daily_checkins"),
@@ -161,6 +170,9 @@ export const submitEveningCheckIn = mutation({
         tasks_missed_reasons: args.missedTasksReasons
           ? JSON.stringify(args.missedTasksReasons)
           : undefined,
+        energy_level: args.energyLevel,
+        mood: args.moodLevel,
+        focus_level: args.focusLevel,
         completed: true,
         completed_at: now,
         device_type: args.deviceType,
@@ -181,6 +193,9 @@ export const submitEveningCheckIn = mutation({
       tasks_missed_reasons: args.missedTasksReasons
         ? JSON.stringify(args.missedTasksReasons)
         : undefined,
+      energy_level: args.energyLevel,
+      mood: args.moodLevel,
+      focus_level: args.focusLevel,
       device_type: args.deviceType,
       created_at: now,
       updated_at: now,
@@ -285,14 +300,19 @@ export const getCheckInHistory = query({
       // Morning data
       sleepQuality: v.optional(v.number()),
       morningEnergy: v.optional(v.number()),
-      mood: v.optional(v.number()),
-      focusLevel: v.optional(v.number()),
-      // Midday data
+      morningMood: v.optional(v.number()),
+      morningFocus: v.optional(v.number()),
+      // Midday data (Watch-style includes mood/focus)
       middayEnergy: v.optional(v.number()),
+      middayMood: v.optional(v.number()),
+      middayFocus: v.optional(v.number()),
       caffeineCups: v.optional(v.number()),
       napTaken: v.optional(v.boolean()),
       napDurationMins: v.optional(v.number()),
-      // Evening data
+      // Evening data (Watch-style includes energy/mood/focus)
+      eveningEnergy: v.optional(v.number()),
+      eveningMood: v.optional(v.number()),
+      eveningFocus: v.optional(v.number()),
       overallDayRating: v.optional(v.number()),
     })
   ),
@@ -305,12 +325,17 @@ export const getCheckInHistory = query({
       eveningCompleted: boolean;
       sleepQuality?: number;
       morningEnergy?: number;
-      mood?: number;
-      focusLevel?: number;
+      morningMood?: number;
+      morningFocus?: number;
       middayEnergy?: number;
+      middayMood?: number;
+      middayFocus?: number;
       caffeineCups?: number;
       napTaken?: boolean;
       napDurationMins?: number;
+      eveningEnergy?: number;
+      eveningMood?: number;
+      eveningFocus?: number;
       overallDayRating?: number;
     }[] = [];
 
@@ -350,14 +375,22 @@ export const getCheckInHistory = query({
         morningCompleted: morning?.completed ?? false,
         middayCompleted: midday?.completed ?? false,
         eveningCompleted: evening?.completed ?? false,
+        // Morning data
         sleepQuality: morning?.sleep_quality,
         morningEnergy: morning?.energy_level,
-        mood: morning?.mood,
-        focusLevel: morning?.focus_level,
+        morningMood: morning?.mood,
+        morningFocus: morning?.focus_level,
+        // Midday data (includes Watch-style mood/focus if available)
         middayEnergy: midday?.midday_energy,
+        middayMood: midday?.mood,
+        middayFocus: midday?.focus_level,
         caffeineCups: midday?.caffeine_cups,
         napTaken: midday?.nap_taken,
         napDurationMins: midday?.nap_duration_mins,
+        // Evening data (includes Watch-style energy/mood/focus if available)
+        eveningEnergy: evening?.energy_level,
+        eveningMood: evening?.mood,
+        eveningFocus: evening?.focus_level,
         overallDayRating: evening?.overall_day_rating,
       });
     }

@@ -134,7 +134,7 @@ extension MoodLevel: Identifiable {
         case .stormy: return "Stormy"
         case .rainy: return "Rainy"
         case .cloudy: return "Cloudy"
-        case .partlyCloudy: return "Clearing"
+        case .partlySunny: return "Clearing"
         case .sunny: return "Sunny"
         case .rainbow: return "Rainbow"
         }
@@ -146,7 +146,7 @@ extension MoodLevel: Identifiable {
         case .stormy: return "cloud.bolt.fill"
         case .rainy: return "cloud.rain.fill"
         case .cloudy: return "cloud.fill"
-        case .partlyCloudy: return "cloud.sun.fill"
+        case .partlySunny: return "cloud.sun.fill"
         case .sunny: return "sun.max.fill"
         case .rainbow: return "rainbow"
         }
@@ -159,7 +159,7 @@ extension MoodLevel: Identifiable {
         case .stormy: return isDark ? Color(red: 0.4, green: 0.3, blue: 0.5) : Color(red: 0.3, green: 0.3, blue: 0.5)
         case .rainy: return isDark ? Color(red: 0.4, green: 0.4, blue: 0.6) : Color(red: 0.4, green: 0.5, blue: 0.7)
         case .cloudy: return isDark ? Color(red: 0.5, green: 0.5, blue: 0.5) : .gray
-        case .partlyCloudy: return isDark ? Color(red: 0.7, green: 0.6, blue: 0.4) : Color(red: 0.9, green: 0.7, blue: 0.3)
+        case .partlySunny: return isDark ? Color(red: 0.7, green: 0.6, blue: 0.4) : Color(red: 0.9, green: 0.7, blue: 0.3)
         case .sunny: return isDark ? Color(red: 0.9, green: 0.7, blue: 0.3) : Color(red: 1.0, green: 0.8, blue: 0.2)
         case .rainbow: return isDark ? Color(red: 0.8, green: 0.5, blue: 0.7) : Color(red: 0.6, green: 0.4, blue: 0.8)
         }
@@ -177,7 +177,7 @@ extension MoodLevel: IntensitySelectable {
             return [Color(red: 0.12, green: 0.14, blue: 0.22), Color(red: 0.16, green: 0.18, blue: 0.28)]
         case .cloudy:
             return [Color(red: 0.18, green: 0.18, blue: 0.22), Color(red: 0.24, green: 0.22, blue: 0.26)]
-        case .partlyCloudy:
+        case .partlySunny:
             return [Color(red: 0.32, green: 0.28, blue: 0.18), Color(red: 0.42, green: 0.35, blue: 0.15)]
         case .sunny:
             return [Color(red: 0.55, green: 0.42, blue: 0.1), Color(red: 0.7, green: 0.52, blue: 0.08)]
@@ -187,7 +187,7 @@ extension MoodLevel: IntensitySelectable {
     }
 }
 
-// MARK: - FocusLevel UI Extensions
+// MARK: - FocusLevel UI Extensions (5 levels to match Watch)
 
 extension FocusLevel: Identifiable {
     var id: Int { rawValue }
@@ -197,10 +197,9 @@ extension FocusLevel: Identifiable {
         switch self {
         case .foggy: return "Foggy"
         case .hazy: return "Hazy"
-        case .overcast: return "Unclear"
         case .clearing: return "Clearing"
         case .clear: return "Clear"
-        case .crystalClear: return "Crystal"
+        case .crystal: return "Crystal"
         }
     }
 
@@ -209,10 +208,9 @@ extension FocusLevel: Identifiable {
         switch self {
         case .foggy: return "cloud.fog.fill"
         case .hazy: return "smoke.fill"
-        case .overcast: return "cloud.fill"
         case .clearing: return "sun.haze.fill"
         case .clear: return "eye.fill"
-        case .crystalClear: return "sparkles"
+        case .crystal: return "sparkles"
         }
     }
 
@@ -222,10 +220,9 @@ extension FocusLevel: Identifiable {
         switch self {
         case .foggy: return isDark ? Color(red: 0.4, green: 0.4, blue: 0.4) : .gray
         case .hazy: return isDark ? Color(red: 0.5, green: 0.5, blue: 0.5) : Color(red: 0.6, green: 0.6, blue: 0.6)
-        case .overcast: return isDark ? Color(red: 0.55, green: 0.55, blue: 0.5) : Color(red: 0.65, green: 0.65, blue: 0.55)
         case .clearing: return isDark ? Color(red: 0.6, green: 0.6, blue: 0.5) : Color(red: 0.7, green: 0.7, blue: 0.5)
         case .clear: return isDark ? Color(red: 0.7, green: 0.7, blue: 0.5) : Color(red: 0.3, green: 0.6, blue: 0.9)
-        case .crystalClear: return isDark ? Color(red: 0.9, green: 0.8, blue: 0.5) : Color(red: 0.4, green: 0.8, blue: 1.0)
+        case .crystal: return isDark ? Color(red: 0.9, green: 0.8, blue: 0.5) : Color(red: 0.4, green: 0.8, blue: 1.0)
         }
     }
 
@@ -233,11 +230,10 @@ extension FocusLevel: Identifiable {
     var blurRadius: CGFloat {
         switch self {
         case .foggy: return 10
-        case .hazy: return 7
-        case .overcast: return 4
-        case .clearing: return 2
+        case .hazy: return 6
+        case .clearing: return 3
         case .clear: return 1
-        case .crystalClear: return 0
+        case .crystal: return 0
         }
     }
 }
@@ -251,13 +247,11 @@ extension FocusLevel: IntensitySelectable {
             return [Color(red: 0.12, green: 0.12, blue: 0.14), Color(red: 0.15, green: 0.15, blue: 0.18)]
         case .hazy:
             return [Color(red: 0.14, green: 0.16, blue: 0.2), Color(red: 0.18, green: 0.2, blue: 0.25)]
-        case .overcast:
-            return [Color(red: 0.1, green: 0.18, blue: 0.24), Color(red: 0.12, green: 0.24, blue: 0.3)]
         case .clearing:
             return [Color(red: 0.12, green: 0.2, blue: 0.28), Color(red: 0.15, green: 0.28, blue: 0.35)]
         case .clear:
             return [Color(red: 0.08, green: 0.28, blue: 0.38), Color(red: 0.1, green: 0.38, blue: 0.48)]
-        case .crystalClear:
+        case .crystal:
             return [Color(red: 0.05, green: 0.38, blue: 0.5), Color(red: 0.08, green: 0.5, blue: 0.6)]
         }
     }
@@ -330,7 +324,7 @@ struct WatchStyleCheckIn: Codable {
     let timeSlot: CheckInTimeSlot
     let energyLevel: Int       // 1-6
     let moodLevel: Int         // 1-6
-    let focusLevel: Int        // 1-6
+    let focusLevel: Int        // 1-5 (matches Watch)
     let completedAt: Date
     let source: String         // "ios" or "watch"
 

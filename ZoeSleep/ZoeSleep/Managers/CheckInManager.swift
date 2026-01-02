@@ -28,21 +28,20 @@ enum EnergyLevel: Int, CaseIterable, Codable {
 }
 
 enum MoodLevel: Int, CaseIterable, Codable {
-    case stormy = 1        // Very negative
-    case rainy = 2         // Somewhat negative
-    case cloudy = 3        // Slightly negative
-    case partlyCloudy = 4  // Neutral
-    case sunny = 5         // Positive
-    case rainbow = 6       // Very positive
+    case stormy = 1        // Terrible mood
+    case rainy = 2         // Down/sad
+    case cloudy = 3        // Meh/neutral
+    case partlySunny = 4   // Okay (matches Watch: partlySunny)
+    case sunny = 5         // Good mood
+    case rainbow = 6       // Amazing!
 }
 
 enum FocusLevel: Int, CaseIterable, Codable {
-    case foggy = 1         // Very scattered
-    case hazy = 2          // Somewhat scattered
-    case overcast = 3      // Slightly unfocused
-    case clearing = 4      // Moderate focus
-    case clear = 5         // Good focus
-    case crystalClear = 6  // Peak focus
+    case foggy = 1         // Can't concentrate
+    case hazy = 2          // Distracted
+    case clearing = 3      // Getting there
+    case clear = 4         // Focused
+    case crystal = 5       // Crystal clear focus (matches Watch: 5 levels)
 }
 
 enum CheckInTimeSlot: String, CaseIterable, Codable {
@@ -220,6 +219,27 @@ class CheckInManager: ObservableObject {
         mood: MoodLevel,
         focus: FocusLevel
     ) async {
+        // Optimistically update local state immediately for responsive UI
+        let completedAt = Date()
+        switch timeSlot {
+        case .morning:
+            morningCompleted = true
+            morningCompletedAt = completedAt
+        case .midday:
+            middayCompleted = true
+            middayCompletedAt = completedAt
+        case .evening:
+            eveningCompleted = true
+            eveningCompletedAt = completedAt
+        }
+
+        // Update last values immediately
+        lastEnergyLevel = energy.rawValue
+        lastMoodLevel = mood.rawValue
+        lastFocusLevel = focus.rawValue
+        lastSyncSource = "ios"
+        lastSyncTime = completedAt
+
         do {
             // Map time slot to appropriate Convex mutation
             switch timeSlot {
@@ -230,8 +250,6 @@ class CheckInManager: ObservableObject {
                     mood: mood.rawValue,
                     focusLevel: focus.rawValue
                 )
-                morningCompleted = true
-                morningCompletedAt = Date()
 
             case .midday:
                 try await ConvexService.shared.submitMiddayCheckIn(
@@ -243,8 +261,6 @@ class CheckInManager: ObservableObject {
                     moodLevel: mood.rawValue,
                     focusLevel: focus.rawValue
                 )
-                middayCompleted = true
-                middayCompletedAt = Date()
 
             case .evening:
                 try await ConvexService.shared.submitEveningCheckIn(
@@ -255,16 +271,7 @@ class CheckInManager: ObservableObject {
                     moodLevel: mood.rawValue,
                     focusLevel: focus.rawValue
                 )
-                eveningCompleted = true
-                eveningCompletedAt = Date()
             }
-
-            // Update last values
-            lastEnergyLevel = energy.rawValue
-            lastMoodLevel = mood.rawValue
-            lastFocusLevel = focus.rawValue
-            lastSyncSource = "ios"
-            lastSyncTime = Date()
 
             // Notify Watch that iPhone completed a check-in (if Watch is connected)
             iOSWatchConnectivityManager.shared.notifyWatchCheckInCompleted(
@@ -273,6 +280,18 @@ class CheckInManager: ObservableObject {
             )
 
         } catch {
+            // Revert optimistic update on error
+            switch timeSlot {
+            case .morning:
+                morningCompleted = false
+                morningCompletedAt = nil
+            case .midday:
+                middayCompleted = false
+                middayCompletedAt = nil
+            case .evening:
+                eveningCompleted = false
+                eveningCompletedAt = nil
+            }
             errorMessage = "Failed to submit check-in"
             print("[CheckInManager] Error submitting Watch-style check-in: \(error)")
         }

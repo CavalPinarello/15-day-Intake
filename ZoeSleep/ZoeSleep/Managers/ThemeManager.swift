@@ -209,6 +209,13 @@ class ThemeManager: ObservableObject {
         }
     }
 
+    /// Watch-style Energy/Mood/Focus check-ins (experimental feature)
+    @Published var showWatchStyleCheckIns: Bool = false {
+        didSet {
+            UserDefaults.standard.set(showWatchStyleCheckIns, forKey: "showWatchStyleCheckIns")
+        }
+    }
+
     // Circadian time period - triggers UI refresh when time period changes
     @Published private(set) var currentTimePeriod: TimePeriod = TimePeriod.current
 
@@ -307,6 +314,7 @@ class ThemeManager: ObservableObject {
         self.showSleepDiaryHistory = UserDefaults.standard.bool(forKey: "showSleepDiaryHistory")
         self.showSleepInsights = UserDefaults.standard.bool(forKey: "showSleepInsights")
         self.gamificationEnabled = UserDefaults.standard.bool(forKey: "gamificationEnabled")
+        self.showWatchStyleCheckIns = UserDefaults.standard.bool(forKey: "showWatchStyleCheckIns")
 
         // Load enhanced readability mode (load last so it can override other settings)
         self.enhancedReadabilityMode = UserDefaults.standard.bool(forKey: "enhancedReadabilityMode")

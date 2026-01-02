@@ -112,11 +112,11 @@ struct MainDashboardView: View {
                     // Header
                     headerView
 
-                    // Daily Check-In Widget (Apple Watch style)
-                    // QuickCheckInWidget() // PAUSED - file not in Xcode project
-
-                    // Journey Progress Card
+                    // Journey Progress Card (Day X of 14)
                     journeyProgressCard
+
+                    // Today's Focus - Energy, Mood, Focus Check-In (Apple Watch style)
+                    QuickCheckInWidget()
 
                     // Catch-up Card (if there are missed days)
                     if !missedDays.isEmpty {

@@ -16,6 +16,7 @@ import SwiftUI
 struct MiddayCheckInView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var themeManager: ThemeManager
+    @ObservedObject private var timeFormatManager = TimeFormatManager.shared
 
     // Check-in state
     @State private var energyLevel: Int = 0
@@ -31,6 +32,18 @@ struct MiddayCheckInView: View {
     @State private var errorMessage: String?
 
     private var theme: ColorTheme { themeManager.currentTheme }
+
+    // Force DatePicker to use 12-hour or 24-hour format based on user preference
+    private var pickerLocale: Locale {
+        switch timeFormatManager.preference {
+        case .system:
+            return Locale.current
+        case .hour12:
+            return Locale(identifier: "en_US")
+        case .hour24:
+            return Locale(identifier: "en_GB")
+        }
+    }
 
     // Quick completion target: 30 seconds
     private let napDurations = [0, 10, 15, 20, 30, 45, 60, 90]
@@ -230,6 +243,7 @@ struct MiddayCheckInView: View {
 
                         DatePicker("", selection: $caffeineLastTime, displayedComponents: .hourAndMinute)
                             .labelsHidden()
+                            .environment(\.locale, pickerLocale)
                             .tint(.brown)
                     }
                 }

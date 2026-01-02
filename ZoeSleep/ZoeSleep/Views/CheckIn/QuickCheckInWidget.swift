@@ -64,6 +64,22 @@ struct QuickCheckInWidget: View {
                 .environmentObject(themeManager)
             }
         }
+        .onAppear {
+            // Load today's check-in status from Convex
+            Task {
+                await checkInManager.loadTodayStatus()
+            }
+        }
+        .onChange(of: showingCheckIn) { _, isShowing in
+            // Refresh status when sheet dismisses
+            if !isShowing {
+                Task {
+                    // Small delay to ensure Convex has saved the data
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                    await checkInManager.loadTodayStatus()
+                }
+            }
+        }
     }
 
     // MARK: - Card Content
@@ -76,9 +92,14 @@ struct QuickCheckInWidget: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(theme.accent)
 
-                Text("Daily Check-In")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(theme.primaryText)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Today's Focus")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(theme.primaryText)
+                    Text("Energy · Mood · Focus")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(theme.secondaryText)
+                }
 
                 Spacer()
 

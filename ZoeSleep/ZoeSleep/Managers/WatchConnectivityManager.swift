@@ -491,12 +491,19 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
 extension iOSWatchConnectivityManager: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         DispatchQueue.main.async {
-            self.isWatchConnected = activationState == .activated
+            // isWatchConnected should reflect actual reachability, not just activation state
+            // session.isReachable indicates the Watch is paired, app installed, and currently reachable
+            self.isWatchConnected = activationState == .activated && session.isReachable
+
+            #if os(iOS)
+            // Update app installed state from session
+            self.isWatchAppInstalled = session.isWatchAppInstalled
+            #endif
 
             if let error = error {
                 print("WatchConnectivity activation failed: \(error.localizedDescription)")
             } else {
-                print("WatchConnectivity activated successfully")
+                print("WatchConnectivity activated - isReachable: \(session.isReachable), isWatchAppInstalled: \(session.isWatchAppInstalled)")
             }
         }
     }
