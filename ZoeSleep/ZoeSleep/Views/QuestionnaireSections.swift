@@ -716,7 +716,10 @@ struct DayCompletionView: View {
                     }
                 }
                 .padding(20)
-                .background(cardBackgroundColor)
+                .background(
+                    GlassyCardBackground(opacity: 0.5)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                )
                 .cornerRadius(16)
                 .padding(.horizontal)
 
@@ -763,7 +766,10 @@ struct DayCompletionView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity)
-                .background(cardBackgroundColor.opacity(0.5))
+                .background(
+                    GlassyCardBackground(opacity: 0.4)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                )
                 .cornerRadius(12)
                 .padding(.horizontal)
 
@@ -965,7 +971,10 @@ struct DayCompletionView: View {
                             }
                         }
                         .padding()
-                        .background(cardBackgroundColor)
+                        .background(
+                            GlassyCardBackground(opacity: 0.4)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        )
                         .cornerRadius(12)
                         .padding(.horizontal)
                     }
@@ -1377,7 +1386,10 @@ struct ExpansionPackIntroView: View {
                 }
             }
             .padding(20)
-            .background(cardBackgroundColor)
+            .background(
+                GlassyCardBackground(opacity: 0.5, tint: QuestionnaireSection.expansionPack.accentColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            )
             .cornerRadius(16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)

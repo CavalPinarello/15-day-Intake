@@ -259,27 +259,27 @@ class QuestionnaireManager: ObservableObject {
             group: "sleep_log"
         ),
 
-        // Sleep Quality Rating (1-5 scale per CSD standard)
+        // Sleep Quality Rating (1-10 unified scale, maps to CSD 1-5 for clinical scoring)
         Question(
             id: "CSD_QUALITY",
             text: "How would you rate the quality of your sleep last night?",
             pillar: .sleepLog,
             questionType: .scale,
             scaleMin: 1,
-            scaleMax: 5,
+            scaleMax: 10,
             scaleMinLabel: "Very poor",
-            scaleMaxLabel: "Very good",
+            scaleMaxLabel: "Excellent",
             group: "sleep_log"
         ),
 
-        // Refreshed feeling
+        // Refreshed feeling (1-10 unified scale, maps to CSD 1-5 for clinical scoring)
         Question(
             id: "CSD_REFRESHED",
             text: "How refreshed do you feel this morning?",
             pillar: .sleepLog,
             questionType: .scale,
             scaleMin: 1,
-            scaleMax: 5,
+            scaleMax: 10,
             scaleMinLabel: "Not at all",
             scaleMaxLabel: "Very refreshed",
             group: "sleep_log"
@@ -677,13 +677,13 @@ class QuestionnaireManager: ObservableObject {
                 text: "On average, what is your pain level?",
                 pillar: .physical,
                 questionType: .scale,
-                scaleMin: 0,
+                scaleMin: 1,
                 scaleMax: 10,
-                scaleMinLabel: "No pain",
+                scaleMinLabel: "No pain at all",
                 scaleMaxLabel: "Worst possible",
                 isGateway: true,
                 gatewayType: .pain,
-                gatewayThreshold: 4,
+                gatewayThreshold: 5,  // Maps to clinical threshold of 4 on 0-10 scale
                 conditionalLogic: ConditionalLogic(questionId: "22", equals: "Yes")
             ),
             Question(id: "24", text: "How often do you exercise or engage in physical activity?", pillar: .physical, questionType: .singleSelect, options: ["Never", "Less than once a week", "1-2 times per week", "3-4 times per week", "5+ times per week"]),

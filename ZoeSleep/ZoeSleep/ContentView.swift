@@ -54,7 +54,7 @@ struct MainDashboardView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var themeManager: ThemeManager
     @ObservedObject private var questionnaireManager = QuestionnaireManager.shared
-    @StateObject private var speedTestManager = SpeedTestManager.shared
+    @StateObject private var timeTravelManager = TimeTravelManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var currentDay: Int = 1
@@ -100,9 +100,9 @@ struct MainDashboardView: View {
 
             ScrollView {
                 VStack(spacing: 16) {
-                    // Speed Test Mode Banner
-                    if speedTestManager.isSpeedTestMode {
-                        speedTestBanner
+                    // Time Travel Mode Banner
+                    if timeTravelManager.isTimeTravelActive {
+                        timeTravelBanner
                     }
 
                     // Header
@@ -130,9 +130,9 @@ struct MainDashboardView: View {
                     // Quick Actions
                     quickActionsCard
                 }
-                .padding()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
-
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showingJourneyOverview) {
@@ -285,34 +285,34 @@ struct MainDashboardView: View {
         }
     }
 
-    // MARK: - Speed Test Mode Banner
+    // MARK: - Time Travel Mode Banner
 
-    private var speedTestBanner: some View {
+    private var timeTravelBanner: some View {
         HStack(spacing: 8) {
-            // Red calendar badge
+            // Cyan clock icon
             ZStack {
-                Image(systemName: "calendar.badge.clock")
+                Image(systemName: "clock.arrow.2.circlepath")
                     .font(.title3)
                     .foregroundColor(.white)
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("SPEED TEST MODE")
+                Text("TIME TRAVEL MODE")
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
 
-                if speedTestManager.secondsUntilUnlock > 0 {
-                    Text("Next day in \(speedTestManager.secondsUntilUnlock)s")
+                if timeTravelManager.secondsUntilUnlock > 0 {
+                    Text("Next day in \(timeTravelManager.secondsUntilUnlock)s")
                         .font(.caption2)
                         .foregroundColor(.white.opacity(0.9))
                         .monospacedDigit()
-                } else if speedTestManager.canAdvance {
+                } else if timeTravelManager.canAdvance {
                     Text("Ready to advance!")
                         .font(.caption2)
                         .foregroundColor(.green)
                 } else {
-                    Text("15-second day lockouts active")
+                    Text("Simulating: \(timeTravelManager.formattedSimulatedDate)")
                         .font(.caption2)
                         .foregroundColor(.white.opacity(0.8))
                 }
@@ -321,17 +321,17 @@ struct MainDashboardView: View {
             Spacer()
 
             // Countdown circle when counting down
-            if speedTestManager.secondsUntilUnlock > 0 {
+            if timeTravelManager.secondsUntilUnlock > 0 {
                 ZStack {
                     Circle()
                         .stroke(Color.white.opacity(0.3), lineWidth: 2)
                         .frame(width: 28, height: 28)
                     Circle()
-                        .trim(from: 0, to: CGFloat(speedTestManager.secondsUntilUnlock) / 15.0)
+                        .trim(from: 0, to: CGFloat(timeTravelManager.secondsUntilUnlock) / 5.0)
                         .stroke(Color.white, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                         .frame(width: 28, height: 28)
                         .rotationEffect(.degrees(-90))
-                    Text("\(speedTestManager.secondsUntilUnlock)")
+                    Text("\(timeTravelManager.secondsUntilUnlock)")
                         .font(.caption2)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
@@ -342,11 +342,11 @@ struct MainDashboardView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.red)
+                .fill(Color.cyan)
         )
         .onAppear {
             Task {
-                await speedTestManager.syncWithServer()
+                await timeTravelManager.syncWithServer()
             }
         }
     }
@@ -411,6 +411,7 @@ struct MainDashboardView: View {
                                 .foregroundColor(theme.primary)
                         }
                     }
+                    .padding(.trailing, 4)  // Extra safety margin for profile circle
                 }
             }
 
@@ -3128,11 +3129,9 @@ struct DayCompleteCelebrationView: View {
             }
         }
         .padding(16)
-        .background(GlassyCardBackground(opacity: 0.5, tint: theme.success))  // Circadian-aware card background
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(theme.success.opacity(0.3), lineWidth: 1)
+        .background(
+            GlassyCardBackground(opacity: 0.5)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
         )
         .onAppear {
             updateCountdown()

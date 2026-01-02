@@ -6,6 +6,35 @@
 
 ### Jan 2, 2026
 
+#### Glassy Card UI & Dashboard Polish
+
+Implemented frosted glass effect for all cards with circadian-aware styling, plus fixed dashboard margins.
+
+**Glassy Card Background:**
+- Uses `.ultraThinMaterial` for subtle blur effect
+- Warm brown tint overlay (18% opacity) in night mode for circadian compliance
+- Semi-transparent so animated wave background shows through
+- Applied to dashboard cards, questionnaire cards, and completion views
+
+**Semi-transparent Option Buttons:**
+- Updated `CircadianColors.secondaryBackground` to 50% opacity
+- Option selectors (Workday, School Day, etc.) now show waves through them
+- Text field backgrounds also semi-transparent (60% opacity)
+
+**Dashboard Margins:**
+- Fixed 20pt horizontal padding on all dashboard content
+- Profile circle ("T" avatar) no longer touches screen edge
+- Consistent spacing across all cards
+
+**Time Travel Mode (replaces Speed Test):**
+- Renamed Speed Test to Time Travel for clarity
+- Allows jumping forward/backward in journey for testing
+- Maintains all existing functionality
+
+**Files changed:** `CircadianWaveBackground.swift`, `QuestionComponents.swift`, `QuestionnaireSections.swift`, `ContentView.swift`, `UnifiedDebugPanel.swift`, `ConvexService.swift`, `QuestionnaireManager.swift`
+
+---
+
 #### Empty Assessment Handling Fix
 Fixed multiple issues where users could navigate to empty assessments or have expansion days incorrectly marked as "missed".
 

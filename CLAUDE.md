@@ -85,6 +85,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
+**Jan 2:** Glassy card UI with frosted glass effect (GlassyCardBackground using ultraThinMaterial with warm tint overlay), semi-transparent option buttons in questionnaires, replaced Speed Test with Time Travel testing mode, fixed dashboard margins (20pt horizontal padding)
 **Jan 2:** Fixed empty assessment handling - days without triggered gateways no longer show assessment task or count as "missed", added EmptyAssessmentView for edge cases, fixed time estimation consistency across Focus/Splash screens, removed misleading INFO_NO_QUESTIONS placeholder
 **Jan 1:** Unified 1-10 scale for ALL slider questions (ScaleMapper with positive/negative label detection), intensity-scaled haptic feedback for sliders (toggleable in Settings > Accessibility)
 **Dec 31:** Profile settings cleanup (removed unused High Contrast, Reduce Motion, Large Icons toggles), experimental features system (Sleep Diary History and Sleep Insights hidden behind debug toggles)

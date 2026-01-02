@@ -109,104 +109,104 @@ enum SleepStageCategory: String, CaseIterable {
 
 /// The four main chronotypes based on circadian preference
 enum Chronotype: String, CaseIterable, Codable {
-    case lion = "lion"       // Early bird - peaks early morning
-    case bear = "bear"       // Most common - follows solar cycle
-    case wolf = "wolf"       // Night owl - peaks late evening
-    case dolphin = "dolphin" // Light sleeper - irregular patterns
+    case earlyRiser = "early_riser"   // Early bird - peaks early morning
+    case balanced = "balanced"         // Most common - follows solar cycle
+    case nightOwl = "night_owl"        // Night owl - peaks late evening
+    case adaptive = "adaptive"         // Light sleeper - irregular patterns
 
     var displayName: String {
         switch self {
-        case .lion: return "Lion"
-        case .bear: return "Bear"
-        case .wolf: return "Wolf"
-        case .dolphin: return "Dolphin"
+        case .earlyRiser: return "Early Riser"
+        case .balanced: return "Balanced"
+        case .nightOwl: return "Night Owl"
+        case .adaptive: return "Adaptive"
         }
     }
 
     var emoji: String {
         switch self {
-        case .lion: return "🦁"
-        case .bear: return "🐻"
-        case .wolf: return "🐺"
-        case .dolphin: return "🐬"
+        case .earlyRiser: return "☀️"
+        case .balanced: return "⚖️"
+        case .nightOwl: return "🌙"
+        case .adaptive: return "🔄"
         }
     }
 
     var description: String {
         switch self {
-        case .lion: return "Early riser, most productive in the morning"
-        case .bear: return "Follows the solar cycle, peaks mid-morning"
-        case .wolf: return "Night owl, most creative in the evening"
-        case .dolphin: return "Light sleeper, often struggles with insomnia"
+        case .earlyRiser: return "Most productive in the morning, naturally wakes early"
+        case .balanced: return "Follows the solar cycle, peaks mid-morning to afternoon"
+        case .nightOwl: return "Most creative in the evening, prefers later bedtimes"
+        case .adaptive: return "Variable sleep patterns, sensitive to environment"
         }
     }
 
     /// Optimal sleep window start (24-hour format)
     var optimalBedtimeStart: Double {
         switch self {
-        case .lion: return 21.0      // 9:00 PM
-        case .bear: return 22.0      // 10:00 PM
-        case .wolf: return 23.5      // 11:30 PM
-        case .dolphin: return 23.0   // 11:00 PM
+        case .earlyRiser: return 21.0      // 9:00 PM
+        case .balanced: return 22.0        // 10:00 PM
+        case .nightOwl: return 23.5        // 11:30 PM
+        case .adaptive: return 23.0        // 11:00 PM
         }
     }
 
     /// Optimal sleep window end
     var optimalBedtimeEnd: Double {
         switch self {
-        case .lion: return 22.0      // 10:00 PM
-        case .bear: return 23.0      // 11:00 PM
-        case .wolf: return 0.5       // 12:30 AM
-        case .dolphin: return 24.0   // Midnight
+        case .earlyRiser: return 22.0      // 10:00 PM
+        case .balanced: return 23.0        // 11:00 PM
+        case .nightOwl: return 0.5         // 12:30 AM
+        case .adaptive: return 24.0        // Midnight
         }
     }
 
     /// Optimal wake time
     var optimalWakeTime: Double {
         switch self {
-        case .lion: return 5.5       // 5:30 AM
-        case .bear: return 7.0       // 7:00 AM
-        case .wolf: return 7.5       // 7:30 AM
-        case .dolphin: return 6.5    // 6:30 AM
+        case .earlyRiser: return 5.5       // 5:30 AM
+        case .balanced: return 7.0         // 7:00 AM
+        case .nightOwl: return 7.5         // 7:30 AM
+        case .adaptive: return 6.5         // 6:30 AM
         }
     }
 
     /// Ideal sleep duration in hours
     var idealSleepDuration: Double {
         switch self {
-        case .lion: return 7.5
-        case .bear: return 8.0
-        case .wolf: return 7.5
-        case .dolphin: return 6.0    // Dolphins often need less but struggle
+        case .earlyRiser: return 7.5
+        case .balanced: return 8.0
+        case .nightOwl: return 7.5
+        case .adaptive: return 6.0    // Adaptive types often need less but struggle
         }
     }
 
     /// Expected deep sleep percentage
     var expectedDeepPercent: ClosedRange<Double> {
         switch self {
-        case .lion: return 0.15...0.25
-        case .bear: return 0.13...0.23
-        case .wolf: return 0.12...0.22
-        case .dolphin: return 0.10...0.18
+        case .earlyRiser: return 0.15...0.25
+        case .balanced: return 0.13...0.23
+        case .nightOwl: return 0.12...0.22
+        case .adaptive: return 0.10...0.18
         }
     }
 
     /// Expected REM percentage
     var expectedREMPercent: ClosedRange<Double> {
         switch self {
-        case .lion: return 0.20...0.25
-        case .bear: return 0.20...0.25
-        case .wolf: return 0.22...0.28
-        case .dolphin: return 0.18...0.24
+        case .earlyRiser: return 0.20...0.25
+        case .balanced: return 0.20...0.25
+        case .nightOwl: return 0.22...0.28
+        case .adaptive: return 0.18...0.24
         }
     }
 
     var color: Color {
         switch self {
-        case .lion: return .orange
-        case .bear: return .brown
-        case .wolf: return .purple
-        case .dolphin: return .cyan
+        case .earlyRiser: return .orange
+        case .balanced: return .green
+        case .nightOwl: return .purple
+        case .adaptive: return .cyan
         }
     }
 }

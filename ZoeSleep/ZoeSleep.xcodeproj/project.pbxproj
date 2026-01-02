@@ -20,7 +20,7 @@
 		4A5E3B912C8E123456789A04 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5E3B902C8E123456789A04 /* Preview Assets.xcassets */; };
 		4A5E3B982C8E123456789A05 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B972C8E123456789A05 /* Config.swift */; };
 		4A5E3B9A2C8E123456789A06 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */; };
-		4A5E3C202C8E123456789ST1 /* SpeedTestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C212C8E123456789ST2 /* SpeedTestManager.swift */; };
+		4A5E3C202C8E123456789ST1 /* TimeTravelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C212C8E123456789ST2 /* TimeTravelManager.swift */; };
 		4A5E3B9C2C8E123456789A07 /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */; };
 		4A5E3B9E2C8E123456789A08 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B9D2C8E123456789A08 /* APIService.swift */; };
 		4A5E3BA02C8E123456789A09 /* AuthenticationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B9F2C8E123456789A09 /* AuthenticationView.swift */; };
@@ -126,6 +126,12 @@
 		SLEEP003012C8E123456789S03 /* ChronotypeSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLEEP004012C8E123456789S04 /* ChronotypeSystem.swift */; };
 		SLEEP005012C8E123456789S05 /* SleepAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLEEP006012C8E123456789S06 /* SleepAnalyzer.swift */; };
 		SLEEP007012C8E123456789S07 /* SleepStagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLEEP008012C8E123456789S08 /* SleepStagesView.swift */; };
+		SLPMON001012C8E123456789M1 /* SleepMonitoringEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLPMON002012C8E123456789M2 /* SleepMonitoringEngine.swift */; };
+		SLPMON003012C8E123456789M3 /* MotionAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLPMON004012C8E123456789M4 /* MotionAnalyzer.swift */; };
+		SLPMON005012C8E123456789M5 /* HeartRateAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLPMON006012C8E123456789M6 /* HeartRateAnalyzer.swift */; };
+		SLPMON007012C8E123456789M7 /* SleepStageClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLPMON008012C8E123456789M8 /* SleepStageClassifier.swift */; };
+		SLPMON009012C8E123456789M9 /* FalsePositiveEliminator.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLPMON00A012C8E123456789MA /* FalsePositiveEliminator.swift */; };
+		ACCEL001012C8E123456789AC1 /* ACCELAlgorithm.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACCEL002012C8E123456789AC2 /* ACCELAlgorithm.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -168,7 +174,7 @@
 		4A5E3B902C8E123456789A04 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		4A5E3B972C8E123456789A05 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
-		4A5E3C212C8E123456789ST2 /* SpeedTestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTestManager.swift; sourceTree = "<group>"; };
+		4A5E3C212C8E123456789ST2 /* TimeTravelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTravelManager.swift; sourceTree = "<group>"; };
 		4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 		4A5E3B9D2C8E123456789A08 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		4A5E3B9F2C8E123456789A09 /* AuthenticationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationView.swift; sourceTree = "<group>"; };
@@ -277,6 +283,12 @@
 		SLEEP004012C8E123456789S04 /* ChronotypeSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChronotypeSystem.swift; sourceTree = "<group>"; };
 		SLEEP006012C8E123456789S06 /* SleepAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAnalyzer.swift; sourceTree = "<group>"; };
 		SLEEP008012C8E123456789S08 /* SleepStagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepStagesView.swift; sourceTree = "<group>"; };
+		SLPMON002012C8E123456789M2 /* SleepMonitoringEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepMonitoringEngine.swift; sourceTree = "<group>"; };
+		SLPMON004012C8E123456789M4 /* MotionAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionAnalyzer.swift; sourceTree = "<group>"; };
+		SLPMON006012C8E123456789M6 /* HeartRateAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateAnalyzer.swift; sourceTree = "<group>"; };
+		SLPMON008012C8E123456789M8 /* SleepStageClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepStageClassifier.swift; sourceTree = "<group>"; };
+		SLPMON00A012C8E123456789MA /* FalsePositiveEliminator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FalsePositiveEliminator.swift; sourceTree = "<group>"; };
+		ACCEL002012C8E123456789AC2 /* ACCELAlgorithm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACCELAlgorithm.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -428,6 +440,7 @@
 				4A5E3DWV012C8E123456789WV01 /* Views */,
 				4A5E3DWG012C8E123456789WG01 /* Managers */,
 				SLEEPGRP0012C8E123456789SG1 /* Sleep */,
+				SLPMONGRP012C8E123456789MG /* SleepMonitoring */,
 				4A5E3BAD2C8E123456789A1A /* ZoeSleep Watch App.entitlements */,
 				4A5E3BAF2C8E123456789A1B /* Info.plist */,
 				4A5E3BA72C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift */,
@@ -446,7 +459,7 @@
 			children = (
 				CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */,
 				4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */,
-				4A5E3C212C8E123456789ST2 /* SpeedTestManager.swift */,
+				4A5E3C212C8E123456789ST2 /* TimeTravelManager.swift */,
 				5A316CC02EF4B1200098C762 /* GamificationManager.swift */,
 				4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */,
 				5A316CB52EF4B0F10098C762 /* NotificationManager.swift */,
@@ -585,6 +598,19 @@
 				SLEEP008012C8E123456789S08 /* SleepStagesView.swift */,
 			);
 			path = Sleep;
+			sourceTree = "<group>";
+		};
+		SLPMONGRP012C8E123456789MG /* SleepMonitoring */ = {
+			isa = PBXGroup;
+			children = (
+				SLPMON002012C8E123456789M2 /* SleepMonitoringEngine.swift */,
+				SLPMON004012C8E123456789M4 /* MotionAnalyzer.swift */,
+				SLPMON006012C8E123456789M6 /* HeartRateAnalyzer.swift */,
+				SLPMON008012C8E123456789M8 /* SleepStageClassifier.swift */,
+				SLPMON00A012C8E123456789MA /* FalsePositiveEliminator.swift */,
+				ACCEL002012C8E123456789AC2 /* ACCELAlgorithm.swift */,
+			);
+			path = SleepMonitoring;
 			sourceTree = "<group>";
 		};
 		4A5E3DWM012C8E123456789WM01 /* Models */ = {
@@ -876,7 +902,7 @@
 				5A316CBA2EF4B10E0098C762 /* EveningReportView.swift in Sources */,
 				4A5E3B982C8E123456789A05 /* Config.swift in Sources */,
 				4A5E3B9A2C8E123456789A06 /* AuthenticationManager.swift in Sources */,
-				4A5E3C202C8E123456789ST1 /* SpeedTestManager.swift in Sources */,
+				4A5E3C202C8E123456789ST1 /* TimeTravelManager.swift in Sources */,
 				4A5E3B9C2C8E123456789A07 /* HealthKitManager.swift in Sources */,
 				4A5E3B9E2C8E123456789A08 /* APIService.swift in Sources */,
 				4A5E3BA02C8E123456789A09 /* AuthenticationView.swift in Sources */,
@@ -978,6 +1004,12 @@
 				SLEEP003012C8E123456789S03 /* ChronotypeSystem.swift in Sources */,
 				SLEEP005012C8E123456789S05 /* SleepAnalyzer.swift in Sources */,
 				SLEEP007012C8E123456789S07 /* SleepStagesView.swift in Sources */,
+				SLPMON001012C8E123456789M1 /* SleepMonitoringEngine.swift in Sources */,
+				SLPMON003012C8E123456789M3 /* MotionAnalyzer.swift in Sources */,
+				SLPMON005012C8E123456789M5 /* HeartRateAnalyzer.swift in Sources */,
+				SLPMON007012C8E123456789M7 /* SleepStageClassifier.swift in Sources */,
+				SLPMON009012C8E123456789M9 /* FalsePositiveEliminator.swift in Sources */,
+				ACCEL001012C8E123456789AC1 /* ACCELAlgorithm.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

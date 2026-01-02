@@ -40,6 +40,9 @@ struct QuestionnaireView: View {
     @State private var assessmentResponses: [String: Any] = [:]
     @State private var assessmentUserInteracted: Set<String> = []  // Track which questions user actually touched
 
+    // Loading State - prevents showing EmptyAssessmentView before questions are loaded
+    @State private var isLoadingQuestions: Bool = true
+
     // Expansion Modules (for dynamic splash screens)
     @State private var currentDayExpansionModules: [String] = []  // Module IDs for expansion splash
 
@@ -94,8 +97,22 @@ struct QuestionnaireView: View {
         currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
     }
 
+    // Hardcoded background color to avoid white flash during navigation
+    private var loadingBackgroundColor: Color {
+        if TimePeriod.current == .evening || TimePeriod.current == .night {
+            return Color(red: 0.08, green: 0.06, blue: 0.04) // Dark evening brown
+        } else {
+            return Color(red: 0.98, green: 0.96, blue: 0.93) // Warm cream for daytime
+        }
+    }
+
     var body: some View {
-        Group {
+        ZStack {
+            // Background layer - always present to prevent white flash
+            loadingBackgroundColor
+                .ignoresSafeArea()
+
+            // Content layer
             if showingDaySplash, let splashInfo = daySplashInfo {
                 // Hero-framed day splash for ALL 14 days
                 DaySplashView(
@@ -175,6 +192,9 @@ struct QuestionnaireView: View {
                         }
                     }
                 )
+            } else if isLoadingQuestions {
+                // Loading state - background ZStack handles the color
+                EmptyView()
             } else if currentQuestions.isEmpty {
                 // Empty state: Assessment section was opened but no questions exist
                 // This can happen on expansion days when required gateways weren't triggered
@@ -984,6 +1004,8 @@ struct QuestionnaireView: View {
     }
 
     private func handleViewAppear() {
+        // Ensure loading state is true when view appears (handles view reuse)
+        isLoadingQuestions = true
         loadQuestions()
         if startSection == .sleepLog {
             fetchHealthKitSleepData()
@@ -1318,6 +1340,9 @@ struct QuestionnaireView: View {
                     // Load saved progress from Convex (cross-device sync)
                     print("[iOS] About to call loadSavedProgress()...")
                     loadSavedProgress()
+
+                    // Mark loading complete - now EmptyAssessmentView can show if truly empty
+                    isLoadingQuestions = false
                 }
             } catch {
                 print("[iOS] Error fetching questions from Convex: \(error.localizedDescription)")
@@ -1339,6 +1364,9 @@ struct QuestionnaireView: View {
                         prefillDemographicsFromHealthKit()
                     }
                     loadSavedProgress()
+
+                    // Mark loading complete even on fallback
+                    isLoadingQuestions = false
                 }
             }
         }

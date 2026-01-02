@@ -2,7 +2,7 @@
 //  ChronotypeSystem.swift
 //  ZoeSleep Watch App
 //
-//  Determines and manages user's chronotype (Lion/Bear/Wolf/Dolphin).
+//  Determines and manages user's chronotype (Early Riser/Balanced/Night Owl/Adaptive).
 //  Uses MEQ (Morningness-Eveningness Questionnaire) principles.
 //
 
@@ -16,7 +16,7 @@ import SwiftUI
 class ChronotypeManager: ObservableObject {
     static let shared = ChronotypeManager()
 
-    @Published var chronotype: Chronotype = .bear  // Default to most common
+    @Published var chronotype: Chronotype = .balanced  // Default to most common
     @Published var confidence: Double = 0.0        // 0-1 confidence in determination
     @Published var isAssessed: Bool = false
     @Published var assessmentDate: Date?
@@ -72,83 +72,83 @@ class ChronotypeManager: ObservableObject {
             id: 1,
             question: "If you were entirely free to plan your day, when would you get up?",
             options: [
-                ChronotypeOption(text: "5:00-6:30 AM", scores: [.lion: 5, .bear: 2, .wolf: 0, .dolphin: 1]),
-                ChronotypeOption(text: "6:30-7:45 AM", scores: [.lion: 3, .bear: 5, .wolf: 1, .dolphin: 2]),
-                ChronotypeOption(text: "7:45-9:45 AM", scores: [.lion: 1, .bear: 3, .wolf: 4, .dolphin: 3]),
-                ChronotypeOption(text: "9:45-11:00 AM", scores: [.lion: 0, .bear: 1, .wolf: 5, .dolphin: 2]),
-                ChronotypeOption(text: "11:00 AM-12:00 PM", scores: [.lion: 0, .bear: 0, .wolf: 5, .dolphin: 1]),
+                ChronotypeOption(text: "5:00-6:30 AM", scores: [.earlyRiser: 5, .balanced: 2, .nightOwl: 0, .adaptive: 1]),
+                ChronotypeOption(text: "6:30-7:45 AM", scores: [.earlyRiser: 3, .balanced: 5, .nightOwl: 1, .adaptive: 2]),
+                ChronotypeOption(text: "7:45-9:45 AM", scores: [.earlyRiser: 1, .balanced: 3, .nightOwl: 4, .adaptive: 3]),
+                ChronotypeOption(text: "9:45-11:00 AM", scores: [.earlyRiser: 0, .balanced: 1, .nightOwl: 5, .adaptive: 2]),
+                ChronotypeOption(text: "11:00 AM-12:00 PM", scores: [.earlyRiser: 0, .balanced: 0, .nightOwl: 5, .adaptive: 1]),
             ]
         ),
         ChronotypeQuestion(
             id: 2,
             question: "If you were entirely free to plan your evening, when would you go to bed?",
             options: [
-                ChronotypeOption(text: "8:00-9:00 PM", scores: [.lion: 5, .bear: 1, .wolf: 0, .dolphin: 1]),
-                ChronotypeOption(text: "9:00-10:15 PM", scores: [.lion: 4, .bear: 4, .wolf: 1, .dolphin: 2]),
-                ChronotypeOption(text: "10:15-12:30 AM", scores: [.lion: 1, .bear: 4, .wolf: 4, .dolphin: 3]),
-                ChronotypeOption(text: "12:30-1:45 AM", scores: [.lion: 0, .bear: 1, .wolf: 5, .dolphin: 2]),
-                ChronotypeOption(text: "1:45-3:00 AM", scores: [.lion: 0, .bear: 0, .wolf: 5, .dolphin: 1]),
+                ChronotypeOption(text: "8:00-9:00 PM", scores: [.earlyRiser: 5, .balanced: 1, .nightOwl: 0, .adaptive: 1]),
+                ChronotypeOption(text: "9:00-10:15 PM", scores: [.earlyRiser: 4, .balanced: 4, .nightOwl: 1, .adaptive: 2]),
+                ChronotypeOption(text: "10:15-12:30 AM", scores: [.earlyRiser: 1, .balanced: 4, .nightOwl: 4, .adaptive: 3]),
+                ChronotypeOption(text: "12:30-1:45 AM", scores: [.earlyRiser: 0, .balanced: 1, .nightOwl: 5, .adaptive: 2]),
+                ChronotypeOption(text: "1:45-3:00 AM", scores: [.earlyRiser: 0, .balanced: 0, .nightOwl: 5, .adaptive: 1]),
             ]
         ),
         ChronotypeQuestion(
             id: 3,
             question: "How alert do you feel during the first half hour after waking?",
             options: [
-                ChronotypeOption(text: "Very alert", scores: [.lion: 5, .bear: 3, .wolf: 0, .dolphin: 2]),
-                ChronotypeOption(text: "Fairly alert", scores: [.lion: 3, .bear: 5, .wolf: 2, .dolphin: 3]),
-                ChronotypeOption(text: "Fairly tired", scores: [.lion: 1, .bear: 2, .wolf: 4, .dolphin: 3]),
-                ChronotypeOption(text: "Very tired", scores: [.lion: 0, .bear: 1, .wolf: 5, .dolphin: 2]),
+                ChronotypeOption(text: "Very alert", scores: [.earlyRiser: 5, .balanced: 3, .nightOwl: 0, .adaptive: 2]),
+                ChronotypeOption(text: "Fairly alert", scores: [.earlyRiser: 3, .balanced: 5, .nightOwl: 2, .adaptive: 3]),
+                ChronotypeOption(text: "Fairly tired", scores: [.earlyRiser: 1, .balanced: 2, .nightOwl: 4, .adaptive: 3]),
+                ChronotypeOption(text: "Very tired", scores: [.earlyRiser: 0, .balanced: 1, .nightOwl: 5, .adaptive: 2]),
             ]
         ),
         ChronotypeQuestion(
             id: 4,
             question: "At what time of day do you feel your best mentally?",
             options: [
-                ChronotypeOption(text: "Morning (8-10 AM)", scores: [.lion: 5, .bear: 3, .wolf: 0, .dolphin: 2]),
-                ChronotypeOption(text: "Late morning (10 AM-12 PM)", scores: [.lion: 3, .bear: 5, .wolf: 1, .dolphin: 3]),
-                ChronotypeOption(text: "Afternoon (12-5 PM)", scores: [.lion: 1, .bear: 3, .wolf: 3, .dolphin: 4]),
-                ChronotypeOption(text: "Evening (5-9 PM)", scores: [.lion: 0, .bear: 1, .wolf: 5, .dolphin: 2]),
-                ChronotypeOption(text: "Night (9 PM-12 AM)", scores: [.lion: 0, .bear: 0, .wolf: 5, .dolphin: 1]),
+                ChronotypeOption(text: "Morning (8-10 AM)", scores: [.earlyRiser: 5, .balanced: 3, .nightOwl: 0, .adaptive: 2]),
+                ChronotypeOption(text: "Late morning (10 AM-12 PM)", scores: [.earlyRiser: 3, .balanced: 5, .nightOwl: 1, .adaptive: 3]),
+                ChronotypeOption(text: "Afternoon (12-5 PM)", scores: [.earlyRiser: 1, .balanced: 3, .nightOwl: 3, .adaptive: 4]),
+                ChronotypeOption(text: "Evening (5-9 PM)", scores: [.earlyRiser: 0, .balanced: 1, .nightOwl: 5, .adaptive: 2]),
+                ChronotypeOption(text: "Night (9 PM-12 AM)", scores: [.earlyRiser: 0, .balanced: 0, .nightOwl: 5, .adaptive: 1]),
             ]
         ),
         ChronotypeQuestion(
             id: 5,
             question: "How easy is it for you to fall asleep at your usual bedtime?",
             options: [
-                ChronotypeOption(text: "Very easy", scores: [.lion: 4, .bear: 4, .wolf: 3, .dolphin: 0]),
-                ChronotypeOption(text: "Fairly easy", scores: [.lion: 3, .bear: 4, .wolf: 4, .dolphin: 1]),
-                ChronotypeOption(text: "Fairly difficult", scores: [.lion: 1, .bear: 2, .wolf: 2, .dolphin: 4]),
-                ChronotypeOption(text: "Very difficult", scores: [.lion: 0, .bear: 1, .wolf: 1, .dolphin: 5]),
+                ChronotypeOption(text: "Very easy", scores: [.earlyRiser: 4, .balanced: 4, .nightOwl: 3, .adaptive: 0]),
+                ChronotypeOption(text: "Fairly easy", scores: [.earlyRiser: 3, .balanced: 4, .nightOwl: 4, .adaptive: 1]),
+                ChronotypeOption(text: "Fairly difficult", scores: [.earlyRiser: 1, .balanced: 2, .nightOwl: 2, .adaptive: 4]),
+                ChronotypeOption(text: "Very difficult", scores: [.earlyRiser: 0, .balanced: 1, .nightOwl: 1, .adaptive: 5]),
             ]
         ),
         ChronotypeQuestion(
             id: 6,
             question: "How would you describe your sleep quality?",
             options: [
-                ChronotypeOption(text: "Deep and refreshing", scores: [.lion: 4, .bear: 5, .wolf: 3, .dolphin: 0]),
-                ChronotypeOption(text: "Good most nights", scores: [.lion: 3, .bear: 4, .wolf: 4, .dolphin: 1]),
-                ChronotypeOption(text: "Variable quality", scores: [.lion: 2, .bear: 2, .wolf: 3, .dolphin: 4]),
-                ChronotypeOption(text: "Light and easily disturbed", scores: [.lion: 1, .bear: 1, .wolf: 2, .dolphin: 5]),
+                ChronotypeOption(text: "Deep and refreshing", scores: [.earlyRiser: 4, .balanced: 5, .nightOwl: 3, .adaptive: 0]),
+                ChronotypeOption(text: "Good most nights", scores: [.earlyRiser: 3, .balanced: 4, .nightOwl: 4, .adaptive: 1]),
+                ChronotypeOption(text: "Variable quality", scores: [.earlyRiser: 2, .balanced: 2, .nightOwl: 3, .adaptive: 4]),
+                ChronotypeOption(text: "Light and easily disturbed", scores: [.earlyRiser: 1, .balanced: 1, .nightOwl: 2, .adaptive: 5]),
             ]
         ),
         ChronotypeQuestion(
             id: 7,
             question: "Would you describe yourself as a 'morning person' or an 'evening person'?",
             options: [
-                ChronotypeOption(text: "Definitely morning", scores: [.lion: 5, .bear: 2, .wolf: 0, .dolphin: 1]),
-                ChronotypeOption(text: "More morning than evening", scores: [.lion: 3, .bear: 5, .wolf: 1, .dolphin: 2]),
-                ChronotypeOption(text: "More evening than morning", scores: [.lion: 1, .bear: 2, .wolf: 4, .dolphin: 3]),
-                ChronotypeOption(text: "Definitely evening", scores: [.lion: 0, .bear: 1, .wolf: 5, .dolphin: 2]),
+                ChronotypeOption(text: "Definitely morning", scores: [.earlyRiser: 5, .balanced: 2, .nightOwl: 0, .adaptive: 1]),
+                ChronotypeOption(text: "More morning than evening", scores: [.earlyRiser: 3, .balanced: 5, .nightOwl: 1, .adaptive: 2]),
+                ChronotypeOption(text: "More evening than morning", scores: [.earlyRiser: 1, .balanced: 2, .nightOwl: 4, .adaptive: 3]),
+                ChronotypeOption(text: "Definitely evening", scores: [.earlyRiser: 0, .balanced: 1, .nightOwl: 5, .adaptive: 2]),
             ]
         ),
         ChronotypeQuestion(
             id: 8,
             question: "How often do you wake up during the night?",
             options: [
-                ChronotypeOption(text: "Rarely or never", scores: [.lion: 3, .bear: 4, .wolf: 3, .dolphin: 0]),
-                ChronotypeOption(text: "Once per night", scores: [.lion: 2, .bear: 3, .wolf: 3, .dolphin: 2]),
-                ChronotypeOption(text: "2-3 times per night", scores: [.lion: 1, .bear: 2, .wolf: 2, .dolphin: 4]),
-                ChronotypeOption(text: "Frequently", scores: [.lion: 0, .bear: 1, .wolf: 1, .dolphin: 5]),
+                ChronotypeOption(text: "Rarely or never", scores: [.earlyRiser: 3, .balanced: 4, .nightOwl: 3, .adaptive: 0]),
+                ChronotypeOption(text: "Once per night", scores: [.earlyRiser: 2, .balanced: 3, .nightOwl: 3, .adaptive: 2]),
+                ChronotypeOption(text: "2-3 times per night", scores: [.earlyRiser: 1, .balanced: 2, .nightOwl: 2, .adaptive: 4]),
+                ChronotypeOption(text: "Frequently", scores: [.earlyRiser: 0, .balanced: 1, .nightOwl: 1, .adaptive: 5]),
             ]
         ),
     ]
@@ -156,10 +156,10 @@ class ChronotypeManager: ObservableObject {
     /// Calculate chronotype from questionnaire responses
     func calculateChronotypeFromResponses(_ responses: [Int: Int]) -> (Chronotype, Double) {
         var scores: [Chronotype: Int] = [
-            .lion: 0,
-            .bear: 0,
-            .wolf: 0,
-            .dolphin: 0
+            .earlyRiser: 0,
+            .balanced: 0,
+            .nightOwl: 0,
+            .adaptive: 0
         ]
 
         for (questionId, optionIndex) in responses {
@@ -193,7 +193,7 @@ class ChronotypeManager: ObservableObject {
     /// Detect chronotype from actual sleep patterns (14+ days of data)
     func detectChronotypeFromPatterns(_ sessions: [SleepSession]) -> (Chronotype, Double) {
         guard sessions.count >= 7 else {
-            return (.bear, 0.3)  // Not enough data, default to bear with low confidence
+            return (.balanced, 0.3)  // Not enough data, default to balanced with low confidence
         }
 
         let calendar = Calendar.current
@@ -221,38 +221,38 @@ class ChronotypeManager: ObservableObject {
         var midpoint = (avgBedtime + avgWakeTime + 24) / 2
         if midpoint > 24 { midpoint -= 24 }
 
-        // Calculate average efficiency (dolphins tend to have lower)
+        // Calculate average efficiency (adaptive types tend to have lower)
         let avgEfficiency = sessions.map { $0.sleepEfficiency }.reduce(0, +) / Double(sessions.count)
 
-        // Calculate variability (dolphins tend to have higher)
+        // Calculate variability (adaptive types tend to have higher)
         let bedtimeStdDev = standardDeviation(bedtimeHours)
         let wakeTimeStdDev = standardDeviation(wakeTimeHours)
 
         // Score each chronotype based on patterns
         var scores: [Chronotype: Double] = [:]
 
-        // Lion: Early bedtime (21-22), early wake (5-6), midpoint around 1-2 AM
-        let lionBedScore = gaussianScore(avgBedtime, mean: 21.5, stdDev: 1.0)
-        let lionWakeScore = gaussianScore(avgWakeTime, mean: 5.5, stdDev: 1.0)
-        let lionMidScore = gaussianScore(midpoint, mean: 1.5, stdDev: 1.0)
-        scores[.lion] = (lionBedScore + lionWakeScore + lionMidScore) / 3
+        // Early Riser: Early bedtime (21-22), early wake (5-6), midpoint around 1-2 AM
+        let earlyBedScore = gaussianScore(avgBedtime, mean: 21.5, stdDev: 1.0)
+        let earlyWakeScore = gaussianScore(avgWakeTime, mean: 5.5, stdDev: 1.0)
+        let earlyMidScore = gaussianScore(midpoint, mean: 1.5, stdDev: 1.0)
+        scores[.earlyRiser] = (earlyBedScore + earlyWakeScore + earlyMidScore) / 3
 
-        // Bear: Normal bedtime (22-23), normal wake (7), midpoint around 3 AM
-        let bearBedScore = gaussianScore(avgBedtime, mean: 22.5, stdDev: 1.0)
-        let bearWakeScore = gaussianScore(avgWakeTime, mean: 7.0, stdDev: 1.0)
-        let bearMidScore = gaussianScore(midpoint, mean: 3.0, stdDev: 1.0)
-        scores[.bear] = (bearBedScore + bearWakeScore + bearMidScore) / 3
+        // Balanced: Normal bedtime (22-23), normal wake (7), midpoint around 3 AM
+        let balancedBedScore = gaussianScore(avgBedtime, mean: 22.5, stdDev: 1.0)
+        let balancedWakeScore = gaussianScore(avgWakeTime, mean: 7.0, stdDev: 1.0)
+        let balancedMidScore = gaussianScore(midpoint, mean: 3.0, stdDev: 1.0)
+        scores[.balanced] = (balancedBedScore + balancedWakeScore + balancedMidScore) / 3
 
-        // Wolf: Late bedtime (23:30+), late wake (7:30+), midpoint around 4 AM
-        let wolfBedScore = gaussianScore(avgBedtime, mean: 24.0, stdDev: 1.0)  // Midnight
-        let wolfWakeScore = gaussianScore(avgWakeTime, mean: 7.75, stdDev: 1.0)
-        let wolfMidScore = gaussianScore(midpoint, mean: 4.0, stdDev: 1.0)
-        scores[.wolf] = (wolfBedScore + wolfWakeScore + wolfMidScore) / 3
+        // Night Owl: Late bedtime (23:30+), late wake (7:30+), midpoint around 4 AM
+        let nightOwlBedScore = gaussianScore(avgBedtime, mean: 24.0, stdDev: 1.0)  // Midnight
+        let nightOwlWakeScore = gaussianScore(avgWakeTime, mean: 7.75, stdDev: 1.0)
+        let nightOwlMidScore = gaussianScore(midpoint, mean: 4.0, stdDev: 1.0)
+        scores[.nightOwl] = (nightOwlBedScore + nightOwlWakeScore + nightOwlMidScore) / 3
 
-        // Dolphin: Low efficiency, high variability, various timings
-        let dolphinEfficiencyScore = avgEfficiency < 0.80 ? 0.8 : 0.3
-        let dolphinVariabilityScore = (bedtimeStdDev > 1.0 || wakeTimeStdDev > 1.0) ? 0.8 : 0.3
-        scores[.dolphin] = (dolphinEfficiencyScore + dolphinVariabilityScore) / 2
+        // Adaptive: Low efficiency, high variability, various timings
+        let adaptiveEfficiencyScore = avgEfficiency < 0.80 ? 0.8 : 0.3
+        let adaptiveVariabilityScore = (bedtimeStdDev > 1.0 || wakeTimeStdDev > 1.0) ? 0.8 : 0.3
+        scores[.adaptive] = (adaptiveEfficiencyScore + adaptiveVariabilityScore) / 2
 
         // Find winner
         let sorted = scores.sorted { $0.value > $1.value }
@@ -306,16 +306,16 @@ class ChronotypeManager: ObservableObject {
         let peakStart: Date
         let peakEnd: Date
         switch chronotype {
-        case .lion:
+        case .earlyRiser:
             peakStart = makeTime(hour: 8.0)
             peakEnd = makeTime(hour: 12.0)
-        case .bear:
+        case .balanced:
             peakStart = makeTime(hour: 10.0)
             peakEnd = makeTime(hour: 14.0)
-        case .wolf:
+        case .nightOwl:
             peakStart = makeTime(hour: 17.0)
             peakEnd = makeTime(hour: 21.0)
-        case .dolphin:
+        case .adaptive:
             peakStart = makeTime(hour: 15.0)
             peakEnd = makeTime(hour: 21.0)
         }
@@ -347,37 +347,37 @@ struct ChronotypeProfile {
 
     var strengthLabel: String {
         switch chronotype {
-        case .lion: return "Early Morning Power"
-        case .bear: return "Balanced Energy"
-        case .wolf: return "Evening Creativity"
-        case .dolphin: return "Adaptive Alertness"
+        case .earlyRiser: return "Early Morning Power"
+        case .balanced: return "Balanced Energy"
+        case .nightOwl: return "Evening Creativity"
+        case .adaptive: return "Adaptive Alertness"
         }
     }
 
     var tips: [String] {
         switch chronotype {
-        case .lion:
+        case .earlyRiser:
             return [
                 "Schedule important tasks before noon",
                 "Protect your early bedtime",
                 "Light exercise in early morning",
                 "Avoid screens after 8 PM"
             ]
-        case .bear:
+        case .balanced:
             return [
                 "Follow the sun's natural cycle",
                 "Most productive mid-morning",
                 "Brief afternoon naps OK",
                 "Consistent schedule is key"
             ]
-        case .wolf:
+        case .nightOwl:
             return [
                 "Don't fight your late energy",
                 "Morning light helps shift earlier",
                 "Creative work in evening",
                 "Avoid early morning meetings"
             ]
-        case .dolphin:
+        case .adaptive:
             return [
                 "Focus on sleep environment",
                 "Relaxation techniques help",

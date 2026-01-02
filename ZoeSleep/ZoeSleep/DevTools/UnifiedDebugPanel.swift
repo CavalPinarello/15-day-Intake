@@ -116,8 +116,8 @@ struct UnifiedDebugPanel: View {
     @EnvironmentObject var questionnaireManager: QuestionnaireManager
     @Environment(\.dismiss) var dismiss
 
-    // Speed Test Manager
-    @StateObject private var speedTestManager = SpeedTestManager.shared
+    // Time Travel Manager
+    @StateObject private var timeTravelManager = TimeTravelManager.shared
 
     // State
     @State private var selectedMode: DataGenerationMode = .fullRandom
@@ -175,19 +175,16 @@ struct UnifiedDebugPanel: View {
                     generationProgressSection
                 }
 
-                // MARK: - Section 6: Journey Controls
+                // MARK: - Section 6: Time Travel Mode
+                timeTravelModeSection
+
+                // MARK: - Section 7: Journey Controls
                 journeyControlsSection
 
-                // MARK: - Section 7: Speed Run (Accelerated Testing)
-                speedRunSection
-
-                // MARK: - Section 8: Speed Test Mode (15-Second Lockouts)
-                speedTestModeSection
-
-                // MARK: - Section 9: Experimental Features
+                // MARK: - Section 8: Experimental Features
                 experimentalFeaturesSection
 
-                // MARK: - Section 8: Repair Tools
+                // MARK: - Section 9: Repair Tools
                 repairToolsSection
             }
             .listStyle(.insetGrouped)
@@ -210,7 +207,7 @@ struct UnifiedDebugPanel: View {
             }
             .task {
                 await refreshPreview()
-                await speedTestManager.syncWithServer()
+                await timeTravelManager.syncWithServer()
             }
             .onChange(of: selectedMode) { _, _ in
                 Task { await refreshPreview() }
@@ -598,99 +595,277 @@ struct UnifiedDebugPanel: View {
         }
     }
 
-    // MARK: - Journey Controls Section
+    // MARK: - Time Travel Mode Section
 
-    @State private var jumpTargetDay: Int = 1
-    @State private var isJumpingToDay = false
-    @State private var backdateDaysAgo: Int = 7
-    @State private var isBackdating = false
+    @State private var timeTravelStartDate: Date = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
 
-    // Speed Run state
-    @State private var speedRunPhenotype: String = "normal"
-    @State private var speedRunTargetDay: Int = 14
-    @State private var isSpeedCompleting = false
-    @State private var isSpeedRunning = false
-
-    private var journeyControlsSection: some View {
+    private var timeTravelModeSection: some View {
         Section {
-            // Jump to Any Day (Primary debug feature)
-            HStack {
-                Label("Jump to Day", systemImage: "arrow.right.to.line")
-                    .foregroundColor(.purple)
-                Spacer()
-                Picker("", selection: $jumpTargetDay) {
-                    ForEach(1...14, id: \.self) { day in
-                        Text("Day \(day)").tag(day)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(width: 100)
-
-                Button {
-                    jumpToDay()
-                } label: {
-                    if isJumpingToDay {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                    } else {
-                        Text("Go")
-                            .fontWeight(.semibold)
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.purple)
-                .disabled(isJumpingToDay || jumpTargetDay == questionnaireManager.currentDay)
-            }
-
-            // Backdate Journey Start (for time-based testing)
-            HStack {
-                Label("Backdate Start", systemImage: "calendar.badge.clock")
-                    .foregroundColor(.cyan)
-                Spacer()
-                Picker("", selection: $backdateDaysAgo) {
-                    ForEach(0...13, id: \.self) { days in
-                        Text("\(days)d → Day \(days + 1)").tag(days)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(width: 130)
-
-                Button {
-                    backdateStart()
-                } label: {
-                    if isBackdating {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                    } else {
-                        Text("Set")
-                            .fontWeight(.semibold)
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.cyan)
-                .disabled(isBackdating)
-            }
-
-            // Advance Day (Sequential)
-            Button {
-                advanceDay()
-            } label: {
+            // Time Travel Status Header
+            if timeTravelManager.isTimeTravelActive {
                 HStack {
-                    Label("Advance to Next Day", systemImage: "forward.fill")
-                        .foregroundColor(.orange)
-                    Spacer()
-                    if isAdvancingDay {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Text("→ Day \(min(questionnaireManager.currentDay + 1, 14))")
+                    ZStack {
+                        Image(systemName: "clock.arrow.2.circlepath")
+                            .font(.title2)
+                            .foregroundColor(.cyan)
+                        Circle()
+                            .fill(.cyan)
+                            .frame(width: 8, height: 8)
+                            .offset(x: 12, y: -10)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Time Travel Active")
+                            .font(.headline)
+                            .foregroundColor(.cyan)
+                        Text("Simulating: \(timeTravelManager.formattedSimulatedDate)")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+
+                    Spacer()
+
+                    Text("Day \(timeTravelManager.currentDay)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.cyan)
+                }
+                .padding(.vertical, 4)
+                .listRowBackground(Color.cyan.opacity(0.1))
+            }
+
+            // Date Picker (when not active)
+            if !timeTravelManager.isTimeTravelActive {
+                HStack {
+                    Label("Start Date", systemImage: "calendar")
+                        .foregroundColor(.cyan)
+                    Spacer()
+                    DatePicker("", selection: $timeTravelStartDate,
+                               in: Calendar.current.date(byAdding: .month, value: -3, to: Date())!...Date(),
+                               displayedComponents: .date)
+                        .labelsHidden()
+                }
+
+                Button {
+                    Task {
+                        do {
+                            try await timeTravelManager.setup(startDate: timeTravelStartDate)
+                            statusMessage = "Time Travel started from \(timeTravelManager.formattedStartDate)"
+                            statusIsError = false
+                            await questionnaireManager.loadJourneyProgress()
+                        } catch {
+                            statusMessage = "Error: \(error.localizedDescription)"
+                            statusIsError = true
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "clock.arrow.2.circlepath")
+                        Text("Start Time Travel")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        if timeTravelManager.isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                    }
+                    .foregroundColor(.white)
+                }
+                .listRowBackground(Color.cyan)
+                .disabled(timeTravelManager.isLoading)
+            }
+
+            // Countdown Timer (when locked)
+            if timeTravelManager.isTimeTravelActive && timeTravelManager.isLocked {
+                HStack {
+                    Image(systemName: "timer")
+                        .foregroundColor(.blue)
+                        .font(.title2)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Next Day Unlocks In")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text("\(timeTravelManager.secondsUntilUnlock) seconds")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(.blue)
+                            .monospacedDigit()
+                    }
+
+                    Spacer()
+
+                    // Progress circle
+                    ZStack {
+                        Circle()
+                            .stroke(Color.blue.opacity(0.2), lineWidth: 4)
+                            .frame(width: 40, height: 40)
+                        Circle()
+                            .trim(from: 0, to: CGFloat(timeTravelManager.secondsUntilUnlock) / 5.0)
+                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                            .frame(width: 40, height: 40)
+                            .rotationEffect(.degrees(-90))
+                        Text("\(timeTravelManager.secondsUntilUnlock)")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                    }
+                }
+                .padding(.vertical, 8)
+                .listRowBackground(Color.blue.opacity(0.1))
+            }
+
+            // Time Travel Controls (when active)
+            if timeTravelManager.isTimeTravelActive {
+                // Complete Day Button
+                if !timeTravelManager.isLocked {
+                    Button {
+                        Task {
+                            do {
+                                try await timeTravelManager.completeDay()
+                                statusMessage = "Day \(timeTravelManager.currentDay) completed!"
+                                statusIsError = false
+                                await questionnaireManager.loadJourneyProgress()
+                            } catch {
+                                statusMessage = "Error: \(error.localizedDescription)"
+                                statusIsError = true
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Label("Complete Day \(timeTravelManager.currentDay)", systemImage: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Spacer()
+                            if timeTravelManager.isLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Text("Mock answers + 5s lockout")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .disabled(timeTravelManager.isLoading || timeTravelManager.currentDay > 14)
+                }
+
+                // Advance Button (when lockout complete)
+                if timeTravelManager.canAdvance {
+                    Button {
+                        Task {
+                            do {
+                                try await timeTravelManager.advanceToNextDay()
+                                questionnaireManager.currentDay = timeTravelManager.currentDay
+                                statusMessage = "Advanced to Day \(timeTravelManager.currentDay)"
+                                statusIsError = false
+                                await questionnaireManager.loadJourneyProgress()
+                            } catch {
+                                statusMessage = "Error: \(error.localizedDescription)"
+                                statusIsError = true
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Label("Advance to Day \(min(timeTravelManager.currentDay + 1, 14))", systemImage: "arrow.right.circle.fill")
+                                .foregroundColor(.orange)
+                            Spacer()
+                            Text("Lockout complete!")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                        }
+                    }
+                    .listRowBackground(Color.green.opacity(0.1))
+                }
+
+                // Reset Journey Button
+                Button {
+                    Task {
+                        do {
+                            try await timeTravelManager.resetJourney()
+                            questionnaireManager.currentDay = 1
+                            clearSplashScreenTracking()
+                            // Reset journey phase back to intake
+                            JourneyPhaseManager.shared.currentPhase = .intake
+                            statusMessage = "Journey reset complete"
+                            statusIsError = false
+                            await questionnaireManager.loadJourneyProgress()
+                        } catch {
+                            statusMessage = "Error: \(error.localizedDescription)"
+                            statusIsError = true
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Label("Reset Journey", systemImage: "arrow.counterclockwise")
+                            .foregroundColor(.red)
+                        Spacer()
+                        if timeTravelManager.isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Clear all data")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .disabled(timeTravelManager.isLoading)
+            }
+
+            // Test Data Indicator
+            if timeTravelManager.isTestData {
+                HStack {
+                    Image(systemName: "testtube.2")
+                        .foregroundColor(.orange)
+                    Text("Account marked as test data")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Spacer()
+                    Button("Clear Flag") {
+                        Task {
+                            do {
+                                try await timeTravelManager.clearTestDataFlag()
+                                statusMessage = "Test data flag cleared"
+                                statusIsError = false
+                            } catch {
+                                statusMessage = "Error: \(error.localizedDescription)"
+                                statusIsError = true
+                            }
+                        }
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .tint(.orange)
                 }
             }
-            .disabled(questionnaireManager.currentDay >= 14 || isAdvancingDay)
+        } header: {
+            HStack {
+                Label("Time Travel Mode", systemImage: "clock.arrow.2.circlepath")
+                if timeTravelManager.isTimeTravelActive {
+                    Spacer()
+                    Text("ACTIVE")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(.cyan))
+                }
+            }
+        } footer: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Pick a start date → Complete days with 5-second lockouts → All data timestamped historically.")
+                if timeTravelManager.isTimeTravelActive {
+                    Text("Complete Day → 5s lockout → Advance → Repeat")
+                        .fontWeight(.medium)
+                }
+            }
+        }
+    }
 
+    // MARK: - Journey Controls Section
+
+    private var journeyControlsSection: some View {
+        Section {
             // Reset Progress
             Button {
                 resetProgress()
@@ -717,326 +892,7 @@ struct UnifiedDebugPanel: View {
         } header: {
             Label("Journey Controls", systemImage: "slider.horizontal.3")
         } footer: {
-            Text("Jump to Day changes current day only. Backdate Start also adjusts the journey start timestamp for accurate time calculations.")
-        }
-    }
-
-    // MARK: - Speed Run Section
-
-    private var speedRunSection: some View {
-        Section {
-            // Phenotype Selector
-            HStack {
-                Label("Phenotype", systemImage: "person.crop.rectangle.badge.plus")
-                    .foregroundColor(.indigo)
-                Spacer()
-                Picker("", selection: $speedRunPhenotype) {
-                    Text("Normal").tag("normal")
-                    Text("Insomnia").tag("insomnia")
-                    Text("OSA").tag("osa")
-                    Text("Anxiety").tag("anxiety")
-                    Text("Depression").tag("depression")
-                }
-                .pickerStyle(.menu)
-                .frame(width: 130)
-            }
-
-            // Speed Complete Current Day
-            Button {
-                speedCompleteCurrentDay()
-            } label: {
-                HStack {
-                    Label("Complete Day \(questionnaireManager.currentDay)", systemImage: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Spacer()
-                    if isSpeedCompleting {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Text("Mock answers + advance")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .disabled(isSpeedCompleting || questionnaireManager.currentDay > 14)
-
-            // Speed Run to Target Day
-            HStack {
-                Label("Speed Run to", systemImage: "forward.end.fill")
-                    .foregroundColor(.orange)
-                Spacer()
-                Picker("", selection: $speedRunTargetDay) {
-                    ForEach(questionnaireManager.currentDay...14, id: \.self) { day in
-                        Text("Day \(day)").tag(day)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(width: 100)
-
-                Button {
-                    speedRunToDay()
-                } label: {
-                    if isSpeedRunning {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                    } else {
-                        Text("Run")
-                            .fontWeight(.semibold)
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
-                .disabled(isSpeedRunning || speedRunTargetDay <= questionnaireManager.currentDay)
-            }
-
-            // Full Journey Button
-            Button {
-                speedRunFullJourney()
-            } label: {
-                HStack {
-                    Label("Complete Full Journey", systemImage: "flame.fill")
-                        .foregroundColor(.red)
-                    Spacer()
-                    if isSpeedRunning {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Text("Days \(questionnaireManager.currentDay)→14")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .disabled(isSpeedRunning || questionnaireManager.currentDay >= 14)
-        } header: {
-            Label("Speed Run (Accelerated Testing)", systemImage: "hare.fill")
-        } footer: {
-            Text("Auto-generates mock questionnaire answers based on selected phenotype. HealthKit data from your Watch is preserved. Use this to quickly test the full 14-day journey.")
-        }
-    }
-
-    // MARK: - Speed Test Mode Section (15-Second Lockouts)
-
-    @State private var speedTestPhenotypeSelection: String = "normal"
-
-    private var speedTestModeSection: some View {
-        Section {
-            // Speed Test Mode Toggle with Red Badge
-            HStack {
-                if speedTestManager.isSpeedTestMode {
-                    // Red calendar badge indicator
-                    ZStack {
-                        Image(systemName: "calendar.badge.clock")
-                            .font(.title2)
-                            .foregroundColor(.red)
-                        Circle()
-                            .fill(.red)
-                            .frame(width: 8, height: 8)
-                            .offset(x: 12, y: -10)
-                    }
-                } else {
-                    Image(systemName: "clock.arrow.2.circlepath")
-                        .font(.title2)
-                        .foregroundColor(.gray)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Speed Test Mode")
-                        .font(.headline)
-                    Text(speedTestManager.isSpeedTestMode ? "15-second day lockouts active" : "Normal 24-hour day cycles")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                Toggle("", isOn: Binding(
-                    get: { speedTestManager.isSpeedTestMode },
-                    set: { newValue in
-                        Task {
-                            do {
-                                if newValue {
-                                    try await speedTestManager.enableSpeedTestMode()
-                                } else {
-                                    try await speedTestManager.disableSpeedTestMode()
-                                }
-                            } catch {
-                                statusMessage = "Error: \(error.localizedDescription)"
-                                statusIsError = true
-                            }
-                        }
-                    }
-                ))
-                .labelsHidden()
-            }
-
-            // Test Data Indicator
-            if speedTestManager.isTestData {
-                HStack {
-                    Image(systemName: "testtube.2")
-                        .foregroundColor(.orange)
-                    Text("This account is marked as test data")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                    Spacer()
-                    Button("Clear Flag") {
-                        Task {
-                            do {
-                                try await speedTestManager.clearTestDataFlag()
-                                statusMessage = "Test data flag cleared"
-                                statusIsError = false
-                            } catch {
-                                statusMessage = "Error: \(error.localizedDescription)"
-                                statusIsError = true
-                            }
-                        }
-                    }
-                    .font(.caption)
-                    .buttonStyle(.bordered)
-                    .tint(.orange)
-                }
-            }
-
-            // Countdown Timer (when active)
-            if speedTestManager.isSpeedTestMode && speedTestManager.secondsUntilUnlock > 0 {
-                HStack {
-                    Image(systemName: "timer")
-                        .foregroundColor(.blue)
-                        .font(.title2)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Next Day Unlocks In")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("\(speedTestManager.secondsUntilUnlock) seconds")
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .foregroundColor(.blue)
-                            .monospacedDigit()
-                    }
-
-                    Spacer()
-
-                    // Progress circle
-                    ZStack {
-                        Circle()
-                            .stroke(Color.blue.opacity(0.2), lineWidth: 4)
-                            .frame(width: 40, height: 40)
-                        Circle()
-                            .trim(from: 0, to: CGFloat(speedTestManager.secondsUntilUnlock) / 15.0)
-                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                            .frame(width: 40, height: 40)
-                            .rotationEffect(.degrees(-90))
-                        Text("\(speedTestManager.secondsUntilUnlock)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                    }
-                }
-                .padding(.vertical, 8)
-                .listRowBackground(Color.blue.opacity(0.1))
-            }
-
-            // Speed Test Controls (when mode is enabled)
-            if speedTestManager.isSpeedTestMode {
-                // Phenotype Selector
-                HStack {
-                    Label("Phenotype", systemImage: "person.crop.rectangle")
-                        .foregroundColor(.indigo)
-                    Spacer()
-                    Picker("", selection: $speedTestPhenotypeSelection) {
-                        Text("Normal").tag("normal")
-                        Text("Insomnia").tag("insomnia")
-                        Text("OSA").tag("osa")
-                        Text("Anxiety").tag("anxiety")
-                        Text("Depression").tag("depression")
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 130)
-                }
-
-                // Complete Day + Start Countdown
-                Button {
-                    Task {
-                        do {
-                            try await speedTestManager.completeDay(phenotype: speedTestPhenotypeSelection)
-                            statusMessage = "Day \(speedTestManager.currentDay) completed. Countdown started!"
-                            statusIsError = false
-                            await questionnaireManager.loadJourneyProgress()
-                        } catch {
-                            statusMessage = "Error: \(error.localizedDescription)"
-                            statusIsError = true
-                        }
-                    }
-                } label: {
-                    HStack {
-                        Label("Complete Day \(questionnaireManager.currentDay)", systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        Spacer()
-                        if speedTestManager.isLoading {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            Text("Mock answers + start 15s timer")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .disabled(speedTestManager.isLoading || speedTestManager.secondsUntilUnlock > 0 || questionnaireManager.currentDay > 14)
-
-                // Advance to Next Day (when countdown complete)
-                if speedTestManager.canAdvance {
-                    Button {
-                        Task {
-                            do {
-                                try await speedTestManager.advanceToNextDay()
-                                questionnaireManager.currentDay = speedTestManager.currentDay
-                                statusMessage = "Advanced to Day \(speedTestManager.currentDay)"
-                                statusIsError = false
-                                await questionnaireManager.loadJourneyProgress()
-                            } catch {
-                                statusMessage = "Error: \(error.localizedDescription)"
-                                statusIsError = true
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Label("Advance to Day \(min(questionnaireManager.currentDay + 1, 14))", systemImage: "arrow.right.circle.fill")
-                                .foregroundColor(.orange)
-                            Spacer()
-                            Text("Countdown complete!")
-                                .font(.caption)
-                                .foregroundColor(.green)
-                        }
-                    }
-                    .listRowBackground(Color.green.opacity(0.1))
-                }
-            }
-        } header: {
-            HStack {
-                Label("Speed Test Mode", systemImage: "clock.badge.checkmark")
-                if speedTestManager.isSpeedTestMode {
-                    Spacer()
-                    Text("ACTIVE")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(.red))
-                }
-            }
-        } footer: {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Simulates the full 14-day journey with 15-second lockouts instead of 24 hours.")
-                if speedTestManager.isSpeedTestMode {
-                    Text("Complete a day → 15 sec countdown → Advance → Repeat")
-                        .fontWeight(.medium)
-                }
-                Text("HealthKit data from your Apple Watch is preserved. Test data is marked and can be filtered on the Dashboard.")
-                    .foregroundColor(.secondary)
-            }
+            Text("Use Time Travel Mode above for testing. Reset clears all data and returns to Day 1.")
         }
     }
 
@@ -1079,196 +935,6 @@ struct UnifiedDebugPanel: View {
             Label("Experimental Features", systemImage: "flask")
         } footer: {
             Text("These features are still in development. Enable to test them on the main dashboard.")
-        }
-    }
-
-    private func jumpToDay() {
-        print("[Debug Panel] jumpToDay called, targetDay: \(jumpTargetDay)")
-        isJumpingToDay = true
-        statusMessage = nil
-
-        Task {
-            do {
-                print("[Debug Panel] Calling ConvexService.shared.jumpToDay(\(jumpTargetDay))...")
-                let response = try await ConvexService.shared.jumpToDay(jumpTargetDay)
-                print("[Debug Panel] Response: success=\(response.success), previousDay=\(response.previousDay ?? -1), newDay=\(response.newDay ?? -1)")
-
-                await MainActor.run {
-                    if response.success {
-                        questionnaireManager.currentDay = response.newDay ?? jumpTargetDay
-                        statusMessage = "Jumped to Day \(response.newDay ?? jumpTargetDay)"
-                        statusIsError = false
-                        print("[Debug Panel] Successfully jumped to Day \(response.newDay ?? jumpTargetDay)")
-                    } else {
-                        statusMessage = "Failed to jump to day"
-                        statusIsError = true
-                        print("[Debug Panel] Server returned success=false")
-                    }
-                    isJumpingToDay = false
-                }
-                await questionnaireManager.loadJourneyProgress()
-            } catch {
-                print("[Debug Panel] ERROR: \(error)")
-                print("[Debug Panel] Error details: \(String(describing: error))")
-                await MainActor.run {
-                    statusMessage = "Error: \(error.localizedDescription)"
-                    statusIsError = true
-                    isJumpingToDay = false
-                }
-            }
-        }
-    }
-
-    private func backdateStart() {
-        print("[Debug Panel] backdateStart called, daysAgo: \(backdateDaysAgo)")
-        isBackdating = true
-        statusMessage = nil
-
-        Task {
-            do {
-                print("[Debug Panel] Calling ConvexService.shared.backdateUserStart(daysAgo: \(backdateDaysAgo))...")
-                let response = try await ConvexService.shared.backdateUserStart(daysAgo: backdateDaysAgo)
-                print("[Debug Panel] Response: success=\(response.success), previousDay=\(response.previousDay ?? -1), newDay=\(response.newDay ?? -1)")
-
-                await MainActor.run {
-                    if response.success {
-                        let newDay = response.newDay ?? (backdateDaysAgo + 1)
-                        questionnaireManager.currentDay = newDay
-                        statusMessage = "Backdated \(backdateDaysAgo) days → Day \(newDay)"
-                        statusIsError = false
-                        print("[Debug Panel] Successfully backdated to Day \(newDay)")
-                    } else {
-                        statusMessage = "Failed to backdate"
-                        statusIsError = true
-                        print("[Debug Panel] Server returned success=false")
-                    }
-                    isBackdating = false
-                }
-                await questionnaireManager.loadJourneyProgress()
-            } catch {
-                print("[Debug Panel] ERROR: \(error)")
-                print("[Debug Panel] Error details: \(String(describing: error))")
-                await MainActor.run {
-                    statusMessage = "Error: \(error.localizedDescription)"
-                    statusIsError = true
-                    isBackdating = false
-                }
-            }
-        }
-    }
-
-    // MARK: - Speed Run Actions
-
-    private func speedCompleteCurrentDay() {
-        print("[Debug Panel] speedCompleteCurrentDay called, phenotype: \(speedRunPhenotype)")
-        isSpeedCompleting = true
-        statusMessage = nil
-
-        Task {
-            do {
-                let response = try await ConvexService.shared.speedCompleteDay(
-                    phenotype: speedRunPhenotype,
-                    advanceToNext: true
-                )
-
-                await MainActor.run {
-                    if response.success {
-                        let completedDay = response.day ?? questionnaireManager.currentDay
-                        let newDay = response.newDay ?? (completedDay + 1)
-                        questionnaireManager.currentDay = newDay
-                        statusMessage = "Day \(completedDay) completed → Day \(newDay)"
-                        statusIsError = false
-                        print("[Debug Panel] Speed completed Day \(completedDay), advanced to Day \(newDay)")
-                    } else {
-                        statusMessage = "Failed to speed complete day"
-                        statusIsError = true
-                    }
-                    isSpeedCompleting = false
-                }
-                await questionnaireManager.loadJourneyProgress()
-            } catch {
-                print("[Debug Panel] Speed complete error: \(error)")
-                await MainActor.run {
-                    statusMessage = "Error: \(error.localizedDescription)"
-                    statusIsError = true
-                    isSpeedCompleting = false
-                }
-            }
-        }
-    }
-
-    private func speedRunToDay() {
-        print("[Debug Panel] speedRunToDay called, target: \(speedRunTargetDay), phenotype: \(speedRunPhenotype)")
-        isSpeedRunning = true
-        statusMessage = nil
-
-        Task {
-            do {
-                let response = try await ConvexService.shared.speedRunFullJourney(
-                    phenotype: speedRunPhenotype,
-                    targetDay: speedRunTargetDay
-                )
-
-                await MainActor.run {
-                    if response.success {
-                        let endDay = response.endDay ?? speedRunTargetDay
-                        let daysCompleted = response.daysCompleted ?? 0
-                        questionnaireManager.currentDay = endDay
-                        statusMessage = "Speed run: \(daysCompleted) days → Day \(endDay)"
-                        statusIsError = false
-                        print("[Debug Panel] Speed run completed \(daysCompleted) days to Day \(endDay)")
-                    } else {
-                        statusMessage = "Failed to speed run"
-                        statusIsError = true
-                    }
-                    isSpeedRunning = false
-                }
-                await questionnaireManager.loadJourneyProgress()
-            } catch {
-                print("[Debug Panel] Speed run error: \(error)")
-                await MainActor.run {
-                    statusMessage = "Error: \(error.localizedDescription)"
-                    statusIsError = true
-                    isSpeedRunning = false
-                }
-            }
-        }
-    }
-
-    private func speedRunFullJourney() {
-        print("[Debug Panel] speedRunFullJourney called, phenotype: \(speedRunPhenotype)")
-        isSpeedRunning = true
-        statusMessage = nil
-
-        Task {
-            do {
-                let response = try await ConvexService.shared.speedRunFullJourney(
-                    phenotype: speedRunPhenotype,
-                    targetDay: 14
-                )
-
-                await MainActor.run {
-                    if response.success {
-                        let daysCompleted = response.daysCompleted ?? 0
-                        questionnaireManager.currentDay = 14
-                        statusMessage = "Full journey: \(daysCompleted) days completed"
-                        statusIsError = false
-                        print("[Debug Panel] Full journey completed: \(daysCompleted) days")
-                    } else {
-                        statusMessage = "Failed to complete full journey"
-                        statusIsError = true
-                    }
-                    isSpeedRunning = false
-                }
-                await questionnaireManager.loadJourneyProgress()
-            } catch {
-                print("[Debug Panel] Full journey error: \(error)")
-                await MainActor.run {
-                    statusMessage = "Error: \(error.localizedDescription)"
-                    statusIsError = true
-                    isSpeedRunning = false
-                }
-            }
         }
     }
 
@@ -1499,6 +1165,8 @@ struct UnifiedDebugPanel: View {
                 // Clear UserDefaults splash screen tracking so they show again
                 await MainActor.run {
                     clearSplashScreenTracking()
+                    // Reset journey phase back to intake
+                    JourneyPhaseManager.shared.currentPhase = .intake
                 }
 
                 await questionnaireManager.loadJourneyProgress()
@@ -1518,17 +1186,17 @@ struct UnifiedDebugPanel: View {
         }
     }
 
-    /// Clear UserDefaults keys that track if splash screens have been shown
+    /// Clear UserDefaults keys that track if day splash screens have been shown
+    /// NOTE: Does NOT clear journey intro - that's a one-time app intro, not per-journey
     private func clearSplashScreenTracking() {
         // Clear day splash keys (daySplashShown_day1_assessment through day14)
         for day in 1...14 {
             UserDefaults.standard.removeObject(forKey: "daySplashShown_day\(day)_assessment")
             UserDefaults.standard.removeObject(forKey: "expansionSplashShown_day\(day)")
         }
-        // Also clear journey intro shown flag
-        UserDefaults.standard.removeObject(forKey: "hasSeenJourneyIntro")
-        OnboardingManager.shared.resetJourneyIntro()
-        print("[Debug] Cleared all splash screen tracking UserDefaults")
+        // NOTE: Do NOT clear hasSeenJourneyIntro - that's a one-time app introduction
+        // The journey intro explains the app once per device, not once per journey
+        print("[Debug] Cleared day splash screen tracking UserDefaults")
     }
 
     /// Reset just the journey intro flag so it shows again on next app launch

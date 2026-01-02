@@ -22,6 +22,8 @@ struct AnalysisPendingView: View {
     @State private var lastRefreshTime: Date = Date()
     @State private var isRefreshing = false
     @State private var refreshTimer: AnyCancellable?
+    @State private var showingResetConfirm = false
+    @State private var isResetting = false
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
@@ -47,11 +49,24 @@ struct AnalysisPendingView: View {
                     // Encouragement Message
                     encouragementCard
 
+                    // Debug: Emergency Reset (for stuck states)
+                    #if DEBUG
+                    emergencyResetSection
+                    #endif
+
                     Spacer(minLength: 40)
                 }
                 .padding()
             }
             .background(theme.backgroundGradient)
+            .alert("Reset Journey?", isPresented: $showingResetConfirm) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reset", role: .destructive) {
+                    performEmergencyReset()
+                }
+            } message: {
+                Text("This will clear all your data and return you to Day 1. Use this if you're stuck on this screen.")
+            }
             .toolbarColorScheme(palette.isDark ? .dark : .light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -126,6 +141,78 @@ struct AnalysisPendingView: View {
             await journeyManager.loadJourneyStatus(userId: userId)
             await MainActor.run {
                 lastRefreshTime = Date()
+            }
+        }
+    }
+
+    // MARK: - Emergency Reset (Debug)
+
+    private var emergencyResetSection: some View {
+        VStack(spacing: 12) {
+            Text("Stuck on this screen?")
+                .font(.caption)
+                .foregroundColor(theme.textSecondary)
+
+            Button {
+                showingResetConfirm = true
+            } label: {
+                HStack {
+                    if isResetting {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    Text("Emergency Reset")
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.red)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.red.opacity(0.5), lineWidth: 1)
+                )
+            }
+            .disabled(isResetting)
+        }
+        .padding(.top, 20)
+    }
+
+    private func performEmergencyReset() {
+        isResetting = true
+
+        Task {
+            do {
+                // Reset on server
+                _ = try await ConvexService.shared.resetJourneyProgress()
+
+                // Reset local state
+                await MainActor.run {
+                    // Clear day splash tracking
+                    for day in 1...14 {
+                        UserDefaults.standard.removeObject(forKey: "daySplashShown_day\(day)_assessment")
+                        UserDefaults.standard.removeObject(forKey: "expansionSplashShown_day\(day)")
+                    }
+
+                    // Reset questionnaire manager
+                    QuestionnaireManager.shared.currentDay = 1
+
+                    // CRITICAL: Reset journey phase back to intake
+                    JourneyPhaseManager.shared.currentPhase = .intake
+
+                    isResetting = false
+                }
+
+                // Reload progress
+                await QuestionnaireManager.shared.loadJourneyProgress()
+
+                print("[AnalysisPending] Emergency reset complete - returning to intake phase")
+            } catch {
+                await MainActor.run {
+                    isResetting = false
+                }
+                print("[AnalysisPending] Emergency reset failed: \(error)")
             }
         }
     }

@@ -16,17 +16,27 @@ class HealthKitWatchManager: ObservableObject {
     @Published var lastNightSleep: SleepData?
     @Published var todayActivity: ActivityData?
     @Published var heartRateData: [HeartRateReading] = []
+    @Published var daylightExposure: DaylightExposureData?
     @Published var isAuthorized = false
-    
+
     // Watch-specific health data types
-    private let watchHealthTypes: Set<HKSampleType> = [
-        HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
-        HKObjectType.quantityType(forIdentifier: .heartRate)!,
-        HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
-        HKObjectType.quantityType(forIdentifier: .appleExerciseTime)!,
-        HKObjectType.quantityType(forIdentifier: .stepCount)!,
-        HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!
-    ]
+    private var watchHealthTypes: Set<HKSampleType> {
+        var types: Set<HKSampleType> = [
+            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
+            HKObjectType.quantityType(forIdentifier: .heartRate)!,
+            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKObjectType.quantityType(forIdentifier: .appleExerciseTime)!,
+            HKObjectType.quantityType(forIdentifier: .stepCount)!,
+            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!
+        ]
+        // Time in Daylight available in watchOS 10+
+        if #available(watchOS 10.0, *) {
+            if let daylightType = HKObjectType.quantityType(forIdentifier: .timeInDaylight) {
+                types.insert(daylightType)
+            }
+        }
+        return types
+    }
     
     init() {
         checkHealthKitAvailability()
@@ -53,11 +63,12 @@ class HealthKitWatchManager: ObservableObject {
     
     func syncHealthData() {
         guard isAuthorized else { return }
-        
+
         Task {
             await loadSleepData()
             await loadActivityData()
             await loadHeartRateData()
+            await loadDaylightExposure()
         }
     }
     
@@ -73,6 +84,7 @@ class HealthKitWatchManager: ObservableObject {
             await loadSleepData()
             await loadActivityData()
             await loadHeartRateData()
+            await loadDaylightExposure()
         }
     }
     
@@ -264,8 +276,70 @@ class HealthKitWatchManager: ObservableObject {
         // In a real app, this would be more sophisticated
         let totalSamples = samples.count
         let asleepSamples = samples.filter { $0.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue }.count
-        
+
         return totalSamples > 0 ? Double(asleepSamples) / Double(totalSamples) * 100 : 0
+    }
+
+    // MARK: - Daylight Exposure
+
+    /// Load today's time in daylight from HealthKit (watchOS 10+)
+    @MainActor
+    private func loadDaylightExposure() async {
+        guard #available(watchOS 10.0, *) else {
+            print("Time in Daylight requires watchOS 10+")
+            return
+        }
+
+        guard let daylightType = HKQuantityType.quantityType(forIdentifier: .timeInDaylight) else {
+            print("Time in Daylight type not available")
+            return
+        }
+
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfDay = calendar.startOfDay(for: now)
+
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: now, options: .strictStartDate)
+
+        // Also get morning light (before 10 AM) for circadian optimization
+        let morningEnd = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: now) ?? now
+        let morningPredicate = HKQuery.predicateForSamples(withStart: startOfDay, end: morningEnd, options: .strictStartDate)
+
+        // Load total daylight
+        let totalMinutes = await loadDaylightMinutes(type: daylightType, predicate: predicate)
+
+        // Load morning daylight
+        let morningMinutes = await loadDaylightMinutes(type: daylightType, predicate: morningPredicate)
+
+        self.daylightExposure = DaylightExposureData(
+            totalMinutes: Int(totalMinutes),
+            morningMinutes: Int(morningMinutes),
+            targetMinutes: 90, // Recommended daily target
+            date: startOfDay
+        )
+
+        print("Daylight exposure loaded: \(Int(totalMinutes)) min total, \(Int(morningMinutes)) min morning")
+    }
+
+    @available(watchOS 10.0, *)
+    private func loadDaylightMinutes(type: HKQuantityType, predicate: NSPredicate) async -> Double {
+        await withCheckedContinuation { continuation in
+            let query = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, error in
+
+                if let error = error {
+                    print("Daylight query error: \(error.localizedDescription)")
+                    continuation.resume(returning: 0.0)
+                    return
+                }
+
+                // Time in daylight is measured in seconds, convert to minutes
+                let seconds = result?.sumQuantity()?.doubleValue(for: HKUnit.second()) ?? 0.0
+                let minutes = seconds / 60.0
+                continuation.resume(returning: minutes)
+            }
+
+            healthStore.execute(query)
+        }
     }
 }
 
@@ -286,4 +360,20 @@ struct ActivityData {
 struct HeartRateReading {
     let value: Double // BPM
     let timestamp: Date
+}
+
+struct DaylightExposureData {
+    let totalMinutes: Int      // Total time in daylight today
+    let morningMinutes: Int    // Morning light exposure (before 10 AM)
+    let targetMinutes: Int     // Daily target (default 90 min)
+    let date: Date
+
+    var percentOfTarget: Int {
+        guard targetMinutes > 0 else { return 0 }
+        return min(100, (totalMinutes * 100) / targetMinutes)
+    }
+
+    var needsMoreLight: Bool {
+        totalMinutes < targetMinutes
+    }
 }

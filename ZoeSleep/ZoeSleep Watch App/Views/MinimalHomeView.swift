@@ -15,12 +15,14 @@ import Charts
 struct MinimalHomeView: View {
     @StateObject private var gardenManager = GardenManager.shared
     @StateObject private var convexService = WatchConvexService.shared
+    @StateObject private var healthKitManager = HealthKitWatchManager()
     @State private var checkInStatus: WatchCheckInStatus?
     @State private var taskStatus: WatchTaskStatus?
     @State private var circadianStatus: WatchCircadianStatusResponse?
     @State private var showCheckInFlow = false
     @State private var showTasks = false
     @State private var showTrends = false
+    @State private var showSleepStages = false
     @State private var isLoading = true
     @State private var isSigningIn = false
     @State private var signInError: String?
@@ -99,6 +101,9 @@ struct MinimalHomeView: View {
                     // Trends Card
                     trendsCard
 
+                    // Sleep Stages Card (Experimental)
+                    sleepStagesCard
+
                     // Streak Card
                     streakCard
 
@@ -170,6 +175,9 @@ struct MinimalHomeView: View {
         }
         .sheet(isPresented: $showTrends) {
             CheckInTrendsView()
+        }
+        .sheet(isPresented: $showSleepStages) {
+            SleepStagesView()
         }
         .onAppear {
             loadData()
@@ -397,6 +405,57 @@ struct MinimalHomeView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Sleep Stages Card (Experimental)
+
+    private var sleepStagesCard: some View {
+        Button(action: { showSleepStages = true }) {
+            HStack {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(Color.indigo.opacity(0.2))
+                        .frame(width: 32, height: 32)
+
+                    Image(systemName: "bed.double.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.indigo)
+                }
+
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 4) {
+                        Text("Sleep Stages")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white)
+
+                        Text("BETA")
+                            .font(.system(size: 6, weight: .bold))
+                            .foregroundColor(.indigo)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(Color.indigo.opacity(0.3))
+                            .clipShape(Capsule())
+                    }
+
+                    Text("Chronotype & Circadian Fit")
+                        .font(.system(size: 9))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10))
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(cardBackground)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Not Authenticated Card
 
     private var notAuthenticatedCard: some View {
@@ -466,8 +525,21 @@ struct MinimalHomeView: View {
 
     @ViewBuilder
     private var circadianCard: some View {
-        if let status = circadianStatus {
-            // Convert WatchCircadianStatusResponse to CircadianStatus
+        // Prefer local HealthKit data (real-time from Watch sensors)
+        if let localData = healthKitManager.daylightExposure {
+            CircadianExposureCard(
+                status: CircadianStatus(
+                    hasData: true,
+                    daylightMins: localData.totalMinutes,
+                    targetMins: localData.targetMinutes,
+                    percentOfTarget: localData.percentOfTarget,
+                    circadianScore: circadianStatus?.circadianScore, // Use backend score if available
+                    needsMoreLight: localData.needsMoreLight,
+                    morningLightMins: localData.morningMinutes
+                )
+            )
+        } else if let status = circadianStatus {
+            // Fall back to backend data
             CircadianExposureCard(
                 status: CircadianStatus(
                     hasData: status.hasData,
@@ -526,6 +598,9 @@ struct MinimalHomeView: View {
 
     private func loadData() {
         isLoading = true
+
+        // Request HealthKit permissions and sync daylight exposure data
+        healthKitManager.requestPermissions()
 
         // Load garden (use empty for now, will sync from Convex)
         if gardenManager.garden == nil {

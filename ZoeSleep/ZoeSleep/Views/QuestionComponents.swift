@@ -45,12 +45,12 @@ struct CircadianColors {
         }
     }
 
-    /// Background for secondary elements
+    /// Background for secondary elements - semi-transparent for glassy effect
     static var secondaryBackground: Color {
         if isEvening {
-            return Color(red: 0.25, green: 0.15, blue: 0.1)  // Dark brown
+            return Color(red: 0.25, green: 0.15, blue: 0.1).opacity(0.5)  // Semi-transparent dark brown
         } else {
-            return Color(.secondarySystemBackground)
+            return Color(.secondarySystemBackground).opacity(0.6)
         }
     }
 
@@ -2087,7 +2087,7 @@ struct PrescriptionMedSelectInput: View {
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
-                        .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08) : Color(.systemBackground))
+                        .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08).opacity(0.6) : Color(.systemBackground).opacity(0.7))
                         .cornerRadius(8)
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(CircadianColors.border, lineWidth: 1))
                 }
@@ -2128,7 +2128,7 @@ struct PrescriptionMedSelectInput: View {
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
-                        .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08) : Color(.systemBackground))
+                        .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08).opacity(0.6) : Color(.systemBackground).opacity(0.7))
                         .cornerRadius(8)
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(CircadianColors.border, lineWidth: 1))
                 }
@@ -2328,7 +2328,7 @@ struct SupplementSelectInput: View {
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
-                        .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08) : Color(.systemBackground))
+                        .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08).opacity(0.6) : Color(.systemBackground).opacity(0.7))
                         .cornerRadius(8)
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(CircadianColors.border, lineWidth: 1))
                 }
@@ -2369,7 +2369,7 @@ struct SupplementSelectInput: View {
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
-                        .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08) : Color(.systemBackground))
+                        .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08).opacity(0.6) : Color(.systemBackground).opacity(0.7))
                         .cornerRadius(8)
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(CircadianColors.border, lineWidth: 1))
                 }
@@ -2546,7 +2546,7 @@ struct SurgeryDetailsInput: View {
                     .foregroundColor(CircadianColors.primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08) : Color(.systemBackground))
+                    .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08).opacity(0.6) : Color(.systemBackground).opacity(0.7))
                     .cornerRadius(8)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(CircadianColors.border, lineWidth: 1))
             }
@@ -2561,7 +2561,7 @@ struct SurgeryDetailsInput: View {
                     .foregroundColor(CircadianColors.primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08) : Color(.systemBackground))
+                    .background(isEvening ? Color(red: 0.2, green: 0.12, blue: 0.08).opacity(0.6) : Color(.systemBackground).opacity(0.7))
                     .cornerRadius(8)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(CircadianColors.border, lineWidth: 1))
             }

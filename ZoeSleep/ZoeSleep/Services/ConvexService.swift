@@ -1073,33 +1073,35 @@ class ConvexService {
         ])
     }
 
-    // MARK: - Speed Test Mode (15-Second Day Lockouts)
+    // MARK: - Time Travel Mode (5-Second Day Lockouts)
 
-    struct SpeedTestStatusResponse: Codable {
-        let speedTestMode: Bool
+    struct TimeTravelStatusResponse: Codable {
+        let isTimeTravelActive: Bool
         let isTestData: Bool
+        let startedAt: Double
         let currentDay: Int
-        let dayUnlocksAt: Int?
+        let simulatedDate: Double
+        let dayUnlocksAt: Double?
         let secondsUntilUnlock: Int
         let canAdvance: Bool
-        let serverTime: Int
+        let isLocked: Bool
     }
 
-    struct SpeedTestEnableResponse: Codable {
+    struct TimeTravelSetupResponse: Codable {
         let success: Bool
-        let speedTestMode: Bool?
-        let message: String?
+        let startDate: Double?
+        let currentDay: Int?
+        let simulatedDate: Double?
     }
 
-    struct SpeedTestCompleteDayResponse: Codable {
+    struct TimeTravelCompleteDayResponse: Codable {
         let success: Bool
         let completedDay: Int?
-        let phenotype: String?
-        let dayUnlocksAt: Int?
+        let historicalDate: Double?
         let secondsUntilUnlock: Int?
     }
 
-    struct SpeedTestAdvanceResponse: Codable {
+    struct TimeTravelAdvanceResponse: Codable {
         let success: Bool
         let previousDay: Int?
         let currentDay: Int?
@@ -1108,58 +1110,65 @@ class ConvexService {
         let secondsUntilUnlock: Int?
     }
 
-    /// Enable speed test mode - 15-second day lockouts instead of 24 hours
-    func enableSpeedTestMode() async throws -> SpeedTestEnableResponse {
-        guard let userId = currentUserId else {
-            throw ConvexError.notAuthenticated
-        }
-
-        return try await client.mutation("ios:enableSpeedTestMode", args: [
-            "userId": userId
-        ])
+    struct TimeTravelResetResponse: Codable {
+        let success: Bool
+        let currentDay: Int?
+        let startedAt: Double?
     }
 
-    /// Disable speed test mode - return to normal 24-hour day cycles
-    func disableSpeedTestMode() async throws -> SpeedTestEnableResponse {
+    /// Set up Time Travel Mode - pick a historical start date for Day 1
+    /// All journey data will be backdated to this period
+    func timeTravelSetup(startDate: Date) async throws -> TimeTravelSetupResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
-        return try await client.mutation("ios:disableSpeedTestMode", args: [
-            "userId": userId
-        ])
-    }
-
-    /// Get current speed test status including countdown timer
-    func getSpeedTestStatus() async throws -> SpeedTestStatusResponse {
-        guard let userId = currentUserId else {
-            throw ConvexError.notAuthenticated
-        }
-
-        return try await client.query("ios:getSpeedTestStatus", args: [
-            "userId": userId
-        ])
-    }
-
-    /// Complete current day in speed test mode (uses mock data) and start 15-second countdown
-    func speedTestCompleteDay(phenotype: String = "normal") async throws -> SpeedTestCompleteDayResponse {
-        guard let userId = currentUserId else {
-            throw ConvexError.notAuthenticated
-        }
-
-        return try await client.mutation("ios:speedTestCompleteDay", args: [
+        return try await client.mutation("ios:timeTravelSetup", args: [
             "userId": userId,
-            "phenotype": phenotype
+            "startDate": startDate.timeIntervalSince1970 * 1000 // Unix timestamp in ms
         ])
     }
 
-    /// Advance to next day after speed test countdown completes
-    func speedTestAdvanceDay() async throws -> SpeedTestAdvanceResponse {
+    /// Get Time Travel status - current day, lockout countdown, simulated dates
+    func getTimeTravelStatus() async throws -> TimeTravelStatusResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
-        return try await client.mutation("ios:speedTestAdvanceDay", args: [
+        return try await client.query("ios:timeTravelStatus", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Complete current day with mock data and start 5-second lockout
+    func timeTravelCompleteDay() async throws -> TimeTravelCompleteDayResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:timeTravelCompleteDay", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Advance to next day after lockout expires
+    func timeTravelAdvanceDay() async throws -> TimeTravelAdvanceResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:timeTravelAdvanceDay", args: [
+            "userId": userId
+        ])
+    }
+
+    /// Reset Time Travel - clears all data and returns to Day 1
+    func timeTravelReset() async throws -> TimeTravelResetResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:timeTravelReset", args: [
             "userId": userId
         ])
     }

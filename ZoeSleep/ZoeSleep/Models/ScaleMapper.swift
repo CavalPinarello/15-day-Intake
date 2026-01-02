@@ -549,7 +549,7 @@ struct ScaleMapper {
             return ("No difficulty", "Extreme difficulty")
         }
         if id.hasPrefix("BPI") || id == "23" || id == "204" || id == "205" || id == "206" || id == "207" {
-            return ("No pain", "Worst imaginable")
+            return ("No pain at all", "Worst imaginable")
         }
         if id.hasPrefix("DASS") {
             return ("Did not apply", "Very much")
@@ -830,7 +830,7 @@ struct ScaleMapper {
 
     /// BPI: Pain intensity
     static let bpiLabels: [Int: String] = [
-        1: "No pain",
+        1: "No pain at all",
         2: "Minimal pain",
         3: "Mild pain",
         4: "Mild pain",

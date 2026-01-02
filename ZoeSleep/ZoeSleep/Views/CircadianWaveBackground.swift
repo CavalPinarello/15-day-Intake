@@ -835,8 +835,8 @@ struct FlowingWave: Shape {
 
 // MARK: - Glassy Card Background
 
-/// A translucent background for cards - uses ThemeManager for proper sync
-/// CIRCADIAN: In evening/night, cards should be warm dark colors that blend with background
+/// A frosted glass background for cards - moderate blur with visible background
+/// CIRCADIAN: In evening/night, uses warm-tinted glass
 struct GlassyCardBackground: View {
     @ObservedObject private var themeManager = ThemeManager.shared
     var opacity: Double = 0.5
@@ -849,63 +849,55 @@ struct GlassyCardBackground: View {
     }
 
     var body: some View {
-
         ZStack {
-            // Base layer - adapts to circadian mode
+            // Frosted glass with subtle blur - waves still visible
             if palette.isDark {
-                // Evening/Night mode: warm solid brown (high contrast with cream text)
-                // Higher opacity for better text readability
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.20, green: 0.13, blue: 0.09).opacity(min(opacity * 2.5, 0.95)),
-                        Color(red: 0.16, green: 0.10, blue: 0.07).opacity(min(opacity * 2.2, 0.90))
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                // Night mode: material blur with light warm overlay
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+
+                // Light warm tint - keeps waves visible
+                Color(red: 0.22, green: 0.14, blue: 0.09)
+                    .opacity(0.18)
             } else {
-                // Day mode: translucent cream/white (subtle, not glaring)
-                LinearGradient(
-                    colors: [
-                        Color(red: 1.0, green: 0.99, blue: 0.96).opacity(opacity * 0.85),
-                        Color(red: 1.0, green: 0.98, blue: 0.94).opacity(opacity * 0.70)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                // Day mode: light frosted glass
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .light)
+
+                // Very light tint
+                Color.white.opacity(0.1)
             }
 
-            // Optional color tint (subtle in dark mode)
+            // Optional color tint
             if let tint = tint {
-                tint.opacity(palette.isDark ? 0.06 : 0.04)
+                tint.opacity(palette.isDark ? 0.04 : 0.03)
             }
 
-            // Subtle border/highlight for depth
-            if palette.isDark {
-                // Warm amber edge highlight for dark cards
-                RoundedRectangle(cornerRadius: 0)
-                    .strokeBorder(
+            // Subtle top highlight for glass depth
+            VStack {
+                Rectangle()
+                    .fill(
                         LinearGradient(
                             colors: [
-                                Color(red: 0.961, green: 0.620, blue: 0.043).opacity(0.15),
+                                (palette.isDark ? Color(red: 0.961, green: 0.620, blue: 0.043) : Color.white).opacity(0.2),
                                 Color.clear
                             ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
-            } else {
-                // Subtle light highlight for day cards
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.20),
-                        Color.clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .center
-                )
+                    .frame(height: 1)
+                Spacer()
             }
+
+            // Subtle border for definition
+            RoundedRectangle(cornerRadius: 0)
+                .strokeBorder(
+                    (palette.isDark ? Color(red: 0.961, green: 0.620, blue: 0.043) : Color.white).opacity(0.12),
+                    lineWidth: 0.5
+                )
         }
     }
 }
