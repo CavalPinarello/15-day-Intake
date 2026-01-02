@@ -1003,6 +1003,28 @@ class ConvexService {
         ])
     }
 
+    struct BackdateResponse: Codable {
+        let success: Bool
+        let previousStartedAt: Int?
+        let newStartedAt: Int?
+        let previousDay: Int?
+        let newDay: Int?
+        let daysAgo: Int?
+    }
+
+    /// Backdate journey start to simulate being further in the 14-day journey (Debug Mode only)
+    /// Example: backdating 7 days makes the app think you started a week ago (Day 8)
+    func backdateUserStart(daysAgo: Int) async throws -> BackdateResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:backdateUserStart", args: [
+            "userId": userId,
+            "daysAgo": daysAgo
+        ])
+    }
+
     /// Get debug information about the user's journey
     func getJourneyDebugInfo() async throws -> JourneyDebugInfo {
         guard let userId = currentUserId else {

@@ -592,6 +592,8 @@ struct UnifiedDebugPanel: View {
 
     @State private var jumpTargetDay: Int = 1
     @State private var isJumpingToDay = false
+    @State private var backdateDaysAgo: Int = 7
+    @State private var isBackdating = false
 
     private var journeyControlsSection: some View {
         Section {
@@ -622,6 +624,35 @@ struct UnifiedDebugPanel: View {
                 .buttonStyle(.borderedProminent)
                 .tint(.purple)
                 .disabled(isJumpingToDay || jumpTargetDay == questionnaireManager.currentDay)
+            }
+
+            // Backdate Journey Start (for time-based testing)
+            HStack {
+                Label("Backdate Start", systemImage: "calendar.badge.clock")
+                    .foregroundColor(.cyan)
+                Spacer()
+                Picker("", selection: $backdateDaysAgo) {
+                    ForEach(0...13, id: \.self) { days in
+                        Text("\(days)d → Day \(days + 1)").tag(days)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 130)
+
+                Button {
+                    backdateStart()
+                } label: {
+                    if isBackdating {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    } else {
+                        Text("Set")
+                            .fontWeight(.semibold)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.cyan)
+                .disabled(isBackdating)
             }
 
             // Advance Day (Sequential)
@@ -670,7 +701,7 @@ struct UnifiedDebugPanel: View {
         } header: {
             Label("Journey Controls", systemImage: "slider.horizontal.3")
         } footer: {
-            Text("Jump to Day lets you test any day's questionnaires without completing previous days.")
+            Text("Jump to Day changes current day only. Backdate Start also adjusts the journey start timestamp for accurate time calculations.")
         }
     }
 
@@ -748,6 +779,44 @@ struct UnifiedDebugPanel: View {
                     statusMessage = "Error: \(error.localizedDescription)"
                     statusIsError = true
                     isJumpingToDay = false
+                }
+            }
+        }
+    }
+
+    private func backdateStart() {
+        print("[Debug Panel] backdateStart called, daysAgo: \(backdateDaysAgo)")
+        isBackdating = true
+        statusMessage = nil
+
+        Task {
+            do {
+                print("[Debug Panel] Calling ConvexService.shared.backdateUserStart(daysAgo: \(backdateDaysAgo))...")
+                let response = try await ConvexService.shared.backdateUserStart(daysAgo: backdateDaysAgo)
+                print("[Debug Panel] Response: success=\(response.success), previousDay=\(response.previousDay ?? -1), newDay=\(response.newDay ?? -1)")
+
+                await MainActor.run {
+                    if response.success {
+                        let newDay = response.newDay ?? (backdateDaysAgo + 1)
+                        questionnaireManager.currentDay = newDay
+                        statusMessage = "Backdated \(backdateDaysAgo) days → Day \(newDay)"
+                        statusIsError = false
+                        print("[Debug Panel] Successfully backdated to Day \(newDay)")
+                    } else {
+                        statusMessage = "Failed to backdate"
+                        statusIsError = true
+                        print("[Debug Panel] Server returned success=false")
+                    }
+                    isBackdating = false
+                }
+                await questionnaireManager.loadJourneyProgress()
+            } catch {
+                print("[Debug Panel] ERROR: \(error)")
+                print("[Debug Panel] Error details: \(String(describing: error))")
+                await MainActor.run {
+                    statusMessage = "Error: \(error.localizedDescription)"
+                    statusIsError = true
+                    isBackdating = false
                 }
             }
         }

@@ -1503,6 +1503,15 @@ export const getDailyCompletionStatus = query({
       }
     }
 
+    // Get user's triggered gateways FIRST (needed for determining if expansion days have content)
+    const gatewayStates = await ctx.db
+      .query("user_gateway_states")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+    const triggeredGatewayIds = gatewayStates
+      .filter(g => g.triggered)
+      .map(g => g.gateway_id);
+
     // Build result for each day up to current_day
     const dailyStatus: {
       dayNumber: number;
@@ -1524,8 +1533,16 @@ export const getDailyCompletionStatus = query({
       // Sleep log is complete if at least 3 sleep-related questions answered
       const sleepLogCompleted = data ? data.sleepLogQuestions.size >= 3 : false;
       // Assessment is complete if at least 1 non-sleep-log question answered
-      // For day 1, assessment requires more questions (core assessment)
       const assessmentCompleted = data ? data.assessmentQuestions.size > 0 : false;
+
+      // Determine if this day actually HAS assessment questions
+      // Core days (1-5) always have assessments
+      // Expansion days (6-14) only have assessments if their required gateways were triggered
+      let dayHasAssessment = true;
+      if (day >= 6 && day <= 14) {
+        // For expansion days, check if the required gateways were triggered
+        dayHasAssessment = shouldShowExpansion(day, triggeredGatewayIds);
+      }
 
       dailyStatus.push({
         dayNumber: day,
@@ -1538,7 +1555,8 @@ export const getDailyCompletionStatus = query({
       // Track missed days (exclude current day - user can still complete it)
       if (day < user.current_day) {
         const missingSleepLog = !sleepLogCompleted;
-        const missingAssessment = !assessmentCompleted;
+        // Only mark assessment as missing if the day actually HAD assessment questions
+        const missingAssessment = dayHasAssessment && !assessmentCompleted;
         if (missingSleepLog || missingAssessment) {
           missedDays.push({
             dayNumber: day,
@@ -1561,14 +1579,7 @@ export const getDailyCompletionStatus = query({
       splashTitle: string;
     }[] = [];
 
-    // Get user's triggered gateways from user_gateway_states (the authoritative table)
-    const gatewayStates = await ctx.db
-      .query("user_gateway_states")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .collect();
-    const triggeredGatewayIds = gatewayStates
-      .filter(g => g.triggered)
-      .map(g => g.gateway_id);
+    // Note: triggeredGatewayIds already loaded earlier in this function
 
     // Check each expansion day (6-14) that's before the current day
     for (let day = 6; day < user.current_day && day <= 14; day++) {
@@ -2074,6 +2085,77 @@ export const jumpToDay = mutation({
       success: true,
       previousDay,
       newDay: args.targetDay,
+    };
+  },
+});
+
+/**
+ * Backdate user's journey start (DEBUG MODE ONLY)
+ * Changes started_at to simulate being further along in the 14-day journey.
+ * Useful for testing expansion packs, time-based features, and late-journey flows.
+ *
+ * Example: backdating 7 days makes the app think you started a week ago,
+ * so you'd be on Day 8 of the journey with correct time calculations.
+ */
+export const backdateUserStart = mutation({
+  args: {
+    userId: v.id("users"),
+    daysAgo: v.number(), // How many days ago to set started_at (1-14)
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Validate daysAgo is reasonable (1-14 for the journey)
+    if (args.daysAgo < 0 || args.daysAgo > 14) {
+      throw new Error("daysAgo must be between 0 and 14");
+    }
+
+    const now = Date.now();
+    const previousStartedAt = user.started_at;
+    const previousDay = user.current_day || 1;
+
+    // Calculate new started_at (X days ago from now)
+    const newStartedAt = now - (args.daysAgo * 24 * 60 * 60 * 1000);
+
+    // Calculate what day the user should be on based on elapsed time
+    // Day 1 = first day, so daysAgo of 0 = Day 1, daysAgo of 6 = Day 7
+    const calculatedDay = Math.min(args.daysAgo + 1, 14);
+
+    // Update user record
+    await ctx.db.patch(args.userId, {
+      started_at: newStartedAt,
+      current_day: calculatedDay,
+      last_accessed: now,
+    });
+
+    // Log the debug action
+    await ctx.db.insert("ios_app_events", {
+      user_id: args.userId,
+      device_id: "debug",
+      event_type: "debug_backdate_start",
+      event_data: JSON.stringify({
+        previousStartedAt,
+        newStartedAt,
+        previousDay,
+        newDay: calculatedDay,
+        daysAgo: args.daysAgo,
+        timestamp: now,
+      }),
+      timestamp: now,
+    });
+
+    console.log(`[backdateUserStart] User ${user.username}: backdated ${args.daysAgo} days (Day ${previousDay} → Day ${calculatedDay})`);
+
+    return {
+      success: true,
+      previousStartedAt,
+      newStartedAt,
+      previousDay,
+      newDay: calculatedDay,
+      daysAgo: args.daysAgo,
     };
   },
 });
