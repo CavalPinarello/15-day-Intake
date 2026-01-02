@@ -97,6 +97,8 @@
 		5A316CD02EF4B12B0098C762 /* ChallengesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CCF2EF4B12A0098C762 /* ChallengesView.swift */; };
 		5A316CD22EF4B12D0098C762 /* StreakFreezeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD12EF4B12C0098C762 /* StreakFreezeView.swift */; };
 		5A316CD42EF4B12F0098C762 /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */; };
+		TFMGR001ED24841599CCADD1 /* TimeFormatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TFMGR002ED24841599CCADD2 /* TimeFormatManager.swift */; };
+		TFMGRW01ED24841599CCADD3 /* TimeFormatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TFMGRW02ED24841599CCADD4 /* TimeFormatManager.swift */; };
 		5A316CD62EF4B1310098C762 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD72EF4B1320098C762 /* PushNotificationManager.swift */; };
 		5A316CD82EF4B1330098C762 /* ProgressiveInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */; };
 		5A316CDA2EF4B1350098C762 /* SleepFingerprintCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A316CDB2EF4B1360098C762 /* SleepFingerprintCard.swift */; };
@@ -255,6 +257,8 @@
 		5A316CCF2EF4B12A0098C762 /* ChallengesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengesView.swift; sourceTree = "<group>"; };
 		5A316CD12EF4B12C0098C762 /* StreakFreezeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakFreezeView.swift; sourceTree = "<group>"; };
 		5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
+		TFMGR002ED24841599CCADD2 /* TimeFormatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatManager.swift; sourceTree = "<group>"; };
+		TFMGRW02ED24841599CCADD4 /* TimeFormatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatManager.swift; sourceTree = "<group>"; };
 		5A316CD72EF4B1320098C762 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
 		5A316CD92EF4B1340098C762 /* ProgressiveInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressiveInsightsView.swift; sourceTree = "<group>"; };
 		5A316CDB2EF4B1360098C762 /* SleepFingerprintCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepFingerprintCard.swift; sourceTree = "<group>"; };
@@ -449,6 +453,7 @@
 				4A5E3BD72C8E123456789C08 /* SettingsView.swift */,
 				4A5E3BE12C8E123456789D02 /* WatchThemeManager.swift */,
 				4A5E3BE52C8E123456789D06 /* WatchConvexService.swift */,
+				TFMGRW02ED24841599CCADD4 /* TimeFormatManager.swift */,
 				4A5E3BAB2C8E123456789A0C /* Assets.xcassets */,
 			);
 			path = "ZoeSleep Watch App";
@@ -673,6 +678,7 @@
 			isa = PBXGroup;
 			children = (
 				5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */,
+				TFMGR002ED24841599CCADD2 /* TimeFormatManager.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -976,6 +982,7 @@
 				EDB3374EBA6CA9B6FB73B63F /* DaySplashView.swift in Sources */,
 				8920FCD6483EE743FCBA4F03 /* AnswerDerivationSystem.swift in Sources */,
 				SCMAP001ED24841599CCADD1 /* ScaleMapper.swift in Sources */,
+				TFMGR001ED24841599CCADD1 /* TimeFormatManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1010,6 +1017,7 @@
 				SLPMON007012C8E123456789M7 /* SleepStageClassifier.swift in Sources */,
 				SLPMON009012C8E123456789M9 /* FalsePositiveEliminator.swift in Sources */,
 				ACCEL001012C8E123456789AC1 /* ACCELAlgorithm.swift in Sources */,
+				TFMGRW01ED24841599CCADD3 /* TimeFormatManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
