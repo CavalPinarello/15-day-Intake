@@ -926,6 +926,121 @@ struct UnifiedDebugPanel: View {
         }
     }
 
+    // MARK: - Speed Run Actions
+
+    private func speedCompleteCurrentDay() {
+        print("[Debug Panel] speedCompleteCurrentDay called, phenotype: \(speedRunPhenotype)")
+        isSpeedCompleting = true
+        statusMessage = nil
+
+        Task {
+            do {
+                let response = try await ConvexService.shared.speedCompleteDay(
+                    phenotype: speedRunPhenotype,
+                    advanceToNext: true
+                )
+
+                await MainActor.run {
+                    if response.success {
+                        let completedDay = response.day ?? questionnaireManager.currentDay
+                        let newDay = response.newDay ?? (completedDay + 1)
+                        questionnaireManager.currentDay = newDay
+                        statusMessage = "Day \(completedDay) completed → Day \(newDay)"
+                        statusIsError = false
+                        print("[Debug Panel] Speed completed Day \(completedDay), advanced to Day \(newDay)")
+                    } else {
+                        statusMessage = "Failed to speed complete day"
+                        statusIsError = true
+                    }
+                    isSpeedCompleting = false
+                }
+                await questionnaireManager.loadJourneyProgress()
+            } catch {
+                print("[Debug Panel] Speed complete error: \(error)")
+                await MainActor.run {
+                    statusMessage = "Error: \(error.localizedDescription)"
+                    statusIsError = true
+                    isSpeedCompleting = false
+                }
+            }
+        }
+    }
+
+    private func speedRunToDay() {
+        print("[Debug Panel] speedRunToDay called, target: \(speedRunTargetDay), phenotype: \(speedRunPhenotype)")
+        isSpeedRunning = true
+        statusMessage = nil
+
+        Task {
+            do {
+                let response = try await ConvexService.shared.speedRunFullJourney(
+                    phenotype: speedRunPhenotype,
+                    targetDay: speedRunTargetDay
+                )
+
+                await MainActor.run {
+                    if response.success {
+                        let endDay = response.endDay ?? speedRunTargetDay
+                        let daysCompleted = response.daysCompleted ?? 0
+                        questionnaireManager.currentDay = endDay
+                        statusMessage = "Speed run: \(daysCompleted) days → Day \(endDay)"
+                        statusIsError = false
+                        print("[Debug Panel] Speed run completed \(daysCompleted) days to Day \(endDay)")
+                    } else {
+                        statusMessage = "Failed to speed run"
+                        statusIsError = true
+                    }
+                    isSpeedRunning = false
+                }
+                await questionnaireManager.loadJourneyProgress()
+            } catch {
+                print("[Debug Panel] Speed run error: \(error)")
+                await MainActor.run {
+                    statusMessage = "Error: \(error.localizedDescription)"
+                    statusIsError = true
+                    isSpeedRunning = false
+                }
+            }
+        }
+    }
+
+    private func speedRunFullJourney() {
+        print("[Debug Panel] speedRunFullJourney called, phenotype: \(speedRunPhenotype)")
+        isSpeedRunning = true
+        statusMessage = nil
+
+        Task {
+            do {
+                let response = try await ConvexService.shared.speedRunFullJourney(
+                    phenotype: speedRunPhenotype,
+                    targetDay: 14
+                )
+
+                await MainActor.run {
+                    if response.success {
+                        let daysCompleted = response.daysCompleted ?? 0
+                        questionnaireManager.currentDay = 14
+                        statusMessage = "Full journey: \(daysCompleted) days completed"
+                        statusIsError = false
+                        print("[Debug Panel] Full journey completed: \(daysCompleted) days")
+                    } else {
+                        statusMessage = "Failed to complete full journey"
+                        statusIsError = true
+                    }
+                    isSpeedRunning = false
+                }
+                await questionnaireManager.loadJourneyProgress()
+            } catch {
+                print("[Debug Panel] Full journey error: \(error)")
+                await MainActor.run {
+                    statusMessage = "Error: \(error.localizedDescription)"
+                    statusIsError = true
+                    isSpeedRunning = false
+                }
+            }
+        }
+    }
+
     // MARK: - Repair Tools Section
 
     @State private var isVerifyingHealthKit = false
