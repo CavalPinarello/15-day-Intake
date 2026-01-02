@@ -8,11 +8,12 @@
 
 #### Unified Time Format System (12-hour/24-hour)
 
-Fixed TimeFormatManager not being found by Xcode and updated Watch app time picker to support both 12-hour and 24-hour modes.
+Fixed TimeFormatManager not being found by Xcode and updated all time pickers to respect the user's 12-hour/24-hour preference.
 
 **Problem:**
 - TimeFormatManager was in Shared folder but not properly linked to iOS target
 - Watch app time picker was hardcoded to 12-hour format only
+- iOS DatePickers ignored app preference and used device locale regardless
 
 **Solution:**
 - Moved TimeFormatManager to `ZoeSleep/Utilities/` for iOS target
@@ -20,10 +21,13 @@ Fixed TimeFormatManager not being found by Xcode and updated Watch app time pick
 - Updated Watch `WatchTimePickerView` to support both 12-hour and 24-hour modes:
   - 12-hour mode: Hour (1-12) + Minute + AM/PM picker
   - 24-hour mode: Hour (00-23) + Minute (no AM/PM)
-- System detects device locale preference automatically
+- **iOS DatePicker Fix:** Added `.environment(\.locale, pickerLocale)` to all DatePickers:
+  - Uses `en_US` locale for 12-hour format (forces AM/PM)
+  - Uses `en_GB` locale for 24-hour format (forces 00:00-23:59)
+  - System default option uses device's actual locale
 - User can override in Settings (System Default / 12-hour / 24-hour)
 
-**Files changed:** `TimeFormatManager.swift` (moved and duplicated), `QuestionnaireView.swift`, `WatchQuestionComponents.swift`
+**Files changed:** `TimeFormatManager.swift`, `QuestionComponents.swift`, `NotificationsSettingsView.swift`, `MiddayCheckInView.swift`, Watch `QuestionnaireView.swift`, `WatchQuestionComponents.swift`
 
 ---
 
