@@ -358,6 +358,101 @@ class NotificationManager: NSObject, ObservableObject {
         }
     }
 
+    // MARK: - Custom Sleep Reminders
+
+    /// Notification identifiers for sleep reminders
+    private static let morningSleepReminderID = "sleep_morning_reminder"
+    private static let eveningSleepReminderID = "sleep_evening_reminder"
+
+    /// Schedule custom morning and evening sleep reminders with user-defined times
+    func scheduleSleepReminders(
+        morningEnabled: Bool,
+        morningHour: Int,
+        morningMinute: Int,
+        eveningEnabled: Bool,
+        eveningHour: Int,
+        eveningMinute: Int
+    ) async {
+        guard isAuthorized else {
+            print("[Notifications] Not authorized, skipping sleep reminders")
+            return
+        }
+
+        // Cancel existing sleep reminders first
+        cancelSleepReminders()
+
+        // Schedule morning reminder if enabled
+        if morningEnabled {
+            let morningContent = UNMutableNotificationContent()
+            morningContent.title = "Good morning!"
+            morningContent.body = "Time to log how you slept last night."
+            morningContent.sound = .default
+            morningContent.categoryIdentifier = NotificationType.morningCheckIn.rawValue
+
+            var morningComponents = DateComponents()
+            morningComponents.hour = morningHour
+            morningComponents.minute = morningMinute
+
+            let morningTrigger = UNCalendarNotificationTrigger(
+                dateMatching: morningComponents,
+                repeats: true
+            )
+
+            let morningRequest = UNNotificationRequest(
+                identifier: Self.morningSleepReminderID,
+                content: morningContent,
+                trigger: morningTrigger
+            )
+
+            do {
+                try await notificationCenter.add(morningRequest)
+                print("[Notifications] Scheduled morning reminder at \(morningHour):\(String(format: "%02d", morningMinute))")
+            } catch {
+                print("[Notifications] Error scheduling morning reminder: \(error)")
+            }
+        }
+
+        // Schedule evening reminder if enabled
+        if eveningEnabled {
+            let eveningContent = UNMutableNotificationContent()
+            eveningContent.title = "Evening check-in"
+            eveningContent.body = "Don't forget to complete your daily assessment."
+            eveningContent.sound = .default
+            eveningContent.categoryIdentifier = NotificationType.eveningReminder.rawValue
+
+            var eveningComponents = DateComponents()
+            eveningComponents.hour = eveningHour
+            eveningComponents.minute = eveningMinute
+
+            let eveningTrigger = UNCalendarNotificationTrigger(
+                dateMatching: eveningComponents,
+                repeats: true
+            )
+
+            let eveningRequest = UNNotificationRequest(
+                identifier: Self.eveningSleepReminderID,
+                content: eveningContent,
+                trigger: eveningTrigger
+            )
+
+            do {
+                try await notificationCenter.add(eveningRequest)
+                print("[Notifications] Scheduled evening reminder at \(eveningHour):\(String(format: "%02d", eveningMinute))")
+            } catch {
+                print("[Notifications] Error scheduling evening reminder: \(error)")
+            }
+        }
+
+        await updatePendingCount()
+    }
+
+    /// Cancel all custom sleep reminders
+    func cancelSleepReminders() {
+        let identifiers = [Self.morningSleepReminderID, Self.eveningSleepReminderID]
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
+        print("[Notifications] Cancelled sleep reminders")
+    }
+
     // MARK: - Badge Management
 
     /// Update app badge with pending task count

@@ -54,6 +54,7 @@ struct ProfileSettingsView: View {
                 // MARK: - About Section
                 aboutSection
             }
+            .listStyle(.insetGrouped)  // Prevent sections from becoming collapsible
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .preferredColorScheme(themeManager.currentColorScheme)

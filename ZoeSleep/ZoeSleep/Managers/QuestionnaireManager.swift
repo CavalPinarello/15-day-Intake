@@ -1242,16 +1242,9 @@ class QuestionnaireManager: ObservableObject {
                         questions.append(contentsOf: moduleQuestions)
                     }
                 }
-            } else {
-                // No expansion needed - show info message
-                questions.append(Question(
-                    id: "INFO_NO_EXPANSION",
-                    text: "Based on your previous responses, no additional questions are needed for today. Great news - you're all caught up!",
-                    pillar: .sleepQuality,
-                    questionType: .info,
-                    required: false
-                ))
             }
+            // NOTE: We no longer add INFO_NO_EXPANSION placeholder when no expansion is triggered.
+            // The iOS client properly handles empty assessments by not showing the "Proceed to Assessment" button.
         }
 
         // 4. Filter out questions based on conditional logic
@@ -2282,6 +2275,8 @@ class QuestionnaireManager: ObservableObject {
         }
 
         isLoading = true
+        // Clear any previous error before attempting sync
+        self.error = nil
         print("[iOS] loadJourneyProgress: Fetching from Convex...")
 
         do {

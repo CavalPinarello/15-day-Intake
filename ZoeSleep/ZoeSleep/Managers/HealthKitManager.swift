@@ -113,9 +113,18 @@ struct HealthKitSyncProgress {
 @MainActor
 class HealthKitManager: ObservableObject {
     let healthStore = HKHealthStore()
-    @Published var isAuthorized = false
+    @Published var isAuthorized = false {
+        didSet {
+            // Persist authorization state to survive app restarts
+            UserDefaults.standard.set(isAuthorized, forKey: Self.healthKitAuthorizedKey)
+            print("[HealthKit] Authorization state saved: \(isAuthorized)")
+        }
+    }
     @Published var demographics: HealthKitDemographics = HealthKitDemographics()
     @Published var syncProgress = HealthKitSyncProgress()
+
+    // Persistence key for authorization state
+    private static let healthKitAuthorizedKey = "healthKitAuthorized"
 
     // API Configuration
     private let apiService = APIService.shared
@@ -123,6 +132,13 @@ class HealthKitManager: ObservableObject {
 
     init(authManager: AuthenticationManager? = nil) {
         self.authManager = authManager
+        // Load cached authorization state immediately for better UX
+        // (actual verification happens on requestAuthorization call)
+        let cachedAuth = UserDefaults.standard.bool(forKey: Self.healthKitAuthorizedKey)
+        if cachedAuth {
+            self.isAuthorized = cachedAuth
+            print("[HealthKit] Loaded cached authorization state: \(cachedAuth)")
+        }
     }
     
     // Check if HealthKit is available

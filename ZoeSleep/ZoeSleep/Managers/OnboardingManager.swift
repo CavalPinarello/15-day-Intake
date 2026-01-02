@@ -312,28 +312,30 @@ class OnboardingManager: ObservableObject {
     }
 
     /// Reset local state for a new user
+    /// Note: hasSeenJourneyIntro is NOT reset - it's a device-level flag, not per-user
     private func resetLocalState() {
         profile = OnboardingProfile()
         currentStep = .name  // Start at name step (no welcome step)
         isOnboardingComplete = false
-        hasSeenJourneyIntro = false
+        // DO NOT reset hasSeenJourneyIntro - the intro explains the app once per device
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
-        UserDefaults.standard.set(false, forKey: journeyIntroSeenKey)
+        // journeyIntroSeenKey is preserved - intro shows once per device, not per user
         detectSystemMeasurementSystem()
     }
 
     /// Clear onboarding state when user signs out
     /// This resets local state without touching server data
+    /// Note: hasSeenJourneyIntro is preserved - it's device-level, not per-user
     func clearForSignOut() {
         profile = OnboardingProfile()
         currentStep = .name  // Start at name step (no welcome step)
         isOnboardingComplete = false
-        hasSeenJourneyIntro = false
+        // DO NOT reset hasSeenJourneyIntro - the intro shows once per device
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
-        UserDefaults.standard.set(false, forKey: journeyIntroSeenKey)
-        print("[Onboarding] Cleared for sign out")
+        // journeyIntroSeenKey is preserved - new users on same device skip intro
+        print("[Onboarding] Cleared for sign out (journey intro preserved)")
     }
 
     // MARK: - System Detection

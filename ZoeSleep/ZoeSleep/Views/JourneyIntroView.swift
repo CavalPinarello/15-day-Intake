@@ -63,6 +63,7 @@ struct JourneyIntroView: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: currentScreen)
+                    .padding(.horizontal, 16)  // Add horizontal padding to prevent graphics clipping
 
                     // Page indicator dots
                     JourneyIntroPageIndicator(

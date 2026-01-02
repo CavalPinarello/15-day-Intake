@@ -9,6 +9,14 @@ import SwiftUI
 import UserNotifications
 
 struct NotificationsSettingsView: View {
+    // MARK: - UserDefaults Keys
+    private static let morningReminderEnabledKey = "morningReminderEnabled"
+    private static let eveningReminderEnabledKey = "eveningReminderEnabled"
+    private static let morningReminderHourKey = "morningReminderHour"
+    private static let morningReminderMinuteKey = "morningReminderMinute"
+    private static let eveningReminderHourKey = "eveningReminderHour"
+    private static let eveningReminderMinuteKey = "eveningReminderMinute"
+
     @State private var notificationsEnabled = false
     @State private var morningReminder = true
     @State private var eveningReminder = true
@@ -31,6 +39,9 @@ struct NotificationsSettingsView: View {
                 .onChange(of: notificationsEnabled) { _, enabled in
                     if enabled {
                         requestNotificationPermission()
+                    } else {
+                        // Cancel all reminders when disabled
+                        NotificationManager.shared.cancelSleepReminders()
                     }
                 }
             } header: {
@@ -48,9 +59,17 @@ struct NotificationsSettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                    .onChange(of: morningReminder) { _, enabled in
+                        saveMorningReminder(enabled: enabled)
+                        scheduleReminders()
+                    }
 
                     if morningReminder {
                         DatePicker("Time", selection: $morningTime, displayedComponents: .hourAndMinute)
+                            .onChange(of: morningTime) { _, newTime in
+                                saveMorningTime(newTime)
+                                scheduleReminders()
+                            }
                     }
                 } header: {
                     Text("Morning Reminder")
@@ -66,9 +85,17 @@ struct NotificationsSettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                    .onChange(of: eveningReminder) { _, enabled in
+                        saveEveningReminder(enabled: enabled)
+                        scheduleReminders()
+                    }
 
                     if eveningReminder {
                         DatePicker("Time", selection: $eveningTime, displayedComponents: .hourAndMinute)
+                            .onChange(of: eveningTime) { _, newTime in
+                                saveEveningTime(newTime)
+                                scheduleReminders()
+                            }
                     }
                 } header: {
                     Text("Evening Reminder")
@@ -78,6 +105,7 @@ struct NotificationsSettingsView: View {
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            loadSavedSettings()
             checkNotificationStatus()
         }
         .alert("Notifications Disabled", isPresented: $showingPermissionAlert) {
@@ -91,6 +119,68 @@ struct NotificationsSettingsView: View {
             }
         } message: {
             Text("Please enable notifications in Settings to receive reminders.")
+        }
+    }
+
+    // MARK: - Load/Save Settings
+
+    private func loadSavedSettings() {
+        let defaults = UserDefaults.standard
+
+        // Load reminder toggles (default to true)
+        morningReminder = defaults.object(forKey: Self.morningReminderEnabledKey) as? Bool ?? true
+        eveningReminder = defaults.object(forKey: Self.eveningReminderEnabledKey) as? Bool ?? true
+
+        // Load morning time (default 8:00 AM)
+        let morningHour = defaults.object(forKey: Self.morningReminderHourKey) as? Int ?? 8
+        let morningMinute = defaults.object(forKey: Self.morningReminderMinuteKey) as? Int ?? 0
+        morningTime = Calendar.current.date(from: DateComponents(hour: morningHour, minute: morningMinute)) ?? Date()
+
+        // Load evening time (default 9:00 PM)
+        let eveningHour = defaults.object(forKey: Self.eveningReminderHourKey) as? Int ?? 21
+        let eveningMinute = defaults.object(forKey: Self.eveningReminderMinuteKey) as? Int ?? 0
+        eveningTime = Calendar.current.date(from: DateComponents(hour: eveningHour, minute: eveningMinute)) ?? Date()
+
+        print("[Notifications] Loaded settings - Morning: \(morningHour):\(morningMinute), Evening: \(eveningHour):\(eveningMinute)")
+    }
+
+    private func saveMorningReminder(enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: Self.morningReminderEnabledKey)
+    }
+
+    private func saveEveningReminder(enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: Self.eveningReminderEnabledKey)
+    }
+
+    private func saveMorningTime(_ time: Date) {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: time)
+        UserDefaults.standard.set(components.hour, forKey: Self.morningReminderHourKey)
+        UserDefaults.standard.set(components.minute, forKey: Self.morningReminderMinuteKey)
+        print("[Notifications] Saved morning time: \(components.hour ?? 8):\(components.minute ?? 0)")
+    }
+
+    private func saveEveningTime(_ time: Date) {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: time)
+        UserDefaults.standard.set(components.hour, forKey: Self.eveningReminderHourKey)
+        UserDefaults.standard.set(components.minute, forKey: Self.eveningReminderMinuteKey)
+        print("[Notifications] Saved evening time: \(components.hour ?? 21):\(components.minute ?? 0)")
+    }
+
+    // MARK: - Notification Scheduling
+
+    private func scheduleReminders() {
+        Task {
+            let morningComponents = Calendar.current.dateComponents([.hour, .minute], from: morningTime)
+            let eveningComponents = Calendar.current.dateComponents([.hour, .minute], from: eveningTime)
+
+            await NotificationManager.shared.scheduleSleepReminders(
+                morningEnabled: morningReminder,
+                morningHour: morningComponents.hour ?? 8,
+                morningMinute: morningComponents.minute ?? 0,
+                eveningEnabled: eveningReminder,
+                eveningHour: eveningComponents.hour ?? 21,
+                eveningMinute: eveningComponents.minute ?? 0
+            )
         }
     }
 
@@ -109,6 +199,10 @@ struct NotificationsSettingsView: View {
                     showingPermissionAlert = true
                 }
                 notificationsEnabled = granted
+                if granted {
+                    // Schedule reminders with current settings after permission granted
+                    scheduleReminders()
+                }
             }
         }
     }
