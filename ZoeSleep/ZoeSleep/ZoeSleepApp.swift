@@ -44,12 +44,25 @@ struct ZoeSleepApp: App {
                         // Send current state to Watch (including theme settings)
                         watchConnectivity.sendUserDataToWatch()
                         watchConnectivity.sendThemeSettingsToWatch()
+
+                        // Schedule notifications from saved settings
+                        Task {
+                            await NotificationManager.shared.scheduleFromSavedSettings()
+                        }
                     }
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         // Refresh journey state when app becomes active
                         refreshJourneyState()
+
+                        // Reschedule notifications from saved settings when app becomes active
+                        // This ensures notifications are scheduled even after being cancelled
+                        if authManager.isAuthenticated {
+                            Task {
+                                await NotificationManager.shared.scheduleFromSavedSettings()
+                            }
+                        }
                     }
                 }
                 .onOpenURL { url in

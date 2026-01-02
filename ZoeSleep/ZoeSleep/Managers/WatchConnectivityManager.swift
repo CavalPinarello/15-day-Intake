@@ -187,6 +187,29 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
         }
     }
 
+    /// Notify Watch that a check-in was completed on iPhone (for Energy/Mood/Focus sync)
+    func notifyWatchCheckInCompleted(timeSlot: CheckInTimeSlot, date: String) {
+        guard let session = session else { return }
+
+        let message: [String: Any] = [
+            "action": "checkInCompleted",
+            "timeSlot": timeSlot.rawValue,
+            "date": date,
+            "source": "ios",
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                print("[iOS] Failed to notify Watch of check-in completion: \(error.localizedDescription)")
+            }
+        } else {
+            // Queue for later delivery
+            session.transferUserInfo(message)
+            print("[iOS] Queued check-in completion for Watch: \(timeSlot.rawValue)")
+        }
+    }
+
     // MARK: - Handle Watch Requests
 
     private func handleWatchMessage(_ message: [String: Any], replyHandler: (([String: Any]) -> Void)?) {
@@ -223,6 +246,9 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
         case "sectionCompleted":
             handleSectionCompleted(message, replyHandler: replyHandler)
 
+        case "checkInCompleted":
+            handleCheckInCompleted(message, replyHandler: replyHandler)
+
         default:
             replyHandler?(["error": "Unknown action: \(action)"])
         }
@@ -239,6 +265,32 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             name: .questionnaireProgressDidChange,
             object: nil,
             userInfo: ["section": section, "dayNumber": dayNumber, "source": "watch"]
+        )
+
+        replyHandler?(["received": true])
+    }
+
+    /// Handle check-in completion notification from Watch
+    private func handleCheckInCompleted(_ message: [String: Any], replyHandler: (([String: Any]) -> Void)?) {
+        guard let timeSlotStr = message["timeSlot"] as? String,
+              let date = message["date"] as? String,
+              let timeSlot = CheckInTimeSlot(rawValue: timeSlotStr) else {
+            replyHandler?(["error": "Invalid check-in data"])
+            return
+        }
+
+        print("[iOS] Watch completed \(timeSlotStr) check-in for \(date)")
+
+        // Update CheckInManager state
+        Task { @MainActor in
+            CheckInManager.shared.handleWatchCheckInCompletion(timeSlot: timeSlot, date: date)
+        }
+
+        // Post notification for UI refresh
+        NotificationCenter.default.post(
+            name: .checkInStatusDidChange,
+            object: nil,
+            userInfo: ["timeSlot": timeSlotStr, "date": date, "source": "watch"]
         )
 
         replyHandler?(["received": true])

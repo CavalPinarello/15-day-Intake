@@ -11,6 +11,8 @@ npx convex dev && ./setup-convex.sh   # Convex cloud mode
 
 ## Critical Info
 
+- **Current Version:** 1.0.12 (Build 12) - See [`docs/VERSION_HISTORY.md`](./docs/VERSION_HISTORY.md)
+- **Version Source:** `ZoeSleep/Shared/AppVersion.swift` (single source of truth)
 - **Test Users:** user1-user10, password: "1"
 - **Registration:** Email + password only (username auto-generated)
 - **Xcode:** `/ZoeSleep/ZoeSleep.xcodeproj`
@@ -73,9 +75,10 @@ iPhone ←→ Convex ←→ Dashboard
 - **Architecture:** [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
 - **Patterns:** [`docs/PATTERNS.md`](./docs/PATTERNS.md)
 - **Changelog:** [`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
+- **Version History:** [`docs/VERSION_HISTORY.md`](./docs/VERSION_HISTORY.md)
 - **Sessions:** [`docs/sessions/INDEX.md`](./docs/sessions/INDEX.md)
 
-## Current Focus (Dec 2025)
+## Current Focus (Jan 2026)
 
 1. iPhone app completion and polish
 2. Clinician dashboard development
@@ -85,6 +88,8 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
+**Jan 2:** Notification message variety (100 rotating messages to prevent desensitization), Watch-style Energy/Mood/Focus check-in infrastructure on iOS, improved notification settings UI with scheduled time display
+**Jan 2:** App versioning system overhaul (v1.0.12) - single source of truth in `ZoeSleep/Shared/AppVersion.swift`, version history tracking in `docs/VERSION_HISTORY.md`, fixed date-based build display bug
 **Jan 2:** Unit-aware help text for temperature question (Q33A) - shows °C or °F based on user's measurement preference, added helpTextImperial field to Question model and Convex schema
 **Jan 2:** Glassy card UI with frosted glass effect (GlassyCardBackground using ultraThinMaterial with warm tint overlay), semi-transparent option buttons in questionnaires, replaced Speed Test with Time Travel testing mode, fixed dashboard margins (20pt horizontal padding)
 **Jan 2:** Fixed empty assessment handling - days without triggered gateways no longer show assessment task or count as "missed", added EmptyAssessmentView for edge cases, fixed time estimation consistency across Focus/Splash screens, removed misleading INFO_NO_QUESTIONS placeholder

@@ -23,6 +23,8 @@ struct MinimalHomeView: View {
     @State private var showTasks = false
     @State private var showTrends = false
     @State private var showSleepStages = false
+    @State private var showLightEducation = false
+    @AppStorage("hasSeenLightEducation") private var hasSeenLightEducation = false
     @State private var isLoading = true
     @State private var isSigningIn = false
     @State private var signInError: String?
@@ -178,6 +180,9 @@ struct MinimalHomeView: View {
         }
         .sheet(isPresented: $showSleepStages) {
             SleepStagesView()
+        }
+        .sheet(isPresented: $showLightEducation) {
+            LightExposureEducationView()
         }
         .onAppear {
             loadData()
@@ -536,7 +541,9 @@ struct MinimalHomeView: View {
                     circadianScore: circadianStatus?.circadianScore, // Use backend score if available
                     needsMoreLight: localData.needsMoreLight,
                     morningLightMins: localData.morningMinutes
-                )
+                ),
+                onTap: { handleLightCardTap() },
+                onInfoTap: hasSeenLightEducation ? { showLightEducation = true } : nil
             )
         } else if let status = circadianStatus {
             // Fall back to backend data
@@ -549,12 +556,26 @@ struct MinimalHomeView: View {
                     circadianScore: status.circadianScore,
                     needsMoreLight: status.needsMoreLight,
                     morningLightMins: status.morningLightMins
-                )
+                ),
+                onTap: { handleLightCardTap() },
+                onInfoTap: hasSeenLightEducation ? { showLightEducation = true } : nil
             )
         } else {
             // Show empty state card with "Go outside!" nudge
-            CircadianExposureEmptyCard()
+            Button(action: { handleLightCardTap() }) {
+                CircadianExposureEmptyCard()
+            }
+            .buttonStyle(.plain)
         }
+    }
+
+    private func handleLightCardTap() {
+        // Show education only on first tap
+        if !hasSeenLightEducation {
+            showLightEducation = true
+            hasSeenLightEducation = true
+        }
+        // After first view, info button appears for on-demand access
     }
 
     // MARK: - Streak Card

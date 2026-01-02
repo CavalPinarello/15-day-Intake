@@ -3126,9 +3126,9 @@ export const getQuestionsForUserDay = query({
 
       result.metadata.assessmentCount = result.assessment.length;
       // Recalculate totalMinutes based on FILTERED assessment questions (not pre-filter totalSeconds)
-      // Use 30 seconds per question as the standard estimate
-      const filteredTotalSeconds = result.assessment.length * 30;
-      result.metadata.totalMinutes = Math.ceil((result.sleepLog.length * 30 + filteredTotalSeconds) / 60);
+      // Use 15 seconds per question as the standard estimate
+      const filteredTotalSeconds = result.assessment.length * 15;
+      result.metadata.totalMinutes = Math.ceil((result.sleepLog.length * 15 + filteredTotalSeconds) / 60);
 
       // NOTE: We no longer add INFO_NO_QUESTIONS placeholder when assessment is empty.
       // The iOS client properly handles empty assessments by not showing the "Proceed to Assessment" button.

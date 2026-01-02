@@ -1215,11 +1215,25 @@ struct ReadyStepView: View {
                     valueColor: onboardingManager.profile.hasConnectedHealthKit ? .green : .orange,
                     isCompact: isCompact
                 )
+
+                SummaryRow(
+                    label: "Reminders",
+                    value: "9 AM & 8 PM",
+                    icon: "bell.fill",
+                    isCompact: isCompact
+                )
             }
             .padding(12)
             .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
             .cornerRadius(10)
             .padding(.horizontal, 20)
+
+            // Notification note
+            Text("We'll ask for notification permission to send you daily reminders")
+                .font(.caption2)
+                .foregroundColor(palette.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
 
             Spacer()
 
@@ -1252,6 +1266,7 @@ struct SummaryRow: View {
     let label: String
     let value: String
     var valueColor: Color? = nil
+    var icon: String? = nil
     var isCompact: Bool = false
 
     private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
@@ -1262,9 +1277,16 @@ struct SummaryRow: View {
                 .font(isCompact ? .caption2 : .caption)
                 .foregroundColor(palette.textSecondary)
             Spacer()
-            Text(value)
-                .font(isCompact ? .caption.weight(.medium) : .subheadline.weight(.medium))
-                .foregroundColor(valueColor ?? palette.textPrimary)
+            HStack(spacing: 4) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(isCompact ? .caption2 : .caption)
+                        .foregroundColor(palette.accent)
+                }
+                Text(value)
+                    .font(isCompact ? .caption.weight(.medium) : .subheadline.weight(.medium))
+                    .foregroundColor(valueColor ?? palette.textPrimary)
+            }
         }
     }
 }

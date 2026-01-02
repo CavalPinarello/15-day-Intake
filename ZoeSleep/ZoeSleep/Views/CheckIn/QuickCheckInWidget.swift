@@ -1,0 +1,263 @@
+//
+//  QuickCheckInWidget.swift
+//  ZoeSleep
+//
+//  Dashboard widget showing check-in status with quick access.
+//  Shows morning/midday/evening completion circles and prompts
+//  for the current check-in window.
+//
+
+import SwiftUI
+
+// MARK: - Quick Check-In Widget
+
+/// Dashboard card showing daily check-in status with tap-to-open functionality.
+struct QuickCheckInWidget: View {
+    @EnvironmentObject private var themeManager: ThemeManager
+    @ObservedObject private var checkInManager = CheckInManager.shared
+
+    @State private var showingCheckIn = false
+
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    // Current time slot for check-in
+    private var currentSlot: CheckInTimeSlot? {
+        CheckInTimeSlot.current
+    }
+
+    // Status for each time slot
+    private var morningDone: Bool {
+        checkInManager.morningCheckInCompleted
+    }
+
+    private var middayDone: Bool {
+        checkInManager.middayCheckInCompleted
+    }
+
+    private var eveningDone: Bool {
+        checkInManager.eveningCheckInCompleted
+    }
+
+    private var allDone: Bool {
+        morningDone && middayDone && eveningDone
+    }
+
+    private var completedCount: Int {
+        [morningDone, middayDone, eveningDone].filter { $0 }.count
+    }
+
+    var body: some View {
+        Button {
+            if let slot = currentSlot, !isSlotCompleted(slot) {
+                showingCheckIn = true
+            }
+        } label: {
+            cardContent
+        }
+        .buttonStyle(.plain)
+        .fullScreenCover(isPresented: $showingCheckIn) {
+            if let slot = currentSlot {
+                WatchStyleCheckInView(
+                    timeSlot: slot,
+                    onComplete: handleCheckInComplete
+                )
+                .environmentObject(themeManager)
+            }
+        }
+    }
+
+    // MARK: - Card Content
+
+    private var cardContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            HStack {
+                Image(systemName: "heart.text.square.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(theme.accent)
+
+                Text("Daily Check-In")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                // Completion indicator
+                Text("\(completedCount)/3")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(theme.secondaryText)
+            }
+
+            // Time slot circles
+            HStack(spacing: 24) {
+                timeSlotIndicator(slot: .morning, isDone: morningDone)
+                timeSlotIndicator(slot: .midday, isDone: middayDone)
+                timeSlotIndicator(slot: .evening, isDone: eveningDone)
+            }
+            .frame(maxWidth: .infinity)
+
+            // Current prompt or completion message
+            if allDone {
+                completionMessage
+            } else if let slot = currentSlot, !isSlotCompleted(slot) {
+                promptMessage(for: slot)
+            } else {
+                waitingMessage
+            }
+        }
+        .padding(20)
+        .background(GlassyCardBackground(opacity: 0.5))
+        .cornerRadius(20)
+    }
+
+    // MARK: - Time Slot Indicator
+
+    private func timeSlotIndicator(slot: CheckInTimeSlot, isDone: Bool) -> some View {
+        let isActive = currentSlot == slot && !isDone
+
+        return VStack(spacing: 8) {
+            ZStack {
+                // Background circle
+                Circle()
+                    .stroke(
+                        isDone ? Color.green.opacity(0.3) : Color.white.opacity(0.15),
+                        lineWidth: 3
+                    )
+                    .frame(width: 52, height: 52)
+
+                // Fill for completed
+                if isDone {
+                    Circle()
+                        .fill(Color.green.opacity(0.2))
+                        .frame(width: 48, height: 48)
+
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.green)
+                } else {
+                    // Icon for pending
+                    Image(systemName: slot.sfSymbol)
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundColor(isActive ? slot.color : .white.opacity(0.4))
+                }
+
+                // Active indicator ring
+                if isActive {
+                    Circle()
+                        .stroke(slot.color, lineWidth: 2)
+                        .frame(width: 56, height: 56)
+                }
+            }
+
+            Text(slot.label)
+                .font(.system(size: 12, weight: isActive ? .semibold : .regular))
+                .foregroundColor(isDone ? .green : (isActive ? .white : .white.opacity(0.5)))
+        }
+    }
+
+    // MARK: - Messages
+
+    private func promptMessage(for slot: CheckInTimeSlot) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "hand.tap.fill")
+                .font(.system(size: 16))
+                .foregroundColor(slot.color)
+
+            Text("Tap to complete your \(slot.label.lowercased()) check-in")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.8))
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white.opacity(0.4))
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(slot.color.opacity(0.15))
+        )
+    }
+
+    private var completionMessage: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 16))
+                .foregroundColor(.green)
+
+            Text("All check-ins complete for today!")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.green.opacity(0.9))
+
+            Spacer()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.green.opacity(0.1))
+        )
+    }
+
+    private var waitingMessage: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clock.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.white.opacity(0.5))
+
+            Text("Next check-in window opens soon")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+
+            Spacer()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.05))
+        )
+    }
+
+    // MARK: - Helpers
+
+    private func isSlotCompleted(_ slot: CheckInTimeSlot) -> Bool {
+        switch slot {
+        case .morning: return morningDone
+        case .midday: return middayDone
+        case .evening: return eveningDone
+        }
+    }
+
+    private func handleCheckInComplete(energy: EnergyLevel, mood: MoodLevel, focus: FocusLevel) {
+        guard let slot = currentSlot else { return }
+
+        Task {
+            await checkInManager.submitWatchStyleCheckIn(
+                timeSlot: slot,
+                energy: energy,
+                mood: mood,
+                focus: focus
+            )
+        }
+    }
+}
+
+// MARK: - Preview
+
+#if DEBUG
+struct QuickCheckInWidget_Previews: PreviewProvider {
+    static var previews: some View {
+        ZStack {
+            CircadianWaveBackground()
+
+            ScrollView {
+                VStack(spacing: 20) {
+                    QuickCheckInWidget()
+                }
+                .padding(20)
+            }
+        }
+        .environmentObject(ThemeManager.shared)
+    }
+}
+#endif

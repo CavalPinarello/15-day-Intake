@@ -6,6 +6,33 @@
 
 ### Jan 2, 2026
 
+#### Notification Message Variety & Check-In Infrastructure
+
+Implemented 100 rotating notification messages to prevent user desensitization and added infrastructure for Watch-style check-ins on iOS.
+
+**100 Varied Morning Messages:**
+- Friendly greetings (20 messages)
+- Motivational messages (20 messages)
+- Question-based prompts (20 messages)
+- Health-focused messages (20 messages)
+- Gentle reminders (20 messages)
+- Each notification randomly selects a message to keep engagement fresh
+
+**Watch-Style Check-In Support:**
+- Added `EnergyLevel`, `MoodLevel`, `FocusLevel` enums to iOS (mirrors Watch types)
+- `CheckInManager` now tracks last energy/mood/focus levels for trend display
+- New `CheckInTimeSlot` enum for morning/midday/evening check-ins
+- Infrastructure ready for Watch sync and unified check-in experience
+
+**Notification Settings UI:**
+- Settings now shows actual scheduled notification times
+- Displays formatted times (e.g., "7:30 AM", "2:00 PM", "9:00 PM")
+- Better user understanding of when notifications will arrive
+
+**Files changed:** `NotificationManager.swift`, `CheckInManager.swift`, `NotificationsSettingsView.swift`, `WatchConnectivityManager.swift`, `ConvexService.swift`
+
+---
+
 #### Unit-Aware Help Text for Temperature Question
 
 Added support for imperial-specific help text on questions with unit switching (temperature Q33A).

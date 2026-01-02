@@ -14,6 +14,7 @@ struct ProfileSettingsView: View {
     @ObservedObject var onboardingManager = OnboardingManager.shared
     @ObservedObject var questionnaireManager = QuestionnaireManager.shared
     @ObservedObject var watchConnectivity = iOSWatchConnectivityManager.shared
+    @ObservedObject var timeFormatManager = TimeFormatManager.shared
 
     @State private var showingSignOutConfirmation = false
     @State private var showingResetOnboardingConfirmation = false
@@ -394,6 +395,7 @@ struct ProfileSettingsView: View {
 
     private var unitsSection: some View {
         Section {
+            // Measurement system (metric/imperial)
             Picker(selection: Binding(
                 get: {
                     MeasurementSystem(rawValue: onboardingManager.profile.measurementSystem) ?? .metric
@@ -410,10 +412,19 @@ struct ProfileSettingsView: View {
             } label: {
                 Label("Units", systemImage: "ruler.fill")
             }
+
+            // Time format (12-hour/24-hour)
+            Picker(selection: $timeFormatManager.preference) {
+                ForEach(TimeFormatPreference.allCases) { pref in
+                    Text(pref.displayName).tag(pref)
+                }
+            } label: {
+                Label("Time Format", systemImage: "clock.fill")
+            }
         } header: {
-            Text("Measurement Units")
+            Text("Units & Display")
         } footer: {
-            Text("Changes how height and weight are displayed throughout the app.")
+            Text("Changes how measurements and times are displayed throughout the app.")
         }
     }
 
@@ -615,14 +626,14 @@ struct ProfileSettingsView: View {
             HStack {
                 Text("Version")
                 Spacer()
-                Text("1.0.0")
+                Text(Config.appVersion)
                     .foregroundColor(.secondary)
             }
 
             HStack {
                 Text("Build")
                 Spacer()
-                Text("2025.12.02")
+                Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1")
                     .foregroundColor(.secondary)
             }
         } header: {

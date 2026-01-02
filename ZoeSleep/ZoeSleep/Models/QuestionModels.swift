@@ -2010,16 +2010,12 @@ struct HealthKitSleepSummary: Codable {
 
     var formattedInBedTime: String? {
         guard let time = inBedTime else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: time)
+        return TimeFormatManager.shared.formatTime(time)
     }
 
     var formattedWakeTime: String? {
         guard let time = wakeTime else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: time)
+        return TimeFormatManager.shared.formatTime(time)
     }
 }
 

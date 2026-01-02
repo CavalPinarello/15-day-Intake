@@ -112,6 +112,9 @@ struct MainDashboardView: View {
                     // Header
                     headerView
 
+                    // Daily Check-In Widget (Apple Watch style)
+                    // QuickCheckInWidget() // PAUSED - file not in Xcode project
+
                     // Journey Progress Card
                     journeyProgressCard
 
@@ -232,10 +235,17 @@ struct MainDashboardView: View {
         .onChange(of: questionnaireManager.journeyProgress?.sleepLogCompleted) { _, newValue in
             // Log section completion change for debugging
             print("[iOS Dashboard] sleepLogCompleted changed to: \(newValue ?? false)")
+            checkAndCancelNotificationIfAllComplete()
         }
         .onChange(of: questionnaireManager.journeyProgress?.assessmentCompleted) { _, newValue in
             // Log section completion change for debugging
             print("[iOS Dashboard] assessmentCompleted changed to: \(newValue ?? false)")
+            checkAndCancelNotificationIfAllComplete()
+        }
+        .onChange(of: questionnaireManager.journeyProgress?.expansionPackCompleted) { _, newValue in
+            // Log expansion pack completion change
+            print("[iOS Dashboard] expansionPackCompleted changed to: \(newValue ?? false)")
+            checkAndCancelNotificationIfAllComplete()
         }
         .refreshable {
             // Pull-to-refresh to manually sync from Convex
@@ -325,6 +335,39 @@ struct MainDashboardView: View {
                 }
             }
             isRefreshing = false
+        }
+    }
+
+    // MARK: - Notification Management
+
+    /// Check if all daily tasks are complete and cancel the notification if so
+    /// Also reschedules notification if tasks are incomplete (for next day or if cancelled)
+    private func checkAndCancelNotificationIfAllComplete() {
+        guard let progress = questionnaireManager.journeyProgress else { return }
+
+        let sleepLogDone = progress.sleepLogCompleted
+        let assessmentDone = progress.assessmentCompleted
+
+        // Check expansion pack status (only relevant for Days 6+)
+        // An expansion is scheduled if scheduledExpansionForToday has modules
+        let hasExpansion = questionnaireManager.scheduledExpansionForToday != nil
+        let expansionDone = progress.expansionPackCompleted
+
+        // Also consider if there are no assessment questions (no gateways triggered)
+        let hasAssessmentQuestions = questionnaireManager.assessmentQuestionCountForToday > 0
+        let effectiveAssessmentDone = assessmentDone || !hasAssessmentQuestions
+
+        let allComplete = sleepLogDone && effectiveAssessmentDone && (!hasExpansion || expansionDone)
+
+        if allComplete {
+            print("[iOS Notifications] All tasks complete - cancelling daily reminder")
+            NotificationManager.shared.cancelDailyTaskReminder()
+        } else {
+            // Tasks incomplete - ensure notification is scheduled
+            // This handles the case where notification was cancelled yesterday but tasks are incomplete today
+            Task {
+                await NotificationManager.shared.scheduleFromSavedSettings()
+            }
         }
     }
 
@@ -983,9 +1026,9 @@ struct MainDashboardView: View {
     private func getAssessmentMinutes() -> Int {
         // Use actual question count if available (loaded via loadAssessmentQuestionCountForDay)
         // This is the SOURCE OF TRUTH - if we've loaded actual question count, use it
-        // Calculate: ~30 seconds per question, minimum 2 minutes
+        // Calculate: ~15 seconds per question, minimum 1 minute
         if questionnaireManager.assessmentQuestionCountForToday > 0 {
-            return max(2, (questionnaireManager.assessmentQuestionCountForToday + 1) / 2)
+            return max(1, (questionnaireManager.assessmentQuestionCountForToday + 3) / 4)
         }
 
         // For expansion days (6-14), use the dynamic Convex schedule
@@ -2679,15 +2722,15 @@ struct SleepDiaryHistoryView: View {
             answerText = String(intValue)
         } else if let dateValue = value as? Date {
             // Format based on question type
-            let formatter = DateFormatter()
             if questionnaireManager.getQuestionType(for: questionId) == .date {
+                let formatter = DateFormatter()
                 formatter.dateStyle = .medium
                 formatter.timeStyle = .none
+                answerText = formatter.string(from: dateValue)
             } else {
-                formatter.dateStyle = .none
-                formatter.timeStyle = .short
+                // Use TimeFormatManager for time display (respects user preference)
+                answerText = TimeFormatManager.shared.formatTime(dateValue)
             }
-            answerText = formatter.string(from: dateValue)
         } else if let arrayValue = value as? [String] {
             answerText = arrayValue.joined(separator: ", ")
         } else {

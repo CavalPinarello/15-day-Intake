@@ -942,6 +942,22 @@ struct UnifiedDebugPanel: View {
                 }
             }
             .tint(.blue)
+
+            Toggle(isOn: $themeManager.gamificationEnabled) {
+                HStack {
+                    Image(systemName: "star.circle")
+                        .foregroundColor(.yellow)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("XP & Gamification")
+                            .font(.subheadline)
+                        Text("Levels, badges, XP tracking (parked)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .tint(.yellow)
         } header: {
             Label("Experimental Features", systemImage: "flask")
         } footer: {

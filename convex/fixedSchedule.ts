@@ -88,7 +88,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     theme: "demographics",
     splashTitle: "Let's Get to Know You",
     splashSubtitle: "Demographics, sleep history, and environment",
-    estimatedMinutes: 8,
+    estimatedMinutes: 4,  // ~15 sec/question
   },
 
   2: {
@@ -96,7 +96,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     theme: "sleep_quality",
     splashTitle: "Your Sleep Quality",
     splashSubtitle: "Sleep patterns, quality ratings, and satisfaction",
-    estimatedMinutes: 8,
+    estimatedMinutes: 6,  // ~15 sec/question
   },
 
   3: {
@@ -104,7 +104,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     theme: "mental_health",
     splashTitle: "Mind & Mood",
     splashSubtitle: "Mental health, daytime function, and concentration",
-    estimatedMinutes: 8,
+    estimatedMinutes: 1,  // ~15 sec/question (only 4 questions)
   },
 
   4: {
@@ -112,7 +112,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     theme: "physical",
     splashTitle: "Body & Health",
     splashSubtitle: "Physical health, breathing, pain, and activity",
-    estimatedMinutes: 8,
+    estimatedMinutes: 3,  // ~15 sec/question
   },
 
   5: {
@@ -120,7 +120,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     theme: "lifestyle",
     splashTitle: "Daily Habits",
     splashSubtitle: "Caffeine, alcohol, meals, screens, and stress",
-    estimatedMinutes: 8,
+    estimatedMinutes: 9,  // ~15 sec/question (33 questions)
   },
 
   // ============================================
@@ -134,7 +134,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     splashTitle: "Sleep & Work Patterns",
     splashSubtitle: "Insomnia severity and shift work assessment",
     totalQuestions: 11,
-    estimatedMinutes: 8,
+    estimatedMinutes: 3,  // 11 questions × 15 sec = ~3 min
   },
 
   7: {
@@ -144,7 +144,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     splashTitle: "Mood & Thinking",
     splashSubtitle: "Depression screening and cognitive function",
     totalQuestions: 15,
-    estimatedMinutes: 10,
+    estimatedMinutes: 4,  // 15 questions × 15 sec = ~4 min
   },
 
   8: {
@@ -154,7 +154,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     splashTitle: "Anxiety & Sleep Habits",
     splashSubtitle: "Anxiety screening and sleep hygiene assessment",
     totalQuestions: 17,
-    estimatedMinutes: 12,
+    estimatedMinutes: 5,  // 17 questions × 15 sec = ~5 min
   },
 
   9: {
@@ -164,7 +164,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     splashTitle: "Sleep Apnea Screening",
     splashSubtitle: "STOP-BANG sleep apnea risk assessment",
     totalQuestions: 8,
-    estimatedMinutes: 5,
+    estimatedMinutes: 2,  // 8 questions × 15 sec = ~2 min
   },
 
   10: {
@@ -174,7 +174,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     splashTitle: "Daytime Energy",
     splashSubtitle: "Sleepiness and fatigue severity assessment",
     totalQuestions: 17,
-    estimatedMinutes: 12,
+    estimatedMinutes: 5,  // 17 questions × 15 sec = ~5 min
   },
 
   11: {
@@ -184,7 +184,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     splashTitle: "Beliefs & Pain (Part 1)",
     splashSubtitle: "Sleep beliefs and pain severity assessment",
     totalQuestions: 12, // 6 DBAS-6 + 6 BPI
-    estimatedMinutes: 8,
+    estimatedMinutes: 3,  // 12 questions × 15 sec = ~3 min
   },
 
   12: {
@@ -194,7 +194,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     splashTitle: "Pain Impact",
     splashSubtitle: "Pain interference with daily activities",
     totalQuestions: 7,
-    estimatedMinutes: 5,
+    estimatedMinutes: 2,  // 7 questions × 15 sec = ~2 min
   },
 
   13: {
@@ -204,7 +204,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     splashTitle: "Sleep Arousal & Function",
     splashSubtitle: "Pre-sleep arousal and functional outcomes",
     totalQuestions: 26,
-    estimatedMinutes: 18,
+    estimatedMinutes: 7,  // 26 questions × 15 sec = ~7 min
   },
 
   14: {
@@ -214,7 +214,7 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
     splashTitle: "Diet & Chronotype",
     splashSubtitle: "Diet assessment and sleep timing patterns",
     totalQuestions: 33,
-    estimatedMinutes: 22,
+    estimatedMinutes: 9,  // 33 questions × 15 sec = ~9 min
   },
 };
 

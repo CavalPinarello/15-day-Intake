@@ -306,6 +306,7 @@ class ThemeManager: ObservableObject {
         // Load experimental feature toggles (hidden by default)
         self.showSleepDiaryHistory = UserDefaults.standard.bool(forKey: "showSleepDiaryHistory")
         self.showSleepInsights = UserDefaults.standard.bool(forKey: "showSleepInsights")
+        self.gamificationEnabled = UserDefaults.standard.bool(forKey: "gamificationEnabled")
 
         // Load enhanced readability mode (load last so it can override other settings)
         self.enhancedReadabilityMode = UserDefaults.standard.bool(forKey: "enhancedReadabilityMode")

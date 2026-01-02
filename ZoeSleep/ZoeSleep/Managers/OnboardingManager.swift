@@ -9,6 +9,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import UserNotifications
 
 /// Measurement system preference
 enum MeasurementSystem: String, CaseIterable, Identifiable {
@@ -278,6 +279,29 @@ class OnboardingManager: ObservableObject {
         // Save to server
         Task {
             await saveOnboardingToServer()
+        }
+
+        // Request notification permission and schedule reminders
+        setupNotifications()
+    }
+
+    /// Request notification permission and schedule daily reminders
+    private func setupNotifications() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            if let error = error {
+                print("[Onboarding] Notification permission error: \(error)")
+                return
+            }
+
+            if granted {
+                print("[Onboarding] Notification permission granted - scheduling reminders")
+                // Schedule reminders with default times (9 AM morning, 8 PM evening)
+                Task {
+                    await NotificationManager.shared.scheduleFromSavedSettings()
+                }
+            } else {
+                print("[Onboarding] Notification permission denied")
+            }
         }
     }
 

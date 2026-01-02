@@ -270,7 +270,8 @@ struct AnalysisPendingView: View {
 
     private var timeFormatter: DateFormatter {
         let formatter = DateFormatter()
-        formatter.timeStyle = .short
+        // Use TimeFormatManager for consistent time format (respects user preference)
+        formatter.dateFormat = TimeFormatManager.shared.dateFormatString
         return formatter
     }
 

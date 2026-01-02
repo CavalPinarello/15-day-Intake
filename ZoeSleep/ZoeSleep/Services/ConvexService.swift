@@ -2575,12 +2575,15 @@ extension ConvexService {
     }
 
     /// Submit midday check-in data (energy, caffeine, naps)
+    /// Supports optional mood and focus levels for Watch-style check-ins
     func submitMiddayCheckIn(
         energyLevel: Int,
         caffeineCups: Int,
         caffeineLastTime: String?,
         napTaken: Bool,
         napDurationMins: Int?,
+        moodLevel: Int? = nil,
+        focusLevel: Int? = nil,
         deviceType: String = "ios"
     ) async throws {
         guard let userId = currentUserId else {
@@ -2601,15 +2604,25 @@ extension ConvexService {
         if let napDuration = napDurationMins {
             args["napDurationMins"] = napDuration
         }
+        if let mood = moodLevel {
+            args["moodLevel"] = mood
+        }
+        if let focus = focusLevel {
+            args["focusLevel"] = focus
+        }
 
         let _: CheckInSubmitResponse = try await client.mutation("checkIn:submitMiddayCheckIn", args: args)
     }
 
     /// Submit evening check-in data
+    /// Supports optional energy, mood, and focus levels for Watch-style check-ins
     func submitEveningCheckIn(
         overallDayRating: Int,
         reflectionText: String?,
         tasksMissedReasons: String?,
+        energyLevel: Int? = nil,
+        moodLevel: Int? = nil,
+        focusLevel: Int? = nil,
         deviceType: String = "ios"
     ) async throws {
         guard let userId = currentUserId else {
@@ -2627,6 +2640,15 @@ extension ConvexService {
         }
         if let missedReasons = tasksMissedReasons {
             args["tasksMissedReasons"] = missedReasons
+        }
+        if let energy = energyLevel {
+            args["energyLevel"] = energy
+        }
+        if let mood = moodLevel {
+            args["moodLevel"] = mood
+        }
+        if let focus = focusLevel {
+            args["focusLevel"] = focus
         }
 
         let _: CheckInSubmitResponse = try await client.mutation("checkIn:submitEveningCheckIn", args: args)

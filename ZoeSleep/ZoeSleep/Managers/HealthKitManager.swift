@@ -92,7 +92,7 @@ struct HealthKitSyncProgress {
             }
         }
 
-        static var totalSteps: Int { 7 }
+        static var totalSteps: Int { 8 }
     }
 
     var currentStep: Step = .idle
@@ -189,6 +189,11 @@ class HealthKitManager: ObservableObject {
         // Exercise Time
         if let exerciseTimeType = HKObjectType.quantityType(forIdentifier: .appleExerciseTime) {
             readTypes.insert(exerciseTimeType)
+        }
+
+        // Stand Time (for activity tracking in debug panel)
+        if let standTimeType = HKObjectType.quantityType(forIdentifier: .appleStandTime) {
+            readTypes.insert(standTimeType)
         }
 
         // Respiratory Rate

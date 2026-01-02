@@ -258,10 +258,12 @@ struct QuestionnaireView: View {
         } message: {
             Text(saveError ?? "An error occurred while saving your responses. Please check your internet connection and try again.")
         }
-        // Gamification Overlays
+        // Gamification Overlays (PARKED - enable via Debug Panel > Experimental Features)
         .overlay {
             // Badge Unlock Animation
-            if gamificationManager.showBadgeUnlockedAnimation, let badge = gamificationManager.unlockedBadge {
+            if themeManager.gamificationEnabled,
+               gamificationManager.showBadgeUnlockedAnimation,
+               let badge = gamificationManager.unlockedBadge {
                 BadgeUnlockView(badge: badge) {
                     gamificationManager.showBadgeUnlockedAnimation = false
                     gamificationManager.unlockedBadge = nil
@@ -272,7 +274,9 @@ struct QuestionnaireView: View {
         }
         .overlay {
             // Level Up Animation
-            if gamificationManager.showLevelUpAnimation, let levelInfo = gamificationManager.newLevelInfo {
+            if themeManager.gamificationEnabled,
+               gamificationManager.showLevelUpAnimation,
+               let levelInfo = gamificationManager.newLevelInfo {
                 LevelUpCelebration(
                     newLevel: levelInfo.level,
                     levelName: levelInfo.name,
@@ -1328,8 +1332,8 @@ struct QuestionnaireView: View {
                             checkAndShowExpansionSplash(modules: expansionModules)
                         } else {
                             // Show hero-framed day splash for core days (1-5) or days without expansion
-                            // Calculate assessment-only time (~30 seconds per question)
-                            let assessmentMinutes = max(3, (assessmentQuestions.count + 1) / 2)
+                            // Calculate assessment-only time (~15 seconds per question)
+                            let assessmentMinutes = max(1, (assessmentQuestions.count + 3) / 4)
                             checkAndShowDaySplash(
                                 questionCount: assessmentQuestions.count,
                                 estimatedMinutes: assessmentMinutes
@@ -2152,7 +2156,7 @@ struct QuestionnaireView: View {
                     // This ensures the splash appears when proceeding from Sleep Log completion
                     print("[iOS] proceedToAssessment: assessmentQuestions.count = \(assessmentQuestions.count)")
                     if !assessmentQuestions.isEmpty {
-                        let estimatedMinutes = max(3, (assessmentQuestions.count + 1) / 2) // ~30 seconds per question, min 3
+                        let estimatedMinutes = max(1, (assessmentQuestions.count + 3) / 4) // ~15 seconds per question, min 1
 
                         // Use expansion splash for expansion days, day splash for core days
                         if !currentDayExpansionModules.isEmpty && currentDay >= 6 {
@@ -2404,17 +2408,19 @@ struct QuestionnaireView: View {
                         }
                     }
 
-                    // Record gamification progress
-                    let triggeredGateways = questionnaireManager.gatewayStates
-                        .filter { $0.triggered }
-                        .map { $0.gatewayType.rawValue }
+                    // Record gamification progress (PARKED - enable via Debug Panel)
+                    if themeManager.gamificationEnabled {
+                        let triggeredGateways = questionnaireManager.gatewayStates
+                            .filter { $0.triggered }
+                            .map { $0.gatewayType.rawValue }
 
-                    _ = await GamificationManager.shared.recordDayComplete(
-                        dayNumber: currentDay,
-                        completedSleepLog: section == .sleepLog || result.sleepLogCompleted,
-                        completedAssessment: section == .assessment || result.assessmentCompleted,
-                        triggeredGateways: triggeredGateways.isEmpty ? nil : triggeredGateways
-                    )
+                        _ = await GamificationManager.shared.recordDayComplete(
+                            dayNumber: currentDay,
+                            completedSleepLog: section == .sleepLog || result.sleepLogCompleted,
+                            completedAssessment: section == .assessment || result.assessmentCompleted,
+                            triggeredGateways: triggeredGateways.isEmpty ? nil : triggeredGateways
+                        )
+                    }
 
                     // Refresh journey progress to update dashboard
                     await questionnaireManager.loadJourneyProgress()
@@ -2430,17 +2436,19 @@ struct QuestionnaireView: View {
                     try await syncResponsesToConvex()
                     try await questionnaireManager.completeDay(currentDay)
 
-                    // Record gamification progress for full day
-                    let triggeredGateways = questionnaireManager.gatewayStates
-                        .filter { $0.triggered }
-                        .map { $0.gatewayType.rawValue }
+                    // Record gamification progress for full day (PARKED - enable via Debug Panel)
+                    if themeManager.gamificationEnabled {
+                        let triggeredGateways = questionnaireManager.gatewayStates
+                            .filter { $0.triggered }
+                            .map { $0.gatewayType.rawValue }
 
-                    _ = await GamificationManager.shared.recordDayComplete(
-                        dayNumber: currentDay,
-                        completedSleepLog: true,
-                        completedAssessment: true,
-                        triggeredGateways: triggeredGateways.isEmpty ? nil : triggeredGateways
-                    )
+                        _ = await GamificationManager.shared.recordDayComplete(
+                            dayNumber: currentDay,
+                            completedSleepLog: true,
+                            completedAssessment: true,
+                            triggeredGateways: triggeredGateways.isEmpty ? nil : triggeredGateways
+                        )
+                    }
 
                     await MainActor.run {
                         currentDay = min(currentDay + 1, 15)

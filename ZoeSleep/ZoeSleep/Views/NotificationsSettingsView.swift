@@ -9,19 +9,11 @@ import SwiftUI
 import UserNotifications
 
 struct NotificationsSettingsView: View {
-    // MARK: - UserDefaults Keys
-    private static let morningReminderEnabledKey = "morningReminderEnabled"
-    private static let eveningReminderEnabledKey = "eveningReminderEnabled"
-    private static let morningReminderHourKey = "morningReminderHour"
-    private static let morningReminderMinuteKey = "morningReminderMinute"
-    private static let eveningReminderHourKey = "eveningReminderHour"
-    private static let eveningReminderMinuteKey = "eveningReminderMinute"
-
     @State private var notificationsEnabled = false
-    @State private var morningReminder = true
-    @State private var eveningReminder = true
-    @State private var morningTime = Calendar.current.date(from: DateComponents(hour: 8, minute: 0)) ?? Date()
-    @State private var eveningTime = Calendar.current.date(from: DateComponents(hour: 21, minute: 0)) ?? Date()
+    @State private var morningReminderEnabled = true
+    @State private var morningTime = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
+    @State private var eveningReminderEnabled = true
+    @State private var eveningTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date()
     @State private var showingPermissionAlert = false
 
     var body: some View {
@@ -31,7 +23,7 @@ struct NotificationsSettingsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Enable Notifications")
                             .font(.headline)
-                        Text("Get reminders to complete your sleep log")
+                        Text("Get reminders to complete your daily tasks")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -41,7 +33,7 @@ struct NotificationsSettingsView: View {
                         requestNotificationPermission()
                     } else {
                         // Cancel all reminders when disabled
-                        NotificationManager.shared.cancelSleepReminders()
+                        NotificationManager.shared.cancelDailyTaskReminder()
                     }
                 }
             } header: {
@@ -50,55 +42,59 @@ struct NotificationsSettingsView: View {
 
             if notificationsEnabled {
                 Section {
-                    Toggle(isOn: $morningReminder) {
+                    Toggle(isOn: $morningReminderEnabled) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Morning Sleep Log")
+                            Text("Morning Reminder")
                                 .font(.headline)
-                            Text("Reminder to log last night's sleep")
+                            Text("Reminder to log your sleep")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .onChange(of: morningReminder) { _, enabled in
-                        saveMorningReminder(enabled: enabled)
-                        scheduleReminders()
+                    .onChange(of: morningReminderEnabled) { _, _ in
+                        saveAndScheduleMorningReminder()
                     }
 
-                    if morningReminder {
+                    if morningReminderEnabled {
                         DatePicker("Time", selection: $morningTime, displayedComponents: .hourAndMinute)
-                            .onChange(of: morningTime) { _, newTime in
-                                saveMorningTime(newTime)
-                                scheduleReminders()
+                            .onChange(of: morningTime) { _, _ in
+                                saveAndScheduleMorningReminder()
                             }
                     }
                 } header: {
                     Text("Morning Reminder")
+                } footer: {
+                    Text("Reminds you to complete your sleep log after waking up.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
 
                 Section {
-                    Toggle(isOn: $eveningReminder) {
+                    Toggle(isOn: $eveningReminderEnabled) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Evening Check-in")
+                            Text("Evening Reminder")
                                 .font(.headline)
-                            Text("Reminder to complete daily assessment")
+                            Text("Follow-up if tasks are still incomplete")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .onChange(of: eveningReminder) { _, enabled in
-                        saveEveningReminder(enabled: enabled)
-                        scheduleReminders()
+                    .onChange(of: eveningReminderEnabled) { _, _ in
+                        saveAndScheduleEveningReminder()
                     }
 
-                    if eveningReminder {
+                    if eveningReminderEnabled {
                         DatePicker("Time", selection: $eveningTime, displayedComponents: .hourAndMinute)
-                            .onChange(of: eveningTime) { _, newTime in
-                                saveEveningTime(newTime)
-                                scheduleReminders()
+                            .onChange(of: eveningTime) { _, _ in
+                                saveAndScheduleEveningReminder()
                             }
                     }
                 } header: {
                     Text("Evening Reminder")
+                } footer: {
+                    Text("A gentle follow-up if you haven't completed your tasks yet. Won't notify if everything is done.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -127,59 +123,49 @@ struct NotificationsSettingsView: View {
     private func loadSavedSettings() {
         let defaults = UserDefaults.standard
 
-        // Load reminder toggles (default to true)
-        morningReminder = defaults.object(forKey: Self.morningReminderEnabledKey) as? Bool ?? true
-        eveningReminder = defaults.object(forKey: Self.eveningReminderEnabledKey) as? Bool ?? true
-
-        // Load morning time (default 8:00 AM)
-        let morningHour = defaults.object(forKey: Self.morningReminderHourKey) as? Int ?? 8
-        let morningMinute = defaults.object(forKey: Self.morningReminderMinuteKey) as? Int ?? 0
+        // Load morning reminder settings (default 9:00 AM)
+        morningReminderEnabled = defaults.object(forKey: NotificationManager.dailyReminderEnabledKey) as? Bool ?? true
+        let morningHour = defaults.object(forKey: NotificationManager.dailyReminderHourKey) as? Int ?? 9
+        let morningMinute = defaults.object(forKey: NotificationManager.dailyReminderMinuteKey) as? Int ?? 0
         morningTime = Calendar.current.date(from: DateComponents(hour: morningHour, minute: morningMinute)) ?? Date()
 
-        // Load evening time (default 9:00 PM)
-        let eveningHour = defaults.object(forKey: Self.eveningReminderHourKey) as? Int ?? 21
-        let eveningMinute = defaults.object(forKey: Self.eveningReminderMinuteKey) as? Int ?? 0
+        // Load evening reminder settings (default 8:00 PM)
+        eveningReminderEnabled = defaults.object(forKey: NotificationManager.eveningReminderEnabledKey) as? Bool ?? true
+        let eveningHour = defaults.object(forKey: NotificationManager.eveningReminderHourKey) as? Int ?? 20
+        let eveningMinute = defaults.object(forKey: NotificationManager.eveningReminderMinuteKey) as? Int ?? 0
         eveningTime = Calendar.current.date(from: DateComponents(hour: eveningHour, minute: eveningMinute)) ?? Date()
 
-        print("[Notifications] Loaded settings - Morning: \(morningHour):\(morningMinute), Evening: \(eveningHour):\(eveningMinute)")
+        print("[Notifications] Loaded settings - Morning: \(morningHour):\(String(format: "%02d", morningMinute)), Evening: \(eveningHour):\(String(format: "%02d", eveningMinute))")
     }
 
-    private func saveMorningReminder(enabled: Bool) {
-        UserDefaults.standard.set(enabled, forKey: Self.morningReminderEnabledKey)
-    }
+    private func saveAndScheduleMorningReminder() {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: morningTime)
+        let hour = components.hour ?? 9
+        let minute = components.minute ?? 0
 
-    private func saveEveningReminder(enabled: Bool) {
-        UserDefaults.standard.set(enabled, forKey: Self.eveningReminderEnabledKey)
-    }
+        print("[Notifications] Saving morning reminder - enabled: \(morningReminderEnabled), time: \(hour):\(String(format: "%02d", minute))")
 
-    private func saveMorningTime(_ time: Date) {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: time)
-        UserDefaults.standard.set(components.hour, forKey: Self.morningReminderHourKey)
-        UserDefaults.standard.set(components.minute, forKey: Self.morningReminderMinuteKey)
-        print("[Notifications] Saved morning time: \(components.hour ?? 8):\(components.minute ?? 0)")
-    }
-
-    private func saveEveningTime(_ time: Date) {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: time)
-        UserDefaults.standard.set(components.hour, forKey: Self.eveningReminderHourKey)
-        UserDefaults.standard.set(components.minute, forKey: Self.eveningReminderMinuteKey)
-        print("[Notifications] Saved evening time: \(components.hour ?? 21):\(components.minute ?? 0)")
-    }
-
-    // MARK: - Notification Scheduling
-
-    private func scheduleReminders() {
         Task {
-            let morningComponents = Calendar.current.dateComponents([.hour, .minute], from: morningTime)
-            let eveningComponents = Calendar.current.dateComponents([.hour, .minute], from: eveningTime)
+            await NotificationManager.shared.scheduleDailyTaskReminder(
+                enabled: morningReminderEnabled,
+                hour: hour,
+                minute: minute
+            )
+        }
+    }
 
-            await NotificationManager.shared.scheduleSleepReminders(
-                morningEnabled: morningReminder,
-                morningHour: morningComponents.hour ?? 8,
-                morningMinute: morningComponents.minute ?? 0,
-                eveningEnabled: eveningReminder,
-                eveningHour: eveningComponents.hour ?? 21,
-                eveningMinute: eveningComponents.minute ?? 0
+    private func saveAndScheduleEveningReminder() {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: eveningTime)
+        let hour = components.hour ?? 20
+        let minute = components.minute ?? 0
+
+        print("[Notifications] Saving evening reminder - enabled: \(eveningReminderEnabled), time: \(hour):\(String(format: "%02d", minute))")
+
+        Task {
+            await NotificationManager.shared.scheduleEveningReminder(
+                enabled: eveningReminderEnabled,
+                hour: hour,
+                minute: minute
             )
         }
     }
@@ -200,8 +186,9 @@ struct NotificationsSettingsView: View {
                 }
                 notificationsEnabled = granted
                 if granted {
-                    // Schedule reminders with current settings after permission granted
-                    scheduleReminders()
+                    // Schedule both reminders with current settings after permission granted
+                    saveAndScheduleMorningReminder()
+                    saveAndScheduleEveningReminder()
                 }
             }
         }
