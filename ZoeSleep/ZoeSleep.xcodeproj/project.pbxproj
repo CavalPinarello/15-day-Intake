@@ -20,6 +20,7 @@
 		4A5E3B912C8E123456789A04 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5E3B902C8E123456789A04 /* Preview Assets.xcassets */; };
 		4A5E3B982C8E123456789A05 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B972C8E123456789A05 /* Config.swift */; };
 		4A5E3B9A2C8E123456789A06 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */; };
+		4A5E3C202C8E123456789ST1 /* SpeedTestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C212C8E123456789ST2 /* SpeedTestManager.swift */; };
 		4A5E3B9C2C8E123456789A07 /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */; };
 		4A5E3B9E2C8E123456789A08 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B9D2C8E123456789A08 /* APIService.swift */; };
 		4A5E3BA02C8E123456789A09 /* AuthenticationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3B9F2C8E123456789A09 /* AuthenticationView.swift */; };
@@ -121,6 +122,10 @@
 		F879436DEDFFFC4ECA1D9ED5 /* AnalysisPendingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */; };
 		FCE5FE4CC8056C6D72F48841 /* CheckInManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C97DBCA01C582571D7064E4A /* CheckInManager.swift */; };
 		WATCHEMBBED0012C8E123456789 /* ZoeSleep Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 4A5E3BA52C8E123456789A0E /* ZoeSleep Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		SLEEP001012C8E123456789S01 /* SleepStageModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLEEP002012C8E123456789S02 /* SleepStageModels.swift */; };
+		SLEEP003012C8E123456789S03 /* ChronotypeSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLEEP004012C8E123456789S04 /* ChronotypeSystem.swift */; };
+		SLEEP005012C8E123456789S05 /* SleepAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLEEP006012C8E123456789S06 /* SleepAnalyzer.swift */; };
+		SLEEP007012C8E123456789S07 /* SleepStagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLEEP008012C8E123456789S08 /* SleepStagesView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -163,6 +168,7 @@
 		4A5E3B902C8E123456789A04 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		4A5E3B972C8E123456789A05 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
+		4A5E3C212C8E123456789ST2 /* SpeedTestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTestManager.swift; sourceTree = "<group>"; };
 		4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 		4A5E3B9D2C8E123456789A08 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		4A5E3B9F2C8E123456789A09 /* AuthenticationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationView.swift; sourceTree = "<group>"; };
@@ -267,6 +273,10 @@
 		SCMAP002ED24841599CCADD2 /* ScaleMapper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScaleMapper.swift; sourceTree = "<group>"; };
 		CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyPhaseManager.swift; sourceTree = "<group>"; };
 		DF6080214D734AC815952E0F /* TestUtilities.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TestUtilities.swift; sourceTree = "<group>"; };
+		SLEEP002012C8E123456789S02 /* SleepStageModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepStageModels.swift; sourceTree = "<group>"; };
+		SLEEP004012C8E123456789S04 /* ChronotypeSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChronotypeSystem.swift; sourceTree = "<group>"; };
+		SLEEP006012C8E123456789S06 /* SleepAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAnalyzer.swift; sourceTree = "<group>"; };
+		SLEEP008012C8E123456789S08 /* SleepStagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepStagesView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -417,6 +427,7 @@
 				4A5E3DWC012C8E123456789WC01 /* Components */,
 				4A5E3DWV012C8E123456789WV01 /* Views */,
 				4A5E3DWG012C8E123456789WG01 /* Managers */,
+				SLEEPGRP0012C8E123456789SG1 /* Sleep */,
 				4A5E3BAD2C8E123456789A1A /* ZoeSleep Watch App.entitlements */,
 				4A5E3BAF2C8E123456789A1B /* Info.plist */,
 				4A5E3BA72C8E123456789A0B /* ZoeSleep_Watch_AppApp.swift */,
@@ -435,6 +446,7 @@
 			children = (
 				CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */,
 				4A5E3B992C8E123456789A06 /* AuthenticationManager.swift */,
+				4A5E3C212C8E123456789ST2 /* SpeedTestManager.swift */,
 				5A316CC02EF4B1200098C762 /* GamificationManager.swift */,
 				4A5E3B9B2C8E123456789A07 /* HealthKitManager.swift */,
 				5A316CB52EF4B0F10098C762 /* NotificationManager.swift */,
@@ -562,6 +574,17 @@
 				4A5E3DW0192C8E123456789W019 /* WatchNotificationManager.swift */,
 			);
 			path = Managers;
+			sourceTree = "<group>";
+		};
+		SLEEPGRP0012C8E123456789SG1 /* Sleep */ = {
+			isa = PBXGroup;
+			children = (
+				SLEEP002012C8E123456789S02 /* SleepStageModels.swift */,
+				SLEEP004012C8E123456789S04 /* ChronotypeSystem.swift */,
+				SLEEP006012C8E123456789S06 /* SleepAnalyzer.swift */,
+				SLEEP008012C8E123456789S08 /* SleepStagesView.swift */,
+			);
+			path = Sleep;
 			sourceTree = "<group>";
 		};
 		4A5E3DWM012C8E123456789WM01 /* Models */ = {
@@ -853,6 +876,7 @@
 				5A316CBA2EF4B10E0098C762 /* EveningReportView.swift in Sources */,
 				4A5E3B982C8E123456789A05 /* Config.swift in Sources */,
 				4A5E3B9A2C8E123456789A06 /* AuthenticationManager.swift in Sources */,
+				4A5E3C202C8E123456789ST1 /* SpeedTestManager.swift in Sources */,
 				4A5E3B9C2C8E123456789A07 /* HealthKitManager.swift in Sources */,
 				4A5E3B9E2C8E123456789A08 /* APIService.swift in Sources */,
 				4A5E3BA02C8E123456789A09 /* AuthenticationView.swift in Sources */,
@@ -950,6 +974,10 @@
 				4A5E3BE02C8E123456789D01 /* WatchThemeManager.swift in Sources */,
 				4A5E3BE42C8E123456789D05 /* WatchConvexService.swift in Sources */,
 				47FDD6E23805CB5BC34ABE75 /* WatchDayInvitationCard.swift in Sources */,
+				SLEEP001012C8E123456789S01 /* SleepStageModels.swift in Sources */,
+				SLEEP003012C8E123456789S03 /* ChronotypeSystem.swift in Sources */,
+				SLEEP005012C8E123456789S05 /* SleepAnalyzer.swift in Sources */,
+				SLEEP007012C8E123456789S07 /* SleepStagesView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
