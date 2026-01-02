@@ -2647,12 +2647,13 @@ export const speedTestCompleteDay = mutation({
         .first();
 
       if (!existing) {
+        // Parse numeric value if the string is a number
+        const numericValue = !isNaN(parseFloat(response.value)) ? parseFloat(response.value) : undefined;
         await ctx.db.insert("user_assessment_responses", {
           user_id: args.userId,
           question_id: response.questionId,
-          response_value: response.value?.toString(),
-          response_number: typeof response.value === "number" ? response.value : undefined,
-          response_array: response.array ? JSON.stringify(response.array) : undefined,
+          response_value: response.value,
+          response_number: numericValue,
           day_number: currentDay,
           created_at: now,
           updated_at: now,
