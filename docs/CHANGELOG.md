@@ -6,6 +6,27 @@
 
 ### Jan 2, 2026
 
+#### Unified Time Format System (12-hour/24-hour)
+
+Fixed TimeFormatManager not being found by Xcode and updated Watch app time picker to support both 12-hour and 24-hour modes.
+
+**Problem:**
+- TimeFormatManager was in Shared folder but not properly linked to iOS target
+- Watch app time picker was hardcoded to 12-hour format only
+
+**Solution:**
+- Moved TimeFormatManager to `ZoeSleep/Utilities/` for iOS target
+- Created separate TimeFormatManager in `ZoeSleep Watch App/` for Watch target
+- Updated Watch `WatchTimePickerView` to support both 12-hour and 24-hour modes:
+  - 12-hour mode: Hour (1-12) + Minute + AM/PM picker
+  - 24-hour mode: Hour (00-23) + Minute (no AM/PM)
+- System detects device locale preference automatically
+- User can override in Settings (System Default / 12-hour / 24-hour)
+
+**Files changed:** `TimeFormatManager.swift` (moved and duplicated), `QuestionnaireView.swift`, `WatchQuestionComponents.swift`
+
+---
+
 #### Notification Message Variety & Check-In Infrastructure
 
 Implemented 100 rotating notification messages to prevent user desensitization and added infrastructure for Watch-style check-ins on iOS.

@@ -88,6 +88,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
+**Jan 2:** Unified time format system - TimeFormatManager moved to target-specific folders (iOS Utilities + Watch App), Watch time picker now supports both 12-hour and 24-hour modes, system auto-detects device preference with optional user override in Settings
 **Jan 2:** Notification message variety (100 rotating messages to prevent desensitization), Watch-style Energy/Mood/Focus check-in infrastructure on iOS, improved notification settings UI with scheduled time display
 **Jan 2:** App versioning system overhaul (v1.0.12) - single source of truth in `ZoeSleep/Shared/AppVersion.swift`, version history tracking in `docs/VERSION_HISTORY.md`, fixed date-based build display bug
 **Jan 2:** Unit-aware help text for temperature question (Q33A) - shows °C or °F based on user's measurement preference, added helpTextImperial field to Question model and Convex schema

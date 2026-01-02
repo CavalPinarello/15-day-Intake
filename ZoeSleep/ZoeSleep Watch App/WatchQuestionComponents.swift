@@ -112,9 +112,8 @@ struct WatchTimePicker: View {
     }
 
     private var timeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: selectedTime)
+        // Use TimeFormatManager for consistent time format (respects user preference)
+        return TimeFormatManager.shared.formatTime(selectedTime)
     }
 }
 

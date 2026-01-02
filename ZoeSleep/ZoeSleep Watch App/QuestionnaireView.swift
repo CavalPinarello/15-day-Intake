@@ -1305,12 +1305,24 @@ struct WatchTimePickerView: View {
     var questionId: String = ""
     var previousBedtime: Date? = nil  // Used to calculate smart defaults for wake/asleep times
 
+    // 12-hour mode states
     @State private var hour12: Int = 10      // 1-12 format
-    @State private var minute: Int = 0
     @State private var isPM: Bool = true     // AM/PM toggle
+
+    // 24-hour mode state
+    @State private var hour24: Int = 22      // 0-23 format
+
+    // Shared states
+    @State private var minute: Int = 0
     @State private var hasInitialized: Bool = false
 
+    // Check if device uses 12-hour format
+    private var uses12Hour: Bool {
+        TimeFormatManager.shared.uses12HourFormat
+    }
+
     private let hours12 = Array(1...12)
+    private let hours24 = Array(0...23)
     private let minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 
     // Smart defaults based on question and previous answers (Stanford Sleep Diary)
@@ -1371,48 +1383,81 @@ struct WatchTimePickerView: View {
 
     var body: some View {
         VStack(spacing: 2) {
-            // 12-hour picker with AM/PM
-            HStack(spacing: 2) {
-                // Hour picker (1-12)
-                Picker("Hour", selection: $hour12) {
-                    ForEach(hours12, id: \.self) { h in
-                        Text("\(h)")
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .tag(h)
+            if uses12Hour {
+                // 12-hour picker with AM/PM
+                HStack(spacing: 2) {
+                    // Hour picker (1-12)
+                    Picker("Hour", selection: $hour12) {
+                        ForEach(hours12, id: \.self) { h in
+                            Text("\(h)")
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .tag(h)
+                        }
                     }
-                }
-                .pickerStyle(.wheel)
-                .frame(width: 50, height: 70)
-                .clipped()
+                    .pickerStyle(.wheel)
+                    .frame(width: 50, height: 70)
+                    .clipped()
 
-                Text(":")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(theme.primary)
+                    Text(":")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(theme.primary)
 
-                // Minute picker
-                Picker("Minute", selection: $minute) {
-                    ForEach(minutes, id: \.self) { m in
-                        Text(String(format: "%02d", m))
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .tag(m)
+                    // Minute picker
+                    Picker("Minute", selection: $minute) {
+                        ForEach(minutes, id: \.self) { m in
+                            Text(String(format: "%02d", m))
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .tag(m)
+                        }
                     }
-                }
-                .pickerStyle(.wheel)
-                .frame(width: 50, height: 70)
-                .clipped()
+                    .pickerStyle(.wheel)
+                    .frame(width: 50, height: 70)
+                    .clipped()
 
-                // AM/PM picker
-                Picker("Period", selection: $isPM) {
-                    Text("AM")
-                        .font(.system(size: 16, weight: .semibold))
-                        .tag(false)
-                    Text("PM")
-                        .font(.system(size: 16, weight: .semibold))
-                        .tag(true)
+                    // AM/PM picker
+                    Picker("Period", selection: $isPM) {
+                        Text("AM")
+                            .font(.system(size: 16, weight: .semibold))
+                            .tag(false)
+                        Text("PM")
+                            .font(.system(size: 16, weight: .semibold))
+                            .tag(true)
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(width: 44, height: 70)
+                    .clipped()
                 }
-                .pickerStyle(.wheel)
-                .frame(width: 44, height: 70)
-                .clipped()
+            } else {
+                // 24-hour picker (no AM/PM)
+                HStack(spacing: 4) {
+                    // Hour picker (0-23)
+                    Picker("Hour", selection: $hour24) {
+                        ForEach(hours24, id: \.self) { h in
+                            Text(String(format: "%02d", h))
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .tag(h)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(width: 55, height: 70)
+                    .clipped()
+
+                    Text(":")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(theme.primary)
+
+                    // Minute picker
+                    Picker("Minute", selection: $minute) {
+                        ForEach(minutes, id: \.self) { m in
+                            Text(String(format: "%02d", m))
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .tag(m)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(width: 55, height: 70)
+                    .clipped()
+                }
             }
         }
         .onAppear {
@@ -1420,52 +1465,71 @@ struct WatchTimePickerView: View {
             hasInitialized = true
 
             // Set smart default based on question
-            let (defaultHour24, defaultMinute) = smartDefault
+            let (defaultHour24Val, defaultMinute) = smartDefault
 
-            // Convert 24h to 12h format
-            if defaultHour24 == 0 {
+            // Set both 12-hour and 24-hour states
+            hour24 = defaultHour24Val
+            minute = defaultMinute
+
+            // Convert 24h to 12h format for 12-hour mode
+            if defaultHour24Val == 0 {
                 hour12 = 12
                 isPM = false
-            } else if defaultHour24 == 12 {
+            } else if defaultHour24Val == 12 {
                 hour12 = 12
                 isPM = true
-            } else if defaultHour24 > 12 {
-                hour12 = defaultHour24 - 12
+            } else if defaultHour24Val > 12 {
+                hour12 = defaultHour24Val - 12
                 isPM = true
             } else {
-                hour12 = defaultHour24
+                hour12 = defaultHour24Val
                 isPM = false
             }
-            minute = defaultMinute
 
             // Apply the default immediately
             updateSelectedTime()
         }
         .onChange(of: hour12) { _, _ in
-            updateSelectedTime()
-            WKInterfaceDevice.current().play(.click)
+            if uses12Hour {
+                updateSelectedTime()
+                WKInterfaceDevice.current().play(.click)
+            }
+        }
+        .onChange(of: hour24) { _, _ in
+            if !uses12Hour {
+                updateSelectedTime()
+                WKInterfaceDevice.current().play(.click)
+            }
         }
         .onChange(of: minute) { _, _ in
             updateSelectedTime()
             WKInterfaceDevice.current().play(.click)
         }
         .onChange(of: isPM) { _, _ in
-            updateSelectedTime()
-            WKInterfaceDevice.current().play(.click)
+            if uses12Hour {
+                updateSelectedTime()
+                WKInterfaceDevice.current().play(.click)
+            }
         }
     }
 
     private func updateSelectedTime() {
-        // Convert 12h to 24h
-        var hour24: Int
-        if hour12 == 12 {
-            hour24 = isPM ? 12 : 0
+        // Get hour in 24h format based on current mode
+        let finalHour24: Int
+        if uses12Hour {
+            // Convert 12h to 24h
+            if hour12 == 12 {
+                finalHour24 = isPM ? 12 : 0
+            } else {
+                finalHour24 = isPM ? hour12 + 12 : hour12
+            }
         } else {
-            hour24 = isPM ? hour12 + 12 : hour12
+            // Already in 24h format
+            finalHour24 = hour24
         }
 
         var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        components.hour = hour24
+        components.hour = finalHour24
         components.minute = minute
         if let newDate = Calendar.current.date(from: components) {
             selectedTime = newDate
