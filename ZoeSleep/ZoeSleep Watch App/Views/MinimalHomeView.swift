@@ -175,7 +175,7 @@ struct MinimalHomeView: View {
             loadData()
             startTimeUpdates()
             // Reset notification tracking for new day
-            WatchNotificationManager.shared.resetCompletedCheckInsIfNewDay()
+            WatchNotificationManager.shared.resetForNewDay()
         }
     }
 
@@ -633,8 +633,15 @@ struct MinimalHomeView: View {
             }
         }
 
-        // Cancel remaining reminders for this slot
-        WatchNotificationManager.shared.markCheckInComplete(type: type.rawValue)
+        // Cancel remaining reminders for this slot (streak is from garden manager)
+        let currentStreak = gardenManager.garden?.currentStreak ?? 1
+        WatchNotificationManager.shared.markCheckInComplete(
+            type: type.rawValue,
+            energy: energy.rawValue,
+            mood: mood.rawValue,
+            focus: focus.rawValue,
+            streak: currentStreak
+        )
 
         // Update check-in status optimistically based on type
         if let currentStatus = checkInStatus {

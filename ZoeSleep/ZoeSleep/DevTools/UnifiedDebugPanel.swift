@@ -175,7 +175,10 @@ struct UnifiedDebugPanel: View {
                 // MARK: - Section 6: Journey Controls
                 journeyControlsSection
 
-                // MARK: - Section 7: Experimental Features
+                // MARK: - Section 7: Speed Run (Accelerated Testing)
+                speedRunSection
+
+                // MARK: - Section 8: Experimental Features
                 experimentalFeaturesSection
 
                 // MARK: - Section 8: Repair Tools
@@ -595,6 +598,12 @@ struct UnifiedDebugPanel: View {
     @State private var backdateDaysAgo: Int = 7
     @State private var isBackdating = false
 
+    // Speed Run state
+    @State private var speedRunPhenotype: String = "normal"
+    @State private var speedRunTargetDay: Int = 14
+    @State private var isSpeedCompleting = false
+    @State private var isSpeedRunning = false
+
     private var journeyControlsSection: some View {
         Section {
             // Jump to Any Day (Primary debug feature)
@@ -702,6 +711,101 @@ struct UnifiedDebugPanel: View {
             Label("Journey Controls", systemImage: "slider.horizontal.3")
         } footer: {
             Text("Jump to Day changes current day only. Backdate Start also adjusts the journey start timestamp for accurate time calculations.")
+        }
+    }
+
+    // MARK: - Speed Run Section
+
+    private var speedRunSection: some View {
+        Section {
+            // Phenotype Selector
+            HStack {
+                Label("Phenotype", systemImage: "person.crop.rectangle.badge.plus")
+                    .foregroundColor(.indigo)
+                Spacer()
+                Picker("", selection: $speedRunPhenotype) {
+                    Text("Normal").tag("normal")
+                    Text("Insomnia").tag("insomnia")
+                    Text("OSA").tag("osa")
+                    Text("Anxiety").tag("anxiety")
+                    Text("Depression").tag("depression")
+                }
+                .pickerStyle(.menu)
+                .frame(width: 130)
+            }
+
+            // Speed Complete Current Day
+            Button {
+                speedCompleteCurrentDay()
+            } label: {
+                HStack {
+                    Label("Complete Day \(questionnaireManager.currentDay)", systemImage: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Spacer()
+                    if isSpeedCompleting {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Text("Mock answers + advance")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .disabled(isSpeedCompleting || questionnaireManager.currentDay > 14)
+
+            // Speed Run to Target Day
+            HStack {
+                Label("Speed Run to", systemImage: "forward.end.fill")
+                    .foregroundColor(.orange)
+                Spacer()
+                Picker("", selection: $speedRunTargetDay) {
+                    ForEach(questionnaireManager.currentDay...14, id: \.self) { day in
+                        Text("Day \(day)").tag(day)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 100)
+
+                Button {
+                    speedRunToDay()
+                } label: {
+                    if isSpeedRunning {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    } else {
+                        Text("Run")
+                            .fontWeight(.semibold)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .disabled(isSpeedRunning || speedRunTargetDay <= questionnaireManager.currentDay)
+            }
+
+            // Full Journey Button
+            Button {
+                speedRunFullJourney()
+            } label: {
+                HStack {
+                    Label("Complete Full Journey", systemImage: "flame.fill")
+                        .foregroundColor(.red)
+                    Spacer()
+                    if isSpeedRunning {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Text("Days \(questionnaireManager.currentDay)→14")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .disabled(isSpeedRunning || questionnaireManager.currentDay >= 14)
+        } header: {
+            Label("Speed Run (Accelerated Testing)", systemImage: "hare.fill")
+        } footer: {
+            Text("Auto-generates mock questionnaire answers based on selected phenotype. HealthKit data from your Watch is preserved. Use this to quickly test the full 14-day journey.")
         }
     }
 

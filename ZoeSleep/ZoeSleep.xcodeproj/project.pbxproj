@@ -120,6 +120,7 @@
 		F72EBBE4767CCE3A211D7777 /* MyDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2088C6077EF6174DFEF37292 /* MyDataView.swift */; };
 		F879436DEDFFFC4ECA1D9ED5 /* AnalysisPendingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */; };
 		FCE5FE4CC8056C6D72F48841 /* CheckInManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C97DBCA01C582571D7064E4A /* CheckInManager.swift */; };
+		WATCHEMBBED0012C8E123456789 /* ZoeSleep Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 4A5E3BA52C8E123456789A0E /* ZoeSleep Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -136,6 +137,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 4A5E3B832C8E123456789A26;
 			remoteInfo = ZoeSleep;
+		};
+		WATCHPROXY00012C8E123456789 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4A5E3B7D2C8E123456789A14 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4A5E3BA42C8E123456789A15;
+			remoteInfo = "ZoeSleep Watch App";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -680,10 +688,12 @@
 				4A5E3B802C8E123456789A28 /* Sources */,
 				4A5E3B812C8E123456789A1C /* Frameworks */,
 				4A5E3B822C8E123456789A29 /* Resources */,
+				WATCHCOPY000012C8E123456789 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				WATCHDEP0000012C8E123456789 /* PBXTargetDependency */,
 			);
 			name = ZoeSleep;
 			productName = ZoeSleep;
@@ -781,6 +791,20 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		WATCHCOPY000012C8E123456789 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				WATCHEMBBED0012C8E123456789 /* ZoeSleep Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXResourcesBuildPhase section */
 		4A5E3B822C8E123456789A29 /* Resources */ = {
@@ -967,6 +991,12 @@
 			name = ZoeSleep;
 			target = 4A5E3B832C8E123456789A26 /* ZoeSleep */;
 			targetProxy = D838A4A692A1462161E20763 /* PBXContainerItemProxy */;
+		};
+		WATCHDEP0000012C8E123456789 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "ZoeSleep Watch App";
+			target = 4A5E3BA42C8E123456789A15 /* ZoeSleep Watch App */;
+			targetProxy = WATCHPROXY00012C8E123456789 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

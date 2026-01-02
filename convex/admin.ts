@@ -852,55 +852,134 @@ export const resetUserPassword = mutation({
 
 /**
  * Reset user progress (keep user, delete all data)
+ * Now includes option to clear ALL wearable data as well
  */
 export const resetUserProgress = mutation({
-  args: { userId: v.id("users") },
-  handler: async (ctx, { userId }) => {
+  args: {
+    userId: v.id("users"),
+    clearWearableData: v.optional(v.boolean()), // If true, also clears wearable/HealthKit data
+  },
+  handler: async (ctx, { userId, clearWearableData = false }) => {
     const user = await ctx.db.get(userId);
     if (!user) {
       return { success: false, error: "User not found" };
     }
 
     let deletedRecords = 0;
+    const deletedTables: Record<string, number> = {};
 
-    // Delete progress-related data but keep user account
-    const tables = [
-      ctx.db.query("user_assessment_responses").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("responses").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_progress").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("daily_checkins").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_sleep_data").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_interventions").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("physician_notes").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("patient_review_status").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("questionnaire_scores").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_gateway_states").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_expansion_schedules").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("questionnaire_session").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("sleep_insights").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("patient_journey_status").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_streaks").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_badges").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_xp").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_daily_tasks").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_cohort_memberships").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_sleep_narrative").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_insight_queue").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_insight_progress").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("patient_analysis_workflow").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_protocol_assignments").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      // Additional tables that may contain derived/cached data
-      ctx.db.query("perception_gaps").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("difficulty_adjustment_log").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("compliance_outcome_correlation").withIndex("by_user", (q) => q.eq("user_id", userId)),
-      ctx.db.query("user_metrics_summary").withIndex("by_user", (q) => q.eq("user_id", userId)),
-    ];
-
-    for (const query of tables) {
+    // Helper to delete and track
+    async function deleteFromTable(tableName: string, query: { collect: () => Promise<Array<{ _id: Id<any> }>> }) {
       const records = await query.collect();
       for (const record of records) {
         await ctx.db.delete(record._id);
         deletedRecords++;
+      }
+      if (records.length > 0) {
+        deletedTables[tableName] = records.length;
+      }
+    }
+
+    // Core assessment and progress data - ALWAYS delete
+    await deleteFromTable("user_assessment_responses",
+      ctx.db.query("user_assessment_responses").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("responses",
+      ctx.db.query("responses").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_progress",
+      ctx.db.query("user_progress").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("daily_checkins",
+      ctx.db.query("daily_checkins").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("questionnaire_session",
+      ctx.db.query("questionnaire_session").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("questionnaire_scores",
+      ctx.db.query("questionnaire_scores").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_gateway_states",
+      ctx.db.query("user_gateway_states").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_expansion_schedules",
+      ctx.db.query("user_expansion_schedules").withIndex("by_user", (q) => q.eq("user_id", userId)));
+
+    // Physician dashboard data
+    await deleteFromTable("physician_notes",
+      ctx.db.query("physician_notes").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("patient_review_status",
+      ctx.db.query("patient_review_status").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("patient_journey_status",
+      ctx.db.query("patient_journey_status").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("patient_analysis_workflow",
+      ctx.db.query("patient_analysis_workflow").withIndex("by_user", (q) => q.eq("user_id", userId)));
+
+    // Interventions
+    await deleteFromTable("user_interventions",
+      ctx.db.query("user_interventions").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_daily_tasks",
+      ctx.db.query("user_daily_tasks").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_protocol_assignments",
+      ctx.db.query("user_protocol_assignments").withIndex("by_user", (q) => q.eq("user_id", userId)));
+
+    // Gamification
+    await deleteFromTable("user_streaks",
+      ctx.db.query("user_streaks").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_badges",
+      ctx.db.query("user_badges").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_xp",
+      ctx.db.query("user_xp").withIndex("by_user", (q) => q.eq("user_id", userId)));
+
+    // Insights and analytics
+    await deleteFromTable("sleep_insights",
+      ctx.db.query("sleep_insights").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_insight_queue",
+      ctx.db.query("user_insight_queue").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_insight_progress",
+      ctx.db.query("user_insight_progress").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_cohort_memberships",
+      ctx.db.query("user_cohort_memberships").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_sleep_narrative",
+      ctx.db.query("user_sleep_narrative").withIndex("by_user", (q) => q.eq("user_id", userId)));
+
+    // Compliance and metrics
+    await deleteFromTable("perception_gaps",
+      ctx.db.query("perception_gaps").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("difficulty_adjustment_log",
+      ctx.db.query("difficulty_adjustment_log").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("compliance_outcome_correlation",
+      ctx.db.query("compliance_outcome_correlation").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_metrics_summary",
+      ctx.db.query("user_metrics_summary").withIndex("by_user", (q) => q.eq("user_id", userId)));
+
+    // WEARABLE DATA - Only delete if clearWearableData is true
+    if (clearWearableData) {
+      await deleteFromTable("user_sleep_data",
+        ctx.db.query("user_sleep_data").withIndex("by_user", (q) => q.eq("user_id", userId)));
+      await deleteFromTable("user_sleep_stages",
+        ctx.db.query("user_sleep_stages").withIndex("by_user", (q) => q.eq("user_id", userId)));
+      await deleteFromTable("user_heart_rate",
+        ctx.db.query("user_heart_rate").withIndex("by_user", (q) => q.eq("user_id", userId)));
+      await deleteFromTable("user_activity",
+        ctx.db.query("user_activity").withIndex("by_user", (q) => q.eq("user_id", userId)));
+      await deleteFromTable("user_workouts",
+        ctx.db.query("user_workouts").withIndex("by_user", (q) => q.eq("user_id", userId)));
+      await deleteFromTable("user_circadian_data",
+        ctx.db.query("user_circadian_data").withIndex("by_user", (q) => q.eq("user_id", userId)));
+      await deleteFromTable("user_baselines",
+        ctx.db.query("user_baselines").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    } else {
+      // If not clearing wearable data, only clear questionnaire-derived sleep records
+      const sleepData = await ctx.db
+        .query("user_sleep_data")
+        .withIndex("by_user", (q) => q.eq("user_id", userId))
+        .collect();
+
+      let questionnaireRecordsDeleted = 0;
+      for (const record of sleepData) {
+        // Only delete questionnaire-sourced data, keep wearable data
+        if (record.primary_source === "Questionnaire" || !record.primary_source) {
+          await ctx.db.delete(record._id);
+          deletedRecords++;
+          questionnaireRecordsDeleted++;
+        }
+      }
+      if (questionnaireRecordsDeleted > 0) {
+        deletedTables["user_sleep_data (questionnaire only)"] = questionnaireRecordsDeleted;
       }
     }
 
@@ -910,13 +989,200 @@ export const resetUserProgress = mutation({
       onboarding_completed: false,
       onboarding_completed_at: undefined,
       developer_mode: false,
+      // Optionally reset apple_health_connected if clearing wearable data
+      ...(clearWearableData ? { apple_health_connected: false } : {}),
     });
 
     return {
       success: true,
       username: user.username,
       deletedRecords,
+      deletedTables,
       resetToDay: 1,
+      wearableDataCleared: clearWearableData,
+    };
+  },
+});
+
+/**
+ * Clear ALL wearable/HealthKit data for a user (but keep questionnaire responses)
+ * Use when you need to specifically clear device-synced data
+ */
+export const clearWearableData = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    let deletedRecords = 0;
+    const deletedTables: Record<string, number> = {};
+
+    // Helper to delete and track
+    async function deleteFromTable(tableName: string, query: { collect: () => Promise<Array<{ _id: Id<any> }>> }) {
+      const records = await query.collect();
+      for (const record of records) {
+        await ctx.db.delete(record._id);
+        deletedRecords++;
+      }
+      if (records.length > 0) {
+        deletedTables[tableName] = records.length;
+      }
+    }
+
+    // Clear all wearable data tables
+    await deleteFromTable("user_sleep_data",
+      ctx.db.query("user_sleep_data").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_sleep_stages",
+      ctx.db.query("user_sleep_stages").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_heart_rate",
+      ctx.db.query("user_heart_rate").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_activity",
+      ctx.db.query("user_activity").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_workouts",
+      ctx.db.query("user_workouts").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_circadian_data",
+      ctx.db.query("user_circadian_data").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("user_baselines",
+      ctx.db.query("user_baselines").withIndex("by_user", (q) => q.eq("user_id", userId)));
+    await deleteFromTable("perception_gaps",
+      ctx.db.query("perception_gaps").withIndex("by_user", (q) => q.eq("user_id", userId)));
+
+    // Reset apple_health_connected flag
+    await ctx.db.patch(userId, {
+      apple_health_connected: false,
+    });
+
+    return {
+      success: true,
+      username: user.username,
+      deletedRecords,
+      deletedTables,
+      appleHealthReset: true,
+    };
+  },
+});
+
+/**
+ * Full reset: Clear ALL user data including wearables (complete fresh start)
+ * This is the most thorough reset option
+ */
+export const resetUserComplete = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    let deletedRecords = 0;
+    const deletedTables: Record<string, number> = {};
+
+    // Helper to delete and track
+    async function deleteFromTable(tableName: string, query: { collect: () => Promise<Array<{ _id: Id<any> }>> }) {
+      const records = await query.collect();
+      for (const record of records) {
+        await ctx.db.delete(record._id);
+        deletedRecords++;
+      }
+      if (records.length > 0) {
+        deletedTables[tableName] = records.length;
+      }
+    }
+
+    // ALL user data tables (comprehensive list)
+    const allTables = [
+      // Assessment & Responses
+      "user_assessment_responses",
+      "responses",
+      "user_progress",
+      "daily_checkins",
+      "questionnaire_session",
+      "questionnaire_scores",
+      "user_gateway_states",
+      "user_expansion_schedules",
+      "onboarding_insights",
+
+      // Wearable/HealthKit data
+      "user_sleep_data",
+      "user_sleep_stages",
+      "user_heart_rate",
+      "user_activity",
+      "user_workouts",
+      "user_circadian_data",
+      "user_baselines",
+
+      // Physician dashboard
+      "physician_notes",
+      "patient_review_status",
+      "patient_journey_status",
+      "patient_analysis_workflow",
+      "patient_visible_fields",
+
+      // Interventions
+      "user_interventions",
+      "user_daily_tasks",
+      "user_protocol_assignments",
+      "intervention_compliance",
+      "intervention_user_notes",
+      "intervention_schedule",
+      "intervention_difficulty_settings",
+
+      // Gamification
+      "user_streaks",
+      "user_badges",
+      "user_xp",
+      "xp_transactions",
+      "user_challenges",
+
+      // Insights and analytics
+      "sleep_insights",
+      "perception_gaps",
+      "user_insight_queue",
+      "user_insight_progress",
+      "user_cohort_memberships",
+      "user_sleep_narrative",
+      "user_encouragement_history",
+
+      // Compliance and metrics
+      "difficulty_adjustment_log",
+      "compliance_outcome_correlation",
+      "user_metrics_summary",
+
+      // Watch data
+      "watch_offline_queue",
+      "watch_garden_state",
+    ];
+
+    for (const tableName of allTables) {
+      try {
+        // @ts-ignore - dynamic table access
+        await deleteFromTable(tableName,
+          ctx.db.query(tableName).withIndex("by_user", (q: any) => q.eq("user_id", userId)));
+      } catch (e) {
+        // Table might not have by_user index or might not exist, skip silently
+        console.log(`Skipping table ${tableName}: ${e}`);
+      }
+    }
+
+    // Reset user to complete fresh state
+    await ctx.db.patch(userId, {
+      current_day: 1,
+      onboarding_completed: false,
+      onboarding_completed_at: undefined,
+      developer_mode: false,
+      apple_health_connected: false,
+    });
+
+    return {
+      success: true,
+      username: user.username,
+      email: user.email,
+      deletedRecords,
+      deletedTables,
+      resetToDay: 1,
+      completeReset: true,
     };
   },
 });

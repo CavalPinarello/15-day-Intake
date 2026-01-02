@@ -589,7 +589,8 @@ struct DayCompletionView: View {
         } else if isFullDayComplete {
             return "Great progress on your sleep journey"
         } else if completedSection == .sleepLog {
-            return "Now let's complete the Day Assessment"
+            // Only suggest assessment if there ARE assessment questions
+            return assessmentQuestionsCount > 0 ? "Now let's complete the Day Assessment" : "Great progress on your sleep journey"
         } else {
             return "Great work!"
         }
@@ -892,41 +893,44 @@ struct DayCompletionView: View {
                         .background(QuestionnaireSection.sleepLog.backgroundColor)
                         .cornerRadius(12)
 
-                        // Assessment summary - show as completed, pending, or to-do
-                        let assessmentDone = isFullDayComplete || completedSection == .assessment || completedAssessment
-                        HStack {
-                            Image(systemName: "clipboard.fill")
-                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                        // Assessment summary - only show if there are assessment questions OR assessment was completed
+                        // This prevents showing "0 questions remaining" on days with no assessment
+                        if assessmentQuestionsCount > 0 || completedAssessment {
+                            let assessmentDone = isFullDayComplete || completedSection == .assessment || completedAssessment
+                            HStack {
+                                Image(systemName: "clipboard.fill")
+                                    .foregroundColor(QuestionnaireSection.assessment.accentColor)
 
-                            VStack(alignment: .leading) {
-                                Text("Day Assessment")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(primaryTextColor)
+                                VStack(alignment: .leading) {
+                                    Text("Day Assessment")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(primaryTextColor)
+                                    if assessmentDone {
+                                        Text("\(assessmentQuestionsCount) questions completed")
+                                            .font(.caption)
+                                            .foregroundColor(secondaryTextColor)
+                                    } else {
+                                        Text("\(assessmentQuestionsCount) questions remaining")
+                                            .font(.caption)
+                                            .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                                    }
+                                }
+
+                                Spacer()
+
                                 if assessmentDone {
-                                    Text("\(assessmentQuestionsCount) questions completed")
-                                        .font(.caption)
-                                        .foregroundColor(secondaryTextColor)
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
                                 } else {
-                                    Text("\(assessmentQuestionsCount) questions remaining")
-                                        .font(.caption)
+                                    Image(systemName: "arrow.right.circle.fill")
                                         .foregroundColor(QuestionnaireSection.assessment.accentColor)
                                 }
                             }
-
-                            Spacer()
-
-                            if assessmentDone {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                            } else {
-                                Image(systemName: "arrow.right.circle.fill")
-                                    .foregroundColor(QuestionnaireSection.assessment.accentColor)
-                            }
+                            .padding()
+                            .background(QuestionnaireSection.assessment.backgroundColor)
+                            .cornerRadius(12)
                         }
-                        .padding()
-                        .background(QuestionnaireSection.assessment.backgroundColor)
-                        .cornerRadius(12)
                     }
                     .padding(.horizontal)
 
@@ -1134,6 +1138,89 @@ struct FlowLayout: Layout {
         completedSleepLog: false,
         completedAssessment: true
     )
+}
+
+// MARK: - Empty Assessment View
+// Shows when user navigates to assessment but there are no questions
+// This can happen on expansion days (6-14) when required gateways weren't triggered
+
+struct EmptyAssessmentView: View {
+    let dayNumber: Int
+    let onDismiss: () -> Void
+
+    // Circadian-aware colors
+    private var isEvening: Bool {
+        TimePeriod.current == .evening || TimePeriod.current == .night
+    }
+
+    private var backgroundColor: Color {
+        if isEvening {
+            return Color(red: 0.12, green: 0.08, blue: 0.05)
+        } else {
+            return Color(.systemBackground)
+        }
+    }
+
+    private var primaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.996, green: 0.953, blue: 0.780)
+        } else {
+            return Color.primary
+        }
+    }
+
+    private var secondaryTextColor: Color {
+        if isEvening {
+            return Color(red: 0.988, green: 0.827, blue: 0.302)
+        } else {
+            return Color.secondary
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            // Success icon
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.1))
+                    .frame(width: 100, height: 100)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.green)
+            }
+
+            VStack(spacing: 12) {
+                Text("You're All Caught Up!")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(primaryTextColor)
+
+                Text("Based on your responses, no additional questions are needed for Day \(dayNumber).")
+                    .font(.body)
+                    .foregroundColor(secondaryTextColor)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            Button(action: onDismiss) {
+                Text("Continue")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 20)
+        }
+        .background(backgroundColor)
+    }
 }
 
 // MARK: - Expansion Pack Intro View

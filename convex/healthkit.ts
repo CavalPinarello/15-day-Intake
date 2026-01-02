@@ -918,6 +918,498 @@ export const getSourceDetails = query({
 });
 
 // ============================================
+// Data Source Verification Tools
+// ============================================
+
+/**
+ * Comprehensive data source verification for wearable data.
+ * Returns detailed audit of all sleep data sources, authenticity checks,
+ * and potential data quality issues.
+ */
+export const verifyDataSources = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+
+    // Get user info
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+
+    // Get all sleep data
+    const sleepData = await ctx.db
+      .query("user_sleep_data")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Get heart rate data
+    const hrData = await ctx.db
+      .query("user_heart_rate")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Get activity data
+    const activityData = await ctx.db
+      .query("user_activity")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Get circadian data
+    const circadianData = await ctx.db
+      .query("user_circadian_data")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Analyze sleep data sources
+    const sourceBreakdown: Record<string, {
+      count: number;
+      dateRange: { first: string; last: string } | null;
+      hasDeepSleep: boolean;
+      hasRemSleep: boolean;
+      hasLightSleep: boolean;
+      avgEfficiency: number | null;
+      avgTotalSleep: number | null;
+      sampleDates: string[];
+    }> = {};
+
+    for (const record of sleepData) {
+      const source = record.primary_source || "Unknown";
+
+      if (!sourceBreakdown[source]) {
+        sourceBreakdown[source] = {
+          count: 0,
+          dateRange: null,
+          hasDeepSleep: false,
+          hasRemSleep: false,
+          hasLightSleep: false,
+          avgEfficiency: null,
+          avgTotalSleep: null,
+          sampleDates: [],
+        };
+      }
+
+      const breakdown = sourceBreakdown[source];
+      breakdown.count++;
+
+      // Track date range
+      if (!breakdown.dateRange) {
+        breakdown.dateRange = { first: record.date, last: record.date };
+      } else {
+        if (record.date < breakdown.dateRange.first) breakdown.dateRange.first = record.date;
+        if (record.date > breakdown.dateRange.last) breakdown.dateRange.last = record.date;
+      }
+
+      // Track capabilities
+      if (record.deep_sleep_mins !== undefined && record.deep_sleep_mins > 0) {
+        breakdown.hasDeepSleep = true;
+      }
+      if (record.rem_sleep_mins !== undefined && record.rem_sleep_mins > 0) {
+        breakdown.hasRemSleep = true;
+      }
+      if (record.light_sleep_mins !== undefined && record.light_sleep_mins > 0) {
+        breakdown.hasLightSleep = true;
+      }
+
+      // Collect sample dates (most recent 5)
+      if (breakdown.sampleDates.length < 5) {
+        breakdown.sampleDates.push(record.date);
+      }
+    }
+
+    // Calculate averages per source
+    for (const source of Object.keys(sourceBreakdown)) {
+      const sourceRecords = sleepData.filter(r => (r.primary_source || "Unknown") === source);
+      const efficiencyRecords = sourceRecords.filter(r => r.sleep_efficiency !== undefined);
+      const sleepRecords = sourceRecords.filter(r => r.total_sleep_mins !== undefined);
+
+      if (efficiencyRecords.length > 0) {
+        sourceBreakdown[source].avgEfficiency = Math.round(
+          efficiencyRecords.reduce((sum, r) => sum + (r.sleep_efficiency || 0), 0) / efficiencyRecords.length
+        );
+      }
+      if (sleepRecords.length > 0) {
+        sourceBreakdown[source].avgTotalSleep = Math.round(
+          sleepRecords.reduce((sum, r) => sum + (r.total_sleep_mins || 0), 0) / sleepRecords.length
+        );
+      }
+    }
+
+    // Identify potential data quality issues
+    const issues: Array<{
+      type: string;
+      severity: "warning" | "error" | "info";
+      message: string;
+      dates?: string[];
+    }> = [];
+
+    // Check for questionnaire data masquerading as wearable
+    const questionnaireData = sleepData.filter(r => r.primary_source === "Questionnaire");
+    const wearableData = sleepData.filter(r => r.primary_source && r.primary_source !== "Questionnaire");
+
+    if (questionnaireData.length > 0) {
+      // Check if questionnaire data has sleep stages (which shouldn't be possible)
+      const questionnaireWithStages = questionnaireData.filter(r =>
+        (r.deep_sleep_mins !== undefined && r.deep_sleep_mins > 0) ||
+        (r.rem_sleep_mins !== undefined && r.rem_sleep_mins > 0) ||
+        (r.light_sleep_mins !== undefined && r.light_sleep_mins > 0)
+      );
+
+      if (questionnaireWithStages.length > 0) {
+        issues.push({
+          type: "fabricated_stages",
+          severity: "error",
+          message: `${questionnaireWithStages.length} questionnaire records have sleep stage data, which is impossible without a wearable device. These values are fabricated.`,
+          dates: questionnaireWithStages.slice(0, 5).map(r => r.date),
+        });
+      }
+    }
+
+    // Check if user claims Apple Health connected but has no wearable data
+    if (user.apple_health_connected && wearableData.length === 0) {
+      issues.push({
+        type: "missing_wearable_data",
+        severity: "warning",
+        message: "User has Apple Health marked as connected but no wearable-sourced sleep data exists.",
+      });
+    }
+
+    // Check for data overlap between sources (potential conflicts)
+    const dateSourceMap = new Map<string, string[]>();
+    for (const record of sleepData) {
+      const source = record.primary_source || "Unknown";
+      if (!dateSourceMap.has(record.date)) {
+        dateSourceMap.set(record.date, []);
+      }
+      dateSourceMap.get(record.date)!.push(source);
+    }
+
+    const overlappingDates = Array.from(dateSourceMap.entries())
+      .filter(([_, sources]) => sources.length > 1)
+      .map(([date, sources]) => ({ date, sources }));
+
+    if (overlappingDates.length > 0) {
+      issues.push({
+        type: "source_overlap",
+        severity: "warning",
+        message: `${overlappingDates.length} dates have data from multiple sources. This may cause inconsistencies.`,
+        dates: overlappingDates.slice(0, 5).map(d => `${d.date} (${d.sources.join(", ")})`),
+      });
+    }
+
+    // Check for unrealistic values
+    const unrealisticRecords = sleepData.filter(r =>
+      (r.sleep_efficiency !== undefined && (r.sleep_efficiency < 0 || r.sleep_efficiency > 100)) ||
+      (r.total_sleep_mins !== undefined && (r.total_sleep_mins < 0 || r.total_sleep_mins > 1440)) ||
+      (r.deep_sleep_mins !== undefined && r.total_sleep_mins !== undefined &&
+        r.deep_sleep_mins > r.total_sleep_mins)
+    );
+
+    if (unrealisticRecords.length > 0) {
+      issues.push({
+        type: "unrealistic_values",
+        severity: "error",
+        message: `${unrealisticRecords.length} records have unrealistic values (efficiency outside 0-100%, sleep > 24h, or deep sleep > total sleep).`,
+        dates: unrealisticRecords.slice(0, 5).map(r => r.date),
+      });
+    }
+
+    // Determine overall data authenticity status
+    let authenticityStatus: "verified" | "mixed" | "questionnaire_only" | "no_data";
+
+    if (sleepData.length === 0) {
+      authenticityStatus = "no_data";
+    } else if (wearableData.length === 0) {
+      authenticityStatus = "questionnaire_only";
+    } else if (questionnaireData.length > 0 && wearableData.length > 0) {
+      authenticityStatus = "mixed";
+    } else {
+      authenticityStatus = "verified";
+    }
+
+    return {
+      // User connection status
+      userProfile: {
+        email: user.email,
+        appleHealthConnected: user.apple_health_connected === true,
+        createdAt: user.created_at,
+      },
+
+      // Overall status
+      authenticityStatus,
+      authenticityMessage: {
+        verified: "All sleep data comes from verified wearable devices",
+        mixed: "Data contains both wearable and questionnaire sources - use caution when interpreting",
+        questionnaire_only: "All sleep data is from questionnaires (self-reported), not wearables",
+        no_data: "No sleep data available for this user",
+      }[authenticityStatus],
+
+      // Data counts
+      summary: {
+        totalSleepRecords: sleepData.length,
+        wearableRecords: wearableData.length,
+        questionnaireRecords: questionnaireData.length,
+        heartRateRecords: hrData.length,
+        activityRecords: activityData.length,
+        circadianRecords: circadianData.length,
+        uniqueSources: Object.keys(sourceBreakdown).length,
+      },
+
+      // Source breakdown
+      sourceBreakdown,
+
+      // Data quality issues
+      issues,
+      hasIssues: issues.length > 0,
+      criticalIssues: issues.filter(i => i.severity === "error").length,
+
+      // Recommendations
+      recommendations: [
+        ...(authenticityStatus === "questionnaire_only" ? [
+          "This user has no wearable data - sleep stage metrics (deep, REM, light) cannot be measured from questionnaires alone"
+        ] : []),
+        ...(authenticityStatus === "mixed" ? [
+          "Consider filtering dashboard views to show only wearable-sourced data for accurate physiological metrics",
+          "Questionnaire data is useful for subjective perception but should not be used for sleep architecture analysis"
+        ] : []),
+        ...(issues.some(i => i.type === "fabricated_stages") ? [
+          "CRITICAL: Remove fabricated sleep stage data from questionnaire records"
+        ] : []),
+      ],
+    };
+  },
+});
+
+/**
+ * Get detailed audit trail for a specific date's sleep data.
+ * Shows exactly what data exists and from what sources.
+ */
+export const auditSleepDataForDate = query({
+  args: {
+    userId: v.id("users"),
+    date: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, date } = args;
+
+    // Get sleep data for this date
+    const sleepData = await ctx.db
+      .query("user_sleep_data")
+      .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", date))
+      .first();
+
+    // Get sleep stages for this date
+    const stages = await ctx.db
+      .query("user_sleep_stages")
+      .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", date))
+      .collect();
+
+    // Get heart rate for this date
+    const heartRate = await ctx.db
+      .query("user_heart_rate")
+      .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", date))
+      .first();
+
+    if (!sleepData) {
+      return {
+        found: false,
+        date,
+        message: `No sleep data found for ${date}`,
+      };
+    }
+
+    // Parse all sources if available
+    let allSources: string[] = [];
+    if (sleepData.all_sources_json) {
+      try {
+        allSources = JSON.parse(sleepData.all_sources_json);
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    // Determine data authenticity
+    const isFromWearable = sleepData.primary_source && sleepData.primary_source !== "Questionnaire";
+    const hasStageData = stages.length > 0 ||
+      (sleepData.deep_sleep_mins !== undefined && sleepData.deep_sleep_mins > 0);
+
+    // Check for data integrity issues
+    const integrityIssues: string[] = [];
+
+    if (!isFromWearable && hasStageData) {
+      integrityIssues.push("Sleep stage data exists but source is not a wearable - this data is fabricated");
+    }
+
+    // Calculate percentages
+    const totalSleepMins = sleepData.total_sleep_mins || 0;
+    const deepPct = totalSleepMins > 0 && sleepData.deep_sleep_mins
+      ? Math.round((sleepData.deep_sleep_mins / totalSleepMins) * 100)
+      : null;
+    const remPct = totalSleepMins > 0 && sleepData.rem_sleep_mins
+      ? Math.round((sleepData.rem_sleep_mins / totalSleepMins) * 100)
+      : null;
+    const lightPct = totalSleepMins > 0 && sleepData.light_sleep_mins
+      ? Math.round((sleepData.light_sleep_mins / totalSleepMins) * 100)
+      : null;
+
+    return {
+      found: true,
+      date,
+
+      // Source verification
+      source: {
+        primarySource: sleepData.primary_source || "Unknown",
+        sourceBundleId: sleepData.source_bundle_id || null,
+        allSources: allSources.length > 0 ? allSources : [sleepData.primary_source || "Unknown"],
+        isMultiSource: sleepData.is_multi_source === true,
+        isFromWearable,
+        isFromQuestionnaire: sleepData.primary_source === "Questionnaire",
+      },
+
+      // Core metrics
+      metrics: {
+        totalSleepMins: sleepData.total_sleep_mins,
+        totalSleepHours: sleepData.total_sleep_mins ? (sleepData.total_sleep_mins / 60).toFixed(1) : null,
+        sleepEfficiency: sleepData.sleep_efficiency,
+        sleepLatencyMins: sleepData.sleep_latency_mins,
+        interruptionsCount: sleepData.interruptions_count,
+        awakeMins: sleepData.awake_mins,
+      },
+
+      // Sleep architecture (ONLY valid from wearables)
+      sleepArchitecture: {
+        available: isFromWearable && hasStageData,
+        trustworthy: isFromWearable,
+        deepSleepMins: sleepData.deep_sleep_mins,
+        deepSleepPct: deepPct,
+        remSleepMins: sleepData.rem_sleep_mins,
+        remSleepPct: remPct,
+        lightSleepMins: sleepData.light_sleep_mins,
+        lightSleepPct: lightPct,
+        stageTransitions: stages.length,
+      },
+
+      // Heart rate data (if available)
+      heartRate: heartRate ? {
+        available: true,
+        restingHr: heartRate.resting_hr,
+        avgHr: heartRate.avg_hr,
+        hrvMorning: heartRate.hrv_morning,
+        hrvAvg: heartRate.hrv_avg,
+      } : {
+        available: false,
+      },
+
+      // Timing information
+      timing: {
+        inBedTime: sleepData.in_bed_time ? new Date(sleepData.in_bed_time).toISOString() : null,
+        asleepTime: sleepData.asleep_time ? new Date(sleepData.asleep_time).toISOString() : null,
+        wakeTime: sleepData.wake_time ? new Date(sleepData.wake_time).toISOString() : null,
+      },
+
+      // Subjective data (from questionnaire)
+      subjective: {
+        quality: sleepData.subjective_quality,
+        dayType: sleepData.day_type,
+        napsTaken: sleepData.naps_taken,
+        napCount: sleepData.nap_count,
+        napTotalMins: sleepData.nap_total_mins,
+        medicationsTaken: sleepData.medications_taken,
+      },
+
+      // Sync metadata
+      metadata: {
+        syncedAt: sleepData.synced_at ? new Date(sleepData.synced_at).toISOString() : null,
+        dayNumber: sleepData.day_number,
+      },
+
+      // Data integrity
+      integrityStatus: integrityIssues.length === 0 ? "valid" : "issues_found",
+      integrityIssues,
+    };
+  },
+});
+
+/**
+ * Get wearable data table counts for a user.
+ * Useful for debugging what data exists before/after reset.
+ */
+export const getWearableDataCounts = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+
+    const sleepData = await ctx.db
+      .query("user_sleep_data")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    const sleepStages = await ctx.db
+      .query("user_sleep_stages")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    const heartRate = await ctx.db
+      .query("user_heart_rate")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    const activity = await ctx.db
+      .query("user_activity")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    const workouts = await ctx.db
+      .query("user_workouts")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    const circadian = await ctx.db
+      .query("user_circadian_data")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    const baselines = await ctx.db
+      .query("user_baselines")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    const perceptionGaps = await ctx.db
+      .query("perception_gaps")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Categorize sleep data by source
+    const sleepBySource: Record<string, number> = {};
+    for (const record of sleepData) {
+      const source = record.primary_source || "Unknown";
+      sleepBySource[source] = (sleepBySource[source] || 0) + 1;
+    }
+
+    const totalRecords = sleepData.length + sleepStages.length + heartRate.length +
+      activity.length + workouts.length + circadian.length + baselines.length + perceptionGaps.length;
+
+    return {
+      tables: {
+        user_sleep_data: sleepData.length,
+        user_sleep_stages: sleepStages.length,
+        user_heart_rate: heartRate.length,
+        user_activity: activity.length,
+        user_workouts: workouts.length,
+        user_circadian_data: circadian.length,
+        user_baselines: baselines.length,
+        perception_gaps: perceptionGaps.length,
+      },
+      sleepDataBySource: sleepBySource,
+      totalRecords,
+      hasWearableData: totalRecords > 0,
+    };
+  },
+});
+
+// ============================================
 // Sleep Metrics Computation from Questionnaire Responses
 // ============================================
 

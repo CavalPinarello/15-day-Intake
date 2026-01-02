@@ -85,6 +85,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
+**Jan 1:** Unified 1-10 scale for ALL slider questions (ScaleMapper with positive/negative label detection), intensity-scaled haptic feedback for sliders (toggleable in Settings > Accessibility)
 **Dec 31:** Profile settings cleanup (removed unused High Contrast, Reduce Motion, Large Icons toggles), experimental features system (Sleep Diary History and Sleep Insights hidden behind debug toggles)
 **Dec 30:** Fix expansion pack scheduling bug (no longer shows on Days 2-5, only Days 6+), question inventory optimization - 20+ new follow-up questions, 3 new gateway triggers (OSA Q48/49, Pain Q53, Prostate Q47), fixed measurement ranges/defaults
 **Dec 29:** Comprehensive debug reset fix (Clinical Scores + all dashboard data), time picker defaults for dependent questions fix, dashboard pillar completion UI (neutral amber), Sleep Health Factors dashboard module, iOS complex response serialization fix, unified body metrics slider UI, auto-derivable questions

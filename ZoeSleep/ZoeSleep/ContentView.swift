@@ -780,11 +780,14 @@ struct MainDashboardView: View {
                 if response.success {
                     await questionnaireManager.loadJourneyProgress()
 
-                    // CRITICAL: Reload expansion schedule for the NEW day to fix stale cache
-                    // Without this, "Today's Focus" shows previous day's expansion (e.g., Day 6 Insomnia on Day 7)
-                    if let newDay = response.newDay, newDay >= 6 {
-                        await questionnaireManager.loadExpansionScheduleForDay(newDay)
+                    // CRITICAL: Reload data for the NEW day to fix stale cache
+                    if let newDay = response.newDay {
+                        // Always reload question count for accurate time estimates
                         await questionnaireManager.loadAssessmentQuestionCountForDay(newDay)
+                        // Expansion schedule only relevant for days 6+
+                        if newDay >= 6 {
+                            await questionnaireManager.loadExpansionScheduleForDay(newDay)
+                        }
                     }
 
                     await MainActor.run {
@@ -832,10 +835,14 @@ struct MainDashboardView: View {
                 if response.success {
                     await questionnaireManager.loadJourneyProgress()
 
-                    // CRITICAL: Reload expansion schedule for the NEW day to fix stale cache
-                    if let newDay = response.newDay, newDay >= 6 {
-                        await questionnaireManager.loadExpansionScheduleForDay(newDay)
+                    // CRITICAL: Reload data for the NEW day to fix stale cache
+                    if let newDay = response.newDay {
+                        // Always reload question count for accurate time estimates
                         await questionnaireManager.loadAssessmentQuestionCountForDay(newDay)
+                        // Expansion schedule only relevant for days 6+
+                        if newDay >= 6 {
+                            await questionnaireManager.loadExpansionScheduleForDay(newDay)
+                        }
                     }
 
                     await MainActor.run {
@@ -874,28 +881,39 @@ struct MainDashboardView: View {
     }
 
     private func getAssessmentMinutes() -> Int {
-        // For core days (1-5), use config estimates
-        if currentDay <= 5 {
-            guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
-                return 10
-            }
-            return config.estimatedMinutes
+        // Use actual question count if available (loaded via loadAssessmentQuestionCountForDay)
+        // This is the SOURCE OF TRUTH - if we've loaded actual question count, use it
+        // Calculate: ~30 seconds per question, minimum 2 minutes
+        if questionnaireManager.assessmentQuestionCountForToday > 0 {
+            return max(2, (questionnaireManager.assessmentQuestionCountForToday + 1) / 2)
         }
 
         // For expansion days (6-14), use the dynamic Convex schedule
-        if let scheduled = questionnaireManager.scheduledExpansionForToday {
-            return scheduled.estimatedMinutes
+        if currentDay > 5 {
+            if let scheduled = questionnaireManager.scheduledExpansionForToday {
+                // IMPORTANT: Only return minutes if there are ACTUALLY questions
+                // This prevents showing assessment task when totalQuestions is 0
+                if scheduled.totalQuestions > 0 {
+                    return scheduled.estimatedMinutes
+                } else {
+                    return 0  // No questions = no assessment
+                }
+            }
+
+            // Fallback to gateway-based calculation
+            let todayGateways = getTriggeredGatewaysForToday()
+            if todayGateways.isEmpty {
+                return 0  // No expansion content if no gateways triggered
+            }
+            let totalMinutes = todayGateways.reduce(0.0) { $0 + $1.estimatedMinutes }
+            return max(Int(ceil(totalMinutes)), 3)
         }
 
-        // Fallback to static calculation
-        let todayGateways = getTriggeredGatewaysForToday()
-        if todayGateways.isEmpty {
-            return 0  // No expansion content if no gateways triggered
+        // Fallback to static config for core days (1-5) if count not yet loaded
+        guard let config = QuestionnaireManager.dayConfigurations.first(where: { $0.dayNumber == currentDay }) else {
+            return 5
         }
-
-        // Sum up estimated minutes for each triggered gateway
-        let totalMinutes = todayGateways.reduce(0.0) { $0 + $1.estimatedMinutes }
-        return max(Int(ceil(totalMinutes)), 3)
+        return config.estimatedMinutes
     }
 
     /// Get the gateways that are both triggered AND scheduled for today
@@ -3808,4 +3826,5 @@ struct ExpansionCompletionView: View {
     ContentView()
         .environmentObject(authManager)
         .environmentObject(HealthKitManager(authManager: authManager))
+        .environmentObject(ThemeManager.shared)
 }

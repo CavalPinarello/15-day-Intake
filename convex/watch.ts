@@ -3125,17 +3125,14 @@ export const getQuestionsForUserDay = query({
       }
 
       result.metadata.assessmentCount = result.assessment.length;
-      result.metadata.totalMinutes = Math.ceil((result.sleepLog.length * 30 + totalSeconds) / 60);
+      // Recalculate totalMinutes based on FILTERED assessment questions (not pre-filter totalSeconds)
+      // Use 30 seconds per question as the standard estimate
+      const filteredTotalSeconds = result.assessment.length * 30;
+      result.metadata.totalMinutes = Math.ceil((result.sleepLog.length * 30 + filteredTotalSeconds) / 60);
 
-      // If NO assessment questions found, add a fallback message
-      if (result.assessment.length === 0) {
-        result.assessment.push({
-          id: "INFO_NO_QUESTIONS",
-          text: "Based on your previous responses, no additional questions are needed for today. Great news - you're all caught up!",
-          type: "info",
-          required: false,
-        });
-      }
+      // NOTE: We no longer add INFO_NO_QUESTIONS placeholder when assessment is empty.
+      // The iOS client properly handles empty assessments by not showing the "Proceed to Assessment" button.
+      // Adding a placeholder caused confusion (showed "1 question remaining" but it was just an info message).
     }
 
     console.log(`[Convex] Returning ${result.sleepLog.length} sleep log + ${result.assessment.length} assessment questions for Day ${args.dayNumber}`);

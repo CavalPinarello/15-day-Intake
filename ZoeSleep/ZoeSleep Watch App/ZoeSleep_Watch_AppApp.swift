@@ -14,6 +14,7 @@ struct ZoeSleep_Watch_App: App {
     @StateObject private var watchConnectivity = WatchConnectivityManager()
     @StateObject private var healthManager = HealthKitWatchManager()
     @StateObject private var convexService = WatchConvexService.shared
+    @StateObject private var notificationManager = WatchNotificationManager.shared
     @ObservedObject private var themeManager = WatchThemeManager.shared
     @State private var isAuthenticated = false
     @Environment(\.scenePhase) private var scenePhase
@@ -25,6 +26,7 @@ struct ZoeSleep_Watch_App: App {
                 .environmentObject(healthManager)
                 .environmentObject(themeManager)
                 .environmentObject(convexService)
+                .environmentObject(notificationManager)
                 .preferredColorScheme(themeManager.currentColorScheme)
                 .tint(themeManager.accentColor)
                 .onAppear {
@@ -34,6 +36,8 @@ struct ZoeSleep_Watch_App: App {
                     if newPhase == .active {
                         // Refresh state from Convex when app becomes active
                         refreshFromConvex()
+                        // Check if new day and reschedule notifications
+                        notificationManager.resetForNewDay()
                     }
                 }
         }
@@ -51,6 +55,9 @@ struct ZoeSleep_Watch_App: App {
 
         // Initial sync with Convex (will auto-login if needed)
         refreshFromConvex()
+
+        // Setup notifications
+        setupNotifications()
     }
 
     private func checkAuthenticationStatus() {
@@ -65,27 +72,35 @@ struct ZoeSleep_Watch_App: App {
             print("[Watch] Current day: \(convexService.currentDay)")
         }
     }
+
+    private func setupNotifications() {
+        Task {
+            // Request notification authorization
+            let granted = await notificationManager.requestAuthorization()
+            if granted {
+                // Register notification categories for actions
+                notificationManager.registerNotificationCategories()
+                // Schedule all notifications based on Convex status
+                await notificationManager.scheduleAllNotifications()
+                // Debug: Print scheduled notifications
+                notificationManager.debugPrintScheduledNotifications()
+            }
+        }
+    }
 }
 
 struct WatchContentView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var themeManager: WatchThemeManager
+    @EnvironmentObject var notificationManager: WatchNotificationManager
     @ObservedObject private var convexService = WatchConvexService.shared
 
     var body: some View {
         // Simple single-screen experience - no tabs
         MinimalHomeView()
             .onAppear {
-                // Request latest data from iPhone
+                // Request latest data from iPhone (syncs credentials)
                 watchConnectivity.requestDataFromiPhone()
-                // Schedule check-in notifications
-                Task {
-                    let granted = await WatchNotificationManager.shared.requestAuthorization()
-                    if granted {
-                        WatchNotificationManager.shared.scheduleCheckInReminders()
-                        WatchNotificationManager.shared.registerNotificationCategories()
-                    }
-                }
             }
     }
 }

@@ -38,6 +38,7 @@ import type * as ios from "../ios.js";
 import type * as journey from "../journey.js";
 import type * as llm from "../llm.js";
 import type * as microCohorts from "../microCohorts.js";
+import type * as mockData from "../mockData.js";
 import type * as outcomeCorrelation from "../outcomeCorrelation.js";
 import type * as physician from "../physician.js";
 import type * as physicianAuth from "../physicianAuth.js";
@@ -99,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   journey: typeof journey;
   llm: typeof llm;
   microCohorts: typeof microCohorts;
+  mockData: typeof mockData;
   outcomeCorrelation: typeof outcomeCorrelation;
   physician: typeof physician;
   physicianAuth: typeof physicianAuth;

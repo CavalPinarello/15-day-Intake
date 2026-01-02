@@ -16,6 +16,9 @@ import { CheckInHistoryCard } from "./CheckInHistoryCard";
 import { WellnessMetricsChart } from "./WellnessMetricsChart";
 import { CircadianMetricsCard } from "./CircadianMetricsCard";
 import { SleepHealthFactorsCard } from "./SleepHealthFactorsCard";
+import { ActivityLightCard } from "./ActivityLightCard";
+import { PrioritySection } from "./PrioritySection";
+import { PerceptionGapCard } from "./PerceptionGapCard";
 import { AdaptiveDifficultyPanel } from "./AdaptiveDifficultyPanel";
 import { ComplianceCorrelationChart } from "@/components/charts/ComplianceCorrelationChart";
 import { ProtocolAssignment } from "@/components/physician/ProtocolAssignment";
@@ -111,6 +114,9 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
     summary: string;
     riskFactors: string[];
     recommendations: string[];
+    dataQuality?: string;
+    urgentFlags?: string[];
+    modulesUsed: string[];
   } | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -121,6 +127,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
     estimatedCost: string;
     selectedModel: string;
     modelProvider: string;
+    modulesUsed: string[];
   } | null>(null);
 
   // State for pillar detail modal
@@ -643,23 +650,27 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
           subjectiveData={subjectiveSleepData as SubjectiveSleepData | undefined}
         />
 
+        {/* Perception Gap Analysis - Timeline + Summary */}
+        <PerceptionGapCard userId={userId} />
+
         {/* Pillar Summary */}
         <PillarSummaryCard
           pillars={pillarStatuses}
           onPillarClick={(pillar) => setSelectedPillar(pillar)}
         />
 
-        {/* Score Gauges */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-700/50 flex items-center justify-center text-gray-400">
-              <Activity className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-white">Clinical Scores</h3>
-              <p className="text-xs text-gray-500">Key assessments</p>
-            </div>
-          </div>
+        {/* Score Gauges - CRITICAL PRIORITY */}
+        <PrioritySection
+          title="Clinical Scores"
+          priority="critical"
+          description="Sleep disorder & mental health indicators"
+          flagCount={
+            (patientScores.ISI !== undefined && patientScores.ISI >= 15 ? 1 : 0) +
+            (patientScores.PHQ9 !== undefined && patientScores.PHQ9 >= 10 ? 1 : 0) +
+            (patientScores.GAD7 !== undefined && patientScores.GAD7 >= 10 ? 1 : 0) +
+            (patientScores.ESS !== undefined && patientScores.ESS >= 11 ? 1 : 0)
+          }
+        >
           <div className="grid grid-cols-2 gap-2">
             {patientScores.ISI !== undefined && (
               <ScoreGauge score={patientScores.ISI} type="ISI" showTrend={null} />
@@ -679,7 +690,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
               </div>
             )}
           </div>
-        </div>
+        </PrioritySection>
 
         {/* Patient Engagement - Shows streak, XP, badges, and engagement insights */}
         <PatientEngagementCard userId={userId} />
@@ -771,6 +782,9 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
 
         {/* Circadian Metrics - Light Exposure & Rhythm */}
         <CircadianMetricsCard userId={userId} />
+
+        {/* Activity & Light Exposure - Combined view with charts */}
+        <ActivityLightCard userId={userId} />
 
         {/* Sleep Health Factors - Naps, Medications, Caffeine */}
         <SleepHealthFactorsCard userId={userId} />
@@ -897,10 +911,39 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
       {/* AI Analysis Results (if available) */}
       {analysis && (
         <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Brain className="w-5 h-5 text-purple-400" />
-            <h3 className="text-lg font-semibold text-white">AI Analysis Results</h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-purple-400" />
+              <h3 className="text-lg font-semibold text-white">AI Analysis Results</h3>
+            </div>
+            {/* Data Quality Badge */}
+            {analysis.dataQuality && (
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                analysis.dataQuality === 'excellent' ? 'bg-green-500/20 text-green-400' :
+                analysis.dataQuality === 'good' ? 'bg-blue-500/20 text-blue-400' :
+                analysis.dataQuality === 'fair' ? 'bg-amber-500/20 text-amber-400' :
+                'bg-gray-500/20 text-gray-400'
+              }`}>
+                Data: {analysis.dataQuality}
+              </span>
+            )}
           </div>
+
+          {/* Urgent Flags */}
+          {analysis.urgentFlags && analysis.urgentFlags.length > 0 && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50">
+              <h4 className="text-sm font-medium text-red-400 mb-2 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Urgent Attention Required
+              </h4>
+              <ul className="space-y-1">
+                {analysis.urgentFlags.map((flag, i) => (
+                  <li key={i} className="text-red-300 text-sm">{flag}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div>
               <h4 className="text-sm font-medium text-gray-400 mb-2">Summary</h4>
@@ -928,6 +971,20 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
                 ))}
               </ul>
             </div>
+
+            {/* Modules Used */}
+            {analysis.modulesUsed && analysis.modulesUsed.length > 0 && (
+              <div className="pt-3 border-t border-gray-700">
+                <h4 className="text-xs font-medium text-gray-500 mb-2">Data Modules Used ({analysis.modulesUsed.length})</h4>
+                <div className="flex flex-wrap gap-1">
+                  {analysis.modulesUsed.map((module, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded bg-gray-700/50 text-gray-400 text-xs">
+                      {module.replace(/_/g, ' ')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -975,6 +1032,21 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
                   </pre>
                 </div>
               </div>
+
+              {/* Modules Used */}
+              {promptPreview.modulesUsed && promptPreview.modulesUsed.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-green-400 mb-2">Data Modules Included ({promptPreview.modulesUsed.length})</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {promptPreview.modulesUsed.map((module, i) => (
+                      <span key={i} className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm">
+                        {module.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-4">
                   <span className="text-gray-400">

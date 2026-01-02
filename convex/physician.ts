@@ -4985,3 +4985,232 @@ export const getSubjectiveSleepQuality = query({
   },
 });
 
+// ============================================
+// Activity & Light Exposure Module
+// ============================================
+
+/**
+ * Get comprehensive activity and light exposure data for physician dashboard
+ * Combines activity metrics with circadian/light exposure data
+ */
+export const getPatientActivityAndCircadian = query({
+  args: {
+    userId: v.id("users"),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, days = 14 } = args;
+
+    // Get activity data
+    const activityData = await ctx.db
+      .query("user_activity")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Get circadian data
+    const circadianData = await ctx.db
+      .query("user_circadian_data")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Get workout data for outdoor activity context
+    const workoutData = await ctx.db
+      .query("user_workouts")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Create date range for last N days
+    const now = new Date();
+    const dateRange: string[] = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      dateRange.push(d.toISOString().split("T")[0]);
+    }
+
+    // Build daily data map
+    const dailyData: Array<{
+      date: string;
+      dayOfWeek: string;
+      // Activity metrics
+      steps?: number;
+      activeMins?: number;
+      exerciseMins?: number;
+      caloriesBurned?: number;
+      // Light exposure metrics
+      daylightMins?: number;
+      morningLightMins?: number;
+      afternoonLightMins?: number;
+      outdoorWorkoutMins?: number;
+      // Circadian health
+      circadianScore?: number;
+      tempDeviation?: number;
+      // Calculated
+      hasActivityData: boolean;
+      hasLightData: boolean;
+    }> = [];
+
+    for (const dateStr of dateRange) {
+      const dayOfWeek = new Date(dateStr).toLocaleDateString("en-US", { weekday: "short" });
+
+      // Find activity for this date
+      const activity = activityData.find((a) => a.date === dateStr);
+
+      // Find circadian for this date
+      const circadian = circadianData.find((c) => c.date === dateStr);
+
+      // Find outdoor workouts for this date
+      const outdoorWorkouts = workoutData.filter(
+        (w) => w.date === dateStr && w.was_outdoor === true
+      );
+      const outdoorWorkoutMins = outdoorWorkouts.reduce((sum, w) => sum + (w.duration_mins || 0), 0);
+
+      dailyData.push({
+        date: dateStr,
+        dayOfWeek,
+        // Activity
+        steps: activity?.steps,
+        activeMins: activity?.active_mins,
+        exerciseMins: activity?.exercise_mins,
+        caloriesBurned: activity?.calories_burned,
+        // Light
+        daylightMins: circadian?.time_in_daylight_mins,
+        morningLightMins: circadian?.morning_light_mins,
+        afternoonLightMins: circadian?.afternoon_light_mins,
+        outdoorWorkoutMins: outdoorWorkoutMins > 0 ? outdoorWorkoutMins : circadian?.outdoor_workout_mins,
+        // Circadian
+        circadianScore: circadian?.circadian_score,
+        tempDeviation: circadian?.sleeping_wrist_temp_deviation,
+        // Flags
+        hasActivityData: !!activity,
+        hasLightData: !!circadian,
+      });
+    }
+
+    // Calculate averages and summaries
+    const daysWithActivity = dailyData.filter((d) => d.hasActivityData).length;
+    const daysWithLight = dailyData.filter((d) => d.hasLightData).length;
+
+    // Activity averages
+    const stepsValues = dailyData.filter((d) => d.steps != null).map((d) => d.steps!);
+    const activeValues = dailyData.filter((d) => d.activeMins != null).map((d) => d.activeMins!);
+    const exerciseValues = dailyData.filter((d) => d.exerciseMins != null).map((d) => d.exerciseMins!);
+
+    const avgSteps = stepsValues.length > 0
+      ? Math.round(stepsValues.reduce((a, b) => a + b, 0) / stepsValues.length)
+      : null;
+    const avgActiveMins = activeValues.length > 0
+      ? Math.round(activeValues.reduce((a, b) => a + b, 0) / activeValues.length)
+      : null;
+    const avgExerciseMins = exerciseValues.length > 0
+      ? Math.round(exerciseValues.reduce((a, b) => a + b, 0) / exerciseValues.length)
+      : null;
+
+    // Light exposure averages
+    const daylightValues = dailyData.filter((d) => d.daylightMins != null).map((d) => d.daylightMins!);
+    const morningValues = dailyData.filter((d) => d.morningLightMins != null).map((d) => d.morningLightMins!);
+    const circadianValues = dailyData.filter((d) => d.circadianScore != null).map((d) => d.circadianScore!);
+
+    const avgDaylightMins = daylightValues.length > 0
+      ? Math.round(daylightValues.reduce((a, b) => a + b, 0) / daylightValues.length)
+      : null;
+    const avgMorningLightMins = morningValues.length > 0
+      ? Math.round(morningValues.reduce((a, b) => a + b, 0) / morningValues.length)
+      : null;
+    const avgCircadianScore = circadianValues.length > 0
+      ? Math.round(circadianValues.reduce((a, b) => a + b, 0) / circadianValues.length)
+      : null;
+
+    // Calculate trends (comparing first half to second half)
+    let stepsTrend: "improving" | "declining" | "stable" | null = null;
+    let lightTrend: "improving" | "declining" | "stable" | null = null;
+
+    if (stepsValues.length >= 4) {
+      const mid = Math.floor(stepsValues.length / 2);
+      // Note: dailyData is in descending order (most recent first)
+      const recentAvg = stepsValues.slice(0, mid).reduce((a, b) => a + b, 0) / mid;
+      const olderAvg = stepsValues.slice(mid).reduce((a, b) => a + b, 0) / (stepsValues.length - mid);
+      const diff = recentAvg - olderAvg;
+      if (diff > avgSteps! * 0.1) stepsTrend = "improving";
+      else if (diff < -avgSteps! * 0.1) stepsTrend = "declining";
+      else stepsTrend = "stable";
+    }
+
+    if (daylightValues.length >= 4) {
+      const mid = Math.floor(daylightValues.length / 2);
+      const recentAvg = daylightValues.slice(0, mid).reduce((a, b) => a + b, 0) / mid;
+      const olderAvg = daylightValues.slice(mid).reduce((a, b) => a + b, 0) / (daylightValues.length - mid);
+      const diff = recentAvg - olderAvg;
+      if (diff > 10) lightTrend = "improving";
+      else if (diff < -10) lightTrend = "declining";
+      else lightTrend = "stable";
+    }
+
+    // Generate clinical notes
+    const clinicalNotes: string[] = [];
+
+    // Activity-related notes
+    if (avgSteps !== null) {
+      if (avgSteps < 5000) {
+        clinicalNotes.push("Low activity level (<5000 steps/day) - sedentary behavior may impact sleep");
+      } else if (avgSteps >= 10000) {
+        clinicalNotes.push("Good activity level (10000+ steps/day) - supports healthy sleep");
+      }
+    }
+
+    if (avgExerciseMins !== null && avgExerciseMins < 20) {
+      clinicalNotes.push("Limited structured exercise - recommend 150 min/week moderate activity");
+    }
+
+    // Light exposure notes
+    if (avgDaylightMins !== null) {
+      if (avgDaylightMins < 30) {
+        clinicalNotes.push("Critical: Very low daylight exposure (<30 min) - significant circadian impact");
+      } else if (avgDaylightMins < 60) {
+        clinicalNotes.push("Low daylight exposure - may contribute to circadian rhythm issues");
+      } else if (avgDaylightMins >= 90) {
+        clinicalNotes.push("Excellent daylight exposure supporting circadian rhythm");
+      }
+    }
+
+    if (avgMorningLightMins !== null && avgMorningLightMins < 15) {
+      clinicalNotes.push("Minimal morning light - consider morning light therapy for circadian entrainment");
+    }
+
+    if (avgCircadianScore !== null && avgCircadianScore < 50) {
+      clinicalNotes.push("Low circadian health score - review light exposure timing and consistency");
+    }
+
+    return {
+      // Daily data for charts
+      dailyData: dailyData.reverse(), // Oldest to newest for charts
+
+      // Activity summary
+      activitySummary: {
+        daysWithData: daysWithActivity,
+        avgSteps,
+        avgActiveMins,
+        avgExerciseMins,
+        trend: stepsTrend,
+        hasData: daysWithActivity > 0,
+      },
+
+      // Light exposure summary
+      lightSummary: {
+        daysWithData: daysWithLight,
+        avgDaylightMins,
+        avgMorningLightMins,
+        avgCircadianScore,
+        trend: lightTrend,
+        hasData: daysWithLight > 0,
+      },
+
+      // Clinical interpretation
+      clinicalNotes,
+
+      // Overall status
+      hasAnyData: daysWithActivity > 0 || daysWithLight > 0,
+    };
+  },
+});
+

@@ -154,7 +154,8 @@ struct QuestionnaireView: View {
                     // Pass which section was completed (nil = full day)
                     // Use the captured section from when completion was triggered
                     completedSection: sectionOnly ? completedSectionAtFinish : nil,
-                    onProceedToNextSection: sectionOnly && completedSectionAtFinish == .sleepLog ? {
+                    // Only show "Proceed to Assessment" if there ARE assessment questions
+                    onProceedToNextSection: sectionOnly && completedSectionAtFinish == .sleepLog && !assessmentQuestions.isEmpty ? {
                         proceedToAssessment()
                     } : nil,
                     // Pass actual completion status from backend to correctly show checkmarks
@@ -173,6 +174,13 @@ struct QuestionnaireView: View {
                             advanceToNextQuestion()
                         }
                     }
+                )
+            } else if currentQuestions.isEmpty {
+                // Empty state: Assessment section was opened but no questions exist
+                // This can happen on expansion days when required gateways weren't triggered
+                EmptyAssessmentView(
+                    dayNumber: currentDay,
+                    onDismiss: { presentationMode.wrappedValue.dismiss() }
                 )
             } else {
                 mainQuestionnaireView
@@ -1298,9 +1306,11 @@ struct QuestionnaireView: View {
                             checkAndShowExpansionSplash(modules: expansionModules)
                         } else {
                             // Show hero-framed day splash for core days (1-5) or days without expansion
+                            // Calculate assessment-only time (~30 seconds per question)
+                            let assessmentMinutes = max(3, (assessmentQuestions.count + 1) / 2)
                             checkAndShowDaySplash(
                                 questionCount: assessmentQuestions.count,
-                                estimatedMinutes: questionsResponse.metadata.totalMinutes
+                                estimatedMinutes: assessmentMinutes
                             )
                         }
                     }

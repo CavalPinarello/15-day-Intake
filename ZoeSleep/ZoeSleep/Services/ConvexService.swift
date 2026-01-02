@@ -1025,6 +1025,54 @@ class ConvexService {
         ])
     }
 
+    // MARK: - Speed Run (Accelerated Testing)
+
+    struct SpeedCompleteDayResponse: Codable {
+        let success: Bool
+        let day: Int?
+        let phenotype: String?
+        let sleepLogQuestions: Int?
+        let assessmentQuestions: Int?
+        let advanced: Bool?
+        let newDay: Int?
+    }
+
+    /// Speed complete the current day with mock questionnaire answers (Debug Mode only)
+    /// Uses phenotype to generate realistic mock responses (insomnia, osa, anxiety, depression, normal)
+    func speedCompleteDay(phenotype: String = "normal", advanceToNext: Bool = true) async throws -> SpeedCompleteDayResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:speedCompleteDay", args: [
+            "userId": userId,
+            "phenotype": phenotype,
+            "advanceToNext": advanceToNext
+        ])
+    }
+
+    struct SpeedRunResponse: Codable {
+        let success: Bool
+        let startDay: Int?
+        let endDay: Int?
+        let phenotype: String?
+        let daysCompleted: Int?
+    }
+
+    /// Speed run through multiple days or the full 14-day journey (Debug Mode only)
+    /// Generates mock questionnaire answers for all days up to targetDay
+    func speedRunFullJourney(phenotype: String = "normal", targetDay: Int = 14) async throws -> SpeedRunResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.mutation("ios:speedRunFullJourney", args: [
+            "userId": userId,
+            "phenotype": phenotype,
+            "targetDay": targetDay
+        ])
+    }
+
     /// Get debug information about the user's journey
     func getJourneyDebugInfo() async throws -> JourneyDebugInfo {
         guard let userId = currentUserId else {

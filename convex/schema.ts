@@ -322,11 +322,15 @@ export default defineSchema({
     source_bundle_id: v.optional(v.string()), // Bundle ID of the primary source app
     all_sources_json: v.optional(v.string()), // JSON array of all contributing sources
     is_multi_source: v.optional(v.boolean()), // True if data came from multiple sources
+    // Mock data tracking (for simulation/testing)
+    is_mock: v.optional(v.boolean()), // True if this is simulated data
+    mock_batch_id: v.optional(v.string()), // Batch ID for grouped mock data
   })
     .index("by_user", ["user_id"])
     .index("by_user_date", ["user_id", "date"])
     .index("by_date", ["date"])
-    .index("by_user_day_type", ["user_id", "day_type"]),
+    .index("by_user_day_type", ["user_id", "day_type"])
+    .index("by_mock", ["is_mock"]),
 
   user_sleep_stages: defineTable({
     user_id: v.id("users"),

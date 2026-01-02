@@ -247,6 +247,617 @@ interface PatientAnalysisPrompt {
   systemPrompt: string;
   userPrompt: string;
   estimatedTokens: number;
+  modulesUsed?: string[];
+}
+
+// ============================================
+// Modular AI Analysis Architecture
+// ============================================
+
+interface PromptModule {
+  id: string;
+  name: string;
+  description: string;
+  estimatedTokens: number;
+  enabledByDefault: boolean;
+  build: (ctx: ActionCtx, userId: string) => Promise<string | null>;
+}
+
+// Default enabled modules
+const DEFAULT_ENABLED_MODULES = [
+  "demographics",
+  "questionnaire_scores",
+  "gateway_triggers",
+  "sleep_log_full",
+  "healthkit_sleep",
+  "activity_data",
+  "light_exposure",
+  "perception_gap",
+  "temporal_trends",
+];
+
+// Module A: Demographics & Context
+async function buildDemographicsModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    const patientDetails = await ctx.runQuery(
+      api.physician.getPatientDetails,
+      { userId: userId as any }
+    );
+
+    if (!patientDetails) return null;
+
+    const dob = patientDetails.demographics.dateOfBirth;
+    let age = "Unknown";
+    if (dob) {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      age = String(Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)));
+    }
+
+    return `- Name: ${patientDetails.name || "Patient"}
+- Age: ${age} years
+- Sex: ${patientDetails.demographics.sex || "Unknown"}
+- Height: ${patientDetails.demographics.height || "Unknown"}
+- Weight: ${patientDetails.demographics.weight || "Unknown"}
+- Days Completed: ${patientDetails.completedDays}/14
+- Total Responses: ${patientDetails.totalResponses}
+- Apple Health Connected: ${(patientDetails.user as any)?.apple_health_connected ? "Yes" : "No"}`;
+  } catch (error) {
+    console.error("Error building demographics module:", error);
+    return null;
+  }
+}
+
+// Module B: Standardized Questionnaire Scores
+async function buildQuestionnaireScoresModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    const scores = await ctx.runQuery(api.physician.getQuestionnaireScores, {
+      userId: userId as any,
+    });
+
+    if (!scores || scores.length === 0) {
+      return "No questionnaire scores calculated yet.";
+    }
+
+    const scoreLines = scores.map((s: any) => {
+      const interpretation = s.category || s.interpretation || "no interpretation";
+      return `- **${s.questionnaire_name}**: ${s.score}/${s.max_score || "?"} (${interpretation})`;
+    });
+
+    return scoreLines.join("\n");
+  } catch (error) {
+    console.error("Error building questionnaire scores module:", error);
+    return null;
+  }
+}
+
+// Module C: Gateway Triggers & Risk Flags
+async function buildGatewayTriggersModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    const gatewayStates = await ctx.runQuery(api.assessment.getUserGatewayStates, {
+      userId: userId as any,
+    });
+
+    if (!gatewayStates) return "No gateway data available.";
+
+    const triggeredGateways = Object.entries(gatewayStates)
+      .filter(([_, state]: [string, any]) => state.triggered)
+      .map(([gatewayId, state]: [string, any]) => {
+        const triggeredAt = state.triggeredAt
+          ? new Date(state.triggeredAt).toLocaleDateString()
+          : "unknown date";
+        return `- **${gatewayId}**: Triggered on ${triggeredAt}`;
+      });
+
+    if (triggeredGateways.length === 0) {
+      return "No clinical gateways triggered.";
+    }
+
+    return triggeredGateways.join("\n");
+  } catch (error) {
+    console.error("Error building gateway triggers module:", error);
+    return null;
+  }
+}
+
+// Module D: Sleep Log Data (ALL 14 days - not truncated)
+async function buildSleepLogFullModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    const subjectiveSleepData = await ctx.runQuery(api.physician.getSubjectiveSleepQuality, {
+      userId: userId as any,
+      days: 14,
+    });
+
+    if (!subjectiveSleepData || !subjectiveSleepData.dailyData || subjectiveSleepData.dailyData.length === 0) {
+      return "No sleep log data available.";
+    }
+
+    const sleepLogLines = subjectiveSleepData.dailyData.map((day: any) => {
+      const quality = day.quality !== null ? `Quality: ${day.quality}/10` : "";
+      const duration = day.totalSleepMins ? `Duration: ${Math.round(day.totalSleepMins / 60 * 10) / 10}h` : "";
+      const efficiency = day.perceivedEfficiency ? `Efficiency: ${day.perceivedEfficiency}%` : "";
+      const latency = day.latencyMins ? `Latency: ${day.latencyMins}min` : "";
+      const waso = day.wasoMins ? `WASO: ${day.wasoMins}min` : "";
+
+      const metrics = [quality, duration, efficiency, latency, waso].filter(Boolean).join(", ");
+      return `- Day ${day.dayNumber || "?"} (${day.date || "?"}): ${metrics || "No data"}`;
+    });
+
+    return sleepLogLines.join("\n");
+  } catch (error) {
+    console.error("Error building sleep log module:", error);
+    return null;
+  }
+}
+
+// Module E: HealthKit Sleep Architecture
+async function buildHealthKitSleepModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    const healthSummary = await ctx.runQuery(api.healthkit.getPatientHealthSummary, {
+      userId: userId as any,
+    });
+
+    const sleepArchitecture = await ctx.runQuery(api.healthkit.getSleepArchitecture, {
+      userId: userId as any,
+      limit: 14,
+    });
+
+    if (!healthSummary && (!sleepArchitecture || sleepArchitecture.length === 0)) {
+      return "No HealthKit sleep data available. Patient may not have connected Apple Health.";
+    }
+
+    let result = "";
+
+    if (healthSummary && healthSummary.hasHealthKitData) {
+      result += `**14-Day Wearable Averages:**
+- Average Sleep: ${healthSummary.summary?.avgSleepHours ? healthSummary.summary.avgSleepHours.toFixed(1) + "h" : "N/A"}
+- Average Efficiency: ${healthSummary.summary?.avgEfficiency ? healthSummary.summary.avgEfficiency + "%" : "N/A"}
+- Average Deep Sleep: ${healthSummary.summary?.avgDeepSleepMins ? Math.round(healthSummary.summary.avgDeepSleepMins) + " mins" : "N/A"}
+- Average REM Sleep: ${healthSummary.summary?.avgRemSleepMins ? Math.round(healthSummary.summary.avgRemSleepMins) + " mins" : "N/A"}
+- Data Points: ${healthSummary.dataPoints || 0}
+`;
+    }
+
+    if (sleepArchitecture && sleepArchitecture.length > 0) {
+      result += `\n**Recent Sleep Architecture (last ${sleepArchitecture.length} nights):**\n`;
+      sleepArchitecture.slice(0, 7).forEach((night: any) => {
+        const deepPct = night.deepSleepPercent ? `Deep: ${night.deepSleepPercent}%` : "";
+        const remPct = night.remSleepPercent ? `REM: ${night.remSleepPercent}%` : "";
+        const lightPct = night.lightSleepPercent ? `Light: ${night.lightSleepPercent}%` : "";
+        const eff = night.efficiency ? `Eff: ${night.efficiency}%` : "";
+        const metrics = [deepPct, remPct, lightPct, eff].filter(Boolean).join(", ");
+        result += `- ${night.date}: ${metrics || "No stage data"}\n`;
+      });
+    }
+
+    return result || null;
+  } catch (error) {
+    console.error("Error building HealthKit sleep module:", error);
+    return null;
+  }
+}
+
+// Module F: Heart Rate & HRV Trends
+async function buildHeartRateHRVModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    // Calculate date range for last 14 days
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 14);
+
+    const hrData = await ctx.runQuery(api.healthkit.getHeartRateRange, {
+      userId: userId as any,
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
+    });
+
+    if (!hrData || hrData.length === 0) {
+      return "No heart rate data available.";
+    }
+
+    // Calculate averages (using snake_case from schema)
+    const validHR = hrData.filter((d: any) => d.resting_hr);
+    const validHRV = hrData.filter((d: any) => d.hrv_avg);
+
+    const avgRestingHR = validHR.length > 0
+      ? Math.round(validHR.reduce((sum: number, d: any) => sum + d.resting_hr, 0) / validHR.length)
+      : null;
+
+    const avgHRV = validHRV.length > 0
+      ? Math.round(validHRV.reduce((sum: number, d: any) => sum + (d.hrv_avg || 0), 0) / validHRV.length)
+      : null;
+
+    let result = `**14-Day Heart Rate Summary:**
+- Average Resting HR: ${avgRestingHR ? avgRestingHR + " bpm" : "N/A"}
+- Average HRV: ${avgHRV ? avgHRV + " ms" : "N/A"}
+- Data Points: ${hrData.length}
+`;
+
+    // Add trend info (first week vs last week)
+    if (hrData.length >= 7) {
+      const firstWeek = hrData.slice(0, 7);
+      const lastWeek = hrData.slice(-7);
+
+      const firstWeekHR = firstWeek.filter((d: any) => d.resting_hr);
+      const lastWeekHR = lastWeek.filter((d: any) => d.resting_hr);
+
+      if (firstWeekHR.length > 0 && lastWeekHR.length > 0) {
+        const avgFirst = firstWeekHR.reduce((s: number, d: any) => s + d.resting_hr, 0) / firstWeekHR.length;
+        const avgLast = lastWeekHR.reduce((s: number, d: any) => s + d.resting_hr, 0) / lastWeekHR.length;
+        const trend = avgLast < avgFirst ? "decreasing (positive)" : avgLast > avgFirst ? "increasing" : "stable";
+        result += `- HR Trend: ${trend}\n`;
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error building heart rate module:", error);
+    return null;
+  }
+}
+
+// Module G: Activity Data
+async function buildActivityDataModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    // Get nap summary (includes activity context)
+    const napSummary = await ctx.runQuery(api.physician.getPatientNapSummary, {
+      userId: userId as any,
+    });
+
+    // Get day type analysis for activity patterns
+    const dayTypeAnalysis = await ctx.runQuery(api.physician.getPatientDayTypeAnalysis, {
+      userId: userId as any,
+    });
+
+    let result = "";
+
+    if (napSummary) {
+      result += `**Nap Patterns:**
+- Days with Naps: ${napSummary.napDays || 0}/${napSummary.totalDays || 0} days
+- Average Naps per Day: ${napSummary.avgNapCount?.toFixed(1) || "0"}
+- Average Nap Duration: ${napSummary.avgDuration ? napSummary.avgDuration + " mins" : "N/A"}
+- Common Nap Times: ${napSummary.commonTimes?.join(", ") || "N/A"}
+`;
+    }
+
+    if (dayTypeAnalysis && dayTypeAnalysis.hasData) {
+      result += `\n**Day Type Analysis:**
+- Total Days: ${dayTypeAnalysis.totalDays || 0}
+- Workday Stats: ${dayTypeAnalysis.workdayStats ? `${dayTypeAnalysis.workdayStats.count} days, avg sleep ${dayTypeAnalysis.workdayStats.avgSleepMins ? Math.round(dayTypeAnalysis.workdayStats.avgSleepMins / 60 * 10) / 10 + "h" : "N/A"}` : "N/A"}
+- Weekend/Off Stats: ${dayTypeAnalysis.weekendStats ? `${dayTypeAnalysis.weekendStats.count} days, avg sleep ${dayTypeAnalysis.weekendStats.avgSleepMins ? Math.round(dayTypeAnalysis.weekendStats.avgSleepMins / 60 * 10) / 10 + "h" : "N/A"}` : "N/A"}`;
+
+      // Add clinical flags
+      if (dayTypeAnalysis.flags && dayTypeAnalysis.flags.length > 0) {
+        result += `\n**Clinical Flags:**\n`;
+        dayTypeAnalysis.flags.forEach((flag: any) => {
+          result += `- [${flag.severity.toUpperCase()}] ${flag.message}\n`;
+        });
+      }
+    }
+
+    return result || "No activity data available.";
+  } catch (error) {
+    console.error("Error building activity module:", error);
+    return null;
+  }
+}
+
+// Module H: Light Exposure & Circadian
+async function buildLightExposureModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    const circadianData = await ctx.runQuery(api.circadian.getCircadianSummary, {
+      userId: userId as any,
+      days: 14,
+    });
+
+    if (!circadianData || !circadianData.hasData) {
+      return "No light exposure data available. Requires iOS 17+ for daylight tracking.";
+    }
+
+    return `**14-Day Light Exposure Summary:**
+- Average Time in Daylight: ${circadianData.avgDaylightMins ? Math.round(circadianData.avgDaylightMins) + " mins" : "N/A"}
+- Average Morning Light: ${circadianData.avgMorningLightMins ? Math.round(circadianData.avgMorningLightMins) + " mins" : "N/A"}
+- Average Outdoor Workout: ${circadianData.avgOutdoorMins ? Math.round(circadianData.avgOutdoorMins) + " mins" : "N/A"}
+- Average Circadian Score: ${circadianData.avgCircadianScore ? circadianData.avgCircadianScore + "/100" : "N/A"}
+- Wrist Temp Deviation: ${circadianData.avgTempDeviation ? circadianData.avgTempDeviation.toFixed(2) + "°C" : "N/A"}
+- Days With Data: ${circadianData.daysWithData || 0}
+- Trend: ${circadianData.trend || "N/A"}`;
+  } catch (error) {
+    console.error("Error building light exposure module:", error);
+    return null;
+  }
+}
+
+// Module I: Perception Gap Analysis
+async function buildPerceptionGapModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    const perceptionGaps = await ctx.runQuery(api.healthkit.getPerceptionGaps, {
+      userId: userId as any,
+      limit: 14,
+    });
+
+    if (!perceptionGaps || perceptionGaps.length === 0) {
+      return "No perception gap data available. Requires both sleep log and HealthKit data.";
+    }
+
+    // Calculate summary stats
+    const overestimate = perceptionGaps.filter((g: any) => g.gap_direction === "overestimate").length;
+    const underestimate = perceptionGaps.filter((g: any) => g.gap_direction === "underestimate").length;
+    const accurate = perceptionGaps.filter((g: any) => g.gap_direction === "accurate").length;
+
+    const avgGapMins = perceptionGaps.reduce((sum: number, g: any) => sum + (g.gap_minutes || 0), 0) / perceptionGaps.length;
+
+    let biasDirection = "neutral";
+    if (overestimate > underestimate + 2) biasDirection = "tends to overestimate sleep";
+    else if (underestimate > overestimate + 2) biasDirection = "tends to underestimate sleep";
+
+    return `**Sleep Perception Analysis (${perceptionGaps.length} nights):**
+- Overestimated Sleep: ${overestimate} nights
+- Underestimated Sleep: ${underestimate} nights
+- Accurate (within 30 mins): ${accurate} nights
+- Average Gap: ${avgGapMins > 0 ? "+" : ""}${Math.round(avgGapMins)} mins
+- Bias Direction: ${biasDirection}
+- Accuracy Rate: ${Math.round((accurate / perceptionGaps.length) * 100)}%
+
+**Clinical Note:** ${biasDirection === "tends to overestimate sleep"
+  ? "Patient may have sleep state misperception or underestimate actual sleep difficulties."
+  : biasDirection === "tends to underestimate sleep"
+  ? "Patient may be sleeping better than perceived - consider anxiety or depression screening."
+  : "Patient has good sleep perception accuracy."}`;
+  } catch (error) {
+    console.error("Error building perception gap module:", error);
+    return null;
+  }
+}
+
+// Module J: Temporal Trends (Week 1 vs Week 2)
+async function buildTemporalTrendsModule(ctx: ActionCtx, userId: string): Promise<string | null> {
+  try {
+    const subjectiveSleepData = await ctx.runQuery(api.physician.getSubjectiveSleepQuality, {
+      userId: userId as any,
+      days: 14,
+    });
+
+    if (!subjectiveSleepData || !subjectiveSleepData.dailyData || subjectiveSleepData.dailyData.length < 7) {
+      return "Insufficient data for trend analysis. Need at least 7 days.";
+    }
+
+    const dailyData = subjectiveSleepData.dailyData;
+
+    // Split into weeks
+    const week1 = dailyData.slice(0, 7);
+    const week2 = dailyData.slice(7, 14);
+
+    // Calculate week 1 averages
+    const week1Quality = week1.filter((d: any) => d.quality !== null);
+    const week1AvgQuality = week1Quality.length > 0
+      ? week1Quality.reduce((s: number, d: any) => s + d.quality, 0) / week1Quality.length
+      : null;
+
+    const week1Duration = week1.filter((d: any) => d.totalSleepMins);
+    const week1AvgDuration = week1Duration.length > 0
+      ? week1Duration.reduce((s: number, d: any) => s + d.totalSleepMins, 0) / week1Duration.length
+      : null;
+
+    // Calculate week 2 averages (if available)
+    let week2AvgQuality = null;
+    let week2AvgDuration = null;
+
+    if (week2.length > 0) {
+      const week2Quality = week2.filter((d: any) => d.quality !== null);
+      week2AvgQuality = week2Quality.length > 0
+        ? week2Quality.reduce((s: number, d: any) => s + d.quality, 0) / week2Quality.length
+        : null;
+
+      const week2Duration = week2.filter((d: any) => d.totalSleepMins);
+      week2AvgDuration = week2Duration.length > 0
+        ? week2Duration.reduce((s: number, d: any) => s + d.totalSleepMins, 0) / week2Duration.length
+        : null;
+    }
+
+    let result = `**Temporal Trend Analysis:**
+
+Week 1 (Days 1-7):
+- Average Quality: ${week1AvgQuality ? week1AvgQuality.toFixed(1) + "/10" : "N/A"}
+- Average Duration: ${week1AvgDuration ? (week1AvgDuration / 60).toFixed(1) + "h" : "N/A"}
+`;
+
+    if (week2.length > 0) {
+      result += `
+Week 2 (Days 8-14):
+- Average Quality: ${week2AvgQuality ? week2AvgQuality.toFixed(1) + "/10" : "N/A"}
+- Average Duration: ${week2AvgDuration ? (week2AvgDuration / 60).toFixed(1) + "h" : "N/A"}
+`;
+
+      // Calculate trends
+      if (week1AvgQuality !== null && week2AvgQuality !== null) {
+        const qualityTrend = week2AvgQuality - week1AvgQuality;
+        const trendText = qualityTrend > 0.5 ? `Improving (+${qualityTrend.toFixed(1)})` : qualityTrend < -0.5 ? `Declining (${qualityTrend.toFixed(1)})` : "Stable";
+        result += `\n**Trends:**
+- Quality Trend: ${trendText}`;
+      }
+
+      if (week1AvgDuration !== null && week2AvgDuration !== null) {
+        const durationTrend = (week2AvgDuration - week1AvgDuration) / 60;
+        const durationText = durationTrend > 0.25 ? `Increasing (+${durationTrend.toFixed(1)}h)` : durationTrend < -0.25 ? `Decreasing (${durationTrend.toFixed(1)}h)` : "Stable";
+        result += `
+- Duration Trend: ${durationText}`;
+      }
+    } else {
+      result += "\nWeek 2 data not yet available.";
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error building temporal trends module:", error);
+    return null;
+  }
+}
+
+// Module definitions registry
+const PROMPT_MODULES: Record<string, PromptModule> = {
+  demographics: {
+    id: "demographics",
+    name: "Demographics & Context",
+    description: "Patient demographics, age, sex, completion status",
+    estimatedTokens: 200,
+    enabledByDefault: true,
+    build: buildDemographicsModule,
+  },
+  questionnaire_scores: {
+    id: "questionnaire_scores",
+    name: "Standardized Questionnaire Scores",
+    description: "ISI, PHQ-9, GAD-7, ESS, PSQI, STOP-BANG scores with interpretations",
+    estimatedTokens: 400,
+    enabledByDefault: true,
+    build: buildQuestionnaireScoresModule,
+  },
+  gateway_triggers: {
+    id: "gateway_triggers",
+    name: "Gateway Triggers & Risk Flags",
+    description: "Triggered clinical gateways (insomnia, OSA, mental health, etc.)",
+    estimatedTokens: 150,
+    enabledByDefault: true,
+    build: buildGatewayTriggersModule,
+  },
+  sleep_log_full: {
+    id: "sleep_log_full",
+    name: "Sleep Log Data (Full 14 Days)",
+    description: "Complete subjective sleep log with quality, duration, latency",
+    estimatedTokens: 800,
+    enabledByDefault: true,
+    build: buildSleepLogFullModule,
+  },
+  healthkit_sleep: {
+    id: "healthkit_sleep",
+    name: "HealthKit Sleep Architecture",
+    description: "Wearable sleep stages (deep/REM/light), efficiency, duration",
+    estimatedTokens: 400,
+    enabledByDefault: true,
+    build: buildHealthKitSleepModule,
+  },
+  heart_rate_hrv: {
+    id: "heart_rate_hrv",
+    name: "Heart Rate & HRV Trends",
+    description: "Resting HR, HRV averages and trends",
+    estimatedTokens: 200,
+    enabledByDefault: false,
+    build: buildHeartRateHRVModule,
+  },
+  activity_data: {
+    id: "activity_data",
+    name: "Activity Data",
+    description: "Nap patterns, day type analysis, exercise data",
+    estimatedTokens: 250,
+    enabledByDefault: true,
+    build: buildActivityDataModule,
+  },
+  light_exposure: {
+    id: "light_exposure",
+    name: "Light Exposure & Circadian",
+    description: "Time in daylight, morning/afternoon light, circadian score",
+    estimatedTokens: 200,
+    enabledByDefault: true,
+    build: buildLightExposureModule,
+  },
+  perception_gap: {
+    id: "perception_gap",
+    name: "Perception Gap Analysis",
+    description: "Comparison of subjective sleep perception vs objective wearable data",
+    estimatedTokens: 200,
+    enabledByDefault: true,
+    build: buildPerceptionGapModule,
+  },
+  temporal_trends: {
+    id: "temporal_trends",
+    name: "Temporal Trends",
+    description: "Week 1 vs Week 2 comparison, improving/declining metrics",
+    estimatedTokens: 200,
+    enabledByDefault: true,
+    build: buildTemporalTrendsModule,
+  },
+};
+
+// Get list of all available modules
+function getAvailableModules(): Array<{
+  id: string;
+  name: string;
+  description: string;
+  estimatedTokens: number;
+  enabledByDefault: boolean;
+}> {
+  return Object.values(PROMPT_MODULES).map(m => ({
+    id: m.id,
+    name: m.name,
+    description: m.description,
+    estimatedTokens: m.estimatedTokens,
+    enabledByDefault: m.enabledByDefault,
+  }));
+}
+
+// Build modular analysis prompt
+async function buildModularAnalysisPrompt(
+  ctx: ActionCtx,
+  userId: string,
+  enabledModules?: string[]
+): Promise<PatientAnalysisPrompt> {
+  // Use default modules if none specified
+  const modules = enabledModules || DEFAULT_ENABLED_MODULES;
+
+  const sections: string[] = [];
+  const modulesUsed: string[] = [];
+  let totalEstimatedTokens = 0;
+
+  // Build each enabled module
+  for (const moduleId of modules) {
+    const module = PROMPT_MODULES[moduleId];
+    if (!module) continue;
+
+    try {
+      const content = await module.build(ctx, userId);
+      if (content) {
+        sections.push(`## ${module.name}\n${content}`);
+        modulesUsed.push(moduleId);
+        totalEstimatedTokens += module.estimatedTokens;
+      }
+    } catch (error) {
+      console.error(`Error building module ${moduleId}:`, error);
+    }
+  }
+
+  const systemPrompt = `You are a board-certified sleep medicine specialist analyzing a patient's comprehensive 14-day sleep assessment.
+
+Your analysis should be:
+- Evidence-based and clinically actionable
+- Specific to the patient's profile and data
+- Prioritized by clinical significance
+- Consider both subjective reports AND objective wearable data when available
+- Note any discrepancies between perceived and actual sleep
+
+IMPORTANT: This analysis includes data from ${modulesUsed.length} modules: ${modulesUsed.join(", ")}.
+
+Provide your analysis in JSON format with these exact keys:
+{
+  "summary": "2-3 sentence clinical summary highlighting the most significant findings",
+  "riskFactors": ["array of 3-5 key risk factors identified from the data"],
+  "recommendations": ["array of 3-5 evidence-based, prioritized interventions"],
+  "dataQuality": "assessment of data completeness (excellent/good/fair/limited)",
+  "urgentFlags": ["any findings requiring immediate attention, or empty array if none"]
+}`;
+
+  const userPrompt = sections.length > 0
+    ? sections.join("\n\n") + "\n\nPlease analyze this patient's comprehensive data and provide your clinical assessment."
+    : "Insufficient patient data available for analysis.";
+
+  // Add system prompt tokens to estimate
+  const estimatedTokens = Math.ceil((systemPrompt.length + userPrompt.length) / 4);
+
+  return {
+    systemPrompt,
+    userPrompt,
+    estimatedTokens,
+    modulesUsed,
+  };
 }
 
 async function buildAnalysisPrompt(
@@ -336,12 +947,34 @@ Please analyze this patient's data and provide your clinical assessment.`;
 }
 
 /**
+ * Get available analysis modules for the UI
+ * Returns list of all modules with their configuration
+ */
+export const getAvailableAnalysisModules = action({
+  args: {},
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      name: v.string(),
+      description: v.string(),
+      estimatedTokens: v.number(),
+      enabledByDefault: v.boolean(),
+    })
+  ),
+  handler: async () => {
+    return getAvailableModules();
+  },
+});
+
+/**
  * Preview the analysis prompt without running the LLM
  * Shows exactly what data will be sent for analysis
+ * Now supports modular architecture with configurable modules
  */
 export const previewAnalysisPrompt = action({
   args: {
     userId: v.id("users"),
+    enabledModules: v.optional(v.array(v.string())),
   },
   returns: v.object({
     systemPrompt: v.string(),
@@ -350,9 +983,11 @@ export const previewAnalysisPrompt = action({
     estimatedCost: v.string(),
     selectedModel: v.string(),
     modelProvider: v.string(),
+    modulesUsed: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    const prompt = await buildAnalysisPrompt(ctx, args.userId);
+    // Use modular prompt builder
+    const prompt = await buildModularAnalysisPrompt(ctx, args.userId, args.enabledModules);
     const config = await getLLMConfigFromSettings(ctx);
 
     // Estimate cost based on model
@@ -375,25 +1010,31 @@ export const previewAnalysisPrompt = action({
       estimatedCost: `~$${estimatedCost.toFixed(4)} (input only)`,
       selectedModel: config.primaryModel,
       modelProvider: provider,
+      modulesUsed: prompt.modulesUsed || [],
     };
   },
 });
 
 /**
  * Analyze patient responses using LLM
- * Now uses configurable model from system settings
+ * Now uses modular architecture with configurable modules
  */
 export const analyzePatientResponses = action({
   args: {
     userId: v.id("users"),
+    enabledModules: v.optional(v.array(v.string())),
   },
   returns: v.object({
     summary: v.string(),
     riskFactors: v.array(v.string()),
     recommendations: v.array(v.string()),
+    dataQuality: v.optional(v.string()),
+    urgentFlags: v.optional(v.array(v.string())),
+    modulesUsed: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    const prompt = await buildAnalysisPrompt(ctx, args.userId);
+    // Use modular prompt builder
+    const prompt = await buildModularAnalysisPrompt(ctx, args.userId, args.enabledModules);
 
     try {
       // Use configurable LLM instead of hardcoded OpenAI
@@ -410,6 +1051,9 @@ export const analyzePatientResponses = action({
         summary: result.summary || "No summary available",
         riskFactors: result.riskFactors || [],
         recommendations: result.recommendations || [],
+        dataQuality: result.dataQuality || "unknown",
+        urgentFlags: result.urgentFlags || [],
+        modulesUsed: prompt.modulesUsed || [],
       };
     } catch (error) {
       console.error("Error analyzing patient responses:", error);
@@ -417,6 +1061,9 @@ export const analyzePatientResponses = action({
         summary: "Error analyzing patient data. Please check API key configuration in Settings.",
         riskFactors: [],
         recommendations: [],
+        dataQuality: "error",
+        urgentFlags: [],
+        modulesUsed: prompt.modulesUsed || [],
       };
     }
   },

@@ -2,6 +2,47 @@
 
 > Complete development history. For quick reference, see [CLAUDE.md](../CLAUDE.md).
 
+## January 2026
+
+### Jan 1, 2026
+
+#### Unified 1-10 Scale for All Slider Questions
+Simplified user experience by presenting a consistent 1-10 scale for ALL slider questions, while internally mapping to correct clinical scale values for scoring.
+
+**Problem:**
+- Different questionnaires used different scales (ISI: 0-4, PHQ-9: 0-3, FSS: 1-7, BPI: 0-10)
+- Users confused by inconsistent scales
+- Sleep quality at value 9 was showing "Very severe" instead of "Excellent"
+
+**Solution - ScaleMapper.swift:**
+- Created comprehensive scale mapping utility
+- Detects positive scales (higher=better: sleep quality, energy) vs negative scales (higher=worse: pain, severity)
+- 22+ positive question IDs identified (1, 55, 234, 235, CSD_QUALITY, etc.)
+- 80+ negative question IDs identified (ISI, PHQ, GAD, ESS, FSS, PSAS, BPI prefixes)
+- Question-specific label dictionaries (sleepQualityLabels, satisfactionLabels, alertnessLabels, etc.)
+- Direction-based fallback labels for uncategorized questions
+
+**Files changed:** `ScaleMapper.swift` (new - 988 lines), `QuestionComponents.swift`, `QuestionnaireView.swift`
+
+#### Intensity-Scaled Haptic Feedback for Sliders
+Added subtle tactile feedback for slider questions with intensity that scales with the slider value.
+
+**Features:**
+- Vibration intensity scales from 0.1 (value 1, barely perceptible) to 1.0 (value 10, full strength)
+- Uses `.light` style for gentleness even at full intensity
+- Toggleable in Settings > Accessibility > Haptic Feedback
+- Default: ON
+
+**Implementation:**
+- Added `hapticFeedbackEnabled` property to ThemeManager (persisted in UserDefaults)
+- Added `scaledImpact(intensity:)` method to HapticManager
+- Integrated in ScaleInput's `.onChange(of: displayValue)` handler
+- Formula: `intensity = (value - 1) / 9.0 * 0.9 + 0.1`
+
+**Files changed:** `ThemeManager.swift`, `ProfileSettingsView.swift`, `HapticFeedback.swift`, `QuestionComponents.swift`
+
+---
+
 ## December 2025
 
 ### Dec 31, 2025

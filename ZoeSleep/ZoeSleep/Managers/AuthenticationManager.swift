@@ -62,6 +62,12 @@ class AuthenticationManager: ObservableObject {
                 self.isAuthenticated = true
                 print("✅ Session restored for user: \(user.username)")
 
+                // Sync credentials to Watch for same-user authentication
+                iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
+                    userId: userId,
+                    username: user.username
+                )
+
                 // Check onboarding state for this user with full profile data
                 await OnboardingManager.shared.checkUserOnboardingState(
                     userId: userId,
@@ -123,6 +129,12 @@ class AuthenticationManager: ObservableObject {
 
             self.isAuthenticated = true
             print("✅ Sign in successful for user: \(response.user.username)")
+
+            // Sync credentials to Watch for same-user authentication
+            iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
+                userId: response.userId,
+                username: response.user.username
+            )
 
             // Check onboarding state for this user with full profile data
             await OnboardingManager.shared.checkUserOnboardingState(
@@ -192,6 +204,12 @@ class AuthenticationManager: ObservableObject {
 
             self.isAuthenticated = true
             print("✅ Registration successful for user: \(response.user.email ?? "unknown")")
+
+            // Sync credentials to Watch for same-user authentication
+            iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
+                userId: response.userId,
+                username: response.user.username
+            )
 
             // New user always needs onboarding - pass empty profile
             await OnboardingManager.shared.checkUserOnboardingState(
@@ -317,6 +335,12 @@ class AuthenticationManager: ObservableObject {
                     } else {
                         print("✅ Existing user signed in via Apple: \(response.user.username)")
                     }
+
+                    // Sync credentials to Watch for same-user authentication
+                    iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
+                        userId: response.userId,
+                        username: response.user.username
+                    )
 
                     // Check onboarding state - new users need onboarding
                     await OnboardingManager.shared.checkUserOnboardingState(

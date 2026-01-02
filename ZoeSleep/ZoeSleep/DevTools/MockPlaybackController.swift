@@ -319,21 +319,12 @@ class MockPlaybackController: ObservableObject {
                     questions.append(contentsOf: moduleQuestions)
                 }
             }
-            if !questions.isEmpty {
-                return questions
-            }
+            return questions
         }
 
-        // No expansion triggered - return single info question
-        return [
-            Question(
-                id: "INFO_NO_EXPANSION_\(dayNumber)",
-                text: "Based on your previous responses, no additional questions are needed for today.",
-                pillar: .sleepQuality,
-                questionType: .info,
-                required: false
-            )
-        ]
+        // No expansion triggered - return empty array
+        // The iOS client properly handles empty assessments by not showing the "Proceed to Assessment" button
+        return []
     }
 
     // MARK: - Date Helpers

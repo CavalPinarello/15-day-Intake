@@ -2161,6 +2161,333 @@ export const backdateUserStart = mutation({
 });
 
 /**
+ * Speed complete current day (DEBUG MODE ONLY)
+ * Generates minimal mock responses and marks both sleep log and assessment as complete.
+ * Useful for rapid testing of the 14-day journey.
+ *
+ * @param phenotype - Sleep phenotype for realistic mock data generation
+ * @param advanceToNext - If true, advances to next day after completion
+ */
+export const speedCompleteDay = mutation({
+  args: {
+    userId: v.id("users"),
+    phenotype: v.optional(v.string()), // "insomnia", "osa", "normal", etc.
+    advanceToNext: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const currentDay = user.current_day || 1;
+    const now = Date.now();
+    const phenotype = args.phenotype || "insomnia";
+
+    // Generate mock sleep log responses (5 Stanford Consensus Sleep Diary questions)
+    const sleepLogResponses = generateMockSleepLogResponses(currentDay, phenotype);
+    for (const response of sleepLogResponses) {
+      // Check if response already exists
+      const existing = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_question", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", response.questionId)
+        )
+        .filter((q) => q.eq(q.field("day_number"), currentDay))
+        .first();
+
+      if (!existing) {
+        await ctx.db.insert("user_assessment_responses", {
+          user_id: args.userId,
+          question_id: response.questionId,
+          response_value: response.value,
+          day_number: currentDay,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+    }
+
+    // Generate mock assessment responses (varies by day)
+    const assessmentResponses = generateMockAssessmentResponses(currentDay, phenotype);
+    for (const response of assessmentResponses) {
+      const existing = await ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_question", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", response.questionId)
+        )
+        .filter((q) => q.eq(q.field("day_number"), currentDay))
+        .first();
+
+      if (!existing) {
+        await ctx.db.insert("user_assessment_responses", {
+          user_id: args.userId,
+          question_id: response.questionId,
+          response_value: response.value,
+          day_number: currentDay,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+    }
+
+    // Get or create user_progress entry for this day
+    const days = await ctx.db.query("days").collect();
+    const dayEntry = days.find((d) => d.day_number === currentDay);
+
+    if (dayEntry) {
+      const existingProgress = await ctx.db
+        .query("user_progress")
+        .withIndex("by_user_day", (q) =>
+          q.eq("user_id", args.userId).eq("day_id", dayEntry._id)
+        )
+        .first();
+
+      if (existingProgress) {
+        await ctx.db.patch(existingProgress._id, {
+          sleep_log_completed: true,
+          assessment_completed: true,
+          completed: true,
+          completed_at: now,
+        });
+      } else {
+        await ctx.db.insert("user_progress", {
+          user_id: args.userId,
+          day_id: dayEntry._id,
+          sleep_log_completed: true,
+          assessment_completed: true,
+          completed: true,
+          completed_at: now,
+          created_at: now,
+        });
+      }
+    }
+
+    // Optionally advance to next day
+    let newDay = currentDay;
+    if (args.advanceToNext && currentDay < 14) {
+      newDay = currentDay + 1;
+      await ctx.db.patch(args.userId, {
+        current_day: newDay,
+        last_accessed: now,
+      });
+    }
+
+    // Log the debug action
+    await ctx.db.insert("ios_app_events", {
+      user_id: args.userId,
+      device_id: "debug",
+      event_type: "debug_speed_complete",
+      event_data: JSON.stringify({
+        day: currentDay,
+        phenotype,
+        advancedTo: args.advanceToNext ? newDay : null,
+        sleepLogResponses: sleepLogResponses.length,
+        assessmentResponses: assessmentResponses.length,
+      }),
+      timestamp: now,
+    });
+
+    console.log(`[speedCompleteDay] User ${user.username}: speed completed Day ${currentDay} (${phenotype}), now on Day ${newDay}`);
+
+    return {
+      success: true,
+      completedDay: currentDay,
+      currentDay: newDay,
+      phenotype,
+      sleepLogResponses: sleepLogResponses.length,
+      assessmentResponses: assessmentResponses.length,
+    };
+  },
+});
+
+// Helper: Generate mock sleep log responses based on phenotype
+function generateMockSleepLogResponses(day: number, phenotype: string): Array<{questionId: string; value: string}> {
+  // Consensus Sleep Diary questions (CSD_*)
+  const baseTime = new Date();
+  baseTime.setHours(22, 30, 0, 0); // 10:30 PM bedtime
+
+  // Phenotype-specific variations
+  const variations: Record<string, {
+    sleepOnsetMin: number;
+    wakeCount: number;
+    wakeMinutes: number;
+    sleepQuality: number;
+    totalSleepHours: number;
+  }> = {
+    insomnia: { sleepOnsetMin: 45, wakeCount: 3, wakeMinutes: 40, sleepQuality: 2, totalSleepHours: 5.5 },
+    osa: { sleepOnsetMin: 10, wakeCount: 5, wakeMinutes: 20, sleepQuality: 3, totalSleepHours: 7 },
+    anxiety: { sleepOnsetMin: 60, wakeCount: 4, wakeMinutes: 30, sleepQuality: 2, totalSleepHours: 5 },
+    depression: { sleepOnsetMin: 20, wakeCount: 2, wakeMinutes: 60, sleepQuality: 2, totalSleepHours: 9 },
+    normal: { sleepOnsetMin: 15, wakeCount: 1, wakeMinutes: 5, sleepQuality: 4, totalSleepHours: 7.5 },
+  };
+
+  const v = variations[phenotype] || variations.normal;
+
+  // Add some day-to-day variation
+  const dayVariation = (day % 3) - 1; // -1, 0, or 1
+
+  return [
+    { questionId: "CSD_1", value: "22:30" }, // Bedtime
+    { questionId: "CSD_2", value: `${v.sleepOnsetMin + dayVariation * 10}` }, // Sleep onset (minutes)
+    { questionId: "CSD_3", value: `${v.wakeCount + dayVariation}` }, // Wake count
+    { questionId: "CSD_4", value: `${v.wakeMinutes + dayVariation * 10}` }, // Wake minutes
+    { questionId: "CSD_5", value: "07:00" }, // Wake time
+    { questionId: "CSD_6", value: `${v.sleepQuality}` }, // Sleep quality (1-5)
+  ];
+}
+
+// Helper: Generate mock assessment responses based on day and phenotype
+function generateMockAssessmentResponses(day: number, phenotype: string): Array<{questionId: string; value: string}> {
+  const responses: Array<{questionId: string; value: string}> = [];
+
+  // Day 1: Core intake questions
+  if (day === 1) {
+    // Basic demographics and sleep concerns
+    responses.push(
+      { questionId: "Q1", value: "difficulty_falling_asleep" },
+      { questionId: "Q2", value: "3" }, // Severity
+      { questionId: "Q3", value: "6_months_to_1_year" },
+    );
+
+    // Phenotype-specific responses
+    if (phenotype === "insomnia") {
+      responses.push({ questionId: "Q_INSOMNIA_TRIGGER", value: "yes" });
+    } else if (phenotype === "osa") {
+      responses.push({ questionId: "Q_SNORING", value: "yes" });
+      responses.push({ questionId: "Q_BREATHING_STOPS", value: "sometimes" });
+    }
+  }
+
+  // Days 2-5: Additional intake
+  if (day >= 2 && day <= 5) {
+    responses.push(
+      { questionId: `Q_DAY${day}_1`, value: "moderate" },
+      { questionId: `Q_DAY${day}_2`, value: "3" },
+    );
+  }
+
+  // Days 6-14: Expansion questions (if gateways triggered)
+  if (day >= 6) {
+    responses.push(
+      { questionId: `Q_EXP_${day}_1`, value: "2" },
+      { questionId: `Q_EXP_${day}_2`, value: "sometimes" },
+    );
+  }
+
+  return responses;
+}
+
+/**
+ * Speed run entire journey (DEBUG MODE ONLY)
+ * Completes all 14 days with mock data in one call.
+ * Perfect for rapid end-to-end testing.
+ */
+export const speedRunFullJourney = mutation({
+  args: {
+    userId: v.id("users"),
+    phenotype: v.optional(v.string()),
+    targetDay: v.optional(v.number()), // Stop at this day (default 14)
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const phenotype = args.phenotype || "insomnia";
+    const targetDay = args.targetDay || 14;
+    const now = Date.now();
+
+    // Backdate started_at to make time calculations work
+    const daysAgo = targetDay - 1;
+    const newStartedAt = now - (daysAgo * 24 * 60 * 60 * 1000);
+
+    await ctx.db.patch(args.userId, {
+      started_at: newStartedAt,
+      current_day: 1, // Start from day 1
+      last_accessed: now,
+    });
+
+    // Complete each day
+    const completedDays: number[] = [];
+    for (let day = 1; day <= targetDay; day++) {
+      // Generate sleep log responses
+      const sleepLogResponses = generateMockSleepLogResponses(day, phenotype);
+      for (const response of sleepLogResponses) {
+        await ctx.db.insert("user_assessment_responses", {
+          user_id: args.userId,
+          question_id: response.questionId,
+          response_value: response.value,
+          day_number: day,
+          created_at: now - ((targetDay - day) * 24 * 60 * 60 * 1000),
+          updated_at: now - ((targetDay - day) * 24 * 60 * 60 * 1000),
+        });
+      }
+
+      // Generate assessment responses
+      const assessmentResponses = generateMockAssessmentResponses(day, phenotype);
+      for (const response of assessmentResponses) {
+        await ctx.db.insert("user_assessment_responses", {
+          user_id: args.userId,
+          question_id: response.questionId,
+          response_value: response.value,
+          day_number: day,
+          created_at: now - ((targetDay - day) * 24 * 60 * 60 * 1000),
+          updated_at: now - ((targetDay - day) * 24 * 60 * 60 * 1000),
+        });
+      }
+
+      // Mark day as complete
+      const days = await ctx.db.query("days").collect();
+      const dayEntry = days.find((d) => d.day_number === day);
+
+      if (dayEntry) {
+        await ctx.db.insert("user_progress", {
+          user_id: args.userId,
+          day_id: dayEntry._id,
+          sleep_log_completed: true,
+          assessment_completed: true,
+          completed: true,
+          completed_at: now - ((targetDay - day) * 24 * 60 * 60 * 1000),
+          created_at: now - ((targetDay - day) * 24 * 60 * 60 * 1000),
+        });
+      }
+
+      completedDays.push(day);
+    }
+
+    // Set final day
+    await ctx.db.patch(args.userId, {
+      current_day: targetDay,
+    });
+
+    // Log the debug action
+    await ctx.db.insert("ios_app_events", {
+      user_id: args.userId,
+      device_id: "debug",
+      event_type: "debug_speed_run_journey",
+      event_data: JSON.stringify({
+        phenotype,
+        targetDay,
+        completedDays: completedDays.length,
+      }),
+      timestamp: now,
+    });
+
+    console.log(`[speedRunFullJourney] User ${user.username}: completed ${completedDays.length} days with ${phenotype} phenotype`);
+
+    return {
+      success: true,
+      completedDays: completedDays.length,
+      currentDay: targetDay,
+      phenotype,
+      startedAt: newStartedAt,
+    };
+  },
+});
+
+/**
  * Get current journey state (for debugging)
  */
 export const getJourneyDebugInfo = query({
