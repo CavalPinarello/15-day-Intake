@@ -2321,6 +2321,7 @@ class QuestionnaireManager: ObservableObject {
                 gatewayStates: gatewayStates,
                 sleepLogCompleted: progress.sleepLogCompleted ?? false,
                 assessmentCompleted: progress.assessmentCompleted ?? false,
+                dayReadyAt: progress.dayReadyAt,
                 expansionPackCompleted: progress.expansionPackCompleted ?? false
             )
             newProgress.completedExpansionGateways = completedExpansionGateways

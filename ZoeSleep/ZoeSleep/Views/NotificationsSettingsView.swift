@@ -14,6 +14,7 @@ struct NotificationsSettingsView: View {
     @State private var morningTime = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
     @State private var eveningReminderEnabled = true
     @State private var eveningTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date()
+    @State private var checkInNudgesEnabled = true
     @State private var showingPermissionAlert = false
     @ObservedObject private var timeFormatManager = TimeFormatManager.shared
 
@@ -111,6 +112,27 @@ struct NotificationsSettingsView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+
+                Section {
+                    Toggle(isOn: $checkInNudgesEnabled) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Check-In Reminders")
+                                .font(.headline)
+                            Text("Nudges for energy, mood & focus check-ins")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .onChange(of: checkInNudgesEnabled) { _, enabled in
+                        saveAndScheduleCheckInNudges(enabled: enabled)
+                    }
+                } header: {
+                    Text("Check-In Reminders")
+                } footer: {
+                    Text("Gentle reminders throughout the day (morning, midday, evening) for quick energy, mood, and focus check-ins. Separate from sleep log reminders.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .navigationTitle("Notifications")
@@ -150,7 +172,10 @@ struct NotificationsSettingsView: View {
         let eveningMinute = defaults.object(forKey: NotificationManager.eveningReminderMinuteKey) as? Int ?? 0
         eveningTime = Calendar.current.date(from: DateComponents(hour: eveningHour, minute: eveningMinute)) ?? Date()
 
-        print("[Notifications] Loaded settings - Morning: \(morningHour):\(String(format: "%02d", morningMinute)), Evening: \(eveningHour):\(String(format: "%02d", eveningMinute))")
+        // Load check-in nudges settings (default enabled)
+        checkInNudgesEnabled = defaults.object(forKey: NotificationManager.checkInNudgesEnabledKey) as? Bool ?? true
+
+        print("[Notifications] Loaded settings - Morning: \(morningHour):\(String(format: "%02d", morningMinute)), Evening: \(eveningHour):\(String(format: "%02d", eveningMinute)), Check-in nudges: \(checkInNudgesEnabled)")
     }
 
     private func saveAndScheduleMorningReminder() {
@@ -185,6 +210,14 @@ struct NotificationsSettingsView: View {
         }
     }
 
+    private func saveAndScheduleCheckInNudges(enabled: Bool) {
+        print("[Notifications] Saving check-in nudges - enabled: \(enabled)")
+
+        Task {
+            await NotificationManager.shared.scheduleCheckInNudges(enabled: enabled)
+        }
+    }
+
     private func checkNotificationStatus() {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             DispatchQueue.main.async {
@@ -201,9 +234,10 @@ struct NotificationsSettingsView: View {
                 }
                 notificationsEnabled = granted
                 if granted {
-                    // Schedule both reminders with current settings after permission granted
+                    // Schedule all reminders with current settings after permission granted
                     saveAndScheduleMorningReminder()
                     saveAndScheduleEveningReminder()
+                    saveAndScheduleCheckInNudges(enabled: checkInNudgesEnabled)
                 }
             }
         }

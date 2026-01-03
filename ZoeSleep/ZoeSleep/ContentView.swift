@@ -86,6 +86,12 @@ struct MainDashboardView: View {
     // Overdue expansion packs from previous days
     @State private var overdueExpansions: [DailyCompletionStatus.OverdueExpansion] = []
 
+    // Coach marks for first-time users
+    @State private var showSleepLogCoachMark = false
+    @State private var showAssessmentCoachMark = false
+    @State private var showProgressCoachMark = false
+    @ObservedObject private var guideManager = FirstTimeGuideManager.shared
+
     // Poll every 5 seconds when app is active (for cross-device sync)
     private let refreshInterval: TimeInterval = 5.0
 
@@ -204,6 +210,9 @@ struct MainDashboardView: View {
             if motivationalMessage.isEmpty {
                 motivationalMessage = FriendlyCopy.randomDayMessage()
             }
+
+            // Show coach marks for first-time users (with delay for smooth UX)
+            triggerCoachMarksIfNeeded()
         }
         .onDisappear {
             stopRefreshTimer()
@@ -256,6 +265,34 @@ struct MainDashboardView: View {
             // Use force=true to bypass throttle since this is an explicit completion notification
             Task {
                 await refreshFromConvex(silent: false, force: true)
+            }
+        }
+        // Full-screen coach mark overlay (appears above all content)
+        .overlay {
+            if showSleepLogCoachMark {
+                CoachMarkWithBackdrop(
+                    content: CoachMarkLibrary.sleepLogTask,
+                    arrowDirection: .down,
+                    targetOffset: CGSize(width: 0, height: 100),
+                    onDismiss: {
+                        showSleepLogCoachMark = false
+                        guideManager.markCoachMarkShown(CoachMarkLibrary.sleepLogTask)
+                        showNextCoachMark(after: CoachMarkLibrary.sleepLogTask)
+                    }
+                )
+                .zIndex(1000)
+            } else if showAssessmentCoachMark {
+                CoachMarkWithBackdrop(
+                    content: CoachMarkLibrary.assessmentTask,
+                    arrowDirection: .down,
+                    targetOffset: CGSize(width: 0, height: 180),
+                    onDismiss: {
+                        showAssessmentCoachMark = false
+                        guideManager.markCoachMarkShown(CoachMarkLibrary.assessmentTask)
+                        showNextCoachMark(after: CoachMarkLibrary.assessmentTask)
+                    }
+                )
+                .zIndex(1000)
             }
         }
     }
@@ -709,7 +746,8 @@ struct MainDashboardView: View {
                 DayCompleteCelebrationView(
                     currentDay: currentDay,
                     isDebugMode: themeManager.debugMode,
-                    onAdvanceDay: advanceToNextDay
+                    onAdvanceDay: advanceToNextDay,
+                    dayReadyAt: questionnaireManager.journeyProgress?.dayReadyAt
                 )
                 // Note: Gateway notifications removed - "Upcoming Assessments" section shows this info with accurate day schedules
             } else if let expansionPack = availableExpansionPack {
@@ -804,7 +842,8 @@ struct MainDashboardView: View {
                     DayCompleteCelebrationView(
                         currentDay: currentDay,
                         isDebugMode: themeManager.debugMode,
-                        onAdvanceDay: advanceToNextDay
+                        onAdvanceDay: advanceToNextDay,
+                        dayReadyAt: questionnaireManager.journeyProgress?.dayReadyAt
                     )
                 }
             } else {
@@ -1315,6 +1354,43 @@ struct MainDashboardView: View {
             }
         } catch {
             print("[iOS] Failed to load missed days: \(error)")
+        }
+    }
+
+    // MARK: - Coach Marks
+
+    /// Trigger coach marks for first-time users in sequence
+    /// Shows once per user, then never again (restorable from Debug Panel)
+    private func triggerCoachMarksIfNeeded() {
+        // Show sleep log coach mark first (with delay) - only if never shown before
+        if guideManager.shouldShowCoachMark(CoachMarkLibrary.sleepLogTask) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                showSleepLogCoachMark = true
+            }
+        }
+    }
+
+    /// Show the next coach mark in sequence after dismissing current one
+    private func showNextCoachMark(after current: CoachMarkContent) {
+        // Sequence: Sleep Log -> Assessment -> Progress
+        if current.id == CoachMarkLibrary.sleepLogTask.id {
+            // Show assessment coach mark next
+            if guideManager.shouldShowCoachMark(CoachMarkLibrary.assessmentTask) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        showAssessmentCoachMark = true
+                    }
+                }
+            }
+        } else if current.id == CoachMarkLibrary.assessmentTask.id {
+            // Show progress coach mark last
+            if guideManager.shouldShowCoachMark(CoachMarkLibrary.dayProgress) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        showProgressCoachMark = true
+                    }
+                }
+            }
         }
     }
 
@@ -3026,6 +3102,9 @@ struct DayCompleteCelebrationView: View {
     let currentDay: Int
     let isDebugMode: Bool
     let onAdvanceDay: () -> Void
+    /// Timestamp (ms) when the day became ready (both sections complete)
+    /// If nil, fall back to legacy behavior (simple hour check)
+    var dayReadyAt: Double? = nil
 
     @State private var timeUntilUnlock: String = ""
     @State private var isUnlocked: Bool = false
@@ -3227,25 +3306,56 @@ struct DayCompleteCelebrationView: View {
         let now = Date()
         let calendar = Calendar.current
 
-        // Find next 4 AM (not 5 AM - changed per user request)
-        var nextUnlock: Date
-        let todayAt4AM = calendar.date(bySettingHour: 4, minute: 0, second: 0, of: now)!
+        // Day unlock logic:
+        // The next day unlocks at 4 AM of the calendar day AFTER the day was completed.
+        // Example: Complete Day 2 at 5 PM Monday → Day 3 unlocks at 4 AM Tuesday
+        //
+        // If dayReadyAt is available, use it to calculate the exact unlock time.
+        // If not available (legacy data), fall back to simple hour check.
 
-        if now < todayAt4AM {
-            // Today's 4 AM hasn't happened yet
-            nextUnlock = todayAt4AM
+        var nextUnlock: Date
+
+        if let readyAtMs = dayReadyAt {
+            // We have the exact completion timestamp - calculate proper unlock time
+            let readyDate = Date(timeIntervalSince1970: readyAtMs / 1000.0)
+
+            // Calculate 4 AM of the calendar day after completion
+            // First, get the start of the day when ready (midnight)
+            let startOfReadyDay = calendar.startOfDay(for: readyDate)
+
+            // Next unlock is 4 AM of the next calendar day
+            // But if the day was completed before 4 AM, unlock same day at 4 AM
+            let readyDayAt4AM = calendar.date(bySettingHour: 4, minute: 0, second: 0, of: startOfReadyDay)!
+
+            if readyDate < readyDayAt4AM {
+                // Completed before 4 AM - unlock at 4 AM same day
+                nextUnlock = readyDayAt4AM
+            } else {
+                // Completed after 4 AM - unlock at 4 AM next day
+                nextUnlock = calendar.date(byAdding: .day, value: 1, to: readyDayAt4AM)!
+            }
         } else {
-            // Next 4 AM is tomorrow
-            nextUnlock = calendar.date(byAdding: .day, value: 1, to: todayAt4AM)!
+            // No completion timestamp available (legacy or first completion)
+            // Fall back to simple logic: if past 4 AM, assume unlocked
+            // This handles the transition period for existing users
+            let currentHour = calendar.component(.hour, from: now)
+            if currentHour >= 4 {
+                isUnlocked = true
+                timeUntilUnlock = "Ready now!"
+                return
+            }
+            // Before 4 AM - wait until 4 AM today
+            nextUnlock = calendar.date(bySettingHour: 4, minute: 0, second: 0, of: now)!
         }
 
-        // Check if already unlocked
+        // Check if we've passed the unlock time
         if now >= nextUnlock {
             isUnlocked = true
             timeUntilUnlock = "Ready now!"
             return
         }
 
+        // Not yet unlocked - show countdown
         isUnlocked = false
 
         // Calculate time remaining

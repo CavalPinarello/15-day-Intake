@@ -4,6 +4,38 @@
 
 ## January 2026
 
+### Jan 3, 2026
+
+#### Watch-Style Check-In Widget Improvements
+
+Enhanced the "Today's Focus" check-in widget for better visibility and instant feedback.
+
+**UI/UX Improvements:**
+- Renamed widget title to "Today's Focus" with subtitle "Energy · Mood · Focus"
+- Theme-aware colors for morning/midday/evening indicators - adapts to circadian phase
+- Increased contrast for inactive slots using `theme.primaryText` and `theme.secondaryText`
+- Subtle background fill on inactive circles for better definition
+- Reordered dashboard: Journey Progress → Today's Focus → Other cards
+
+**State Management:**
+- Optimistic state updates - UI shows completion immediately before Convex confirms
+- Reverts gracefully on network errors
+- `onChange` listener refreshes status when check-in sheet dismisses
+- `onAppear` loads today's status from Convex
+
+**Backend (Convex):**
+- `submitMiddayCheckIn`: Added `moodLevel` and `focusLevel` optional parameters
+- `submitEveningCheckIn`: Added `energyLevel`, `moodLevel`, `focusLevel` optional parameters
+- `getCheckInHistory`: Returns all energy/mood/focus data per time slot for physician dashboard
+
+**Enum Alignment (iOS ↔ Watch):**
+- `FocusLevel`: Reduced from 6 to 5 levels to match Watch (foggy, hazy, clearing, clear, crystal)
+- `MoodLevel`: Fixed `partlyCloudy` → `partlySunny` to match Watch naming
+
+**Files changed:** `QuickCheckInWidget.swift`, `CheckInManager.swift`, `SharedCheckInModels.swift`, `ContentView.swift`, `convex/checkIn.ts`
+
+---
+
 ### Jan 2, 2026
 
 #### Parked XP/Gamification Feature

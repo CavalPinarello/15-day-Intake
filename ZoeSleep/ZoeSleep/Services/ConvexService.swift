@@ -168,6 +168,9 @@ struct JourneyProgress: Codable {
     // Section completion status for current day
     let sleepLogCompleted: Bool?
     let assessmentCompleted: Bool?
+    // Day ready timestamp - when both required sections were completed
+    // Used to calculate when next day unlocks (4 AM of next calendar day after this timestamp)
+    let dayReadyAt: Double?
     // Expansion pack completion for current day (same-day deep dives on Days 1-5)
     let hasExpansionPackToday: Bool?
     let expansionPackCompleted: Bool?

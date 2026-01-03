@@ -112,7 +112,12 @@ export default defineSchema({
     created_at: v.number(),
     // Section-level completion tracking for cross-device sync
     sleep_log_completed: v.optional(v.boolean()),
+    sleep_log_completed_at: v.optional(v.number()), // Timestamp when sleep log was completed
     assessment_completed: v.optional(v.boolean()),
+    assessment_completed_at: v.optional(v.number()), // Timestamp when assessment was completed
+    // Day ready timestamp - set when both required sections are complete
+    // Used for calculating when the next day unlocks (4 AM of the next calendar day)
+    day_ready_at: v.optional(v.number()),
     // Expansion pack (same-day deep dive) completion tracking
     expansion_pack_completed: v.optional(v.boolean()),
   })

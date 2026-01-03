@@ -17,10 +17,10 @@ struct AppVersion {
     // MARK: - Current Version
 
     /// Marketing version (shown to users)
-    static let version = "1.0.12"
+    static let version = "1.0"
 
     /// Build number (incremental)
-    static let build = 12
+    static let build = 13
 
     /// Build date
     static let buildDate = "2026-01-02"

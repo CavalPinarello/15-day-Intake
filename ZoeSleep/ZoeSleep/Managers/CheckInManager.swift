@@ -279,6 +279,9 @@ class CheckInManager: ObservableObject {
                 date: formattedDate(Date())
             )
 
+            // Cancel remaining check-in nudge notifications for this time slot
+            NotificationManager.shared.cancelCheckInNudges(for: timeSlot.rawValue)
+
         } catch {
             // Revert optimistic update on error
             switch timeSlot {
@@ -316,6 +319,9 @@ class CheckInManager: ObservableObject {
 
         lastSyncSource = "watch"
         lastSyncTime = Date()
+
+        // Cancel remaining check-in nudge notifications for this time slot
+        NotificationManager.shared.cancelCheckInNudges(for: timeSlot.rawValue)
     }
 
     /// Format date as YYYY-MM-DD for sync

@@ -32,22 +32,30 @@ struct HealthKitDemographics {
 struct SleepDataSource: Codable, Equatable {
     let name: String           // e.g., "Apple Watch", "Oura", "Fitbit"
     let bundleIdentifier: String
-    let priority: Int          // 1 = highest (Apple Watch), 2 = iPhone, 3 = third-party
+    let priority: Int          // 1 = highest (Oura), 2 = Apple Watch, 3 = wearables, 4 = iPhone, 5 = other
 
     /// Create a SleepDataSource from an HKSourceRevision
     static func from(sourceRevision: HKSourceRevision) -> SleepDataSource {
         let name = sourceRevision.source.name
         let bundleId = sourceRevision.source.bundleIdentifier
+        let lowerName = name.lowercased()
+        let lowerBundleId = bundleId.lowercased()
 
-        // Priority assignment: Apple Watch > iPhone native > third-party
+        // Priority assignment: Oura > Apple Watch > Garmin/Fitbit/WHOOP > iPhone native > other
+        // Oura Ring typically provides more accurate sleep stage data than Apple Watch
         let priority: Int
-        if name.lowercased().contains("apple watch") ||
-           name.lowercased().contains("watch") {
-            priority = 1  // Apple Watch = highest priority
+        if lowerName.contains("oura") || lowerBundleId.contains("ouraring") {
+            priority = 1  // Oura Ring = highest priority (most accurate sleep tracking)
+        } else if lowerName.contains("apple watch") || lowerName.contains("watch") {
+            priority = 2  // Apple Watch = second priority
+        } else if lowerName.contains("garmin") || lowerBundleId.contains("garmin") ||
+                  lowerName.contains("fitbit") || lowerBundleId.contains("fitbit") ||
+                  lowerName.contains("whoop") || lowerBundleId.contains("whoop") {
+            priority = 3  // Other dedicated wearables
         } else if bundleId.hasPrefix("com.apple") {
-            priority = 2  // iPhone native apps
+            priority = 4  // iPhone native apps
         } else {
-            priority = 3  // Third-party (Oura, Fitbit, WHOOP, Garmin, etc.)
+            priority = 5  // Other third-party apps
         }
 
         return SleepDataSource(name: name, bundleIdentifier: bundleId, priority: priority)
@@ -341,54 +349,91 @@ class HealthKitManager: ObservableObject {
 
     /// Fetches all available demographic data from HealthKit
     /// This includes: Date of Birth, Biological Sex, Height, and Weight
-    func fetchDemographics() {
-        var newDemographics = HealthKitDemographics()
+    /// - Parameter completion: Optional callback when all data is fetched
+    func fetchDemographics(completion: (() -> Void)? = nil) {
+        let group = DispatchGroup()
+
+        // Thread-safe storage for async fetch results
+        var fetchedHeight: Double?
+        var fetchedWeight: Double?
+        let lock = NSLock()
+
+        // Fetch synchronous characteristics first
+        var dateOfBirth: Date?
+        var biologicalSex: String?
 
         // Fetch Date of Birth (characteristic - set once in Health app)
         do {
             let dobComponents = try healthStore.dateOfBirthComponents()
-            newDemographics.dateOfBirth = Calendar.current.date(from: dobComponents)
+            dateOfBirth = Calendar.current.date(from: dobComponents)
         } catch {
             print("[HealthKit] Could not fetch date of birth: \(error.localizedDescription)")
         }
 
         // Fetch Biological Sex (characteristic - set once in Health app)
         do {
-            let biologicalSex = try healthStore.biologicalSex()
-            switch biologicalSex.biologicalSex {
+            let biologicalSexObj = try healthStore.biologicalSex()
+            switch biologicalSexObj.biologicalSex {
             case .female:
-                newDemographics.biologicalSex = "Female"
+                biologicalSex = "Female"
             case .male:
-                newDemographics.biologicalSex = "Male"
+                biologicalSex = "Male"
             case .other:
-                newDemographics.biologicalSex = "Other"
+                biologicalSex = "Other"
             case .notSet:
-                newDemographics.biologicalSex = nil
+                biologicalSex = nil
             @unknown default:
-                newDemographics.biologicalSex = nil
+                biologicalSex = nil
             }
         } catch {
             print("[HealthKit] Could not fetch biological sex: \(error.localizedDescription)")
         }
 
-        // Fetch Height (most recent sample)
+        // Fetch Height (most recent sample) - async with thread-safe update
+        group.enter()
         fetchMostRecentHeight { height in
-            DispatchQueue.main.async {
-                self.demographics.heightCm = height
-            }
+            lock.lock()
+            fetchedHeight = height
+            lock.unlock()
+            group.leave()
         }
 
-        // Fetch Weight (most recent sample)
+        // Fetch Weight (most recent sample) - async with thread-safe update
+        group.enter()
         fetchMostRecentWeight { weight in
-            DispatchQueue.main.async {
-                self.demographics.weightKg = weight
-            }
+            lock.lock()
+            fetchedWeight = weight
+            lock.unlock()
+            group.leave()
         }
 
-        // Update published demographics (DOB and Sex are synchronous)
-        DispatchQueue.main.async {
-            self.demographics.dateOfBirth = newDemographics.dateOfBirth
-            self.demographics.biologicalSex = newDemographics.biologicalSex
+        // Wait for all async fetches to complete, then update demographics on main thread
+        group.notify(queue: .main) {
+            var newDemographics = HealthKitDemographics()
+            newDemographics.dateOfBirth = dateOfBirth
+            newDemographics.biologicalSex = biologicalSex
+            newDemographics.heightCm = fetchedHeight
+            newDemographics.weightKg = fetchedWeight
+
+            self.demographics = newDemographics
+            print("[HealthKit] Demographics refreshed - Height: \(newDemographics.heightCm ?? 0) cm, Weight: \(newDemographics.weightKg ?? 0) kg, Age: \(newDemographics.age ?? 0)")
+            completion?()
+        }
+    }
+
+    /// Refreshes demographics data from HealthKit and returns the updated values
+    /// Call this when Profile screen appears or when user requests a refresh
+    /// - Parameter completion: Callback with the refreshed demographics
+    func refreshDemographics(completion: ((HealthKitDemographics) -> Void)? = nil) {
+        guard isAuthorized else {
+            print("[HealthKit] Not authorized - skipping demographics refresh")
+            completion?(demographics)
+            return
+        }
+
+        print("[HealthKit] Refreshing demographics from HealthKit...")
+        fetchDemographics {
+            completion?(self.demographics)
         }
     }
 
@@ -558,13 +603,20 @@ class HealthKitManager: ObservableObject {
         }
     }
 
-    /// Deduplicates overlapping sleep samples by prioritizing higher-priority sources
-    /// Priority: Apple Watch (1) > iPhone native (2) > Third-party apps (3)
+    /// Merges sleep samples from multiple sources using hybrid Apple Health-style logic
+    /// Priority: Oura (1) > Apple Watch (2) > Garmin/Fitbit/WHOOP (3) > iPhone (4) > Other (5)
     ///
-    /// IMPORTANT: This function groups by "sleep night" not calendar day.
+    /// Algorithm:
+    /// 1. Group samples by sleep night (wake date)
+    /// 2. Identify primary source (highest priority with data)
+    /// 3. Use primary source as base
+    /// 4. Fill gaps with secondary source data (non-overlapping periods only)
+    /// 5. This matches Apple Health's approach of combining data from multiple sources
+    ///
+    /// IMPORTANT: Groups by "sleep night" not calendar day.
     /// A sleep session is defined by when you WAKE UP, not when you go to bed.
-    /// This ensures overnight sleep (11pm-7am) is properly deduplicated as one session.
-    private nonisolated func deduplicateSleepSamples(_ samples: [SourcedSleepSample]) -> [SourcedSleepSample] {
+    /// This ensures overnight sleep (11pm-7am) is properly attributed to one session.
+    private nonisolated func mergeMultiSourceSleepSamples(_ samples: [SourcedSleepSample]) -> [SourcedSleepSample] {
         let calendar = Calendar.current
 
         // Group by "sleep night" - use the END time to determine which night's sleep this belongs to
@@ -576,31 +628,59 @@ class HealthKitManager: ObservableObject {
         var result: [SourcedSleepSample] = []
 
         for (_, nightSamples) in byNight {
-            // Sort by start time
-            let sorted = nightSamples.sorted { $0.startTime < $1.startTime }
-            var deduped: [SourcedSleepSample] = []
+            // Group samples by source
+            let bySource = Dictionary(grouping: nightSamples) { $0.source.bundleIdentifier }
 
-            for sample in sorted {
-                // Check for overlap with existing samples
-                let overlappingIndex = deduped.firstIndex { existing in
-                    sample.startTime < existing.endTime && sample.endTime > existing.startTime
+            // Calculate total sleep time per source to determine primary
+            var sourceTotals: [(source: SleepDataSource, totalMins: Int, samples: [SourcedSleepSample])] = []
+            for (_, sourceSamples) in bySource {
+                guard let firstSample = sourceSamples.first else { continue }
+                let totalMins = sourceSamples.reduce(0) { $0 + $1.durationMins }
+                sourceTotals.append((firstSample.source, totalMins, sourceSamples))
+            }
+
+            // Sort by priority (lower = better), then by total minutes (higher = better as tiebreaker)
+            sourceTotals.sort { lhs, rhs in
+                if lhs.source.priority != rhs.source.priority {
+                    return lhs.source.priority < rhs.source.priority
                 }
+                return lhs.totalMins > rhs.totalMins
+            }
 
-                if let idx = overlappingIndex {
-                    // Keep higher priority (lower number = higher priority)
-                    if sample.source.priority < deduped[idx].source.priority {
-                        deduped.remove(at: idx)
-                        deduped.append(sample)
+            guard let primary = sourceTotals.first else { continue }
+
+            // Start with all samples from primary source
+            var merged = primary.samples
+
+            // Track time intervals covered by primary source
+            var coveredIntervals: [(start: Date, end: Date)] = primary.samples.map { ($0.startTime, $0.endTime) }
+
+            // Add non-overlapping samples from secondary sources to fill gaps
+            for secondary in sourceTotals.dropFirst() {
+                for sample in secondary.samples {
+                    // Check if this sample overlaps with any covered interval
+                    let hasOverlap = coveredIntervals.contains { interval in
+                        sample.startTime < interval.end && sample.endTime > interval.start
                     }
-                    // else: keep existing, discard this sample
-                } else {
-                    deduped.append(sample)
+
+                    if !hasOverlap {
+                        // No overlap - add this sample to fill the gap
+                        merged.append(sample)
+                        coveredIntervals.append((sample.startTime, sample.endTime))
+                    }
                 }
             }
-            result.append(contentsOf: deduped)
+
+            result.append(contentsOf: merged)
         }
 
         return result
+    }
+
+    /// Legacy deduplication function - kept for reference but replaced by mergeMultiSourceSleepSamples
+    @available(*, deprecated, message: "Use mergeMultiSourceSleepSamples instead for better multi-source handling")
+    private nonisolated func deduplicateSleepSamples(_ samples: [SourcedSleepSample]) -> [SourcedSleepSample] {
+        return mergeMultiSourceSleepSamples(samples)
     }
 
     private nonisolated func processSleepSamples(_ samples: [HKCategorySample]) -> [[String: Any]] {
@@ -626,8 +706,9 @@ class HealthKitManager: ObservableObject {
             )
         }
 
-        // Step 2: Deduplicate overlapping samples from multiple sources
-        let deduplicatedSamples = deduplicateSleepSamples(sourcedSamples)
+        // Step 2: Merge samples from multiple sources (Oura + Apple Watch)
+        // Uses hybrid algorithm: primary source as base, fills gaps from secondary sources
+        let mergedSamples = mergeMultiSourceSleepSamples(sourcedSamples)
 
         // Step 3: Track unique sources per date for metadata
         // Use END time to determine the "sleep night" - this ensures overnight sleep is attributed
@@ -635,7 +716,7 @@ class HealthKitManager: ObservableObject {
         var sourcesByDate: [String: Set<String>] = [:]
         var primarySourceByDate: [String: SleepDataSource] = [:]
 
-        for sample in deduplicatedSamples {
+        for sample in mergedSamples {
             let dateKey = String(dateFormatter.string(from: sample.endTime).prefix(10))
             sourcesByDate[dateKey, default: Set()].insert(sample.source.name)
 
@@ -652,7 +733,7 @@ class HealthKitManager: ObservableObject {
         // Step 4: Convert to processed stages format
         // Use END time to group by sleep night (when you wake up)
         var processedStages: [[String: Any]] = []
-        for sample in deduplicatedSamples {
+        for sample in mergedSamples {
             let dateKey = String(dateFormatter.string(from: sample.endTime).prefix(10))
             processedStages.append([
                 "date": dateKey,

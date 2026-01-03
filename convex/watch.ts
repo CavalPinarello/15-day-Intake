@@ -1377,7 +1377,7 @@ export const getJourneyState = query({
 
     // Get completed day numbers and section completion status
     const completedDays: number[] = [];
-    const daySectionStatus: { [key: number]: { sleepLogCompleted: boolean; assessmentCompleted: boolean } } = {};
+    const daySectionStatus: { [key: number]: { sleepLogCompleted: boolean; assessmentCompleted: boolean; dayReadyAt?: number } } = {};
 
     for (const entry of progressEntries) {
       const day = await ctx.db.get(entry.day_id);
@@ -1385,6 +1385,7 @@ export const getJourneyState = query({
         daySectionStatus[day.day_number] = {
           sleepLogCompleted: entry.sleep_log_completed ?? entry.completed ?? false,
           assessmentCompleted: entry.assessment_completed ?? entry.completed ?? false,
+          dayReadyAt: entry.day_ready_at,
         };
         if (entry.completed) {
           completedDays.push(day.day_number);
@@ -1396,6 +1397,7 @@ export const getJourneyState = query({
     const currentDaySections = daySectionStatus[user.current_day] ?? {
       sleepLogCompleted: false,
       assessmentCompleted: false,
+      dayReadyAt: undefined,
     };
 
     // Check for expansion packs from user_expansion_schedules
@@ -1462,6 +1464,9 @@ export const getJourneyState = query({
       // Section-level completion for current day
       sleepLogCompleted: currentDaySections.sleepLogCompleted,
       assessmentCompleted: currentDaySections.assessmentCompleted,
+      // Day ready timestamp - when both required sections were completed
+      // Used by iOS to calculate when next day unlocks (4 AM of next calendar day)
+      dayReadyAt: currentDaySections.dayReadyAt,
       // Expansion pack status for current day (scheduled Days 6-14 OR same-day triggered Days 1-5)
       hasExpansionPackToday,
       expansionPackCompleted,
@@ -1671,17 +1676,31 @@ export const completeSection = mutation({
       sleepLogCompleted = existingProgress.sleep_log_completed ?? false;
       assessmentCompleted = existingProgress.assessment_completed ?? false;
 
+      // Track section timestamps
+      let sleepLogCompletedAt = existingProgress.sleep_log_completed_at;
+      let assessmentCompletedAt = existingProgress.assessment_completed_at;
+
       // Update the specific section
       if (args.section === "sleepLog") {
         sleepLogCompleted = true;
+        if (!sleepLogCompletedAt) sleepLogCompletedAt = now;
       } else {
         assessmentCompleted = true;
+        if (!assessmentCompletedAt) assessmentCompletedAt = now;
       }
+
+      // Determine if day is now "ready" (both required sections complete)
+      // This timestamp is used to calculate when the next day unlocks (4 AM next calendar day)
+      const dayNowReady = sleepLogCompleted && assessmentCompleted;
+      const dayReadyAt = dayNowReady && !existingProgress.day_ready_at ? now : existingProgress.day_ready_at;
 
       // Update existing progress
       await ctx.db.patch(existingProgress._id, {
         sleep_log_completed: sleepLogCompleted,
+        sleep_log_completed_at: sleepLogCompletedAt,
         assessment_completed: assessmentCompleted,
+        assessment_completed_at: assessmentCompletedAt,
+        day_ready_at: dayReadyAt,
         // Mark day as fully completed if both sections are done
         completed: sleepLogCompleted && assessmentCompleted,
         completed_at: sleepLogCompleted && assessmentCompleted ? now : existingProgress.completed_at,
@@ -1691,11 +1710,20 @@ export const completeSection = mutation({
       sleepLogCompleted = args.section === "sleepLog";
       assessmentCompleted = args.section === "assessment";
 
+      // Set timestamps based on which section was completed
+      const sleepLogCompletedAt = sleepLogCompleted ? now : undefined;
+      const assessmentCompletedAt = assessmentCompleted ? now : undefined;
+      const dayNowReady = sleepLogCompleted && assessmentCompleted;
+      const dayReadyAt = dayNowReady ? now : undefined;
+
       await ctx.db.insert("user_progress", {
         user_id: args.userId,
         day_id: day._id,
         sleep_log_completed: sleepLogCompleted,
+        sleep_log_completed_at: sleepLogCompletedAt,
         assessment_completed: assessmentCompleted,
+        assessment_completed_at: assessmentCompletedAt,
+        day_ready_at: dayReadyAt,
         completed: sleepLogCompleted && assessmentCompleted,
         completed_at: sleepLogCompleted && assessmentCompleted ? now : undefined,
         created_at: now,
@@ -1951,6 +1979,8 @@ export const canAdvanceDay = query({
     let sleepLogCompleted = false;
     let assessmentCompleted = false;
 
+    let dayReadyAt: number | undefined;
+
     if (day) {
       const progress = await ctx.db
         .query("user_progress")
@@ -1962,6 +1992,7 @@ export const canAdvanceDay = query({
       if (progress) {
         sleepLogCompleted = progress.sleep_log_completed ?? progress.completed ?? false;
         assessmentCompleted = progress.assessment_completed ?? progress.completed ?? false;
+        dayReadyAt = progress.day_ready_at;
       }
     }
 
@@ -1983,17 +2014,35 @@ export const canAdvanceDay = query({
     const bothSectionsComplete = sleepLogCompleted && assessmentOk;
 
     // Check time restriction (4 AM unlock)
+    // The next day unlocks at 4 AM of the calendar day AFTER the day was completed
     // In debug mode, skip time check
     let timeUnlocked = args.debugMode ?? false;
 
     if (!timeUnlocked) {
-      // Check if it's past 4 AM
-      // Note: This runs on the server, so we use UTC and let clients handle timezone
       const now = new Date();
-      const hour = now.getHours();
-      // For now, assume server is in user's timezone (simplified)
-      // In production, you'd want to track user's timezone
-      timeUnlocked = hour >= 4;
+
+      if (dayReadyAt) {
+        // We have the exact completion timestamp - calculate proper unlock time
+        const readyDate = new Date(dayReadyAt);
+
+        // Get 4 AM of the day the user completed
+        const readyDayStart = new Date(readyDate);
+        readyDayStart.setHours(4, 0, 0, 0);
+
+        if (readyDate < readyDayStart) {
+          // Completed before 4 AM - unlock at 4 AM same day
+          timeUnlocked = now >= readyDayStart;
+        } else {
+          // Completed after 4 AM - unlock at 4 AM next day
+          const nextDayAt4AM = new Date(readyDayStart);
+          nextDayAt4AM.setDate(nextDayAt4AM.getDate() + 1);
+          timeUnlocked = now >= nextDayAt4AM;
+        }
+      } else {
+        // No completion timestamp (legacy data) - fall back to simple hour check
+        const hour = now.getHours();
+        timeUnlocked = hour >= 4;
+      }
     }
 
     const canAdvance = bothSectionsComplete && timeUnlocked;
@@ -2096,6 +2145,7 @@ export const advanceDay = mutation({
 
     const sleepLogCompleted = progress?.sleep_log_completed ?? progress?.completed ?? false;
     const assessmentCompleted = progress?.assessment_completed ?? progress?.completed ?? false;
+    const dayReadyAt = progress?.day_ready_at;
 
     // Check if this is an expansion day with no gateways triggered (no assessment needed)
     let hasAssessmentToday = true;
@@ -2134,10 +2184,35 @@ export const advanceDay = mutation({
     }
 
     // Time check (only in normal mode)
+    // The next day unlocks at 4 AM of the calendar day AFTER the day was completed
     if (!args.debugMode) {
       const now = new Date();
-      const hour = now.getHours();
-      if (hour < 4) {
+      let timeUnlocked = false;
+
+      if (dayReadyAt) {
+        // We have the exact completion timestamp - calculate proper unlock time
+        const readyDate = new Date(dayReadyAt);
+
+        // Get 4 AM of the day the user completed
+        const readyDayStart = new Date(readyDate);
+        readyDayStart.setHours(4, 0, 0, 0);
+
+        if (readyDate < readyDayStart) {
+          // Completed before 4 AM - unlock at 4 AM same day
+          timeUnlocked = now >= readyDayStart;
+        } else {
+          // Completed after 4 AM - unlock at 4 AM next day
+          const nextDayAt4AM = new Date(readyDayStart);
+          nextDayAt4AM.setDate(nextDayAt4AM.getDate() + 1);
+          timeUnlocked = now >= nextDayAt4AM;
+        }
+      } else {
+        // No completion timestamp (legacy data) - fall back to simple hour check
+        const hour = now.getHours();
+        timeUnlocked = hour >= 4;
+      }
+
+      if (!timeUnlocked) {
         return {
           success: false,
           error: "Next day unlocks at 4:00 AM",

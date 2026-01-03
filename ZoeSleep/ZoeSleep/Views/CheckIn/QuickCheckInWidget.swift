@@ -135,21 +135,32 @@ struct QuickCheckInWidget: View {
 
     private func timeSlotIndicator(slot: CheckInTimeSlot, isDone: Bool) -> some View {
         let isActive = currentSlot == slot && !isDone
+        // Use theme-aware colors for better contrast in light circadian modes
+        let inactiveRingColor = theme.primaryText.opacity(0.25)
+        let inactiveIconColor = theme.primaryText.opacity(0.4)
+        let inactiveLabelColor = theme.secondaryText
 
         return VStack(spacing: 8) {
             ZStack {
-                // Background circle
+                // Background circle with subtle fill for inactive
+                if !isDone && !isActive {
+                    Circle()
+                        .fill(theme.primaryText.opacity(0.05))
+                        .frame(width: 52, height: 52)
+                }
+
+                // Ring stroke
                 Circle()
                     .stroke(
-                        isDone ? Color.green.opacity(0.3) : Color.white.opacity(0.15),
-                        lineWidth: 3
+                        isDone ? Color.green.opacity(0.5) : (isActive ? slot.color : inactiveRingColor),
+                        lineWidth: isDone ? 3 : (isActive ? 3 : 2)
                     )
                     .frame(width: 52, height: 52)
 
                 // Fill for completed
                 if isDone {
                     Circle()
-                        .fill(Color.green.opacity(0.2))
+                        .fill(Color.green.opacity(0.15))
                         .frame(width: 48, height: 48)
 
                     Image(systemName: "checkmark")
@@ -159,20 +170,20 @@ struct QuickCheckInWidget: View {
                     // Icon for pending
                     Image(systemName: slot.sfSymbol)
                         .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(isActive ? slot.color : .white.opacity(0.4))
+                        .foregroundColor(isActive ? slot.color : inactiveIconColor)
                 }
 
-                // Active indicator ring
+                // Active indicator ring (outer glow)
                 if isActive {
                     Circle()
-                        .stroke(slot.color, lineWidth: 2)
-                        .frame(width: 56, height: 56)
+                        .stroke(slot.color.opacity(0.5), lineWidth: 2)
+                        .frame(width: 60, height: 60)
                 }
             }
 
             Text(slot.label)
-                .font(.system(size: 12, weight: isActive ? .semibold : .regular))
-                .foregroundColor(isDone ? .green : (isActive ? .white : .white.opacity(0.5)))
+                .font(.system(size: 12, weight: isActive ? .semibold : .medium))
+                .foregroundColor(isDone ? .green : (isActive ? theme.primaryText : inactiveLabelColor))
         }
     }
 

@@ -2030,6 +2030,9 @@ struct JourneyProgressData: Codable {
     // Section completion status for current day
     var sleepLogCompleted: Bool = false
     var assessmentCompleted: Bool = false
+    // Day ready timestamp - when both required sections were completed (milliseconds since epoch)
+    // Used to calculate when next day unlocks (4 AM of next calendar day after this timestamp)
+    var dayReadyAt: Double? = nil
     // Expansion pack completion for current day (tracked locally)
     var expansionPackCompleted: Bool = false
     // Gateways whose expansion questions have been answered (persists across days)

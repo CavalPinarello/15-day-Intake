@@ -16,6 +16,7 @@ struct QuestionnaireView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var questionnaireManager = QuestionnaireManager.shared
     @ObservedObject private var gamificationManager = GamificationManager.shared
+    @ObservedObject private var guideManager = FirstTimeGuideManager.shared
 
     // Which section to start with (and optionally limit to)
     var startSection: QuestionnaireSection = .sleepLog
@@ -157,6 +158,10 @@ struct QuestionnaireView: View {
                             showingTransition = false
                             currentSection = .assessment
                         }
+                        // Show first-time Assessment guide after transition
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            guideManager.showGuideIfNeeded(for: .assessment)
+                        }
                     }
                 )
             } else if showingCompletion {
@@ -287,6 +292,14 @@ struct QuestionnaireView: View {
                 }
                 .transition(.opacity)
                 .zIndex(101)
+            }
+        }
+        // First-Time Feature Guides
+        .fullScreenCover(isPresented: $guideManager.isShowingGuide) {
+            if let guide = guideManager.currentGuide {
+                FirstTimeGuideView(guide: guide) {
+                    guideManager.dismissGuide()
+                }
             }
         }
     }
@@ -1018,6 +1031,15 @@ struct QuestionnaireView: View {
         // This prevents showing notifications for gateways triggered in previous sessions
         for gateway in questionnaireManager.gatewayStates where gateway.triggered {
             acknowledgedGateways.insert(gateway.gatewayType)
+        }
+
+        // Show first-time guide for the starting section (with slight delay for smooth UX)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if startSection == .sleepLog {
+                guideManager.showGuideIfNeeded(for: .sleepLog)
+            } else if startSection == .assessment {
+                guideManager.showGuideIfNeeded(for: .assessment)
+            }
         }
     }
 
@@ -1797,8 +1819,8 @@ struct QuestionnaireView: View {
                     showingCompletion = true
                 }
             } else {
-                // Check if reward should show BEFORE advancing
-                if rewardManager.shouldShowReward {
+                // Check if reward should show BEFORE advancing (respects Sleep Science Cards setting)
+                if themeManager.showSleepScienceCards && rewardManager.shouldShowReward {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                         showingRewardCard = true
                     }

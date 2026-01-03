@@ -11,8 +11,8 @@ npx convex dev && ./setup-convex.sh   # Convex cloud mode
 
 ## Critical Info
 
-- **Current Version:** 1.0.12 (Build 12) - See [`docs/VERSION_HISTORY.md`](./docs/VERSION_HISTORY.md)
-- **Version Source:** `ZoeSleep/Shared/AppVersion.swift` (single source of truth)
+- **Current Version:** 1.0.12 (Build 12+) - See [`docs/VERSION_HISTORY.md`](./docs/VERSION_HISTORY.md)
+- **Version Source:** `ZoeSleep/Shared/AppVersion.swift` (auto-increments on each build)
 - **Test Users:** user1-user10, password: "1"
 - **Registration:** Email + password only (username auto-generated)
 - **Xcode:** `/ZoeSleep/ZoeSleep.xcodeproj`
@@ -88,6 +88,8 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
+**Jan 3:** Watch-style check-in widget improvements - optimistic state updates for instant UI feedback, theme-aware colors for better contrast in all circadian phases, fixed state persistence after completion, widget title changed to "Today's Focus" with "Energy · Mood · Focus" subtitle
+**Jan 3:** Convex backend enhancements - added mood/focus parameters to midday and evening check-in mutations, expanded getCheckInHistory query to return all energy/mood/focus data per time slot for physician dashboard
 **Jan 2:** Parked XP/Gamification feature - disabled via `gamificationEnabled` flag in ThemeManager (default false), toggle available in Debug Panel > Experimental Features, code preserved for future re-enablement
 **Jan 2:** Unified time format system - TimeFormatManager + locale override on all DatePickers to force 12/24-hour format, Watch time picker supports both modes, system auto-detects device preference with user override in Settings
 **Jan 2:** Notification message variety (100 rotating messages to prevent desensitization), Watch-style Energy/Mood/Focus check-in infrastructure on iOS, improved notification settings UI with scheduled time display

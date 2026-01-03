@@ -93,6 +93,20 @@ struct ProfileSettingsView: View {
             .sheet(isPresented: $showingBodyMetricsEditor) {
                 BodyMetricsEditorView(onboardingManager: onboardingManager, themeManager: themeManager)
             }
+
+            // Auto-refresh HealthKit data when view appears
+            .onAppear {
+                refreshHealthKitData()
+            }
+        }
+    }
+
+    /// Refresh HealthKit demographics data and update profile
+    private func refreshHealthKitData() {
+        guard healthKitManager.isAuthorized else { return }
+
+        healthKitManager.refreshDemographics { demographics in
+            onboardingManager.populateFromHealthKit(demographics: demographics)
         }
     }
 
@@ -449,9 +463,9 @@ struct ProfileSettingsView: View {
             // Sleep Science Cards Toggle
             Toggle(isOn: $themeManager.showSleepScienceCards) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Label("Sleep Science Cards", systemImage: "lightbulb.fill")
+                    Label("Sleep Science Cards", systemImage: "sparkles")
                         .font(.headline)
-                    Text("Show educational info before each day's assessment")
+                    Text("Show sleep facts between questions")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -647,7 +661,7 @@ struct ProfileSettingsView: View {
             HStack {
                 Text("Build")
                 Spacer()
-                Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1")
+                Text(AppVersion.displayBuild)
                     .foregroundColor(.secondary)
             }
         } header: {
@@ -666,7 +680,10 @@ struct ProfileSettingsView: View {
         healthKitManager.requestAuthorization { success, error in
             if success {
                 onboardingManager.markHealthKitConnected()
-                onboardingManager.populateFromHealthKit(demographics: healthKitManager.demographics)
+                // Wait for demographics to be fully fetched before populating profile
+                healthKitManager.refreshDemographics { demographics in
+                    onboardingManager.populateFromHealthKit(demographics: demographics)
+                }
             }
         }
     }

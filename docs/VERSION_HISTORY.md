@@ -13,7 +13,7 @@ The app uses semantic versioning: `MAJOR.MINOR.BUILD`
 
 ### Single Source of Truth
 
-All version information comes from `ZoeSleep/Shared/AppVersion.swift`. Update this file when creating new builds:
+All version information comes from `ZoeSleep/Shared/AppVersion.swift`:
 
 ```swift
 struct AppVersion {
@@ -22,6 +22,22 @@ struct AppVersion {
     static let buildDate = "2026-01-02"
 }
 ```
+
+### Automatic Build Increment
+
+The build number auto-increments on every Xcode compile via `ZoeSleep/Scripts/increment_build.sh`.
+
+**Setup in Xcode (one-time):**
+1. Select your target > Build Phases > + > New Run Script Phase
+2. Drag it **BEFORE** "Compile Sources"
+3. Paste: `"${SRCROOT}/Scripts/increment_build.sh"`
+4. Uncheck "Based on dependency analysis"
+
+**What it does:**
+- Increments `build` in `AppVersion.swift`
+- Updates `buildDate` to current date
+- Logs each build to `ZoeSleep/Scripts/build_history.log`
+- Updates `BuildNumber.xcconfig` for Xcode reference
 
 ## Build History
 
@@ -42,28 +58,33 @@ struct AppVersion {
 
 ## How to Release a New Build
 
-1. **Update `AppVersion.swift`**:
+### Automatic (every compile)
+The build number increments automatically when you build in Xcode. No action needed.
+
+### Manual Version Bump (for releases)
+When releasing a new version (not just build):
+
+1. **Update `version` in `AppVersion.swift`**:
    ```swift
-   static let version = "1.0.13"  // Increment version
-   static let build = 13          // Increment build number
-   static let buildDate = "YYYY-MM-DD"  // Today's date
+   static let version = "1.1.0"  // Bump version for releases
    ```
 
 2. **Add to build history** in `AppVersion.swift`:
    ```swift
-   (13, "YYYY-MM-DD", "Brief description of changes"),
+   (XX, "YYYY-MM-DD", "Brief description of changes"),
    ```
 
-3. **Update this document** with the new build entry
+3. **Update `CLAUDE.md`** with release notes if significant changes
 
-4. **Update `CLAUDE.md`** with release notes if significant changes
-
-5. **Commit** with message: `Release v1.0.13 (Build 13) - Brief description`
+4. **Commit** with message: `Release v1.1.0 (Build XX) - Brief description`
 
 ## Files That Reference Version
 
-- `ZoeSleep/Shared/AppVersion.swift` - **PRIMARY SOURCE**
-- `ZoeSleep/ZoeSleep/Config.swift` - References `AppVersion.version`
+- `ZoeSleep/Shared/AppVersion.swift` - **PRIMARY SOURCE** (auto-updated by build script)
+- `ZoeSleep/BuildNumber.xcconfig` - Xcode config reference (auto-updated)
+- `ZoeSleep/Scripts/increment_build.sh` - Auto-increment script
+- `ZoeSleep/Scripts/build_history.log` - Build log (auto-generated)
+- `ZoeSleep/ZoeSleep/Config.swift` - References version string
 - `ZoeSleep/ZoeSleep/Views/ProfileSettingsView.swift` - Displays in Settings
 - `ZoeSleep/ZoeSleep Watch App/SettingsView.swift` - Displays in Watch Settings
 

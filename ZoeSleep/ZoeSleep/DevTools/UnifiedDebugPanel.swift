@@ -1054,6 +1054,14 @@ struct UnifiedDebugPanel: View {
                     .foregroundColor(.purple)
             }
 
+            // Reset Feature Guides
+            Button {
+                resetFeatureGuides()
+            } label: {
+                Label("Reset Feature Guides", systemImage: "book.circle")
+                    .foregroundColor(.teal)
+            }
+
             // Status message
             if let message = statusMessage {
                 HStack {
@@ -1248,6 +1256,15 @@ struct UnifiedDebugPanel: View {
         statusMessage = "Journey intro reset - restart app to see it"
         statusIsError = false
         print("[Debug] Journey intro reset - will show on next app launch")
+    }
+
+    /// Reset all first-time feature guides so they show again
+    private func resetFeatureGuides() {
+        FirstTimeGuideManager.shared.resetAllGuides()
+        FirstTimeGuideManager.shared.resetAllCoachMarks()
+        statusMessage = "All guides & coach marks reset"
+        statusIsError = false
+        print("[Debug] All first-time feature guides and coach marks reset")
     }
 
     private func refreshFromServer() {

@@ -453,12 +453,54 @@ struct HealthKitDetailedDebugView: View {
 
                 Spacer()
 
-                Text(entry.source)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                // Source indicator with icon
+                HStack(spacing: 4) {
+                    Image(systemName: sourceIcon(for: entry.source))
+                        .foregroundColor(sourceColor(for: entry.source))
+                        .font(.caption)
+                    Text(entry.source)
+                        .font(.caption2)
+                        .foregroundColor(sourceColor(for: entry.source))
+                }
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// Returns the appropriate SF Symbol icon for a sleep data source
+    private func sourceIcon(for source: String) -> String {
+        let lowerSource = source.lowercased()
+        if lowerSource.contains("oura") {
+            return "circle.circle"  // Ring-like icon for Oura
+        } else if lowerSource.contains("watch") {
+            return "applewatch"
+        } else if lowerSource.contains("garmin") {
+            return "figure.run"
+        } else if lowerSource.contains("fitbit") {
+            return "waveform.path.ecg"
+        } else if lowerSource.contains("whoop") {
+            return "waveform"
+        } else {
+            return "heart.fill"
+        }
+    }
+
+    /// Returns the appropriate color for a sleep data source
+    private func sourceColor(for source: String) -> Color {
+        let lowerSource = source.lowercased()
+        if lowerSource.contains("oura") {
+            return .purple  // Oura's brand color
+        } else if lowerSource.contains("watch") {
+            return .green   // Apple Watch's activity color
+        } else if lowerSource.contains("garmin") {
+            return .blue
+        } else if lowerSource.contains("fitbit") {
+            return .teal
+        } else if lowerSource.contains("whoop") {
+            return .orange
+        } else {
+            return .secondary
+        }
     }
 
     // MARK: - Heart Rate Tab

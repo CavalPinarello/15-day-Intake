@@ -111,7 +111,34 @@ struct ZoeSleepApp: App {
         Task {
             await QuestionnaireManager.shared.loadJourneyProgress()
             print("[iOS] Refreshed journey state on app activation")
+
+            // Check if we need to reset check-in nudges for a new day
+            await checkAndResetCheckInNudgesForNewDay()
         }
+    }
+
+    /// Check if it's a new day and reset check-in nudge notifications with fresh random messages
+    private func checkAndResetCheckInNudgesForNewDay() async {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let lastRefreshKey = "lastCheckInNudgeRefreshDate"
+
+        // Get the last refresh date
+        if let lastRefreshDate = UserDefaults.standard.object(forKey: lastRefreshKey) as? Date {
+            let lastRefreshDay = calendar.startOfDay(for: lastRefreshDate)
+
+            // If same day, no need to reset
+            if lastRefreshDay == today {
+                return
+            }
+        }
+
+        // New day - reset check-in nudges with fresh random messages
+        print("[iOS] New day detected - resetting check-in nudges with fresh messages")
+        await NotificationManager.shared.resetCheckInNudgesForNewDay()
+
+        // Update the last refresh date
+        UserDefaults.standard.set(Date(), forKey: lastRefreshKey)
     }
 }
 
