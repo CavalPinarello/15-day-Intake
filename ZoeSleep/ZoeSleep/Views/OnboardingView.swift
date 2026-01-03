@@ -746,10 +746,21 @@ enum HealthKitConnectionStatus {
     case unavailable  // HealthKit not available on device
 }
 
+/// Sleep analysis phase during onboarding
+enum SleepAnalysisPhase {
+    case notStarted
+    case fetchingSleepData
+    case analyzingPatterns
+    case complete
+    case insufficientData
+}
+
 struct HealthConnectStepView: View {
     @ObservedObject var onboardingManager: OnboardingManager
+    @ObservedObject var chronotypeManager = ChronotypeManager.shared
     @EnvironmentObject var healthKitManager: HealthKitManager
     @State private var connectionStatus: HealthKitConnectionStatus = .notConnected
+    @State private var analysisPhase: SleepAnalysisPhase = .notStarted
     @State private var showingError = false
     @State private var errorMessage = ""
     let screenHeight: CGFloat
@@ -761,6 +772,39 @@ struct HealthConnectStepView: View {
         VStack(spacing: isCompact ? 12 : 16) {
             Spacer(minLength: isCompact ? 20 : 35)
 
+            // Show different content based on analysis phase
+            if analysisPhase == .notStarted {
+                // Standard HealthKit connection UI
+                healthKitConnectionContent
+            } else {
+                // Sleep analysis / chronotype UI
+                sleepAnalysisContent
+            }
+        }
+        .onAppear {
+            // Check initial status
+            if !healthKitManager.isHealthKitAvailable {
+                connectionStatus = .unavailable
+            } else if onboardingManager.profile.hasConnectedHealthKit && healthKitManager.isAuthorized {
+                connectionStatus = .connected
+            }
+        }
+        .alert("Connection Issue", isPresented: $showingError) {
+            Button("Open Settings", role: .none) {
+                if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(settingsURL)
+                }
+            }
+            Button("Skip for now", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
+        }
+    }
+
+    // MARK: - HealthKit Connection Content
+
+    private var healthKitConnectionContent: some View {
+        Group {
             // Icon - changes based on status
             ZStack {
                 Circle()
@@ -834,23 +878,209 @@ struct HealthConnectStepView: View {
             }
             .padding(.bottom, isCompact ? 24 : 32)
         }
-        .onAppear {
-            // Check initial status
-            if !healthKitManager.isHealthKitAvailable {
-                connectionStatus = .unavailable
-            } else if onboardingManager.profile.hasConnectedHealthKit && healthKitManager.isAuthorized {
-                connectionStatus = .connected
+    }
+
+    // MARK: - Sleep Analysis Content
+
+    private var sleepAnalysisContent: some View {
+        Group {
+            switch analysisPhase {
+            case .fetchingSleepData, .analyzingPatterns:
+                // Progress indicator
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(palette.accent.opacity(0.15))
+                            .frame(width: isCompact ? 70 : 80, height: isCompact ? 70 : 80)
+
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(palette.accent)
+                    }
+
+                    VStack(spacing: 4) {
+                        Text(analysisPhase == .fetchingSleepData ? "Fetching Sleep History" : "Analyzing Patterns")
+                            .font(isCompact ? .title3.bold() : .title2.bold())
+                            .foregroundColor(palette.textPrimary)
+
+                        Text(analysisPhase == .fetchingSleepData
+                             ? "Retrieving your sleep data from Apple Health..."
+                             : "Calculating your sleep midpoint and chronotype...")
+                            .font(.caption)
+                            .foregroundColor(palette.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
+                    }
+                }
+
+                Spacer()
+
+            case .complete:
+                // Show chronotype result
+                if let result = chronotypeManager.result {
+                    chronotypeResultView(result: result)
+                }
+
+            case .insufficientData:
+                // Not enough data message
+                insufficientDataView
+
+            case .notStarted:
+                EmptyView()
+            }
+
+            Spacer()
+
+            // Continue button (only show when analysis is complete)
+            if analysisPhase == .complete || analysisPhase == .insufficientData {
+                Button(action: { onboardingManager.nextStep() }) {
+                    HStack(spacing: 8) {
+                        Text("Continue")
+                            .fontWeight(.semibold)
+                        Image(systemName: "arrow.right")
+                    }
+                    .foregroundColor(palette.isDark ? Color(red: 0.15, green: 0.10, blue: 0.08) : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            colors: [palette.accent, palette.wave],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, isCompact ? 24 : 32)
             }
         }
-        .alert("Connection Issue", isPresented: $showingError) {
-            Button("Open Settings", role: .none) {
-                if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(settingsURL)
+    }
+
+    // MARK: - Chronotype Result View
+
+    private func chronotypeResultView(result: ChronotypeResult) -> some View {
+        VStack(spacing: 16) {
+            // Chronotype icon and emoji
+            ZStack {
+                Circle()
+                    .fill(result.chronotypeEnum.color.opacity(0.2))
+                    .frame(width: isCompact ? 80 : 100, height: isCompact ? 80 : 100)
+
+                Text(result.emoji)
+                    .font(.system(size: isCompact ? 40 : 50))
+            }
+
+            // Title
+            VStack(spacing: 4) {
+                Text("You're a \(result.displayName)!")
+                    .font(isCompact ? .title3.bold() : .title2.bold())
+                    .foregroundColor(palette.textPrimary)
+
+                Text(result.chronotypeEnum.description)
+                    .font(.caption)
+                    .foregroundColor(palette.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
+            // Sleep stats card
+            VStack(spacing: 10) {
+                HStack {
+                    Label("Sleep Midpoint", systemImage: "clock")
+                        .font(.subheadline)
+                        .foregroundColor(palette.textSecondary)
+                    Spacer()
+                    Text(chronotypeManager.formatMidpointTime(result.avgSleepMidpoint))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(result.chronotypeEnum.color)
+                }
+
+                Divider()
+                    .background(palette.textSecondary.opacity(0.3))
+
+                HStack {
+                    Label("Usual Bedtime", systemImage: "bed.double")
+                        .font(.subheadline)
+                        .foregroundColor(palette.textSecondary)
+                    Spacer()
+                    Text(chronotypeManager.formatMidpointTime(result.avgBedtime))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(palette.textPrimary)
+                }
+
+                HStack {
+                    Label("Usual Wake Time", systemImage: "sun.max")
+                        .font(.subheadline)
+                        .foregroundColor(palette.textSecondary)
+                    Spacer()
+                    Text(chronotypeManager.formatMidpointTime(result.avgWakeTime))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(palette.textPrimary)
+                }
+
+                Divider()
+                    .background(palette.textSecondary.opacity(0.3))
+
+                HStack {
+                    Text("Based on \(result.daysAnalyzed) nights")
+                        .font(.caption)
+                        .foregroundColor(palette.textSecondary)
+                    Spacer()
                 }
             }
-            Button("Skip for now", role: .cancel) {}
-        } message: {
-            Text(errorMessage)
+            .padding(14)
+            .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+            .cornerRadius(12)
+            .padding(.horizontal, 20)
+        }
+    }
+
+    // MARK: - Insufficient Data View
+
+    private var insufficientDataView: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(palette.accent.opacity(0.15))
+                    .frame(width: isCompact ? 70 : 80, height: isCompact ? 70 : 80)
+
+                Image(systemName: "chart.bar.doc.horizontal")
+                    .font(.system(size: isCompact ? 32 : 38))
+                    .foregroundColor(palette.accent)
+            }
+
+            VStack(spacing: 4) {
+                Text("Learning Your Patterns")
+                    .font(isCompact ? .title3.bold() : .title2.bold())
+                    .foregroundColor(palette.textPrimary)
+
+                Text(chronotypeManager.dataStatusMessage)
+                    .font(.caption)
+                    .foregroundColor(palette.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
+            // Info card
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(palette.accent)
+                    Text("What is chronotype?")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(palette.textPrimary)
+                }
+
+                Text("Your chronotype determines whether you're naturally a morning person, night owl, or somewhere in between. It's based on your typical sleep midpoint - the halfway point between when you fall asleep and wake up.")
+                    .font(.caption)
+                    .foregroundColor(palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+            .cornerRadius(10)
+            .padding(.horizontal, 20)
         }
     }
 
@@ -985,11 +1215,14 @@ struct HealthConnectStepView: View {
             if success {
                 connectionStatus = .connected
                 onboardingManager.markHealthKitConnected()
-                onboardingManager.populateFromHealthKit(demographics: healthKitManager.demographics)
 
-                // Auto-advance after brief delay to show success state
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    onboardingManager.nextStep()
+                // Wait for demographics to be fully fetched (height/weight are async)
+                healthKitManager.refreshDemographics { demographics in
+                    onboardingManager.populateFromHealthKit(demographics: demographics)
+                    print("[Onboarding] HealthKit demographics populated - Height: \(demographics.heightCm ?? 0), Weight: \(demographics.weightKg ?? 0), Age: \(demographics.age ?? 0)")
+
+                    // Now start chronotype analysis
+                    startChronotypeAnalysis()
                 }
             } else {
                 // Authorization was denied or failed
@@ -1002,6 +1235,49 @@ struct HealthConnectStepView: View {
                 // Show helpful message
                 errorMessage = "To import your sleep data, please enable Apple Health access in Settings > Privacy & Security > Health > Zoe Sleep."
                 showingError = true
+            }
+        }
+    }
+
+    private func startChronotypeAnalysis() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            analysisPhase = .fetchingSleepData
+        }
+
+        // Fetch sleep data from HealthKit
+        healthKitManager.fetchSleepDataForChronotype { sleepData in
+            DispatchQueue.main.async {
+                chronotypeManager.nightsFound = sleepData.count
+
+                if sleepData.isEmpty {
+                    // No sleep data at all
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        analysisPhase = .insufficientData
+                    }
+                    return
+                }
+
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    analysisPhase = .analyzingPatterns
+                }
+
+                // Add brief delay for visual effect
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    // Analyze the data
+                    if let result = chronotypeManager.analyzeFromSleepData(sleepData) {
+                        // Sufficient data - show result
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            analysisPhase = .complete
+                        }
+                        print("[Onboarding] Chronotype determined: \(result.chronotype), midpoint: \(chronotypeManager.formatMidpointTime(result.avgSleepMidpoint))")
+                    } else {
+                        // Insufficient data
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            analysisPhase = .insufficientData
+                        }
+                        print("[Onboarding] Insufficient sleep data for chronotype: \(sleepData.count) nights")
+                    }
+                }
             }
         }
     }

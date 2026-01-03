@@ -41,6 +41,9 @@ struct ProfileSettingsView: View {
                 // MARK: - Personal Info Section
                 personalInfoSection
 
+                // MARK: - Sleep Profile Section
+                sleepProfileSection
+
                 // MARK: - Units Section
                 unitsSection
 
@@ -403,6 +406,72 @@ struct ProfileSettingsView: View {
             }
         } header: {
             Text("Personal Information")
+        }
+    }
+
+    // MARK: - Sleep Profile Section
+
+    private var sleepProfileSection: some View {
+        Section {
+            if let result = ChronotypeManager.shared.result {
+                // Chronotype row
+                HStack {
+                    Label {
+                        Text("Chronotype")
+                    } icon: {
+                        Image(systemName: "moon.zzz")
+                            .foregroundColor(result.chronotypeEnum.color)
+                    }
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Text(result.emoji)
+                        Text(result.displayName)
+                            .foregroundColor(result.chronotypeEnum.color)
+                            .fontWeight(.medium)
+                    }
+                }
+
+                // Sleep midpoint row
+                HStack {
+                    Label("Sleep Midpoint", systemImage: "clock")
+                    Spacer()
+                    Text(ChronotypeManager.shared.formatMidpointTime(result.avgSleepMidpoint))
+                        .foregroundColor(.secondary)
+                }
+
+                // Usual bedtime
+                HStack {
+                    Label("Usual Bedtime", systemImage: "bed.double")
+                    Spacer()
+                    Text(ChronotypeManager.shared.formatMidpointTime(result.avgBedtime))
+                        .foregroundColor(.secondary)
+                }
+
+                // Usual wake time
+                HStack {
+                    Label("Usual Wake", systemImage: "sun.max")
+                    Spacer()
+                    Text(ChronotypeManager.shared.formatMidpointTime(result.avgWakeTime))
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                // Not yet assessed
+                HStack {
+                    Label("Chronotype", systemImage: "moon.zzz")
+                    Spacer()
+                    Text("Assessing...")
+                        .foregroundColor(.secondary)
+                        .italic()
+                }
+            }
+        } header: {
+            Text("Sleep Profile")
+        } footer: {
+            if let result = ChronotypeManager.shared.result {
+                Text("Based on \(result.daysAnalyzed) nights of sleep data. Your chronotype affects your optimal sleep and wake times.")
+            } else {
+                Text("Your chronotype will be determined as we collect more sleep data from Apple Health.")
+            }
         }
     }
 

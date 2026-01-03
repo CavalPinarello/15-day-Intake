@@ -18,7 +18,6 @@ struct AnalysisPendingView: View {
     @ObservedObject var journeyManager = JourneyPhaseManager.shared
 
     @State private var showingSettings = false
-    @State private var showingMyData = false
     @State private var lastRefreshTime: Date = Date()
     @State private var isRefreshing = false
     @State private var refreshTimer: AnyCancellable?
@@ -73,31 +72,28 @@ struct AnalysisPendingView: View {
             }
             .toolbarColorScheme(palette.isDark ? .dark : .light, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { showingMyData = true }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.body.weight(.semibold))
-                            Text("My Data")
-                                .font(.body)
-                        }
-                        .foregroundColor(theme.accent)
-                    }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { showingSettings = true }) {
-                        Image(systemName: "person.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(theme.primaryText)
+                        ZStack {
+                            Circle()
+                                .fill(theme.primaryText.opacity(0.15))
+                                .frame(width: 36, height: 36)
+
+                            if !OnboardingManager.shared.profile.name.isEmpty {
+                                Text(String(OnboardingManager.shared.profile.name.prefix(1)).uppercased())
+                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                    .foregroundColor(theme.primaryText)
+                            } else {
+                                Image(systemName: "person.fill")
+                                    .font(.body)
+                                    .foregroundColor(theme.primaryText)
+                            }
+                        }
                     }
                 }
             }
             .sheet(isPresented: $showingSettings) {
                 ProfileSettingsView()
-                    .environmentObject(themeManager)
-            }
-            .sheet(isPresented: $showingMyData) {
-                MyDataView()
                     .environmentObject(themeManager)
             }
             .refreshable {

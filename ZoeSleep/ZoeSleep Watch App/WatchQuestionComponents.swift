@@ -53,27 +53,25 @@ struct WatchTimePicker: View {
     }
 
     var body: some View {
-        VStack(spacing: watchSize.isUltra ? 12 : 8) {
+        VStack(spacing: 10) {
             Text(title)
-                .font(.system(size: watchSize.fontSize, weight: .medium))
+                .font(.system(size: watchSize.fontSize, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
+                .minimumScaleFactor(0.9)
 
-            // Large time display
+            // Large time display - very prominent
             Text(timeString)
                 .font(.system(size: watchSize.timeDisplayFontSize, weight: .bold, design: .rounded))
                 .foregroundColor(.teal)
+                .padding(.vertical, 4)
 
-            Text("Rotate Crown")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-
-            // Confirm button
+            // Confirm button - full width, easy to tap
             Button {
                 WKInterfaceDevice.current().play(.click)
             } label: {
                 Text("Confirm")
-                    .font(.system(size: watchSize.fontSize, weight: .semibold))
+                    .font(.system(size: watchSize.fontSize, weight: .bold))
                     .frame(maxWidth: .infinity)
                     .frame(height: watchSize.buttonHeight)
             }
@@ -137,13 +135,14 @@ struct WatchNumberGrid: View {
     }
 
     var body: some View {
-        VStack(spacing: watchSize.isUltra ? 10 : 6) {
+        VStack(spacing: 8) {
             Text(title)
-                .font(.system(size: watchSize.fontSize, weight: .medium))
+                .font(.system(size: watchSize.fontSize, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
+                .minimumScaleFactor(0.9)
 
-            LazyVGrid(columns: gridItems, spacing: 4) {
+            LazyVGrid(columns: gridItems, spacing: 6) {
                 ForEach(Array(range), id: \.self) { number in
                     Button {
                         selectedValue = number
@@ -151,12 +150,12 @@ struct WatchNumberGrid: View {
                         onSelect?()
                     } label: {
                         Text(number == range.upperBound ? "\(number)+" : "\(number)")
-                            .font(.system(size: largeTextMode ? watchSize.fontSize + 2 : watchSize.fontSize, weight: .semibold))
+                            .font(.system(size: watchSize.titleFontSize, weight: .bold))
                             .frame(maxWidth: .infinity)
-                            .frame(height: watchSize.buttonHeight - 10)
+                            .frame(height: watchSize.buttonHeight)
                             .background(selectedValue == number ? Color.teal : Color.gray.opacity(0.3))
                             .foregroundColor(selectedValue == number ? .white : .primary)
-                            .cornerRadius(8)
+                            .cornerRadius(12)
                     }
                     .buttonStyle(.plain)
                 }
@@ -180,53 +179,49 @@ struct WatchScaleSlider: View {
     @State private var crownValue: Double = 5
 
     var body: some View {
-        VStack(spacing: watchSize.isUltra ? 12 : 8) {
+        VStack(spacing: 8) {
             Text(title)
-                .font(.system(size: watchSize.fontSize, weight: .medium))
+                .font(.system(size: watchSize.fontSize, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
+                .minimumScaleFactor(0.9)
 
-            // Emoji labels
+            // Labels - larger and clearer
             HStack {
                 Text(minLabel)
-                    .font(.caption2)
+                    .font(.system(size: watchSize.captionFontSize, weight: .medium))
                 Spacer()
                 Text(maxLabel)
-                    .font(.caption2)
+                    .font(.system(size: watchSize.captionFontSize, weight: .medium))
             }
             .foregroundColor(.secondary)
 
-            // Visual progress bar
+            // Visual progress bar - thicker
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    // Background
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: 8)
                         .fill(Color.gray.opacity(0.3))
-                        .frame(height: 12)
+                        .frame(height: 16)
 
-                    // Filled portion
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: 8)
                         .fill(Color.teal)
-                        .frame(width: geometry.size.width * CGFloat(value - range.lowerBound) / CGFloat(range.upperBound - range.lowerBound), height: 12)
+                        .frame(width: geometry.size.width * CGFloat(value - range.lowerBound) / CGFloat(range.upperBound - range.lowerBound), height: 16)
                 }
             }
-            .frame(height: 12)
+            .frame(height: 16)
 
-            // Large value display
+            // Large value display - very prominent
             Text("\(value)")
                 .font(.system(size: watchSize.scaleValueFontSize, weight: .bold, design: .rounded))
                 .foregroundColor(.teal)
+                .padding(.vertical, 2)
 
-            Text("Rotate Crown")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-
-            // Confirm button
+            // Confirm button - full width
             Button {
                 WKInterfaceDevice.current().play(.click)
             } label: {
                 Text("Confirm")
-                    .font(.system(size: watchSize.fontSize, weight: .semibold))
+                    .font(.system(size: watchSize.fontSize, weight: .bold))
                     .frame(maxWidth: .infinity)
                     .frame(height: watchSize.buttonHeight)
             }
@@ -263,19 +258,20 @@ struct WatchYesNoButtons: View {
     private let watchSize = WatchSizeDetector.current
 
     var body: some View {
-        VStack(spacing: watchSize.isUltra ? 12 : 8) {
+        VStack(spacing: 10) {
             Text(title)
-                .font(.system(size: watchSize.fontSize, weight: .medium))
+                .font(.system(size: watchSize.fontSize, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
+                .minimumScaleFactor(0.85)
 
-            // YES Button
+            // YES Button - large and prominent
             Button {
                 selectedValue = true
                 WKInterfaceDevice.current().play(.click)
                 onSelect?()
             } label: {
-                Text("YES")
+                Text("Yes")
                     .font(.system(size: watchSize.titleFontSize, weight: .bold))
                     .frame(maxWidth: .infinity)
                     .frame(height: watchSize.buttonHeight)
@@ -283,13 +279,13 @@ struct WatchYesNoButtons: View {
             .buttonStyle(.borderedProminent)
             .tint(selectedValue == true ? .teal : .gray.opacity(0.5))
 
-            // NO Button
+            // NO Button - large and prominent
             Button {
                 selectedValue = false
                 WKInterfaceDevice.current().play(.click)
                 onSelect?()
             } label: {
-                Text("NO")
+                Text("No")
                     .font(.system(size: watchSize.titleFontSize, weight: .bold))
                     .frame(maxWidth: .infinity)
                     .frame(height: watchSize.buttonHeight)
@@ -313,11 +309,12 @@ struct WatchSingleSelectList: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: watchSize.fontSize, weight: .medium))
+                    .font(.system(size: watchSize.fontSize, weight: .semibold))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
+                    .minimumScaleFactor(0.9)
                     .padding(.bottom, 4)
 
                 ForEach(options, id: \.self) { option in
@@ -326,20 +323,22 @@ struct WatchSingleSelectList: View {
                         WKInterfaceDevice.current().play(.click)
                         onSelect?()
                     } label: {
-                        HStack {
+                        HStack(spacing: 10) {
                             Text(option)
-                                .font(.system(size: largeTextMode ? watchSize.fontSize : watchSize.fontSize - 1))
+                                .font(.system(size: watchSize.fontSize, weight: .medium))
                                 .lineLimit(2)
+                                .minimumScaleFactor(0.85)
                             Spacer()
                             if selectedOption == option {
                                 Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 22))
                                     .foregroundColor(.teal)
                             }
                         }
-                        .padding(.horizontal, 12)
-                        .frame(height: watchSize.rowHeight)
-                        .background(selectedOption == option ? Color.teal.opacity(0.2) : Color.gray.opacity(0.15))
-                        .cornerRadius(10)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: watchSize.rowHeight)
+                        .background(selectedOption == option ? Color.teal.opacity(0.25) : Color.gray.opacity(0.2))
+                        .cornerRadius(12)
                     }
                     .buttonStyle(.plain)
                 }
@@ -358,26 +357,26 @@ struct WatchProgressHeader: View {
     private let watchSize = WatchSizeDetector.current
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             Text(sectionTitle)
-                .font(.caption2)
+                .font(.system(size: watchSize.captionFontSize, weight: .medium))
                 .foregroundColor(.secondary)
                 .lineLimit(1)
 
-            // Progress dots
-            HStack(spacing: 4) {
+            // Progress dots - larger
+            HStack(spacing: 6) {
                 ForEach(1...totalQuestions, id: \.self) { index in
                     Circle()
                         .fill(index <= currentQuestion ? Color.teal : Color.gray.opacity(0.3))
-                        .frame(width: watchSize.isUltra ? 8 : 6, height: watchSize.isUltra ? 8 : 6)
+                        .frame(width: 10, height: 10)
                 }
             }
 
             Text("\(currentQuestion) of \(totalQuestions)")
-                .font(.caption2)
+                .font(.system(size: watchSize.captionFontSize, weight: .semibold))
                 .foregroundColor(.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
     }
 }
 
@@ -392,9 +391,9 @@ struct WatchCompletionView: View {
     private let watchSize = WatchSizeDetector.current
 
     var body: some View {
-        VStack(spacing: watchSize.isUltra ? 16 : 12) {
+        VStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: watchSize.isUltra ? 50 : 40))
+                .font(.system(size: 50))
                 .foregroundColor(.green)
 
             Text(title)
@@ -402,7 +401,7 @@ struct WatchCompletionView: View {
                 .multilineTextAlignment(.center)
 
             Text(message)
-                .font(.system(size: watchSize.fontSize - 2))
+                .font(.system(size: watchSize.fontSize, weight: .medium))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
 
@@ -410,13 +409,14 @@ struct WatchCompletionView: View {
                 Button {
                     onContinue()
                 } label: {
-                    HStack {
-                        Text("Continue on")
+                    HStack(spacing: 8) {
+                        Text("Continue")
                         Image(systemName: "iphone")
+                            .font(.system(size: 18))
                     }
-                    .font(.system(size: watchSize.fontSize - 1, weight: .medium))
+                    .font(.system(size: watchSize.fontSize, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(height: watchSize.buttonHeight - 6)
+                    .frame(height: watchSize.buttonHeight)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.blue)
@@ -426,10 +426,10 @@ struct WatchCompletionView: View {
                 Button {
                     onDone()
                 } label: {
-                    Text("Done for now")
-                        .font(.system(size: watchSize.fontSize - 1, weight: .medium))
+                    Text("Done")
+                        .font(.system(size: watchSize.fontSize, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .frame(height: watchSize.buttonHeight - 6)
+                        .frame(height: watchSize.buttonHeight)
                 }
                 .buttonStyle(.bordered)
             }

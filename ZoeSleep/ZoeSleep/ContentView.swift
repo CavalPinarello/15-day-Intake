@@ -3929,6 +3929,23 @@ struct ExpansionPackQuestionnaireView: View {
             ])
         }
 
+        // SB_4: High blood pressure - from Question 27 (Day 4)
+        if let q27 = qm.responses["27"]?.stringValue {
+            derivedResponses.append([
+                "questionId": "SB_4",
+                "responseValue": q27
+            ])
+        }
+
+        // SB_7: Neck circumference > 40cm - from Question 21 (Day 4)
+        if let q21 = qm.responses["21"]?.numberValue {
+            let neckOver40 = q21 > 40
+            derivedResponses.append([
+                "questionId": "SB_7",
+                "responseValue": neckOver40 ? "Yes" : "No"
+            ])
+        }
+
         // ===== PHQ-9 Auto-Derived =====
 
         // PHQ9_2: "Feeling down, depressed, or hopeless?" - from Question 15 (gateway)

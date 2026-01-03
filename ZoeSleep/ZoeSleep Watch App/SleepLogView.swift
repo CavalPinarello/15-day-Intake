@@ -196,56 +196,48 @@ struct SleepLogCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    // Section badge
-                    HStack(spacing: 4) {
-                        Image(systemName: "moon.zzz.fill")
-                            .font(.caption)
-                        Text("SLEEP LOG")
-                            .font(.system(size: 9, weight: .bold))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(WatchSectionColors.sleepLogAccent)
-                    .cornerRadius(6)
-
-                    Spacer()
+            HStack(spacing: 12) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(isCompleted ? Color.green.opacity(0.2) : WatchSectionColors.sleepLogAccent.opacity(0.2))
+                        .frame(width: 44, height: 44)
 
                     if isCompleted {
-                        Image(systemName: "checkmark.circle.fill")
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.green)
                     } else {
-                        Text("5 Q")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Text("Daily Sleep Log")
-                    .font(.system(size: watchSize.fontSize, weight: .semibold))
-
-                Text(isCompleted ? "Completed today" : "About last night's sleep")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-
-                if !isCompleted {
-                    HStack {
-                        Spacer()
-                        Text("~60 sec")
-                            .font(.caption2)
-                            .fontWeight(.medium)
+                        Image(systemName: "moon.zzz.fill")
+                            .font(.system(size: 20))
                             .foregroundColor(WatchSectionColors.sleepLogAccent)
                     }
                 }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Sleep Log")
+                        .font(.system(size: watchSize.fontSize, weight: .semibold))
+                        .foregroundColor(isCompleted ? .primary.opacity(0.6) : .primary)
+
+                    Text(isCompleted ? "Done" : "5 quick questions")
+                        .font(.system(size: watchSize.captionFontSize))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if !isCompleted {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
             }
-            .padding()
+            .padding(12)
+            .frame(minHeight: watchSize.rowHeight)
             .background(WatchSectionColors.sleepLogBackground.opacity(0.3))
-            .cornerRadius(12)
+            .cornerRadius(14)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 14)
                     .stroke(WatchSectionColors.sleepLogAccent.opacity(0.3), lineWidth: 1)
             )
         }
@@ -269,56 +261,48 @@ struct DayAssessmentCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    // Section badge
-                    HStack(spacing: 4) {
-                        Image(systemName: "clipboard.fill")
-                            .font(.caption)
-                        Text("ASSESSMENT")
-                            .font(.system(size: 9, weight: .bold))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(WatchSectionColors.assessmentAccent)
-                    .cornerRadius(6)
-
-                    Spacer()
+            HStack(spacing: 12) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(isCompleted ? Color.green.opacity(0.2) : WatchSectionColors.assessmentAccent.opacity(0.2))
+                        .frame(width: 44, height: 44)
 
                     if isCompleted {
-                        Image(systemName: "checkmark.circle.fill")
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.green)
                     } else {
-                        Text("\(questionCount) Q")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Text("Day \(dayNumber): \(title)")
-                    .font(.system(size: watchSize.fontSize, weight: .semibold))
-                    .lineLimit(2)
-
-                if !isCompleted {
-                    HStack {
-                        Spacer()
-                        Text("~\(estimatedMinutes) min")
-                            .font(.caption2)
-                            .fontWeight(.medium)
+                        Image(systemName: "clipboard.fill")
+                            .font(.system(size: 20))
                             .foregroundColor(WatchSectionColors.assessmentAccent)
                     }
-                } else {
-                    Text("Completed")
-                        .font(.caption)
-                        .foregroundColor(.green)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Day \(dayNumber)")
+                        .font(.system(size: watchSize.fontSize, weight: .semibold))
+                        .foregroundColor(isCompleted ? .primary.opacity(0.6) : .primary)
+
+                    Text(isCompleted ? "Done" : "\(questionCount) questions")
+                        .font(.system(size: watchSize.captionFontSize))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if !isCompleted {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
                 }
             }
-            .padding()
+            .padding(12)
+            .frame(minHeight: watchSize.rowHeight)
             .background(WatchSectionColors.assessmentBackground.opacity(0.3))
-            .cornerRadius(12)
+            .cornerRadius(14)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 14)
                     .stroke(WatchSectionColors.assessmentAccent.opacity(0.3), lineWidth: 1)
             )
         }

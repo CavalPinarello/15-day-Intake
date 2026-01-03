@@ -117,103 +117,90 @@ struct QuestionnaireView: View {
         }
     }
 
+    private let watchSize = WatchSizeDetector.current
+
     private var questionnaireContent: some View {
         GeometryReader { geometry in
-            ZStack {
-                // Main content
-                VStack(spacing: 0) {
-                    // Progress bar inline - very compact
-                    HStack(spacing: 4) {
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(height: 3)
-                            .overlay(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 1.5)
-                                    .fill(theme.primary)
-                                    .frame(width: max(0, (geometry.size.width - 40) * CGFloat(currentQuestionIndex + 1) / CGFloat(max(1, questions.count))), height: 3)
-                            }
+            VStack(spacing: 0) {
+                // Progress bar - thicker, more visible
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(height: 6)
+                        .overlay(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(theme.primary)
+                                .frame(width: max(0, (geometry.size.width - 60) * CGFloat(currentQuestionIndex + 1) / CGFloat(max(1, questions.count))), height: 6)
+                        }
 
-                        Text("\(currentQuestionIndex + 1)/\(questions.count)")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
-                            .fixedSize()
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 2)
+                    Text("\(currentQuestionIndex + 1)/\(questions.count)")
+                        .font(.system(size: watchSize.captionFontSize, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .fixedSize()
+                }
+                .padding(.horizontal, 8)
+                .padding(.top, 4)
 
-                    if currentQuestionIndex < questions.count {
-                        let question = questions[currentQuestionIndex]
+                if currentQuestionIndex < questions.count {
+                    let question = questions[currentQuestionIndex]
 
-                        // Question text - compact
-                        Text(question.text)
-                            .font(.system(size: 13, weight: .medium))
-                            .multilineTextAlignment(.center)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.8)
-                            .padding(.horizontal, 8)
-                            .padding(.top, 2)
+                    // Question text - larger, more readable
+                    Text(question.text)
+                        .font(.system(size: watchSize.fontSize, weight: .semibold))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.85)
+                        .padding(.horizontal, 8)
+                        .padding(.top, 6)
 
-                        // Answer input area - leave room for nav buttons (28pt)
-                        questionInputView(for: question)
-                            .padding(.horizontal, 4)
-                            .padding(.bottom, 32)
-                    }
-
-                    Spacer(minLength: 0)
+                    // Answer input area
+                    questionInputView(for: question)
+                        .padding(.horizontal, 4)
+                        .padding(.bottom, watchSize.navButtonSize + 8)
                 }
 
-                // Navigation buttons - anchored to bottom corners
+                Spacer(minLength: 0)
+
+                // Navigation buttons - full width, large tap targets
                 if currentQuestionIndex < questions.count {
-                    VStack {
-                        Spacer()
-                        HStack {
-                            // Back button (left)
-                            if currentQuestionIndex > 0 {
-                                Button {
-                                    currentQuestionIndex -= 1
-                                } label: {
-                                    Image(systemName: "chevron.left")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(theme.primary)
-                                }
-                                .frame(width: 36, height: 28)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(8)
-                            }
-
-                            Spacer()
-
-                            // Next/Done button (right)
+                    HStack(spacing: 8) {
+                        // Back button
+                        if currentQuestionIndex > 0 {
                             Button {
-                                // Save current response's smart default if not interacted
-                                saveCurrentResponseIfNeeded()
-
-                                if currentQuestionIndex == questions.count - 1 {
-                                    completeQuestionnaire()
-                                } else {
-                                    currentQuestionIndex += 1
-                                    // Sync progress to Convex for cross-device sync
-                                    syncProgressToConvex()
-                                }
+                                currentQuestionIndex -= 1
                             } label: {
-                                if currentQuestionIndex == questions.count - 1 {
-                                    Text("Done")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(.black)
-                                } else {
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.black)
-                                }
+                                Text("Back")
+                                    .font(.system(size: watchSize.fontSize - 2, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: watchSize.navButtonSize)
                             }
-                            .frame(width: currentQuestionIndex == questions.count - 1 ? 50 : 36, height: 28)
-                            .background(theme.primary)
-                            .cornerRadius(8)
-                            .disabled(!isCurrentQuestionAnswered())
+                            .buttonStyle(.bordered)
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.bottom, 2)
+
+                        // Next/Done button - takes full width if no back button
+                        Button {
+                            saveCurrentResponseIfNeeded()
+
+                            if currentQuestionIndex == questions.count - 1 {
+                                completeQuestionnaire()
+                            } else {
+                                currentQuestionIndex += 1
+                                syncProgressToConvex()
+                            }
+                        } label: {
+                            Text(currentQuestionIndex == questions.count - 1 ? "Done" : "Next")
+                                .font(.system(size: watchSize.fontSize, weight: .bold))
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: watchSize.navButtonSize)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(theme.primary)
+                        .disabled(!isCurrentQuestionAnswered())
                     }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 4)
                 }
             }
         }

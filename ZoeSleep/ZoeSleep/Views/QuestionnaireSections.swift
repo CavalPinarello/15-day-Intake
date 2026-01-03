@@ -507,20 +507,6 @@ struct DayCompletionView: View {
 
     @State private var isAnimating = false
     @State private var showConfetti = false
-    @State private var showXPGain = false
-
-    // XP amounts based on completion type
-    private var xpEarned: Int {
-        if isJourneyComplete {
-            return 500  // Big bonus for completing the entire journey
-        } else if isFullDayComplete {
-            return 200  // Perfect day bonus
-        } else if completedSection == .sleepLog {
-            return 50   // Sleep log XP
-        } else {
-            return 100  // Assessment XP
-        }
-    }
 
     // Circadian-aware colors
     private var isEvening: Bool {
@@ -806,12 +792,6 @@ struct DayCompletionView: View {
                 )
                 .ignoresSafeArea()
             }
-
-            // XP gain popup
-            if showXPGain {
-                XPGainPopup(amount: xpEarned)
-                    .transition(.opacity)
-            }
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
@@ -820,10 +800,6 @@ struct DayCompletionView: View {
             // Trigger confetti after a short delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 showConfetti = true
-                // Show XP gain after confetti starts
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    showXPGain = true
-                }
             }
         }
     }
@@ -1023,12 +999,6 @@ struct DayCompletionView: View {
                 )
                 .ignoresSafeArea()
             }
-
-            // XP gain popup
-            if showXPGain {
-                XPGainPopup(amount: xpEarned)
-                    .transition(.opacity)
-            }
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
@@ -1038,9 +1008,6 @@ struct DayCompletionView: View {
             if isFullDayComplete || completedSection == .assessment {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     showConfetti = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showXPGain = true
-                    }
                 }
             }
         }

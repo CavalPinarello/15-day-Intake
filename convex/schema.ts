@@ -53,6 +53,13 @@ export default defineSchema({
     time_travel_simulated_date: v.optional(v.number()), // Unix timestamp of "today" in the simulation
     time_travel_current_day: v.optional(v.number()), // Journey day (1-14) in Time Travel mode
     time_travel_day_completed: v.optional(v.boolean()), // Whether current day's tasks are done
+    // Chronotype Assessment (from HealthKit sleep data analysis)
+    chronotype: v.optional(v.string()), // early_riser, balanced, night_owl, adaptive
+    avg_sleep_midpoint: v.optional(v.number()), // Average sleep midpoint in hours (e.g., 3.5 = 3:30 AM)
+    avg_bedtime: v.optional(v.number()), // Average bedtime in hours (e.g., 23.0 = 11:00 PM)
+    avg_wake_time: v.optional(v.number()), // Average wake time in hours (e.g., 7.0 = 7:00 AM)
+    chronotype_assessed_at: v.optional(v.number()), // Unix timestamp when chronotype was assessed
+    chronotype_nights_analyzed: v.optional(v.number()), // Number of nights used in assessment
   })
     .index("by_username", ["username"])
     .index("by_email", ["email"])

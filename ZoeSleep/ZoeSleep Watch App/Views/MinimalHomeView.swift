@@ -13,26 +13,19 @@ import Charts
 // MARK: - Minimal Home View
 
 struct MinimalHomeView: View {
-    @StateObject private var gardenManager = GardenManager.shared
     @StateObject private var convexService = WatchConvexService.shared
-    @StateObject private var healthKitManager = HealthKitWatchManager()
     @State private var checkInStatus: WatchCheckInStatus?
     @State private var taskStatus: WatchTaskStatus?
-    @State private var circadianStatus: WatchCircadianStatusResponse?
     @State private var showCheckInFlow = false
     @State private var showTasks = false
-    @State private var showTrends = false
     @State private var showSleepStages = false
-    @State private var showLightEducation = false
-    @AppStorage("hasSeenLightEducation") private var hasSeenLightEducation = false
     @State private var isLoading = true
     @State private var isSigningIn = false
     @State private var signInError: String?
     @State private var currentHour = Calendar.current.component(.hour, from: Date())
-    @State private var encouragementMessage: String?
-    @State private var checkInError: String?
 
     private let palette = WatchCircadianPalette.current
+    private let watchSize = WatchSizeDetector.current
 
     // Card background color - always light on dark since we use dark background
     private var cardBackground: Color {
@@ -54,105 +47,30 @@ struct MinimalHomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 // Show connection status if not authenticated
                 if !convexService.isAuthenticated {
                     notAuthenticatedCard
                 } else {
-                    // Weekly Garden
-                    if let garden = gardenManager.garden {
-                        WeeklyGardenView(garden: garden)
-                    } else {
-                        WeeklyGardenView(garden: GardenManager.createEmptyGarden())
-                    }
+                    // MARK: - Group 1: Sleep
+                    sleepCard
 
-                    // Show logged-in user for debugging
+                    // MARK: - Group 2: Energy, Focus, Mood (Check-ins)
+                    checkInCard
+
+                    // MARK: - Group 3: Protocol
+                    protocolCard
+
+                    // Debug info (dev only)
                     #if DEBUG
-                    HStack {
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.6))
-                        Text(convexService.username ?? "unknown")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.6))
-                        Text("Day \(convexService.currentDay)")
-                            .font(.system(size: 10))
-                            .foregroundColor(palette.accent)
-
-                        // Sign out button for testing
-                        Button(action: {
-                            convexService.clearCredentials()
-                        }) {
-                            Image(systemName: "arrow.right.square")
-                                .font(.system(size: 10))
-                                .foregroundColor(.red)
-                        }
-                        .buttonStyle(.plain)
+                    if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == nil {
+                        debugInfoRow
                     }
                     #endif
-
-                    // Check-In Cards (time-locked)
-                    checkInSection
-
-                    // Tasks Card
-                    tasksCard
-
-                    // Circadian Light Exposure Card
-                    circadianCard
-
-                    // Trends Card
-                    trendsCard
-
-                    // Sleep Stages Card (Experimental)
-                    sleepStagesCard
-
-                    // Streak Card
-                    streakCard
-
-                    // Encouragement message (shows briefly after check-in)
-                    if let message = encouragementMessage {
-                        Text(message)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.green)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.green.opacity(0.15))
-                            )
-                            .transition(.opacity.combined(with: .scale))
-                    }
-
-                    // Error message (shows when check-in fails)
-                    if let error = checkInError {
-                        VStack(spacing: 4) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 12))
-                                Text("Check-in failed!")
-                                    .font(.system(size: 11, weight: .semibold))
-                            }
-                            .foregroundColor(.red)
-
-                            Text(error)
-                                .font(.system(size: 9))
-                                .foregroundColor(.red.opacity(0.8))
-                                .multilineTextAlignment(.center)
-                                .lineLimit(4)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.red.opacity(0.15))
-                        )
-                        .transition(.opacity.combined(with: .scale))
-                    }
                 }
             }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 12)
         }
         .background(
             LinearGradient(
@@ -169,136 +87,233 @@ struct MinimalHomeView: View {
                 }
             }
         }
+        .sheet(isPresented: $showSleepStages) {
+            SleepStagesView()
+        }
         .sheet(isPresented: $showTasks) {
             MinimalTasksView(
                 taskStatus: taskStatus ?? .empty,
                 overdueExpansionsCount: convexService.overdueExpansionsCount
             )
         }
-        .sheet(isPresented: $showTrends) {
-            CheckInTrendsView()
-        }
-        .sheet(isPresented: $showSleepStages) {
-            SleepStagesView()
-        }
-        .sheet(isPresented: $showLightEducation) {
-            LightExposureEducationView()
-        }
         .onAppear {
             loadData()
             startTimeUpdates()
-            // Reset notification tracking for new day
             WatchNotificationManager.shared.resetForNewDay()
         }
     }
 
-    // MARK: - Check-In Section
+    // MARK: - Group 1: Sleep Card
 
-    private var checkInSection: some View {
-        VStack(spacing: 8) {
-            // Morning
-            checkInRow(
-                type: .morning,
-                window: "5 AM – 12 PM",
-                isActive: currentCheckInWindow == .morning,
-                isDone: checkInStatus?.morningDone ?? false
-            )
-
-            // Afternoon
-            checkInRow(
-                type: .midday,
-                window: "12 PM – 6 PM",
-                isActive: currentCheckInWindow == .afternoon,
-                isDone: checkInStatus?.middayDone ?? false
-            )
-
-            // Evening
-            checkInRow(
-                type: .evening,
-                window: "6 PM – 12 AM",
-                isActive: currentCheckInWindow == .evening,
-                isDone: checkInStatus?.eveningDone ?? false
-            )
-        }
-    }
-
-    private func checkInRow(type: CheckInType, window: String, isActive: Bool, isDone: Bool) -> some View {
-        let canTap = isActive && !isDone
-
-        return Button(action: {
-            if canTap {
-                showCheckInFlow = true
-            }
-        }) {
-            HStack(spacing: 8) {
-                // Status indicator
+    private var sleepCard: some View {
+        Button(action: { showSleepStages = true }) {
+            HStack(spacing: 14) {
+                // Icon
                 ZStack {
-                    Circle()
-                        .fill(rowColor(isActive: isActive, isDone: isDone).opacity(0.2))
-                        .frame(width: 32, height: 32)
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.indigo.opacity(0.3))
+                        .frame(width: 56, height: 56)
 
-                    if isDone {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.green)
-                    } else {
-                        Image(systemName: type.sfSymbol)
-                            .font(.system(size: 14))
-                            .foregroundColor(rowColor(isActive: isActive, isDone: isDone))
-                    }
+                    Image(systemName: "bed.double.fill")
+                        .font(.system(size: 26))
+                        .foregroundColor(.indigo)
                 }
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(type.label)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(isDone ? .white.opacity(0.6) : .white)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Sleep")
+                        .font(.system(size: watchSize.titleFontSize, weight: .bold))
+                        .foregroundColor(.white)
 
-                    Text(window)
-                        .font(.system(size: 9))
+                    Text("Stages & Timing")
+                        .font(.system(size: watchSize.captionFontSize))
                         .foregroundColor(.white.opacity(0.6))
                 }
 
                 Spacer()
 
-                // Status badge
-                if isDone {
-                    Text("Done")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.green)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.green.opacity(0.2))
-                        .clipShape(Capsule())
-                } else if isActive {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10))
-                        .foregroundColor(.white.opacity(0.6))
-                } else {
-                    Text("Locked")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.white.opacity(0.6).opacity(0.6))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.gray.opacity(0.15))
-                        .clipShape(Capsule())
-                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.4))
             }
-            .padding(8)
+            .padding(14)
             .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(cardBackground.opacity(isDone ? 0.5 : 1))
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(cardBackground)
             )
-            .opacity(canTap ? 1 : (isDone ? 0.7 : 0.5))
         }
         .buttonStyle(.plain)
-        .disabled(!canTap)
     }
 
-    private func rowColor(isActive: Bool, isDone: Bool) -> Color {
-        if isDone { return .green }
-        if isActive { return palette.accent }
-        return .gray
+    // MARK: - Group 2: Check-In Card (Energy, Mood, Focus)
+
+    private var checkInCard: some View {
+        let canDoCurrentCheckIn = canDoCheckIn(for: currentCheckInWindow.checkInType ?? .morning)
+        let allDone = (checkInStatus?.morningDone ?? false) &&
+                      (checkInStatus?.middayDone ?? false) &&
+                      (checkInStatus?.eveningDone ?? false)
+
+        return Button(action: {
+            if canDoCurrentCheckIn {
+                showCheckInFlow = true
+            }
+        }) {
+            VStack(spacing: 12) {
+                HStack(spacing: 14) {
+                    // Icon
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(palette.accent.opacity(0.3))
+                            .frame(width: 56, height: 56)
+
+                        Image(systemName: "heart.circle.fill")
+                            .font(.system(size: 26))
+                            .foregroundColor(palette.accent)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Check-in")
+                            .font(.system(size: watchSize.titleFontSize, weight: .bold))
+                            .foregroundColor(.white)
+
+                        Text("Energy · Mood · Focus")
+                            .font(.system(size: watchSize.captionFontSize))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+
+                    Spacer()
+
+                    if allDone {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.green)
+                    } else if canDoCurrentCheckIn {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.4))
+                    } else {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                }
+
+                // Status dots for AM / PM / Eve
+                HStack(spacing: 20) {
+                    checkInDot(label: "AM", isDone: checkInStatus?.morningDone ?? false, isActive: currentCheckInWindow == .morning)
+                    checkInDot(label: "PM", isDone: checkInStatus?.middayDone ?? false, isActive: currentCheckInWindow == .afternoon)
+                    checkInDot(label: "Eve", isDone: checkInStatus?.eveningDone ?? false, isActive: currentCheckInWindow == .evening)
+                }
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(cardBackground)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!canDoCurrentCheckIn && !allDone)
+        .opacity(canDoCurrentCheckIn || allDone ? 1 : 0.6)
     }
+
+    private func checkInDot(label: String, isDone: Bool, isActive: Bool) -> some View {
+        VStack(spacing: 4) {
+            Circle()
+                .fill(isDone ? Color.green : (isActive ? palette.accent : Color.gray.opacity(0.3)))
+                .frame(width: 14, height: 14)
+
+            Text(label)
+                .font(.system(size: watchSize.captionFontSize - 2, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+        }
+    }
+
+    // MARK: - Group 3: Protocol Card
+
+    private var protocolCard: some View {
+        let hasTasks = taskStatus?.protocolTasks.isEmpty == false
+        let pendingCount = taskStatus?.pendingProtocolCount ?? 0
+
+        return Button(action: { showTasks = true }) {
+            HStack(spacing: 14) {
+                // Icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.orange.opacity(0.3))
+                        .frame(width: 56, height: 56)
+
+                    Image(systemName: "stethoscope")
+                        .font(.system(size: 26))
+                        .foregroundColor(.orange)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Protocol")
+                        .font(.system(size: watchSize.titleFontSize, weight: .bold))
+                        .foregroundColor(.white)
+
+                    if hasTasks {
+                        Text("\(pendingCount) remaining")
+                            .font(.system(size: watchSize.captionFontSize))
+                            .foregroundColor(.white.opacity(0.6))
+                    } else {
+                        Text("No tasks yet")
+                            .font(.system(size: watchSize.captionFontSize))
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                }
+
+                Spacer()
+
+                if hasTasks && pendingCount > 0 {
+                    Text("\(pendingCount)")
+                        .font(.system(size: watchSize.fontSize, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 28, height: 28)
+                        .background(Circle().fill(Color.orange))
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.4))
+                }
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(cardBackground)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Debug Info Row
+
+    #if DEBUG
+    private var debugInfoRow: some View {
+        HStack {
+            Image(systemName: "person.circle.fill")
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.5))
+            Text(convexService.username ?? "?")
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.5))
+            Text("Day \(convexService.currentDay)")
+                .font(.system(size: 12))
+                .foregroundColor(palette.accent.opacity(0.7))
+
+            Spacer()
+
+            Button(action: { convexService.clearCredentials() }) {
+                Image(systemName: "arrow.right.square")
+                    .font(.system(size: 12))
+                    .foregroundColor(.red.opacity(0.7))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 8)
+    }
+    #endif
+
+    // MARK: - Helper Functions
 
     private func canDoCheckIn(for type: CheckInType) -> Bool {
         guard let status = checkInStatus else { return true }
@@ -307,158 +322,6 @@ struct MinimalHomeView: View {
         case .midday: return !status.middayDone && currentCheckInWindow == .afternoon
         case .evening: return !status.eveningDone && currentCheckInWindow == .evening
         }
-    }
-
-    // MARK: - Tasks Card
-
-    private var tasksCard: some View {
-        Button(action: { showTasks = true }) {
-            HStack {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(Color.blue.opacity(0.2))
-                        .frame(width: 32, height: 32)
-
-                    Image(systemName: "list.bullet.clipboard")
-                        .font(.system(size: 14))
-                        .foregroundColor(.blue)
-                }
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Today's Tasks")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white)
-
-                    Text(taskSummary)
-                        .font(.system(size: 9))
-                        .foregroundColor(.white.opacity(0.6))
-                }
-
-                Spacer()
-
-                // Badge
-                if let status = taskStatus, status.pendingCount > 0 {
-                    Text("\(status.pendingCount)")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 18, height: 18)
-                        .background(Circle().fill(Color.blue))
-                } else {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11))
-                        .foregroundColor(.green)
-                }
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(cardBackground)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var taskSummary: String {
-        guard let status = taskStatus else { return "Loading..." }
-        if status.pendingCount == 0 { return "All done!" }
-        var items: [String] = []
-        if !status.sleepLogDone { items.append("Sleep Log") }
-        if !status.assessmentDone { items.append("Assessment") }
-        if status.pendingProtocolCount > 0 { items.append("Protocol") }
-        return items.prefix(2).joined(separator: ", ")
-    }
-
-    // MARK: - Trends Card
-
-    private var trendsCard: some View {
-        Button(action: { showTrends = true }) {
-            HStack {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(Color.purple.opacity(0.2))
-                        .frame(width: 32, height: 32)
-
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.system(size: 14))
-                        .foregroundColor(.purple)
-                }
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("My Trends")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white)
-
-                    Text("Energy, Mood & Focus")
-                        .font(.system(size: 9))
-                        .foregroundColor(.white.opacity(0.6))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(cardBackground)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Sleep Stages Card (Experimental)
-
-    private var sleepStagesCard: some View {
-        Button(action: { showSleepStages = true }) {
-            HStack {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(Color.indigo.opacity(0.2))
-                        .frame(width: 32, height: 32)
-
-                    Image(systemName: "bed.double.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.indigo)
-                }
-
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: 4) {
-                        Text("Sleep Stages")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.white)
-
-                        Text("BETA")
-                            .font(.system(size: 6, weight: .bold))
-                            .foregroundColor(.indigo)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(Color.indigo.opacity(0.3))
-                            .clipShape(Capsule())
-                    }
-
-                    Text("Chronotype & Circadian Fit")
-                        .font(.system(size: 9))
-                        .foregroundColor(.white.opacity(0.6))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(cardBackground)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Not Authenticated Card
@@ -526,86 +389,6 @@ struct MinimalHomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Circadian Card
-
-    @ViewBuilder
-    private var circadianCard: some View {
-        // Prefer local HealthKit data (real-time from Watch sensors)
-        if let localData = healthKitManager.daylightExposure {
-            CircadianExposureCard(
-                status: CircadianStatus(
-                    hasData: true,
-                    daylightMins: localData.totalMinutes,
-                    targetMins: localData.targetMinutes,
-                    percentOfTarget: localData.percentOfTarget,
-                    circadianScore: circadianStatus?.circadianScore, // Use backend score if available
-                    needsMoreLight: localData.needsMoreLight,
-                    morningLightMins: localData.morningMinutes
-                ),
-                onTap: { handleLightCardTap() },
-                onInfoTap: hasSeenLightEducation ? { showLightEducation = true } : nil
-            )
-        } else if let status = circadianStatus {
-            // Fall back to backend data
-            CircadianExposureCard(
-                status: CircadianStatus(
-                    hasData: status.hasData,
-                    daylightMins: status.daylightMins,
-                    targetMins: status.targetMins,
-                    percentOfTarget: status.percentOfTarget,
-                    circadianScore: status.circadianScore,
-                    needsMoreLight: status.needsMoreLight,
-                    morningLightMins: status.morningLightMins
-                ),
-                onTap: { handleLightCardTap() },
-                onInfoTap: hasSeenLightEducation ? { showLightEducation = true } : nil
-            )
-        } else {
-            // Show empty state card with "Go outside!" nudge
-            Button(action: { handleLightCardTap() }) {
-                CircadianExposureEmptyCard()
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func handleLightCardTap() {
-        // Show education only on first tap
-        if !hasSeenLightEducation {
-            showLightEducation = true
-            hasSeenLightEducation = true
-        }
-        // After first view, info button appears for on-demand access
-    }
-
-    // MARK: - Streak Card
-
-    private var streakCard: some View {
-        HStack {
-            // Flame icon
-            Image(systemName: "flame.fill")
-                .font(.system(size: 16))
-                .foregroundColor(.orange)
-
-            VStack(alignment: .leading, spacing: 0) {
-                Text("\(gardenManager.garden?.currentStreak ?? 0) Day Streak")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.white)
-
-                Text("Best: \(gardenManager.garden?.longestStreak ?? 0) days")
-                    .font(.system(size: 9))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-
-            Spacer()
-        }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(cardBackground.opacity(0.7))
-        )
-    }
-
     // MARK: - Time Updates
 
     private func startTimeUpdates() {
@@ -620,18 +403,9 @@ struct MinimalHomeView: View {
     private func loadData() {
         isLoading = true
 
-        // Request HealthKit permissions and sync daylight exposure data
-        healthKitManager.requestPermissions()
-
-        // Load garden (use empty for now, will sync from Convex)
-        if gardenManager.garden == nil {
-            gardenManager.garden = GardenManager.createEmptyGarden()
-        }
-
-        // Fetch actual state from Convex
         Task {
             do {
-                // Refresh journey state (includes sleepLogCompleted, assessmentCompleted, overdueExpansionsCount)
+                // Refresh journey state
                 await convexService.refreshFromConvex()
 
                 // Fetch check-in status
@@ -650,7 +424,6 @@ struct MinimalHomeView: View {
                 }
             } catch {
                 print("[MinimalHomeView] Failed to fetch check-in status: \(error)")
-                // Use default status on error
                 await MainActor.run {
                     checkInStatus = WatchCheckInStatus(
                         morningDone: false,
@@ -665,25 +438,14 @@ struct MinimalHomeView: View {
                 }
             }
 
-            // Update task status from Convex service state
+            // Update task status
             await MainActor.run {
                 taskStatus = WatchTaskStatus(
                     sleepLogDone: convexService.sleepLogCompleted,
                     assessmentDone: convexService.assessmentCompleted,
-                    protocolTasks: []  // Protocol tasks will be populated when physician assigns interventions
+                    protocolTasks: []
                 )
                 isLoading = false
-            }
-
-            // Fetch circadian status for light exposure card
-            do {
-                let circadianResponse = try await convexService.getCircadianStatus()
-                await MainActor.run {
-                    circadianStatus = circadianResponse
-                }
-            } catch {
-                print("[MinimalHomeView] Failed to fetch circadian status: \(error)")
-                // Leave circadianStatus as nil - empty state card will show
             }
         }
     }
@@ -691,52 +453,18 @@ struct MinimalHomeView: View {
     private func submitCheckIn(energy: EnergyLevel, mood: MoodLevel, focus: FocusLevel, type: CheckInType) {
         print("[MinimalHomeView] Check-in submitted: \(energy.label), \(mood.label), \(focus.label)")
 
-        // Clear any previous error
-        withAnimation {
-            checkInError = nil
-        }
-
-        // Save old status for potential rollback
-        let oldStatus = checkInStatus
-
-        // Play success haptic (optimistic)
+        // Play success haptic
         WKInterfaceDevice.current().play(.success)
 
-        // Update local state optimistically
-        let todayDate = formatDate(Date())
         let newCheckInsCount = (checkInStatus?.totalDone ?? 0) + 1
 
-        gardenManager.updateDayBloom(
-            date: todayDate,
-            checkInsCompleted: newCheckInsCount,
-            tasksCompleted: taskStatus?.completedCount ?? 0,
-            totalTasks: taskStatus?.totalCount ?? 0
-        )
-
-        // Show encouragement message with animation
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-            encouragementMessage = EncouragementMessages.personalizedMessage(
-                energy: energy.rawValue,
-                mood: mood.rawValue,
-                focus: focus.rawValue
-            )
-        }
-
-        // Hide message after 3 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                encouragementMessage = nil
-            }
-        }
-
-        // Cancel remaining reminders for this slot (streak is from garden manager)
-        let currentStreak = gardenManager.garden?.currentStreak ?? 1
+        // Mark check-in complete for notifications
         WatchNotificationManager.shared.markCheckInComplete(
             type: type.rawValue,
             energy: energy.rawValue,
             mood: mood.rawValue,
             focus: focus.rawValue,
-            streak: currentStreak
+            streak: 1
         )
 
         // Update check-in status optimistically based on type
@@ -781,48 +509,17 @@ struct MinimalHomeView: View {
         // Submit to Convex
         Task {
             do {
-                print("[MinimalHomeView] Calling Convex submitWatchCheckIn...")
-                print("[MinimalHomeView] - checkInType: \(type.rawValue)")
-                print("[MinimalHomeView] - energyLevel: \(energy.rawValue)")
-                print("[MinimalHomeView] - moodLevel: \(mood.rawValue)")
-                print("[MinimalHomeView] - focusLevel: \(focus.rawValue)")
-                print("[MinimalHomeView] - userId: \(convexService.userId ?? "nil")")
-
                 let response = try await convexService.submitWatchCheckIn(
                     checkInType: type.rawValue,
                     energyLevel: energy.rawValue,
                     moodLevel: mood.rawValue,
                     focusLevel: focus.rawValue
                 )
-                print("[MinimalHomeView] Check-in saved to Convex! success=\(response.success), checkInId=\(response.checkInId ?? "nil")")
-
-                // Sync garden after check-in
-                _ = try await convexService.syncGardenAfterCheckIn(
-                    checkInsCompletedToday: response.checkInsCompletedToday
-                )
+                print("[MinimalHomeView] Check-in saved: \(response.success)")
             } catch {
-                print("[MinimalHomeView] ❌ FAILED to submit check-in: \(error)")
-                print("[MinimalHomeView] Error details: \(String(describing: error))")
-
-                // Rollback optimistic UI update
+                print("[MinimalHomeView] Failed to submit check-in: \(error)")
                 await MainActor.run {
-                    checkInStatus = oldStatus
-
-                    // Play failure haptic
                     WKInterfaceDevice.current().play(.failure)
-
-                    // Show error with animation
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        encouragementMessage = nil
-                        checkInError = error.localizedDescription
-                    }
-
-                    // Hide error after 8 seconds
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            checkInError = nil
-                        }
-                    }
                 }
             }
         }

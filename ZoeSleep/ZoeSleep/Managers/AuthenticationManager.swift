@@ -426,6 +426,10 @@ class AuthenticationManager: ObservableObject {
     // MARK: - Sign Out
 
     func signOut() {
+        // Notify Apple Watch to clear its cached credentials
+        // Uses transferUserInfo for guaranteed delivery even if Watch is asleep
+        iOSWatchConnectivityManager.shared.notifyWatchLogout()
+
         // Clear server session asynchronously
         Task {
             do {
@@ -444,7 +448,7 @@ class AuthenticationManager: ObservableObject {
         self.user = nil
         self.errorMessage = nil
 
-        print("✅ Sign out complete - auth state cleared")
+        print("✅ Sign out complete - auth state cleared, Watch notified")
     }
 
     // MARK: - Helper Methods

@@ -187,6 +187,33 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
         }
     }
 
+    /// Notify Watch that user logged out on iPhone - Watch should clear its credentials
+    func notifyWatchLogout() {
+        guard let session = session else {
+            print("[iOS] Cannot notify Watch of logout - no session")
+            return
+        }
+
+        let message: [String: Any] = [
+            "action": "userLogout",
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        // Use transferUserInfo for guaranteed delivery even if Watch isn't currently reachable
+        // This ensures Watch clears credentials even if it was asleep during logout
+        session.transferUserInfo(message)
+        print("[iOS] Queued logout notification for Watch via transferUserInfo")
+
+        // Also try sendMessage for immediate effect if Watch is reachable
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: { reply in
+                print("[iOS] Watch acknowledged logout immediately")
+            }) { error in
+                print("[iOS] Watch not reachable for immediate logout (queued via transferUserInfo)")
+            }
+        }
+    }
+
     /// Notify Watch that a check-in was completed on iPhone (for Energy/Mood/Focus sync)
     func notifyWatchCheckInCompleted(timeSlot: CheckInTimeSlot, date: String) {
         guard let session = session else { return }

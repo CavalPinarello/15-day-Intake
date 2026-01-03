@@ -1892,5 +1892,30 @@ class HealthKitManager: ObservableObject {
             completion(.success(results))
         }
     }
+
+    // MARK: - Chronotype Analysis
+
+    /// Fetches sleep data for chronotype analysis (90 days)
+    /// Returns processed sleep sessions with asleep_time and wake_time for each night
+    func fetchSleepDataForChronotype(completion: @escaping ([[String: Any]]) -> Void) {
+        guard isAuthorized else {
+            print("[HealthKit] Not authorized - skipping chronotype sleep fetch")
+            completion([])
+            return
+        }
+
+        print("[HealthKit] Fetching sleep data for chronotype analysis (90 days)...")
+
+        fetchSleepData(daysBack: 90) { result in
+            switch result {
+            case .success(let data):
+                print("[HealthKit] Fetched \(data.count) sleep entries for chronotype")
+                completion(data)
+            case .failure(let error):
+                print("[HealthKit] Failed to fetch sleep data for chronotype: \(error)")
+                completion([])
+            }
+        }
+    }
 }
 

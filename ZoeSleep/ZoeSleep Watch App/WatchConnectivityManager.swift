@@ -529,6 +529,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
             }
             replyHandler?(["received": true])
 
+        case "userLogout":
+            // iPhone user logged out - clear Watch credentials and state
+            handleUserLogout()
+            replyHandler?(["received": true, "cleared": true])
+
         default:
             replyHandler?(["error": "Unknown action: \(action)"])
         }
@@ -557,6 +562,22 @@ extension WatchConnectivityManager: WCSessionDelegate {
         // Update WatchConvexService with the iPhone's credentials
         let convexService = WatchConvexService.shared
         convexService.updateCredentialsFromiPhone(userId: userId, username: username)
+    }
+
+    // MARK: - Logout Handler
+
+    private func handleUserLogout() {
+        print("[Watch] ⚠️ Received logout notification from iPhone - clearing credentials")
+
+        // Clear local state
+        isUserAuthenticated = false
+        currentUserDay = 1
+
+        // Clear WatchConvexService credentials (removes from UserDefaults too)
+        let convexService = WatchConvexService.shared
+        convexService.clearCredentials()
+
+        print("[Watch] ✅ Credentials cleared - Watch will sync with next iPhone login")
     }
 
     // MARK: - Theme Settings Handler

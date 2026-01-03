@@ -133,6 +133,7 @@ struct MinimalTasksView: View {
     @State private var localTaskStatus: WatchTaskStatus
 
     private let palette = WatchCircadianPalette.current
+    private let watchSize = WatchSizeDetector.current
 
     /// Get current day config
     private var dayConfig: DayAssessmentConfig {
@@ -191,16 +192,7 @@ struct MinimalTasksView: View {
                     .ignoresSafeArea()
             )
             .navigationTitle("Today")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .font(.system(size: 12))
-                    .foregroundColor(.white)
-                }
-            }
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 
@@ -213,31 +205,31 @@ struct MinimalTasksView: View {
                 WatchConnectivityManager.shared.openPhoneApp(action: "sleeplog")
             }
         } label: {
-            HStack(spacing: 10) {
-                // Icon
+            HStack(spacing: 12) {
+                // Icon - larger for elderly
                 ZStack {
                     Circle()
                         .fill(localTaskStatus.sleepLogDone ? Color.green.opacity(0.2) : Color.purple.opacity(0.2))
-                        .frame(width: 36, height: 36)
+                        .frame(width: 44, height: 44)
 
                     if localTaskStatus.sleepLogDone {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.green)
                     } else {
                         Image(systemName: "moon.zzz.fill")
-                            .font(.system(size: 16))
+                            .font(.system(size: 20))
                             .foregroundColor(.purple)
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("Sleep Log")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: watchSize.fontSize, weight: .semibold))
                         .foregroundColor(localTaskStatus.sleepLogDone ? .white.opacity(0.6) : .white)
 
-                    Text(localTaskStatus.sleepLogDone ? "Completed" : "Tap to open iPhone")
-                        .font(.system(size: 10))
+                    Text(localTaskStatus.sleepLogDone ? "Done" : "Open iPhone")
+                        .font(.system(size: watchSize.captionFontSize))
                         .foregroundColor(.white.opacity(0.6))
                 }
 
@@ -245,13 +237,14 @@ struct MinimalTasksView: View {
 
                 if !localTaskStatus.sleepLogDone {
                     Image(systemName: "arrow.up.forward.app.fill")
-                        .font(.system(size: 12))
+                        .font(.system(size: 18))
                         .foregroundColor(.purple.opacity(0.8))
                 }
             }
-            .padding(10)
+            .padding(12)
+            .frame(minHeight: watchSize.rowHeight)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 14)
                     .fill(cardBackground.opacity(localTaskStatus.sleepLogDone ? 0.5 : 1))
             )
             .opacity(localTaskStatus.sleepLogDone ? 0.7 : 1)
@@ -269,98 +262,47 @@ struct MinimalTasksView: View {
                 WatchConnectivityManager.shared.openPhoneApp(action: "assessment")
             }
         } label: {
-            VStack(spacing: 0) {
-                // Main card content
-                HStack(spacing: 10) {
-                    // Icon
-                    ZStack {
-                        Circle()
-                            .fill(localTaskStatus.assessmentDone ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
-                            .frame(width: 36, height: 36)
+            HStack(spacing: 12) {
+                // Icon - larger for elderly
+                ZStack {
+                    Circle()
+                        .fill(localTaskStatus.assessmentDone ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
+                        .frame(width: 44, height: 44)
 
-                        if localTaskStatus.assessmentDone {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.green)
-                        } else {
-                            Image(systemName: "clipboard.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.blue)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        // Show questionnaire name (e.g., "PSQI Part 1")
-                        Text(dayConfig.questionnaire)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(localTaskStatus.assessmentDone ? .white.opacity(0.6) : .white)
-
-                        Text(localTaskStatus.assessmentDone ? "Completed" : "Tap to open iPhone")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.6))
-                    }
-
-                    Spacer()
-
-                    if !localTaskStatus.assessmentDone {
-                        Image(systemName: "arrow.up.forward.app.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.blue.opacity(0.8))
+                    if localTaskStatus.assessmentDone {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.green)
+                    } else {
+                        Image(systemName: "clipboard.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.blue)
                     }
                 }
-                .padding(10)
 
-                // Mission statement (only show if not completed)
+                VStack(alignment: .leading, spacing: 3) {
+                    // Simplified: just show "Assessment"
+                    Text("Assessment")
+                        .font(.system(size: watchSize.fontSize, weight: .semibold))
+                        .foregroundColor(localTaskStatus.assessmentDone ? .white.opacity(0.6) : .white)
+
+                    Text(localTaskStatus.assessmentDone ? "Done" : "Open iPhone")
+                        .font(.system(size: watchSize.captionFontSize))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+
+                Spacer()
+
                 if !localTaskStatus.assessmentDone {
-                    VStack(alignment: .leading, spacing: 6) {
-                        // Divider
-                        Rectangle()
-                            .fill(Color.white.opacity(0.1))
-                            .frame(height: 1)
-                            .padding(.horizontal, 8)
-
-                        // Mission text
-                        Text(dayConfig.mission)
-                            .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.7))
-                            .lineLimit(3)
-                            .padding(.horizontal, 10)
-                            .padding(.bottom, 8)
-
-                        // Stats row
-                        HStack(spacing: 8) {
-                            // Question count
-                            HStack(spacing: 3) {
-                                Image(systemName: "list.bullet")
-                                    .font(.system(size: 8))
-                                Text("\(dayConfig.questionCount) Q")
-                                    .font(.system(size: 9, weight: .medium))
-                            }
-                            .foregroundColor(.blue.opacity(0.8))
-
-                            // Time estimate
-                            HStack(spacing: 3) {
-                                Image(systemName: "clock")
-                                    .font(.system(size: 8))
-                                Text("~\(dayConfig.estimatedMinutes) min")
-                                    .font(.system(size: 9, weight: .medium))
-                            }
-                            .foregroundColor(.white.opacity(0.6))
-
-                            Spacer()
-
-                            // Day badge
-                            Text("Day \(convexService.currentDay)")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.orange)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.bottom, 8)
-                    }
+                    Image(systemName: "arrow.up.forward.app.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.blue.opacity(0.8))
                 }
             }
+            .padding(12)
+            .frame(minHeight: watchSize.rowHeight)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 14)
                     .fill(cardBackground.opacity(localTaskStatus.assessmentDone ? 0.5 : 1))
             )
             .opacity(localTaskStatus.assessmentDone ? 0.7 : 1)
@@ -388,6 +330,7 @@ struct MinimalTasksView: View {
 
     private var deeperDiveCard: some View {
         let isCompleted = convexService.expansionPackCompleted
+        let accentColor = Color(red: 0.85, green: 0.55, blue: 0.25)
 
         return Button {
             if !isCompleted {
@@ -395,96 +338,50 @@ struct MinimalTasksView: View {
                 WatchConnectivityManager.shared.openPhoneApp(action: "assessment")
             }
         } label: {
-            VStack(spacing: 0) {
-                // Main card content
-                HStack(spacing: 10) {
-                    // Icon - sparkles for deeper dive
-                    ZStack {
-                        Circle()
-                            .fill(isCompleted ? Color.green.opacity(0.2) : Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.2))
-                            .frame(width: 36, height: 36)
+            HStack(spacing: 12) {
+                // Icon - larger for elderly
+                ZStack {
+                    Circle()
+                        .fill(isCompleted ? Color.green.opacity(0.2) : accentColor.opacity(0.2))
+                        .frame(width: 44, height: 44)
 
-                        if isCompleted {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.green)
-                        } else {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 16))
-                                .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25))
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Deeper Dive")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(isCompleted ? .white.opacity(0.6) : .white)
-
-                        Text(isCompleted ? "Completed" : "Tap to open iPhone")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.6))
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-
-                    if !isCompleted {
-                        Image(systemName: "arrow.up.forward.app.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.8))
+                    if isCompleted {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.green)
+                    } else {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 20))
+                            .foregroundColor(accentColor)
                     }
                 }
-                .padding(10)
 
-                // Additional info (only show if not completed)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Deeper Dive")
+                        .font(.system(size: watchSize.fontSize, weight: .semibold))
+                        .foregroundColor(isCompleted ? .white.opacity(0.6) : .white)
+
+                    Text(isCompleted ? "Done" : "Open iPhone")
+                        .font(.system(size: watchSize.captionFontSize))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+
+                Spacer()
+
                 if !isCompleted {
-                    VStack(alignment: .leading, spacing: 4) {
-                        // Divider
-                        Rectangle()
-                            .fill(Color.white.opacity(0.1))
-                            .frame(height: 1)
-                            .padding(.horizontal, 8)
-
-                        // Stats row
-                        HStack(spacing: 8) {
-                            // Question count
-                            if convexService.expansionQuestionCount > 0 {
-                                HStack(spacing: 3) {
-                                    Image(systemName: "list.bullet")
-                                        .font(.system(size: 8))
-                                    Text("\(convexService.expansionQuestionCount) Q")
-                                        .font(.system(size: 9, weight: .medium))
-                                }
-                                .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.8))
-                            }
-
-                            // Time estimate
-                            HStack(spacing: 3) {
-                                Image(systemName: "clock")
-                                    .font(.system(size: 8))
-                                Text("~7 min")
-                                    .font(.system(size: 9, weight: .medium))
-                            }
-                            .foregroundColor(.white.opacity(0.6))
-
-                            Spacer()
-
-                            // Badge
-                            Text("Triggered by your answers")
-                                .font(.system(size: 8))
-                                .foregroundColor(Color(red: 0.85, green: 0.55, blue: 0.25))
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.bottom, 8)
-                    }
+                    Image(systemName: "arrow.up.forward.app.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(accentColor.opacity(0.8))
                 }
             }
+            .padding(12)
+            .frame(minHeight: watchSize.rowHeight)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 14)
                     .fill(cardBackground.opacity(isCompleted ? 0.5 : 1))
                     .overlay(
-                        isCompleted ? nil : RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(red: 0.85, green: 0.55, blue: 0.25).opacity(0.3), lineWidth: 1)
+                        isCompleted ? nil : RoundedRectangle(cornerRadius: 14)
+                            .stroke(accentColor.opacity(0.3), lineWidth: 1)
                     )
             )
             .opacity(isCompleted ? 0.7 : 1)
@@ -500,49 +397,50 @@ struct MinimalTasksView: View {
             WKInterfaceDevice.current().play(.click)
             WatchConnectivityManager.shared.openPhoneApp(action: "assessment")
         } label: {
-            HStack(spacing: 10) {
-                // Icon
+            HStack(spacing: 12) {
+                // Icon - larger for elderly
                 ZStack {
                     Circle()
                         .fill(Color.orange.opacity(0.2))
-                        .frame(width: 36, height: 36)
+                        .frame(width: 44, height: 44)
 
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 16))
+                        .font(.system(size: 20))
                         .foregroundColor(.orange)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Deep Dive Pending")
-                        .font(.system(size: 14, weight: .semibold))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Pending")
+                        .font(.system(size: watchSize.fontSize, weight: .semibold))
                         .foregroundColor(.white)
 
-                    Text("Tap to open iPhone")
-                        .font(.system(size: 10))
+                    Text("Open iPhone")
+                        .font(.system(size: watchSize.captionFontSize))
                         .foregroundColor(.white.opacity(0.6))
                 }
 
                 Spacer()
 
                 // Badge showing count + arrow
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Text("\(overdueExpansionsCount)")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: watchSize.captionFontSize, weight: .bold))
                         .foregroundColor(.white)
-                        .frame(width: 18, height: 18)
+                        .frame(width: 24, height: 24)
                         .background(Circle().fill(Color.orange))
 
                     Image(systemName: "arrow.up.forward.app.fill")
-                        .font(.system(size: 12))
+                        .font(.system(size: 18))
                         .foregroundColor(.orange.opacity(0.8))
                 }
             }
-            .padding(10)
+            .padding(12)
+            .frame(minHeight: watchSize.rowHeight)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 14)
                     .fill(cardBackground)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 14)
                             .stroke(Color.orange.opacity(0.3), lineWidth: 1)
                     )
             )
@@ -553,21 +451,21 @@ struct MinimalTasksView: View {
     // MARK: - Protocol Section
 
     private var protocolSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Section header
+        VStack(alignment: .leading, spacing: 10) {
+            // Section header - larger text
             HStack {
                 Image(systemName: "stethoscope")
-                    .font(.system(size: 12))
+                    .font(.system(size: 18))
                     .foregroundColor(.orange)
 
                 Text("Protocol")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: watchSize.fontSize, weight: .semibold))
                     .foregroundColor(.white)
 
                 Spacer()
 
-                Text("\(localTaskStatus.pendingProtocolCount) remaining")
-                    .font(.system(size: 10))
+                Text("\(localTaskStatus.pendingProtocolCount) left")
+                    .font(.system(size: watchSize.captionFontSize))
                     .foregroundColor(.white.opacity(0.6))
             }
             .padding(.horizontal, 4)
@@ -576,6 +474,7 @@ struct MinimalTasksView: View {
             ForEach(Array(localTaskStatus.protocolTasks.enumerated()), id: \.element.id) { index, task in
                 ProtocolTaskRow(
                     task: task,
+                    watchSize: watchSize,
                     onTap: {
                         completeProtocolTask(at: index)
                     }
@@ -599,6 +498,7 @@ struct MinimalTasksView: View {
 
 struct ProtocolTaskRow: View {
     let task: ProtocolTask
+    let watchSize: WatchSizeDetector
     let onTap: () -> Void
 
     @State private var checkmarkScale: CGFloat = 1.0
@@ -621,39 +521,40 @@ struct ProtocolTaskRow: View {
             }
             onTap()
         }) {
-            HStack(spacing: 10) {
-                // Checkbox
+            HStack(spacing: 12) {
+                // Checkbox - larger for elderly
                 ZStack {
                     Circle()
-                        .stroke(task.isCompleted ? Color.green : Color.orange.opacity(0.5), lineWidth: 2)
-                        .frame(width: 22, height: 22)
+                        .stroke(task.isCompleted ? Color.green : Color.orange.opacity(0.5), lineWidth: 2.5)
+                        .frame(width: 28, height: 28)
 
                     if task.isCompleted {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.green)
                             .scaleEffect(checkmarkScale)
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(task.name)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: watchSize.fontSize - 1, weight: .medium))
                         .foregroundColor(task.isCompleted ? .white.opacity(0.6) : .white)
                         .strikethrough(task.isCompleted, color: .white.opacity(0.6))
-                        .lineLimit(1)
+                        .lineLimit(2)
 
                     Text(task.timing)
-                        .font(.system(size: 9))
+                        .font(.system(size: watchSize.captionFontSize))
                         .foregroundColor(.white.opacity(0.6))
                 }
 
                 Spacer()
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 10)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .frame(minHeight: watchSize.rowHeight - 4)
             .background(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(cardBackground.opacity(task.isCompleted ? 0.5 : 1.0))
             )
             .opacity(task.isCompleted ? 0.7 : 1.0)

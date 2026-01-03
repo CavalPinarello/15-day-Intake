@@ -47,10 +47,6 @@ struct QuestionnaireView: View {
     // Expansion Modules (for dynamic splash screens)
     @State private var currentDayExpansionModules: [String] = []  // Module IDs for expansion splash
 
-    // HealthKit
-    @State private var healthKitSleepSummary: HealthKitSleepSummary?
-    @State private var isLoadingHealthKit: Bool = false
-
     // Timing
     @State private var startTime: Date = Date()
     @State private var questionStartTime: Date = Date()
@@ -211,6 +207,7 @@ struct QuestionnaireView: View {
                 mainQuestionnaireView
             }
         }
+        .disableSwipeBack()  // Prevent accidental back navigation when using sliders
         .navigationTitle(currentSection == .sleepLog ? "Sleep Log" : "Day \(currentDay) Assessment")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(navBarBackgroundColor, for: .navigationBar)
@@ -330,11 +327,8 @@ struct QuestionnaireView: View {
                 // Main Content
                 ScrollView {
                     VStack(spacing: 20) {
-                        // HealthKit Sleep Summary (show at start of sleep log)
-                        if currentSection == .sleepLog && currentIndex == 0 && healthKitSleepSummary != nil {
-                            HealthKitSleepCard(summary: healthKitSleepSummary!, theme: theme)
-                                .padding(.horizontal)
-                        }
+                        // NOTE: HealthKit sleep card removed - sleep log is about SUBJECTIVE sleep experience,
+                        // not objective Apple Health data which can be unreliable/incomplete for new users
 
                         // Current Question
                         if !currentQuestions.isEmpty && currentIndex < currentQuestions.count {
@@ -1024,9 +1018,6 @@ struct QuestionnaireView: View {
         // Ensure loading state is true when view appears (handles view reuse)
         isLoadingQuestions = true
         loadQuestions()
-        if startSection == .sleepLog {
-            fetchHealthKitSleepData()
-        }
         // Initialize acknowledged gateways with any that are already triggered
         // This prevents showing notifications for gateways triggered in previous sessions
         for gateway in questionnaireManager.gatewayStates where gateway.triggered {
@@ -1689,43 +1680,6 @@ struct QuestionnaireView: View {
                 print("[iOS] Failed to sync progress: \(error)")
             }
         }
-    }
-
-    private func fetchHealthKitSleepData() {
-        guard healthKitManager.isAuthorized else { return }
-
-        isLoadingHealthKit = true
-        healthKitManager.fetchSleepData(daysBack: 1) { result in
-            DispatchQueue.main.async {
-                isLoadingHealthKit = false
-                switch result {
-                case .success(let data):
-                    if let lastNight = data.first {
-                        self.healthKitSleepSummary = parseHealthKitData(lastNight)
-                    }
-                case .failure(let error):
-                    print("HealthKit fetch error: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-
-    private func parseHealthKitData(_ data: [String: Any]) -> HealthKitSleepSummary {
-        let dateFormatter = ISO8601DateFormatter()
-
-        return HealthKitSleepSummary(
-            date: Date(),
-            inBedTime: dateFormatter.date(from: data["in_bed_time"] as? String ?? ""),
-            asleepTime: dateFormatter.date(from: data["asleep_time"] as? String ?? ""),
-            wakeTime: dateFormatter.date(from: data["wake_time"] as? String ?? ""),
-            totalSleepMinutes: data["total_sleep_mins"] as? Int,
-            awakeningsCount: data["interruptions_count"] as? Int,
-            awakeDurationMinutes: data["awake_mins"] as? Int,
-            sleepEfficiency: data["sleep_efficiency"] as? Double,
-            deepSleepMinutes: data["deep_sleep_mins"] as? Int,
-            remSleepMinutes: data["rem_sleep_mins"] as? Int,
-            lightSleepMinutes: data["light_sleep_mins"] as? Int
-        )
     }
 
     private func previousQuestion() {
@@ -3087,126 +3041,6 @@ struct QuestionnaireView: View {
         // Set the splash info and show it
         expansionSplashInfo = infos
         showingExpansionSplash = true
-    }
-}
-
-// MARK: - HealthKit Sleep Card
-
-struct HealthKitSleepCard: View {
-    let summary: HealthKitSleepSummary
-    var theme: ColorTheme = ColorTheme.shared
-
-    // Circadian-aware text colors
-    private var isEvening: Bool {
-        TimePeriod.current == .evening || TimePeriod.current == .night
-    }
-
-    private var primaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
-        } else {
-            return Color.primary
-        }
-    }
-
-    private var secondaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
-        } else {
-            return Color.secondary
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "heart.fill")
-                    .foregroundColor(theme.health)
-                Text("Last Night's Sleep (Apple Health)")
-                    .font(.headline)
-                    .foregroundColor(primaryTextColor)
-                Spacer()
-            }
-
-            HStack(spacing: 20) {
-                // Total sleep
-                VStack {
-                    Image(systemName: "moon.zzz.fill")
-                        .font(.title2)
-                        .foregroundColor(QuestionnaireSection.sleepLog.accentColor)
-                    if let mins = summary.totalSleepMinutes {
-                        Text("\(mins / 60)h \(mins % 60)m")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(primaryTextColor)
-                    }
-                    Text("Total Sleep")
-                        .font(.caption2)
-                        .foregroundColor(secondaryTextColor)
-                }
-                .frame(maxWidth: .infinity)
-
-                // Sleep efficiency
-                VStack {
-                    Image(systemName: "percent")
-                        .font(.title2)
-                        .foregroundColor(theme.success)
-                    if let eff = summary.sleepEfficiency {
-                        Text("\(Int(eff))%")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(primaryTextColor)
-                    }
-                    Text("Efficiency")
-                        .font(.caption2)
-                        .foregroundColor(secondaryTextColor)
-                }
-                .frame(maxWidth: .infinity)
-
-                // Awakenings
-                VStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.title2)
-                        .foregroundColor(theme.warning)
-                    if let count = summary.awakeningsCount {
-                        Text("\(count)")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(primaryTextColor)
-                    }
-                    Text("Awakenings")
-                        .font(.caption2)
-                        .foregroundColor(secondaryTextColor)
-                }
-                .frame(maxWidth: .infinity)
-            }
-
-            // Time range
-            HStack {
-                if let inBed = summary.formattedInBedTime {
-                    Label(inBed, systemImage: "bed.double.fill")
-                        .font(.caption)
-                }
-                Spacer()
-                Image(systemName: "arrow.right")
-                    .font(.caption)
-                    .foregroundColor(secondaryTextColor)
-                Spacer()
-                if let wake = summary.formattedWakeTime {
-                    Label(wake, systemImage: "sun.max.fill")
-                        .font(.caption)
-                }
-            }
-            .foregroundColor(secondaryTextColor)
-
-            Text("Now tell us your subjective experience - how YOU perceived your sleep")
-                .font(.caption)
-                .foregroundColor(QuestionnaireSection.sleepLog.descriptionTextColor)
-                .padding(.top, 4)
-        }
-        .padding(16)
-        .background(QuestionnaireSection.sleepLog.backgroundColor)
-        .cornerRadius(12)
     }
 }
 

@@ -113,8 +113,10 @@
 		703F5C9C034E07725D93854A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B4C412A8BC055DC054F328E /* Foundation.framework */; };
 		78819D6CD1E767284E8A2BD1 /* ProtocolCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3315DDF499A0993F301C5F8F /* ProtocolCardView.swift */; };
 		82ECFA1EB2E727053DA900A4 /* DaySplashLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA328882E23ED40DF40AA050 /* DaySplashLibrary.swift */; };
+		83B775136061980008446B82 /* NavigationGestureControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2A3829066AEEBCC3CAA8C9 /* NavigationGestureControl.swift */; };
 		8920FCD6483EE743FCBA4F03 /* AnswerDerivationSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBBE1CCD02DCDC3C1643F536 /* AnswerDerivationSystem.swift */; };
 		93D3EA4C6429DD6F6C27D6E1 /* ThemeManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B495D2EDDEAA550D2CC113D1 /* ThemeManagerTests.swift */; };
+		9511F2DCFB0702034E224C98 /* ChronotypeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0C97324A7C32C9B9A6B008 /* ChronotypeManager.swift */; };
 		A2E61DC60CC9C77792E05AB7 /* MiddayCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025C43C0F7D4EA449A2B34ED /* MiddayCheckInView.swift */; };
 		ACCEL001012C8E123456789AC1 /* ACCELAlgorithm.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACCEL002012C8E123456789AC2 /* ACCELAlgorithm.swift */; };
 		AEB13F10E2D18979451DBF6E /* HealthKitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037F9206B99764D48FD1C894 /* HealthKitManagerTests.swift */; };
@@ -188,6 +190,7 @@
 		037F9206B99764D48FD1C894 /* HealthKitManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthKitManagerTests.swift; sourceTree = "<group>"; };
 		0693D7D01C2394F0DD9088A7 /* ZoeSleepUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZoeSleepUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C3C75401618BC61F51A395C /* AppVersion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
+		1C0C97324A7C32C9B9A6B008 /* ChronotypeManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChronotypeManager.swift; path = ../ZoeSleep/Managers/ChronotypeManager.swift; sourceTree = "<group>"; };
 		2088C6077EF6174DFEF37292 /* MyDataView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MyDataView.swift; sourceTree = "<group>"; };
 		300B6C4CE88E58106B1C0325 /* DaySplashInfo.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DaySplashInfo.swift; sourceTree = "<group>"; };
 		3315DDF499A0993F301C5F8F /* ProtocolCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProtocolCardView.swift; path = Views/PostIntake/ProtocolCardView.swift; sourceTree = "<group>"; };
@@ -302,6 +305,7 @@
 		ACCEL002012C8E123456789AC2 /* ACCELAlgorithm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACCELAlgorithm.swift; sourceTree = "<group>"; };
 		B495D2EDDEAA550D2CC113D1 /* ThemeManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThemeManagerTests.swift; sourceTree = "<group>"; };
 		B6780971900FE9C52E85727D /* WatchDayInvitationCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDayInvitationCard.swift; sourceTree = "<group>"; };
+		BB2A3829066AEEBCC3CAA8C9 /* NavigationGestureControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NavigationGestureControl.swift; sourceTree = "<group>"; };
 		C97DBCA01C582571D7064E4A /* CheckInManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CheckInManager.swift; path = Managers/CheckInManager.swift; sourceTree = "<group>"; };
 		CA328882E23ED40DF40AA050 /* DaySplashLibrary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DaySplashLibrary.swift; sourceTree = "<group>"; };
 		CBBE1CCD02DCDC3C1643F536 /* AnswerDerivationSystem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnswerDerivationSystem.swift; path = ../Models/AnswerDerivationSystem.swift; sourceTree = "<group>"; };
@@ -692,6 +696,7 @@
 			children = (
 				5A316CD32EF4B12E0098C762 /* HapticFeedback.swift */,
 				TFMGR002ED24841599CCADD2 /* TimeFormatManager.swift */,
+				BB2A3829066AEEBCC3CAA8C9 /* NavigationGestureControl.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -726,6 +731,7 @@
 			isa = PBXGroup;
 			children = (
 				C97DBCA01C582571D7064E4A /* CheckInManager.swift */,
+				1C0C97324A7C32C9B9A6B008 /* ChronotypeManager.swift */,
 			);
 			name = Managers;
 			sourceTree = "<group>";
@@ -1019,6 +1025,8 @@
 				DF2B81891BB67E4F199DB32C /* FirstTimeGuideView.swift in Sources */,
 				37945B955A98D24C09A986CA /* AppVersion.swift in Sources */,
 				5A85FD2514F4F2608B0DB3B9 /* CoachMarkView.swift in Sources */,
+				9511F2DCFB0702034E224C98 /* ChronotypeManager.swift in Sources */,
+				83B775136061980008446B82 /* NavigationGestureControl.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -39,9 +39,9 @@ struct WatchSettingsView: View {
                     Spacer()
                     Circle()
                         .fill(themeManager.accentColor)
-                        .frame(width: 20, height: 20)
+                        .frame(width: 24, height: 24)
                     Text(themeManager.accentColorOption.rawValue)
-                        .font(.caption)
+                        .font(.system(size: watchSize.captionFontSize))
                         .foregroundColor(.secondary)
                 }
 
@@ -50,12 +50,12 @@ struct WatchSettingsView: View {
                     Label("Theme", systemImage: "circle.lefthalf.filled")
                     Spacer()
                     Text(themeManager.appearanceMode.rawValue)
-                        .font(.caption)
+                        .font(.system(size: watchSize.captionFontSize))
                         .foregroundColor(.secondary)
                 }
 
-                Text("Change theme on iPhone")
-                    .font(.caption2)
+                Text("Change on iPhone")
+                    .font(.system(size: watchSize.captionFontSize))
                     .foregroundColor(.secondary)
             }
 
@@ -90,11 +90,11 @@ struct WatchSettingsView: View {
                             Spacer()
                             if convexService.isAuthenticated {
                                 Text("Day \(convexService.currentDay)")
-                                    .font(.caption2)
+                                    .font(.system(size: watchSize.captionFontSize))
                                     .foregroundColor(.secondary)
                             } else {
                                 Text("Not logged in")
-                                    .font(.caption2)
+                                    .font(.system(size: watchSize.captionFontSize))
                                     .foregroundColor(.orange)
                             }
                         }
@@ -114,12 +114,12 @@ struct WatchSettingsView: View {
                     }
 
                     Text("Use same account on iPhone")
-                        .font(.caption2)
+                        .font(.system(size: watchSize.captionFontSize))
                         .foregroundColor(.secondary)
 
                     if let error = loginError {
                         Text(error)
-                            .font(.caption2)
+                            .font(.system(size: watchSize.captionFontSize))
                             .foregroundColor(.red)
                             .lineLimit(3)
                     }
@@ -130,7 +130,7 @@ struct WatchSettingsView: View {
                         Text(convexService.username ?? "Unknown")
                             .foregroundColor(.secondary)
                     }
-                    .font(.caption)
+                    .font(.system(size: watchSize.captionFontSize))
                 }
             }
 
@@ -152,7 +152,7 @@ struct WatchSettingsView: View {
                                 .foregroundColor(.orange)
                             Spacer()
                             Text("Day \(currentDay)")
-                                .font(.caption2)
+                                .font(.system(size: watchSize.captionFontSize))
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -403,69 +403,88 @@ enum WatchSizeDetector {
         }
     }
 
-    // MARK: - Adaptive Sizing
+    // MARK: - Adaptive Sizing (Optimized for elderly users - larger minimums)
 
     var buttonHeight: CGFloat {
         switch self {
-        case .ultra49mm: return 60
-        case .large45mm, .large44mm: return 54
-        case .medium41mm: return 48
-        case .small40mm: return 44
+        case .ultra49mm: return 66
+        case .large45mm, .large44mm: return 60
+        case .medium41mm: return 56
+        case .small40mm: return 52
         }
     }
 
     var fontSize: CGFloat {
         switch self {
-        case .ultra49mm: return 18
-        case .large45mm, .large44mm: return 16
-        default: return 15
+        case .ultra49mm: return 20
+        case .large45mm, .large44mm: return 18
+        default: return 17
         }
     }
 
     var titleFontSize: CGFloat {
         switch self {
-        case .ultra49mm: return 22
-        case .large45mm, .large44mm: return 20
-        default: return 18
+        case .ultra49mm: return 26
+        case .large45mm, .large44mm: return 24
+        default: return 22
         }
     }
 
     var gridColumns: Int {
+        // Fewer columns = bigger buttons
         switch self {
-        case .ultra49mm: return 5
-        default: return 4
+        case .ultra49mm: return 4
+        default: return 3
         }
     }
 
     var maxVisibleOptions: Int {
         switch self {
-        case .ultra49mm: return 4
-        case .large45mm, .large44mm: return 3
-        default: return 3
+        case .ultra49mm: return 3
+        case .large45mm, .large44mm: return 2
+        default: return 2
         }
     }
 
     var rowHeight: CGFloat {
         switch self {
-        case .ultra49mm: return 56
-        case .large45mm, .large44mm: return 50
-        default: return 44
+        case .ultra49mm: return 64
+        case .large45mm, .large44mm: return 58
+        default: return 54
         }
     }
 
     var timeDisplayFontSize: CGFloat {
         switch self {
-        case .ultra49mm: return 28
-        case .large45mm, .large44mm: return 24
-        default: return 20
+        case .ultra49mm: return 36
+        case .large45mm, .large44mm: return 32
+        default: return 28
         }
     }
 
     var scaleValueFontSize: CGFloat {
         switch self {
-        case .ultra49mm: return 32
-        case .large45mm, .large44mm: return 28
-        default: return 24
+        case .ultra49mm: return 42
+        case .large45mm, .large44mm: return 38
+        default: return 34
+        }
+    }
+
+    // Navigation button size (minimum 44pt for accessibility)
+    var navButtonSize: CGFloat {
+        switch self {
+        case .ultra49mm: return 52
+        case .large45mm, .large44mm: return 48
+        default: return 44
+        }
+    }
+
+    // Caption font size (larger for readability)
+    var captionFontSize: CGFloat {
+        switch self {
+        case .ultra49mm: return 16
+        case .large45mm, .large44mm: return 14
+        default: return 13
         }
     }
 }

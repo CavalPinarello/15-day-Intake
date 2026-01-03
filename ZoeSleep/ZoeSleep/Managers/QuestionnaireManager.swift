@@ -662,9 +662,18 @@ class QuestionnaireManager: ObservableObject {
                 isGateway: true,
                 gatewayType: .osa
             ),
-            // Note: Q21 removed - redundant with Q17 (Day 3 gateway)
-            // Q17 asks the same thing with a 5-point scale, Q21 was just yes/no
-            // SB_2 derivation now uses Q17 instead
+            Question(
+                id: "21",
+                text: "What is your neck circumference?",
+                pillar: .physical,
+                questionType: .scale,
+                minValue: 30,
+                maxValue: 55,
+                step: 0.5,
+                unit: "cm",
+                defaultValue: 38,
+                helpText: "This is typically your dress shirt collar size. Measure around your neck at the Adam's apple level."
+            ),
             Question(
                 id: "22",
                 text: "Do you experience pain that affects your sleep?",
@@ -1238,11 +1247,15 @@ class QuestionnaireManager: ObservableObject {
 
             if shouldShowExpansion {
                 // Add expansion questions for triggered modules
+                var expansionQuestions: [Question] = []
                 for moduleId in config.moduleIds {
                     if let moduleQuestions = Self.expansionQuestionsByModule[moduleId] {
-                        questions.append(contentsOf: moduleQuestions)
+                        expansionQuestions.append(contentsOf: moduleQuestions)
                     }
                 }
+                // Filter out redundant questions that can be derived from profile or core assessment
+                let filteredExpansion = filterRedundantExpansionQuestions(expansionQuestions)
+                questions.append(contentsOf: filteredExpansion)
             }
             // NOTE: We no longer add INFO_NO_EXPANSION placeholder when no expansion is triggered.
             // The iOS client properly handles empty assessments by not showing the "Proceed to Assessment" button.
@@ -1800,6 +1813,12 @@ class QuestionnaireManager: ObservableObject {
             case "SB_6":
                 // "Age > 50?" - we have birth year from onboarding
                 return false
+            case "SB_4":
+                // "Have or treated for high blood Pressure?" - already asked as Question 27 on Day 4
+                return responses["27"] != nil
+            case "SB_7":
+                // "Neck circumference > 40cm?" - we have the measurement from Question 21 on Day 4
+                return responses["21"] != nil
             case "SB_8":
                 // "Gender = Male?" - we have sex from onboarding
                 return false
