@@ -6,6 +6,38 @@
 
 ### Jan 3, 2026
 
+#### Simplified Onboarding Flow
+
+Removed the Sleep Philosophy step from onboarding to streamline the user experience.
+
+**Changes:**
+- Removed `SleepPhilosophyStepView` and `PhilosophyCard` components from OnboardingView
+- Removed `.sleepPhilosophy` case from `OnboardingStep` enum
+- Updated step numbering: `ready` is now step 6 (was 7)
+- Flow now goes: Welcome → Name → Goals → Health Permissions → Wearables → Ready
+
+**Why:**
+- Philosophy content can be communicated elsewhere in the app
+- Shorter onboarding improves completion rates
+- Less friction to start the 14-day journey
+
+**Files changed:** `OnboardingView.swift`, `OnboardingManager.swift`
+
+---
+
+#### Analysis Pending Screen Polish (Day 14+)
+
+Cleaned up the AnalysisPendingView screen shown after completing the 14-day intake.
+
+**Changes:**
+- Hidden "My Data" back button (top left) - feature not ready for release
+- Changed profile icon from generic person silhouette to user's initial in a circle
+- Now matches the profile button style used throughout the rest of the app
+
+**Files changed:** `AnalysisPendingView.swift`
+
+---
+
 #### Fix Day Advancement Bug for Expansion Days Without Assessments
 
 Fixed critical bug where users couldn't advance to the next day when the current expansion day had no assessments scheduled for their triggered gateways.

@@ -89,8 +89,7 @@ enum OnboardingStep: Int, CaseIterable {
     case heightWeight = 3       // Skipped entirely if HealthKit provides data
     case genderAge = 4          // Skipped if HealthKit provides data
     case wearables = 5
-    case sleepPhilosophy = 6
-    case ready = 7
+    case ready = 6
 
     var title: String {
         switch self {
@@ -100,7 +99,6 @@ enum OnboardingStep: Int, CaseIterable {
         case .heightWeight: return "Body Metrics"
         case .genderAge: return "About You"
         case .wearables: return "Devices"
-        case .sleepPhilosophy: return "Our Approach"
         case .ready: return "Ready"
         }
     }
@@ -536,8 +534,6 @@ class OnboardingManager: ObservableObject {
             return true // Optional step
         case .healthConnect:
             return true // Optional step
-        case .sleepPhilosophy:
-            return true
         case .ready:
             return true
         }

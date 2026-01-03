@@ -56,9 +56,6 @@ struct OnboardingView: View {
                         WearablesStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.wearables)
 
-                        SleepPhilosophyStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
-                            .tag(OnboardingStep.sleepPhilosophy)
-
                         ReadyStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.ready)
                     }
@@ -1310,116 +1307,6 @@ struct HealthBenefitRow: View {
     }
 }
 
-// MARK: - Sleep Philosophy Step (Compact Cards)
-
-struct SleepPhilosophyStepView: View {
-    @ObservedObject var onboardingManager: OnboardingManager
-    let screenHeight: CGFloat
-
-    private var isCompact: Bool { screenHeight < 700 }
-    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
-
-    var body: some View {
-        VStack(spacing: isCompact ? 10 : 14) {
-            Spacer(minLength: isCompact ? 16 : 30)
-
-            // Icon & Title
-            VStack(spacing: 4) {
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: isCompact ? 28 : 36))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [palette.accent, palette.wave],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-
-                Text("Our Philosophy")
-                    .font(isCompact ? .title3.bold() : .title2.bold())
-                    .foregroundColor(palette.textPrimary)
-            }
-
-            // Philosophy cards (compact)
-            VStack(spacing: 8) {
-                PhilosophyCard(
-                    icon: "moon.stars.fill",
-                    title: "How You Feel",
-                    description: "Your subjective sleep experience matters",
-                    color: palette.isDark ? palette.accent : Color(hex: "#6C5CE7")!,
-                    isCompact: isCompact
-                )
-
-                PhilosophyCard(
-                    icon: "waveform.path.ecg",
-                    title: "What Happened",
-                    description: "Wearable data shows objective truth",
-                    color: palette.wave,
-                    isCompact: isCompact
-                )
-
-                PhilosophyCard(
-                    icon: "sparkles",
-                    title: "The Gap Between",
-                    description: "We bridge perception and reality",
-                    color: palette.accent,
-                    isCompact: isCompact
-                )
-            }
-            .padding(.horizontal, 16)
-
-            Spacer()
-
-            // Navigation
-            OnboardingNavigationButtons(
-                onboardingManager: onboardingManager,
-                showBack: true
-            )
-            .padding(.horizontal, 20)
-            .padding(.bottom, isCompact ? 24 : 32)
-        }
-    }
-}
-
-struct PhilosophyCard: View {
-    let icon: String
-    let title: String
-    let description: String
-    let color: Color
-    var isCompact: Bool = false
-
-    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(isCompact ? .subheadline : .body)
-                .foregroundColor(color)
-                .frame(width: 28)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(palette.textPrimary)
-
-                Text(description)
-                    .font(.caption2)
-                    .foregroundColor(palette.textSecondary)
-                    .lineLimit(2)
-            }
-
-            Spacer()
-        }
-        .padding(isCompact ? 10 : 12)
-        .background(color.opacity(0.08))
-        .cornerRadius(10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(color.opacity(0.2), lineWidth: 1)
-        )
-    }
-}
-
 // MARK: - Ready Step (Compact Celebration)
 
 struct ReadyStepView: View {
@@ -1474,6 +1361,22 @@ struct ReadyStepView: View {
                     .foregroundColor(palette.textSecondary)
                     .multilineTextAlignment(.center)
             }
+
+            // Philosophy message (compact)
+            HStack(spacing: 10) {
+                Image(systemName: "brain.head.profile")
+                    .font(.body)
+                    .foregroundColor(palette.accent)
+
+                Text("We bridge how you feel and what your data shows")
+                    .font(.caption)
+                    .foregroundColor(palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(10)
+            .background(palette.accent.opacity(0.08))
+            .cornerRadius(8)
+            .padding(.horizontal, 20)
 
             // Summary (compact)
             VStack(spacing: 8) {
