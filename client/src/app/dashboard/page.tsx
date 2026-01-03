@@ -57,15 +57,10 @@ const dayConfigurations: Record<number, { title: string; description: string; es
   4: { title: "Physical & Metabolic Health", description: "Health factors affecting sleep", estimatedMinutes: 9 },
   5: { title: "Nutritional & Social Factors", description: "Lifestyle influences on sleep", estimatedMinutes: 7 },
   6: { title: "Personalized Assessment", description: "Based on your responses", estimatedMinutes: 15 },
-  7: { title: "Personalized Assessment", description: "Continuing your journey", estimatedMinutes: 12 },
-  8: { title: "Personalized Assessment", description: "Deep dive into sleep patterns", estimatedMinutes: 10 },
-  9: { title: "Personalized Assessment", description: "Understanding triggers", estimatedMinutes: 11 },
-  10: { title: "Personalized Assessment", description: "Behavioral patterns", estimatedMinutes: 9 },
-  11: { title: "Personalized Assessment", description: "Environmental factors", estimatedMinutes: 8 },
-  12: { title: "Personalized Assessment", description: "Stress and anxiety", estimatedMinutes: 10 },
-  13: { title: "Personalized Assessment", description: "Physical symptoms", estimatedMinutes: 9 },
-  14: { title: "Personalized Assessment", description: "Final assessments", estimatedMinutes: 11 },
-  15: { title: "Journey Completion", description: "Final review and recommendations", estimatedMinutes: 7 },
+  7: { title: "Mental Health & Arousal", description: "Depression, anxiety, and pre-sleep arousal", estimatedMinutes: 9 },
+  8: { title: "Breathing & Energy", description: "Sleep apnea screening and daytime sleepiness", estimatedMinutes: 7 },
+  9: { title: "Function & Behavior", description: "Sleep habits, pain, and functional outcomes", estimatedMinutes: 9 },
+  10: { title: "Lifestyle & Rhythm", description: "Cognitive function, diet, and chronotype", estimatedMinutes: 11 },
 };
 
 // Gateway display names
@@ -86,7 +81,7 @@ export default function DashboardPage() {
   const [journeyProgress, setJourneyProgress] = useState<JourneyProgress>({
     currentDay: 1,
     completedDays: [],
-    totalDays: 14,
+    totalDays: 10,
     phase: 'core',
     triggeredGateways: [],
   });
@@ -205,7 +200,7 @@ export default function DashboardPage() {
         {/* Journey Progress Card */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">14-Day Sleep Journey</h2>
+            <h2 className="text-lg font-semibold text-gray-900">10-Day Sleep Journey</h2>
             <span className="text-sm text-gray-500">
               Day {journeyProgress.currentDay} of {journeyProgress.totalDays}
             </span>
@@ -244,7 +239,7 @@ export default function DashboardPage() {
             {/* Day Dots */}
             <div className="flex-1">
               <div className="flex flex-wrap gap-1.5">
-                {Array.from({ length: 15 }, (_, i) => i + 1).map((day) => (
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((day) => (
                   <div
                     key={day}
                     className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
@@ -431,7 +426,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold">View Full Journey</h3>
-              <p className="text-sm text-white/80">See all 14 days and your progress</p>
+              <p className="text-sm text-white/80">See all 10 days and your progress</p>
             </div>
             <ChevronRight className="w-6 h-6" />
           </div>

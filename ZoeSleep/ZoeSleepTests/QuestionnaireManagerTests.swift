@@ -63,7 +63,7 @@ final class QuestionnaireManagerTests: XCTestCase {
 
     func testDayConfigurationsExist() {
         let configs = QuestionnaireManager.dayConfigurations
-        XCTAssertEqual(configs.count, 14, "Should have 14 day configurations")
+        XCTAssertEqual(configs.count, 10, "Should have 10 day configurations")
     }
 
     func testDayConfiguration_Day1() {
@@ -92,8 +92,8 @@ final class QuestionnaireManagerTests: XCTestCase {
 
     func testDayConfiguration_ExpansionDays() {
         let configs = QuestionnaireManager.dayConfigurations
-        // Journey is now 14 days (updated Dec 21, 2025)
-        for day in 6...14 {
+        // Journey is now 10 days (updated Jan 3, 2026)
+        for day in 6...10 {
             guard let config = configs.first(where: { $0.dayNumber == day }) else {
                 XCTFail("Day \(day) configuration should exist")
                 continue

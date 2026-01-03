@@ -1,10 +1,10 @@
-# Zoe Sleep V1 - 14-Day Intake Journey
+# Zoe Sleep V1 - 10-Day Intake Journey
 
 ## Project Overview
 
-This is a sleep coaching platform implementing a 14-day intake journey with **iOS and watchOS as the primary user-facing applications**:
+This is a sleep coaching platform implementing a 10-day intake journey with **iOS and watchOS as the primary user-facing applications**:
 
-- **iOS Application** (PRIMARY): Main user-facing app for the 14-day intake journey
+- **iOS Application** (PRIMARY): Main user-facing app for the 10-day intake journey
 - **Apple Watch Application**: Companion app with watch-optimized questionnaire experience
 - **Web Application** (DEV/DEBUG ONLY): Used for debugging questionnaires and development testing
 - **Convex Backend**: Serverless backend providing real-time data synchronization
@@ -14,7 +14,7 @@ This is a sleep coaching platform implementing a 14-day intake journey with **iO
 ## Features
 
 ### iOS & Apple Watch Applications
-- ✅ **14-Day Adaptive Questionnaire**: Smart gateway logic adapts questions based on responses
+- ✅ **10-Day Adaptive Questionnaire**: Smart gateway logic adapts questions based on responses
 - ✅ **Stanford Sleep Log**: Daily subjective sleep perception tracking
 - ✅ **Gateway System**: 10 gateway types trigger personalized expansion assessments
 - ✅ **Clinical Instruments**: ISI, DBAS-16, ESS, PHQ-9, GAD-7, STOP-BANG, Berlin, MEDAS, MEQ
@@ -186,7 +186,7 @@ open ZoeSleep/ZoeSleep.xcodeproj
 
 The Convex backend includes the following tables:
 - `users` - User accounts and authentication
-- `days` - 14-day intake journey structure
+- `days` - 10-day intake journey structure
 - `assessment_questions` - Questions for each day (optimized for iOS/watchOS)
 - `user_assessment_responses` - User responses from iOS and Apple Watch
 - `user_sleep_data` - HealthKit sleep data from iOS and watchOS
@@ -258,7 +258,7 @@ docs/
 
 ```
 ├── client/            # Next.js web application (physician dashboard)
-├── ios/               # iOS application files (14-day intake journey)
+├── ios/               # iOS application files (10-day intake journey)
 │   ├── Config.swift           # API endpoints and configuration
 │   ├── HealthKitManager.swift # HealthKit integration for iOS
 │   ├── AuthenticationManager.swift # Authentication handling
@@ -297,7 +297,7 @@ docs/
 ## Development Notes
 
 **Platform-Specific Implementation:**
-- **iOS App** (PRIMARY): Main user-facing app - comprehensive 14-day intake journey with full UI and HealthKit integration
+- **iOS App** (PRIMARY): Main user-facing app - comprehensive 10-day intake journey with full UI and HealthKit integration
 - **Apple Watch App**: Companion questionnaire interface with quick interactions and physician recommendations
 - **Cross-device Sync**: WatchConnectivity ensures seamless experience between iPhone and Watch
 - **Web App** (DEV ONLY): For debugging questionnaires and development testing - NOT for end users

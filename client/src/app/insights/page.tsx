@@ -201,7 +201,7 @@ export default function InsightsPage() {
 
     // Journey progress insights
     if (progress) {
-      const completionRate = (progress.completedDays.length / 15) * 100;
+      const completionRate = (progress.completedDays.length / 10) * 100;
 
       if (completionRate >= 30 && completionRate < 100) {
         newInsights.push({
@@ -209,7 +209,7 @@ export default function InsightsPage() {
           type: 'neutral',
           category: 'Journey Progress',
           title: `${Math.round(completionRate)}% Complete`,
-          description: `You've completed ${progress.completedDays.length} of 14 days. ${progress.phase === 'expansion' ? 'You\'re now in the personalized assessment phase!' : 'Keep going!'}`,
+          description: `You've completed ${progress.completedDays.length} of 10 days. ${progress.phase === 'expansion' ? 'You\'re now in the personalized assessment phase!' : 'Keep going!'}`,
           metric: `Day ${progress.currentDay}`,
           icon: Target,
           color: 'blue'
@@ -321,7 +321,7 @@ export default function InsightsPage() {
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">
-                  {journeyProgress ? `${Math.round((journeyProgress.completedDays.length / 15) * 100)}%` : '0%'}
+                  {journeyProgress ? `${Math.round((journeyProgress.completedDays.length / 10) * 100)}%` : '0%'}
                 </div>
                 <p className="text-sm text-white/80">Journey</p>
               </div>
@@ -426,7 +426,7 @@ export default function InsightsPage() {
         )}
 
         {/* CTA to continue journey */}
-        {journeyProgress && journeyProgress.currentDay <= 15 && (
+        {journeyProgress && journeyProgress.currentDay <= 10 && (
           <Link
             href="/journey"
             className="block bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl p-4 text-white hover:opacity-90 transition-opacity"

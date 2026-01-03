@@ -62,7 +62,7 @@ enum GuideLibrary {
             .init(icon: "brain.head.profile", text: "Capture how refreshed you feel each day"),
             .init(icon: "stethoscope", text: "These are the same questions used in sleep clinics worldwide")
         ],
-        footer: "After 14 days, you'll have a clinical-grade baseline of your sleep patterns."
+        footer: "After 10 days, you'll have a clinical-grade baseline of your sleep patterns."
     )
 
     // MARK: - Assessment Guide
@@ -121,7 +121,7 @@ enum GuideLibrary {
         title: "Your Sleep Dashboard",
         headline: "This is your command center for understanding and improving your sleep.",
         bulletPoints: [
-            .init(icon: "calendar", text: "Track your daily progress through the 14-day journey"),
+            .init(icon: "calendar", text: "Track your daily progress through the 10-day journey"),
             .init(icon: "chart.pie.fill", text: "See your sleep health across multiple pillars"),
             .init(icon: "leaf.fill", text: "Watch your sleep garden grow with each completion"),
             .init(icon: "bell.badge.fill", text: "Get reminders to stay on track")
@@ -142,7 +142,7 @@ enum GuideLibrary {
             .init(icon: "slider.horizontal.3", text: "Fully customizable timing and frequency"),
             .init(icon: "bell.slash.fill", text: "Easy to turn off anytime in Settings")
         ],
-        footer: "Notifications help most users stay consistent during the 14-day calibration."
+        footer: "Notifications help most users stay consistent during the 10-day calibration."
     )
 
     // MARK: - Sleep Science Cards Guide

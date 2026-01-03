@@ -21,7 +21,7 @@ class TimeTravelManager: ObservableObject {
     @Published var isTimeTravelActive: Bool = false
     @Published var isTestData: Bool = false
     @Published var simulatedDate: Date = Date()      // "Today" in the simulation
-    @Published var currentDay: Int = 1               // Journey day (1-14)
+    @Published var currentDay: Int = 1               // Journey day (1-10)
     @Published var dayCompleted: Bool = false        // Whether current day is done
     @Published var isLoading: Bool = false
     @Published var error: String?
@@ -45,10 +45,10 @@ class TimeTravelManager: ObservableObject {
     /// Whether we can advance to the next day
     /// - Must be in Time Travel mode
     /// - Next simulated date must not exceed today's real date
-    /// - Must not be past Day 14
+    /// - Must not be past Day 10
     var canAdvanceToNextDay: Bool {
         guard isTimeTravelActive else { return false }
-        guard currentDay < 14 else { return false }
+        guard currentDay < 10 else { return false }
 
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: simulatedDate) ?? simulatedDate
         return tomorrow <= Date()
@@ -63,7 +63,7 @@ class TimeTravelManager: ObservableObject {
     /// Why the advance button is disabled (for UI)
     var advanceDisabledReason: String? {
         guard isTimeTravelActive else { return nil }
-        if currentDay >= 14 { return "Journey Complete" }
+        if currentDay >= 10 { return "Journey Complete" }
         if !canAdvanceToNextDay { return "At today's date" }
         return nil
     }
@@ -85,9 +85,9 @@ class TimeTravelManager: ObservableObject {
         return formatter.string(from: simulatedDate)
     }
 
-    /// Whether the journey is complete (Day 14)
+    /// Whether the journey is complete (Day 10)
     var journeyComplete: Bool {
-        currentDay >= 14
+        currentDay >= 10
     }
 
     // MARK: - Persistence

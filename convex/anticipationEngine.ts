@@ -5,7 +5,7 @@
  * Provides:
  * - Tonight's sleep forecast based on patterns
  * - Day-of-week predictions (Sunday anxiety, etc.)
- * - Lifecycle-aware messaging (Day 1-7 vs Day 8-14 vs treatment)
+ * - Lifecycle-aware messaging (Day 1-5 vs Day 6-10 vs treatment)
  * - Early warning for challenging nights
  */
 
@@ -492,8 +492,8 @@ export const getLifecycleMessage = query({
       };
     }
 
-    // Day 8-14: Insights unlocking
-    if (currentDay <= 14) {
+    // Day 6-10: Insights unlocking
+    if (currentDay <= 10) {
       return {
         phase: "insights",
         title: "Your Sleep Fingerprint",
@@ -503,7 +503,7 @@ export const getLifecycleMessage = query({
       };
     }
 
-    // Day 14+: Treatment phase
+    // Day 10+: Treatment phase
     if (phase === "treatment_active") {
       return {
         phase: "treatment",

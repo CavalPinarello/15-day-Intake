@@ -417,11 +417,11 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         }
       }
       if (pillar === "sleepLog") {
-        // Sleep log completion based on 14-day journey (not current day)
-        const TOTAL_JOURNEY_DAYS = 14;
+        // Sleep log completion based on 10-day journey (not current day)
+        const TOTAL_JOURNEY_DAYS = 10;
         score = patient.completedDays > 0 ? Math.round((patient.completedDays / TOTAL_JOURNEY_DAYS) * 100) : 0;
         questionsAnswered = patient.completedDays * 5; // 5 questions per day
-        questionsTotal = TOTAL_JOURNEY_DAYS * 5; // Full 14-day journey
+        questionsTotal = TOTAL_JOURNEY_DAYS * 5; // Full 10-day journey
       }
       // Only use healthSummary for sleep quantity if there's real wearable data
       if (pillar === "sleepQuantity" && healthSummary?.hasHealthKitData && healthSummary?.summary?.avgSleepHours) {
@@ -498,10 +498,10 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
   const hasHealthKitData = healthSummary?.hasHealthKitData || false;
 
   // Calculate REAL compliance using actual question counts
-  // Sleep Log: based on 14-day journey (days with sleep log complete / 14)
+  // Sleep Log: based on 10-day journey (days with sleep log complete / 10)
   // Assessment: based on pillar questions answered / expected questions
   const actualComplianceData = useMemo(() => {
-    const TOTAL_JOURNEY_DAYS = 14;
+    const TOTAL_JOURNEY_DAYS = 10;
 
     // Calculate assessment rate from pillarStats (actual questions answered vs expected)
     let assessmentQuestionsAnswered = 0;
@@ -576,7 +576,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
           icon={<Calendar className="w-5 h-5" />}
           label="Journey Progress"
           value={`Day ${patient.user.current_day}`}
-          subValue="of 14"
+          subValue="of 10"
           color="blue"
         />
         <StatCard
@@ -619,7 +619,7 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
             </div>
             <div>
               <h3 className="text-sm font-medium text-white">Sleep Quality Trend</h3>
-              <p className="text-xs text-gray-500">14-day overview</p>
+              <p className="text-xs text-gray-500">10-day overview</p>
             </div>
           </div>
           {sleepTrendData.length > 0 ? (

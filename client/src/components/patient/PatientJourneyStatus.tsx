@@ -46,7 +46,7 @@ const phaseConfig = {
 };
 
 const stageConfig = [
-  { id: 1, title: "Data collected", icon: CheckCircle2, description: "14 days of sleep data ready" },
+  { id: 1, title: "Data collected", icon: CheckCircle2, description: "10 days of sleep data ready" },
   { id: 2, title: "Patterns identified", icon: Search, description: "Reviewing sleep patterns" },
   { id: 3, title: "Recommendations preparing", icon: FileText, description: "Creating treatment plan" },
   { id: 4, title: "Treatment plan ready!", icon: Star, description: "Ready for patient" },
@@ -234,7 +234,7 @@ export function PatientJourneyStatus({ userId }: PatientJourneyStatusProps) {
           <div className="flex items-start gap-2">
             <Calendar className="w-4 h-4 text-blue-400 mt-0.5" />
             <div>
-              <p className="text-sm text-blue-400 font-medium">14-Day Data Collection</p>
+              <p className="text-sm text-blue-400 font-medium">10-Day Data Collection</p>
               <p className="text-xs text-gray-400 mt-1">
                 Patient is currently completing daily sleep logs and questionnaires.
               </p>

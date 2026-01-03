@@ -699,7 +699,7 @@ export const saveGatewayState = mutation({
     }
 
     // When a gateway is triggered, recompute the expansion schedule
-    // This ensures expansion packs are properly scheduled for Days 6-14
+    // This ensures expansion packs are properly scheduled for Days 6-10
     if (args.triggered) {
       await ctx.scheduler.runAfter(0, api.expansionScheduler.computeAndStoreSchedule, {
         userId: args.userId,

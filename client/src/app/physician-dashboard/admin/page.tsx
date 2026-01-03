@@ -93,7 +93,7 @@ export default function AdminToolsPage() {
   // Mock Data Simulation state
   const [mockDataUserId, setMockDataUserId] = useState<string | null>(null);
   const [mockDataPattern, setMockDataPattern] = useState<string>("normal");
-  const [mockDataDays, setMockDataDays] = useState<number>(14);
+  const [mockDataDays, setMockDataDays] = useState<number>(10);
   const [isGeneratingMock, setIsGeneratingMock] = useState(false);
 
   // Queries
@@ -1194,7 +1194,7 @@ export default function AdminToolsPage() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 truncate">
-                        {user.email || "No email"} · Day {user.current_day}/14 · {user.responseCount} responses
+                        {user.email || "No email"} · Day {user.current_day}/10 · {user.responseCount} responses
                       </p>
                     </div>
 

@@ -102,7 +102,7 @@ export const getCommunityStats = query({
     ).length;
 
     const journeysCompleted = allStreaks.filter(
-      (s) => s.total_days_completed >= 14
+      (s) => s.total_days_completed >= 10
     ).length;
 
     const avgStreak = allStreaks.length > 0

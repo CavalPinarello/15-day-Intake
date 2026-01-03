@@ -6,28 +6,45 @@
 
 ### Jan 3, 2026
 
-#### Simplified Onboarding Flow
+#### Shortened Journey from 14 Days to 10 Days
 
-Removed the Sleep Philosophy step from onboarding to streamline the user experience.
+Major change to reduce user fatigue and accelerate launch timeline. The intake journey is now 10 days instead of 14 days.
+
+**New 10-Day Schedule:**
+- **Days 1-5 (Core Assessment):** Unchanged - Demographics, Sleep Quality, Mind & Mood, Body & Health, Daily Habits
+- **Day 6 (Insomnia Assessment):** ISI + SWDSQ + DBAS (17 questions, ~5 min)
+- **Day 7 (Mental Health & Arousal):** PHQ-9 + GAD-7 + PSAS (32 questions, ~9 min)
+- **Day 8 (Breathing & Energy):** STOP-BANG + ESS + FSS (25 questions, ~7 min)
+- **Day 9 (Function & Behavior):** Sleep Hygiene + BPI Part 1 & 2 + FOSQ (33 questions, ~9 min)
+- **Day 10 (Lifestyle & Rhythm):** PROMIS + MEDAS + MEQ (39 questions, ~11 min)
+
+**Files changed:** All platforms - Convex backend (11 files), iOS app (8 files), Web client (10 files), Documentation (4 files)
+
+---
+
+#### Onboarding UX Improvements
+
+Multiple improvements to onboarding flow for better usability.
 
 **Changes:**
-- Removed `SleepPhilosophyStepView` and `PhilosophyCard` components from OnboardingView
-- Removed `.sleepPhilosophy` case from `OnboardingStep` enum
-- Updated step numbering: `ready` is now step 6 (was 7)
+- Removed floating magnifying glass (Enhanced Readability button) from all onboarding screens - unnecessary visual clutter
+- Replaced small text-based "Continue" and "Back" buttons on HealthKit connection screen with visible styled buttons using `OnboardingNavigationButtons` component
+- Removed Sleep Philosophy step from onboarding flow
 - Flow now goes: Welcome → Name → Goals → Health Permissions → Wearables → Ready
 
 **Why:**
+- Enhanced Readability feature still accessible via Settings, not needed on every screen
+- Larger, styled navigation buttons are more intuitive and easier to tap
 - Philosophy content can be communicated elsewhere in the app
 - Shorter onboarding improves completion rates
-- Less friction to start the 14-day journey
 
 **Files changed:** `OnboardingView.swift`, `OnboardingManager.swift`
 
 ---
 
-#### Analysis Pending Screen Polish (Day 14+)
+#### Analysis Pending Screen Polish (Day 10+)
 
-Cleaned up the AnalysisPendingView screen shown after completing the 14-day intake.
+Cleaned up the AnalysisPendingView screen shown after completing the 10-day intake.
 
 **Changes:**
 - Hidden "My Data" back button (top left) - feature not ready for release

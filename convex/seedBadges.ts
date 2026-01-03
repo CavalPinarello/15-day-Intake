@@ -79,11 +79,11 @@ const BADGE_DEFINITIONS = [
   {
     badge_id: "journey_master",
     name: "Journey Master",
-    description: "Complete all 14 days of the sleep journey",
+    description: "Complete all 10 days of the sleep journey",
     category: "journey",
     icon: "🏆",
     unlock_type: "day_complete",
-    unlock_threshold: 14,
+    unlock_threshold: 10,
     xp_reward: 500,
     rarity: "legendary",
     order_index: 6,

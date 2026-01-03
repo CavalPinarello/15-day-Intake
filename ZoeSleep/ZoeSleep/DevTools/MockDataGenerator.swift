@@ -3,7 +3,7 @@
 //  ZoeSleep
 //
 //  Generates plausible mock answers for questionnaire testing
-//  Creates realistic sleep data patterns for 14-day journey
+//  Creates realistic sleep data patterns for 10-day journey
 //
 //  NOTE: Available in all builds (including TestFlight) when Debug Mode is enabled
 //

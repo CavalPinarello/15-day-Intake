@@ -47,7 +47,7 @@ const MODULE_TO_QUESTION_PREFIX: Record<string, string> = {
   expansion_psas_somatic: "PSAS_",
   expansion_fosq_part1: "FOSQ_",
   expansion_fosq_part2: "FOSQ_",
-  // Day 14: Diet + Chronotype
+  // Day 10: Lifestyle + Rhythm (Diet + Chronotype + Cognitive)
   expansion_medas: "MEDAS_",
   expansion_meq_part1: "MEQ_",
   expansion_meq_part2: "MEQ_",
@@ -1396,14 +1396,14 @@ export const completeDay = mutation({
     });
 
     // Advance to next day if this was current day
-    if (user.current_day === args.dayNumber && args.dayNumber < 14) {
+    if (user.current_day === args.dayNumber && args.dayNumber < 10) {
       await ctx.db.patch(args.userId, {
         current_day: args.dayNumber + 1,
       });
     }
 
-    // Check if all 14 days completed
-    if (args.dayNumber === 14) {
+    // Check if all 10 days completed
+    if (args.dayNumber === 10) {
       await ctx.db.patch(args.userId, {
         onboarding_completed: true,
         onboarding_completed_at: Date.now(),
@@ -1412,8 +1412,8 @@ export const completeDay = mutation({
 
     return {
       success: true,
-      newDay: Math.min(args.dayNumber + 1, 14),
-      journeyComplete: args.dayNumber === 14,
+      newDay: Math.min(args.dayNumber + 1, 10),
+      journeyComplete: args.dayNumber === 10,
     };
   },
 });
@@ -1447,7 +1447,7 @@ export const getJourneyProgress = query({
     return {
       currentDay: user.current_day,
       completedDays: resolvedDays.filter(Boolean) as number[],
-      totalDays: 14,
+      totalDays: 10,
       journeyComplete: user.onboarding_completed ?? false,
       startedAt: user.started_at,
     };
@@ -1537,9 +1537,9 @@ export const getDailyCompletionStatus = query({
 
       // Determine if this day actually HAS assessment questions
       // Core days (1-5) always have assessments
-      // Expansion days (6-14) only have assessments if their required gateways were triggered
+      // Expansion days (6-10) only have assessments if their required gateways were triggered
       let dayHasAssessment = true;
-      if (day >= 6 && day <= 14) {
+      if (day >= 6 && day <= 10) {
         // For expansion days, check if the required gateways were triggered
         dayHasAssessment = shouldShowExpansion(day, triggeredGatewayIds);
       }
@@ -1567,7 +1567,7 @@ export const getDailyCompletionStatus = query({
       }
     }
 
-    // Track incomplete expansion packs from previous days (Days 6-14)
+    // Track incomplete expansion packs from previous days (Days 6-10)
     // FIXED: Now uses FIXED_SCHEDULE instead of old user_expansion_schedules table
     const overdueExpansions: {
       dayNumber: number;
@@ -1581,8 +1581,8 @@ export const getDailyCompletionStatus = query({
 
     // Note: triggeredGatewayIds already loaded earlier in this function
 
-    // Check each expansion day (6-14) that's before the current day
-    for (let day = 6; day < user.current_day && day <= 14; day++) {
+    // Check each expansion day (6-10) that's before the current day
+    for (let day = 6; day < user.current_day && day <= 10; day++) {
       const config = FIXED_SCHEDULE[day];
       if (!config || config.type !== "expansion") continue;
 
@@ -2039,7 +2039,7 @@ export const resetJourneyProgress = mutation({
 
 /**
  * Jump to any day (DEBUG MODE ONLY)
- * Allows testers to instantly move to any day 1-14 for testing specific questionnaires
+ * Allows testers to instantly move to any day 1-10 for testing specific questionnaires
  * Does NOT require completing previous days - purely for testing purposes
  */
 export const jumpToDay = mutation({
@@ -2053,9 +2053,9 @@ export const jumpToDay = mutation({
       throw new Error("User not found");
     }
 
-    // Validate target day is 1-14
-    if (args.targetDay < 1 || args.targetDay > 14) {
-      throw new Error("Target day must be between 1 and 14");
+    // Validate target day is 1-10
+    if (args.targetDay < 1 || args.targetDay > 10) {
+      throw new Error("Target day must be between 1 and 10");
     }
 
     const previousDay = user.current_day || 1;
@@ -2091,7 +2091,7 @@ export const jumpToDay = mutation({
 
 /**
  * Backdate user's journey start (DEBUG MODE ONLY)
- * Changes started_at to simulate being further along in the 14-day journey.
+ * Changes started_at to simulate being further along in the 10-day journey.
  * Useful for testing expansion packs, time-based features, and late-journey flows.
  *
  * Example: backdating 7 days makes the app think you started a week ago,
@@ -2100,7 +2100,7 @@ export const jumpToDay = mutation({
 export const backdateUserStart = mutation({
   args: {
     userId: v.id("users"),
-    daysAgo: v.number(), // How many days ago to set started_at (1-14)
+    daysAgo: v.number(), // How many days ago to set started_at (1-10)
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -2108,9 +2108,9 @@ export const backdateUserStart = mutation({
       throw new Error("User not found");
     }
 
-    // Validate daysAgo is reasonable (1-14 for the journey)
-    if (args.daysAgo < 0 || args.daysAgo > 14) {
-      throw new Error("daysAgo must be between 0 and 14");
+    // Validate daysAgo is reasonable (1-10 for the journey)
+    if (args.daysAgo < 0 || args.daysAgo > 10) {
+      throw new Error("daysAgo must be between 0 and 10");
     }
 
     const now = Date.now();
@@ -2122,7 +2122,7 @@ export const backdateUserStart = mutation({
 
     // Calculate what day the user should be on based on elapsed time
     // Day 1 = first day, so daysAgo of 0 = Day 1, daysAgo of 6 = Day 7
-    const calculatedDay = Math.min(args.daysAgo + 1, 14);
+    const calculatedDay = Math.min(args.daysAgo + 1, 10);
 
     // Update user record
     await ctx.db.patch(args.userId, {
@@ -2163,7 +2163,7 @@ export const backdateUserStart = mutation({
 /**
  * Speed complete current day (DEBUG MODE ONLY)
  * Generates minimal mock responses and marks both sleep log and assessment as complete.
- * Useful for rapid testing of the 14-day journey.
+ * Useful for rapid testing of the 10-day journey.
  *
  * @param phenotype - Sleep phenotype for realistic mock data generation
  * @param advanceToNext - If true, advances to next day after completion
@@ -2265,7 +2265,7 @@ export const speedCompleteDay = mutation({
 
     // Optionally advance to next day
     let newDay = currentDay;
-    if (args.advanceToNext && currentDay < 14) {
+    if (args.advanceToNext && currentDay < 10) {
       newDay = currentDay + 1;
       await ctx.db.patch(args.userId, {
         current_day: newDay,
@@ -2367,7 +2367,7 @@ function generateMockAssessmentResponses(day: number, phenotype: string): Array<
     );
   }
 
-  // Days 6-14: Expansion questions (if gateways triggered)
+  // Days 6-10: Expansion questions (if gateways triggered)
   if (day >= 6) {
     responses.push(
       { questionId: `Q_EXP_${day}_1`, value: "2" },
@@ -2380,14 +2380,14 @@ function generateMockAssessmentResponses(day: number, phenotype: string): Array<
 
 /**
  * Speed run entire journey (DEBUG MODE ONLY)
- * Completes all 14 days with mock data in one call.
+ * Completes all 10 days with mock data in one call.
  * Perfect for rapid end-to-end testing.
  */
 export const speedRunFullJourney = mutation({
   args: {
     userId: v.id("users"),
     phenotype: v.optional(v.string()),
-    targetDay: v.optional(v.number()), // Stop at this day (default 14)
+    targetDay: v.optional(v.number()), // Stop at this day (default 10)
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -2396,7 +2396,7 @@ export const speedRunFullJourney = mutation({
     }
 
     const phenotype = args.phenotype || "insomnia";
-    const targetDay = args.targetDay || 14;
+    const targetDay = args.targetDay || 10;
     const now = Date.now();
 
     // Backdate started_at to make time calculations work
@@ -2575,9 +2575,9 @@ export const timeTravelStatus = query({
 
     // Calculate if we can advance:
     // 1. Simulated date + 1 day must not exceed today's date
-    // 2. Must not be past Day 14
+    // 2. Must not be past Day 10
     const nextSimulatedDate = simulatedDate + DAY_MS;
-    const canAdvance = isTimeTravelActive && nextSimulatedDate <= now && currentDay < 14;
+    const canAdvance = isTimeTravelActive && nextSimulatedDate <= now && currentDay < 10;
 
     // Calculate days ago for display
     const daysAgo = Math.floor((now - simulatedDate) / DAY_MS);
@@ -2590,7 +2590,7 @@ export const timeTravelStatus = query({
       dayCompleted,
       canAdvance,
       daysAgo,
-      journeyComplete: currentDay >= 14,
+      journeyComplete: currentDay >= 10,
     };
   },
 });
@@ -2716,7 +2716,7 @@ export const timeTravelCompleteDay = mutation({
 
 /**
  * Advance to next day - moves simulated date forward by 1 day
- * Guards: Cannot advance past today's real date, cannot advance past Day 14
+ * Guards: Cannot advance past today's real date, cannot advance past Day 10
  */
 export const timeTravelAdvanceDay = mutation({
   args: {
@@ -2735,11 +2735,11 @@ export const timeTravelAdvanceDay = mutation({
     const currentDay = user.time_travel_current_day || user.current_day || 1;
     const simulatedDate = user.time_travel_simulated_date || user.started_at || now;
 
-    // Guard: Cannot advance past Day 14
-    if (currentDay >= 14) {
+    // Guard: Cannot advance past Day 10
+    if (currentDay >= 10) {
       return {
         success: false,
-        error: "Journey complete (Day 14 reached)",
+        error: "Journey complete (Day 10 reached)",
       };
     }
 
@@ -2773,7 +2773,7 @@ export const timeTravelAdvanceDay = mutation({
       previousDay: currentDay,
       currentDay: newDay,
       simulatedDate: nextSimulatedDate,
-      journeyComplete: newDay >= 14,
+      journeyComplete: newDay >= 10,
     };
   },
 });

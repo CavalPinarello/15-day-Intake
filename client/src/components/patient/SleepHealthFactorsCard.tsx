@@ -83,7 +83,7 @@ interface CaffeineCategory {
   totalServings: number;
 }
 
-// Mini bar chart for 14-day rolling data
+// Mini bar chart for 10-day rolling data
 function MiniBarChart({
   data,
   maxValue,
@@ -203,7 +203,7 @@ export function SleepHealthFactorsCard({ userId }: SleepHealthFactorsCardProps) 
           </div>
           <div>
             <h3 className="text-sm font-medium text-white">Sleep Health Factors</h3>
-            <p className="text-xs text-gray-500">14-day rolling view</p>
+            <p className="text-xs text-gray-500">10-day rolling view</p>
           </div>
         </div>
 
@@ -333,10 +333,10 @@ export function SleepHealthFactorsCard({ userId }: SleepHealthFactorsCardProps) 
           <div className="bg-gray-900 rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden border border-gray-700">
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <h3 className="text-lg font-semibold text-white">
-                {showDetailModal === "naps" && "Napping - 14 Day View"}
-                {showDetailModal === "meds" && "Sleep Medications - 14 Day View"}
-                {showDetailModal === "supplements" && "Supplements - 14 Day View"}
-                {showDetailModal === "caffeine" && "Caffeine - 14 Day View"}
+                {showDetailModal === "naps" && "Napping - 10 Day View"}
+                {showDetailModal === "meds" && "Sleep Medications - 10 Day View"}
+                {showDetailModal === "supplements" && "Supplements - 10 Day View"}
+                {showDetailModal === "caffeine" && "Caffeine - 10 Day View"}
               </h3>
               <button
                 onClick={() => setShowDetailModal(null)}
@@ -364,9 +364,9 @@ export function SleepHealthFactorsCard({ userId }: SleepHealthFactorsCardProps) 
                     </div>
                   </div>
 
-                  {/* 14-Day Chart */}
+                  {/* 10-Day Chart */}
                   <div className="p-3 rounded-lg bg-gray-800/50">
-                    <p className="text-sm font-medium text-gray-400 mb-2">Napping Pattern (14 days)</p>
+                    <p className="text-sm font-medium text-gray-400 mb-2">Napping Pattern (10 days)</p>
                     <MiniBarChart data={napChartData} maxValue={1} color="blue" />
                   </div>
 
@@ -452,9 +452,9 @@ export function SleepHealthFactorsCard({ userId }: SleepHealthFactorsCardProps) 
                     </div>
                   </div>
 
-                  {/* 14-Day Chart */}
+                  {/* 10-Day Chart */}
                   <div className="p-3 rounded-lg bg-gray-800/50">
-                    <p className="text-sm font-medium text-gray-400 mb-2">Medication Use (14 days)</p>
+                    <p className="text-sm font-medium text-gray-400 mb-2">Medication Use (10 days)</p>
                     <MiniBarChart data={medChartData} maxValue={1} color="purple" />
                   </div>
 
@@ -549,9 +549,9 @@ export function SleepHealthFactorsCard({ userId }: SleepHealthFactorsCardProps) 
                     </div>
                   </div>
 
-                  {/* 14-Day Chart */}
+                  {/* 10-Day Chart */}
                   <div className="p-3 rounded-lg bg-gray-800/50">
-                    <p className="text-sm font-medium text-gray-400 mb-2">Supplement Use (14 days)</p>
+                    <p className="text-sm font-medium text-gray-400 mb-2">Supplement Use (10 days)</p>
                     <MiniBarChart data={suppChartData} maxValue={1} color="green" />
                   </div>
 

@@ -83,7 +83,7 @@ enum CoachMarkLibrary {
         id: "coach_day_progress",
         icon: "calendar.circle.fill",
         title: "Journey Progress",
-        message: "14 days of data builds your personalized sleep profile. You're on your way!"
+        message: "10 days of data builds your personalized sleep profile. You're on your way!"
     )
 
     // MARK: - Settings

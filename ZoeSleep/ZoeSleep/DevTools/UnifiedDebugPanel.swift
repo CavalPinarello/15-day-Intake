@@ -76,8 +76,8 @@ enum DataGenerationMode: String, CaseIterable, Identifiable {
 
     var description: String {
         switch self {
-        case .fullRandom: return "14 days with ~40% gateway triggers"
-        case .maxLoad: return "14 days with ALL 10 gateways triggered"
+        case .fullRandom: return "10 days with ~40% gateway triggers"
+        case .maxLoad: return "10 days with ALL 10 gateways triggered"
         case .selective: return "Choose which gateways to trigger"
         case .quickTest: return "Days 1-5 only, ~30 seconds"
         }
@@ -104,7 +104,7 @@ enum DataGenerationMode: String, CaseIterable, Identifiable {
     var days: ClosedRange<Int> {
         switch self {
         case .quickTest: return 1...5
-        default: return 1...14
+        default: return 1...10
         }
     }
 }
@@ -132,7 +132,7 @@ struct UnifiedDebugPanel: View {
 
     // Progress tracking (updated via timer since @State doesn't observe ObservableObject)
     @State private var progressCurrentDay: Int = 1
-    @State private var progressTotalDays: Int = 14
+    @State private var progressTotalDays: Int = 10
     @State private var progressSection: String = "Sleep Log"
     @State private var progressQuestionIndex: Int = 0
     @State private var progressTotalQuestions: Int = 0
@@ -263,7 +263,7 @@ struct UnifiedDebugPanel: View {
             HStack {
                 Label("Completed Days", systemImage: "checkmark.circle")
                 Spacer()
-                Text("\(questionnaireManager.journeyProgress?.completedDays.count ?? 0) of 14")
+                Text("\(questionnaireManager.journeyProgress?.completedDays.count ?? 0) of 10")
                     .foregroundColor(.secondary)
             }
 
@@ -523,7 +523,7 @@ struct UnifiedDebugPanel: View {
                     .foregroundColor(.secondary)
             }
         } header: {
-            Label("Expansion Schedule (Days 8-14)", systemImage: "calendar.badge.clock")
+            Label("Expansion Schedule (Days 6-10)", systemImage: "calendar.badge.clock")
         }
     }
 
@@ -1240,8 +1240,8 @@ struct UnifiedDebugPanel: View {
     /// Clear UserDefaults keys that track if day splash screens have been shown
     /// NOTE: Does NOT clear journey intro - that's a one-time app intro, not per-journey
     private func clearSplashScreenTracking() {
-        // Clear day splash keys (daySplashShown_day1_assessment through day14)
-        for day in 1...14 {
+        // Clear day splash keys (daySplashShown_day1_assessment through day10)
+        for day in 1...10 {
             UserDefaults.standard.removeObject(forKey: "daySplashShown_day\(day)_assessment")
             UserDefaults.standard.removeObject(forKey: "expansionSplashShown_day\(day)")
         }
@@ -1358,7 +1358,7 @@ struct UnifiedDebugPanel: View {
     private func computeLocalSchedule(triggeredGateways: [String]) -> [(dayNumber: Int, modules: [String], questionCount: Int, estimatedMinutes: Int)] {
         let maxQuestionsPerDay = 18
         let expansionStartDay = 6
-        let expansionEndDay = 14
+        let expansionEndDay = 10
 
         var eligibleModules = ExpansionModule.allModules.filter { module in
             triggeredGateways.contains(module.requiredGateway.rawValue)

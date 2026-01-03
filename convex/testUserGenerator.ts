@@ -1772,7 +1772,7 @@ export const repairTestUserDemographics = mutation({
 /**
  * Generate a complete test user with ALL data populated for dashboard testing.
  * This creates a user with:
- * - Full 14-day journey data
+ * - Full 10-day journey data
  * - All health pillar responses
  * - Clinical scores (ISI, PHQ-9, GAD-7, ESS, STOP-BANG)
  * - Expansion pack data based on triggered gateways
@@ -1783,12 +1783,12 @@ export const generateCompleteDashboardTestUser = mutation({
     name: v.string(),
     gateways: v.array(v.string()), // Which gateways to trigger
     severity: v.optional(v.string()), // mild, moderate, severe
-    daysCompleted: v.optional(v.number()), // How many days (1-14)
+    daysCompleted: v.optional(v.number()), // How many days (1-10)
   },
   handler: async (ctx, args) => {
     const now = Date.now();
     const severity = args.severity || "moderate";
-    const daysCompleted = Math.min(args.daysCompleted || 14, 14);
+    const daysCompleted = Math.min(args.daysCompleted || 10, 10);
     const username = `dash_test_${Date.now()}`;
     const email = `${username}@test.zoesleep.com`;
 
@@ -1809,8 +1809,8 @@ export const generateCompleteDashboardTestUser = mutation({
       started_at: now - (daysCompleted * 24 * 60 * 60 * 1000),
       last_accessed: now,
       created_at: now,
-      onboarding_completed: daysCompleted >= 14,
-      onboarding_completed_at: daysCompleted >= 14 ? now : undefined,
+      onboarding_completed: daysCompleted >= 10,
+      onboarding_completed_at: daysCompleted >= 10 ? now : undefined,
       full_name: args.name,
       measurement_system: "Metric",
       height_cm: heightCm,

@@ -3,7 +3,7 @@
 //  ZoeSleep
 //
 //  Data types for mock data generation
-//  Allows rapid testing of 14-day questionnaire flow
+//  Allows rapid testing of 10-day questionnaire flow
 //
 //  NOTE: Available in all builds (including TestFlight) when Debug Mode is enabled
 //
@@ -17,8 +17,8 @@ struct MockGeneratorConfig {
     /// Delay between questions (seconds) - controls playback speed
     var questionDelay: TimeInterval = 0.1
 
-    /// Range of days to generate (1-14 for full intake journey)
-    var dayRange: ClosedRange<Int> = 1...14
+    /// Range of days to generate (1-10 for full intake journey)
+    var dayRange: ClosedRange<Int> = 1...10
 
     /// Probability that a gateway question triggers (0.0-1.0)
     /// At 0.4, roughly 4-6 of 10 gateways will trigger
@@ -101,7 +101,7 @@ enum MockGeneratorState: Equatable {
 /// Tracks real-time progress during mock data generation
 struct MockGenerationProgress {
     var currentDay: Int = 0
-    var totalDays: Int = 14
+    var totalDays: Int = 10
 
     var currentSection: String = ""  // "Sleep Log" or "Assessment"
     var currentQuestionIndex: Int = 0

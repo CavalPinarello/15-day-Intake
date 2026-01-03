@@ -231,7 +231,7 @@ struct AnalysisPendingView: View {
                 .fontWeight(.bold)
                 .foregroundColor(theme.primaryText)
 
-            Text("Our sleep medicine team is analyzing your 14 days of responses to create your personalized treatment protocol.")
+            Text("Our sleep medicine team is analyzing your 10 days of responses to create your personalized treatment protocol.")
                 .font(.subheadline)
                 .foregroundColor(theme.secondaryText)
                 .multilineTextAlignment(.center)

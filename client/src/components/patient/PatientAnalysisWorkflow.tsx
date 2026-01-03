@@ -45,7 +45,7 @@ const stageConfig = [
     stage: 1,
     title: "Data Collected",
     icon: CheckCircle2,
-    description: "14 days of sleep data ready for analysis",
+    description: "10 days of sleep data ready for analysis",
     color: "green",
   },
   {
@@ -401,7 +401,7 @@ export function PatientAnalysisWorkflow({
                         <span className="font-medium">Data collection complete</span>
                       </div>
                       <p className="text-sm text-gray-400">
-                        The patient has completed their 14-day intake journey. All sleep logs and
+                        The patient has completed their 10-day intake journey. All sleep logs and
                         questionnaires have been submitted and are ready for your review.
                       </p>
                       {currentStage === 1 && (

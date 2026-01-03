@@ -62,13 +62,6 @@ struct OnboardingView: View {
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: onboardingManager.currentStep)
                 }
-
-                // Floating accessibility button (bottom-right)
-                // Uses palette colors to blend with circadian background
-                EnhancedReadabilityButton(
-                    lightStyle: WaveCircadianPalette.current.isDark,
-                    edgePadding: 24
-                )
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -857,22 +850,13 @@ struct HealthConnectStepView: View {
                 unavailableStatus
             }
 
-            // Skip/Continue button
-            Button(action: { onboardingManager.nextStep() }) {
-                Text(continueButtonText)
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
-            }
-
-            // Back
-            Button(action: { onboardingManager.previousStep() }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                    Text("Back")
-                }
-                .font(.caption)
-                .foregroundColor(palette.textSecondary.opacity(0.7))
-            }
+            // Navigation buttons
+            OnboardingNavigationButtons(
+                onboardingManager: onboardingManager,
+                showBack: true,
+                nextLabel: continueButtonText
+            )
+            .padding(.horizontal, 20)
             .padding(.bottom, isCompact ? 24 : 32)
         }
     }
@@ -1356,7 +1340,7 @@ struct ReadyStepView: View {
                         .foregroundColor(palette.accent)
                 }
 
-                Text("Your 14-day sleep journey begins now")
+                Text("Your 10-day sleep journey begins now")
                     .font(.caption)
                     .foregroundColor(palette.textSecondary)
                     .multilineTextAlignment(.center)

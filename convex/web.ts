@@ -170,7 +170,7 @@ export const getWebJourneyState = query({
 
     return {
       currentDay: user.current_day,
-      totalDays: 14,
+      totalDays: 10,
       sleepLogCompleted: progress?.sleep_log_completed ?? false,
       assessmentCompleted: progress?.assessment_completed ?? false,
       onboardingCompleted: user.onboarding_completed ?? false,

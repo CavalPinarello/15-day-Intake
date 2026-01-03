@@ -38,7 +38,7 @@ struct JourneyIntroScreen1: View {
                 .opacity(textOpacity)
 
             // Description - conversational
-            Text("Over the next 14 days, we'll get to know\nhow you sleep — what works, what doesn't,\nand what makes you uniquely you.")
+            Text("Over the next 10 days, we'll get to know\nhow you sleep — what works, what doesn't,\nand what makes you uniquely you.")
                 .font(.system(size: isCompact ? 17 : 19, weight: .medium, design: .rounded))
                 .foregroundColor(.white.opacity(0.85))
                 .multilineTextAlignment(.center)
@@ -157,7 +157,7 @@ struct JourneyIntroScreen3: View {
 
             // Description - reassuring
             VStack(spacing: isCompact ? 12 : 16) {
-                Text("After 14 days, a sleep specialist\nlooks at your complete picture.")
+                Text("After 10 days, a sleep specialist\nlooks at your complete picture.")
                     .font(.system(size: isCompact ? 17 : 19, weight: .medium, design: .rounded))
                     .foregroundColor(.white.opacity(0.85))
                     .multilineTextAlignment(.center)

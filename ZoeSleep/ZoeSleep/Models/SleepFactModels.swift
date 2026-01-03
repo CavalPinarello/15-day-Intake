@@ -465,7 +465,7 @@ enum SleepFactBank {
             pillar: .sleepQuality,
             title: "Building Your Sleep Profile",
             body: "This 2-week calibration captures your natural patterns. After this initial period, logging gets faster as we learn your unique rhythms.",
-            statistic: "Your baseline will be complete in just 14 days",
+            statistic: "Your baseline will be complete in just 10 days",
             category: .calibrationEncouragement
         ),
         SleepFact(

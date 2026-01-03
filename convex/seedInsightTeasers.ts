@@ -87,7 +87,7 @@ const INSIGHT_TEASERS: InsightTeaserData[] = [
   },
   {
     teaser_id: "full_sleep_profile",
-    unlock_day: 14,
+    unlock_day: 10,
     teaser_type: "countdown",
     title: "Complete Sleep Profile",
     locked_description: "Your complete sleep profile is almost ready",

@@ -855,7 +855,7 @@ struct WatchHomeView: View {
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(celebrationColor)
 
-            Text("Congratulations! You've completed your 14-day sleep intake.")
+            Text("Congratulations! You've completed your 10-day sleep intake.")
                 .font(.system(size: 11))
                 .foregroundColor(palette.textPrimary.opacity(0.8))
                 .multilineTextAlignment(.center)

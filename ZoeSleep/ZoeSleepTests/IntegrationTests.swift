@@ -100,8 +100,8 @@ final class IntegrationTests: XCTestCase {
             let progress = try await convexService.getJourneyProgress()
 
             XCTAssertGreaterThanOrEqual(progress.currentDay, 1)
-            XCTAssertLessThanOrEqual(progress.currentDay, 14)
-            XCTAssertEqual(progress.totalDays, 14)
+            XCTAssertLessThanOrEqual(progress.currentDay, 10)
+            XCTAssertEqual(progress.totalDays, 10)
         } catch {
             XCTFail("Failed to get journey progress: \(error)")
         }

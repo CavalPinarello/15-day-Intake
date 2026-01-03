@@ -48,7 +48,7 @@ iPhone ←→ Convex ←→ Dashboard
 (Full intake)      (Clinician view)
 ```
 
-- **iPhone:** 14-day intake journey (PRIMARY)
+- **iPhone:** 10-day intake journey (PRIMARY)
 - **Dashboard:** Clinician interface (IN DEVELOPMENT)
 - **Web:** Debug/testing only
 - **Watch:** PAUSED - branch `feature/watch-app-complete`
@@ -65,7 +65,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 ## Smart Questionnaire System
 
-- **14-Day Journey:** Core (Days 1-7) + Conditional expansion (Days 8-15)
+- **10-Day Journey:** Core (Days 1-5) + Conditional expansion (Days 6-10)
 - **11 Gateways:** Insomnia, Sleep Apnea (OSA), Mental Health, Pain, Prostate, etc.
 - **Daily Sleep Log:** 5 Stanford questions every morning
 - **Auto-derivation:** Many questions pre-populated from sleep log data
@@ -88,7 +88,8 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
-**Jan 3:** Simplified onboarding flow - removed Sleep Philosophy step, now goes directly from wearables to ready screen
+**Jan 3:** Shortened journey from 14 days to 10 days - Core assessment (Days 1-5) unchanged, expansion packs consolidated into Days 6-10 by grouping related clinical instruments (Day 6: ISI+SWDSQ+DBAS, Day 7: PHQ9+GAD7+PSAS, Day 8: STOP-BANG+ESS+FSS, Day 9: Sleep Hygiene+BPI+FOSQ, Day 10: PROMIS+MEDAS+MEQ)
+**Jan 3:** Onboarding UX improvements - removed floating magnifying glass (Enhanced Readability button) from onboarding screens, replaced small text Continue/Back buttons with visible styled buttons on HealthKit connection screen, removed Sleep Philosophy step
 **Jan 3:** Analysis pending screen polish - hidden "My Data" button (feature not ready), changed profile icon from person silhouette to user's initial in circle for consistency with main dashboard
 **Jan 3:** Fixed day advancement bug for expansion days without assessments - `advanceDay` mutation now uses `shouldShowExpansion()` to check if the SPECIFIC day has content for user's triggered gateways, not just if ANY gateways are triggered globally. Fixes inability to advance past Day 10 when only Pain gateway triggered (Day 10 requires excessive_sleepiness gateway for ESS/FSS packs).
 **Jan 3:** Watch-style check-in widget improvements - optimistic state updates for instant UI feedback, theme-aware colors for better contrast in all circadian phases, fixed state persistence after completion, widget title changed to "Today's Focus" with "Energy · Mood · Focus" subtitle

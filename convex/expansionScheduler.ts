@@ -349,7 +349,7 @@ export const getScheduleSummary = query({
         .filter((n): n is number => n !== undefined)
     );
 
-    for (let day = 6; day <= 14; day++) {
+    for (let day = 6; day <= 10; day++) {
       if (shouldShowExpansion(day, triggeredGateways)) {
         const config = FIXED_SCHEDULE[day];
         if (config && config.type === "expansion") {
@@ -513,7 +513,7 @@ export const previewFixedSchedule = query({
       theme?: string;
     }[] = [];
 
-    for (let day = 1; day <= 14; day++) {
+    for (let day = 1; day <= 10; day++) {
       const config = getDayConfig(day);
       if (!config) continue;
 
@@ -601,7 +601,7 @@ export const getSchedule = query({
       completed: boolean;
     }[] = [];
 
-    for (let day = 6; day <= 14; day++) {
+    for (let day = 6; day <= 10; day++) {
       if (shouldShowExpansion(day, triggeredGateways)) {
         const config = FIXED_SCHEDULE[day];
         if (config && config.type === "expansion") {

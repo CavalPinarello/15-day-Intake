@@ -984,9 +984,9 @@ export const getAllPatientsWithProgress = query({
           .withIndex("by_user", (q) => q.eq("user_id", user._id))
           .first();
 
-        // Calculate progress percentage (14 days total)
+        // Calculate progress percentage (10 days total)
         const progressPercentage = Math.min(
-          Math.round((user.current_day / 14) * 100),
+          Math.round((user.current_day / 10) * 100),
           100
         );
 
@@ -1826,9 +1826,9 @@ export const getDailyComplianceData = query({
       .map((g) => g.gateway_id);
 
     // Build map of days that have expansion tasks based on FIXED SCHEDULE
-    // Days 6-14 have expansion if ANY of their gateways are triggered
+    // Days 6-10 have expansion if ANY of their gateways are triggered
     const daysWithExpansionTask = new Set<number>();
-    for (let day = 6; day <= 14; day++) {
+    for (let day = 6; day <= 10; day++) {
       if (shouldShowExpansion(day, triggeredGateways)) {
         daysWithExpansionTask.add(day);
       }
@@ -2007,8 +2007,8 @@ export const getDailyComplianceData = query({
       const expansionFromSchedule = expansionCompletedByDay[day] ?? false;
       const expansionIsComplete = expansionFromProgress || expansionFromSchedule || expansionComplete;
 
-      // Days 1-5 have core assessment questions, Days 6-14 do not
-      // On Days 6-14, only Sleep Log and (optionally) Expansion Pack are assigned
+      // Days 1-5 have core assessment questions, Days 6-10 do not
+      // On Days 6-10, only Sleep Log and (optionally) Expansion Pack are assigned
       const hasAssessmentTask = day <= 5;
 
       result.push({
@@ -2075,7 +2075,7 @@ export const getModularComplianceData = query({
     }),
   }),
   handler: async (ctx, args) => {
-    const TOTAL_JOURNEY_DAYS = 14;
+    const TOTAL_JOURNEY_DAYS = 10;
     const SLEEP_LOG_QUESTIONS_PER_DAY = 5; // Minimum required per day
 
     // Core assessment expected questions (from crossPlatformValidator)
@@ -3594,9 +3594,9 @@ export const setPatientDay = mutation({
     currentDay: v.number(),
   }),
   handler: async (ctx, args) => {
-    // Validate dayNumber is 1-14
-    if (args.dayNumber < 1 || args.dayNumber > 14) {
-      throw new Error("Day must be between 1 and 14");
+    // Validate dayNumber is 1-10
+    if (args.dayNumber < 1 || args.dayNumber > 10) {
+      throw new Error("Day must be between 1 and 10");
     }
 
     const user = await ctx.db.get(args.userId);

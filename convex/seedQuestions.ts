@@ -256,7 +256,7 @@ export const clearInternalHelpText = mutation({
     message: v.string()
   }),
   handler: async (ctx) => {
-    const questionIds = ["44I", "44J", "47_PROSTATE"];
+    const questionIds = ["44I", "44J", "47_PROSTATE", "47_STREAM"];
     let updated = 0;
 
     for (const questionId of questionIds) {

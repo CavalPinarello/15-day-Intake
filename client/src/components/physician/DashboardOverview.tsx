@@ -97,7 +97,7 @@ export function DashboardOverview({ patients }: DashboardOverviewProps) {
         return (
           p.review_status === "pending_review" ||
           daysSinceActive > 3 ||
-          (p.current_day >= 14 && p.review_status !== "interventions_active")
+          (p.current_day >= 10 && p.review_status !== "interventions_active")
         );
       })
       .slice(0, 5);

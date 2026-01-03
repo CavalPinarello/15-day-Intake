@@ -56,68 +56,41 @@ let dayAssessmentConfigs: [Int: DayAssessmentConfig] = [
         questionCount: 13,
         estimatedMinutes: 11
     ),
+    // Expansion Pack Phase (Days 6-10) - Consolidated from 9 to 5 days
     6: DayAssessmentConfig(
-        title: "Insomnia Deep Dive",
-        questionnaire: "ISI Assessment",
-        mission: "Assess insomnia severity with clinical-grade screening.",
-        questionCount: 16,
-        estimatedMinutes: 14
+        title: "Insomnia Assessment",
+        questionnaire: "ISI + SWDSQ + DBAS",
+        mission: "Assess insomnia severity, shift work, and sleep beliefs.",
+        questionCount: 17,
+        estimatedMinutes: 5
     ),
     7: DayAssessmentConfig(
-        title: "Sleepiness Check",
-        questionnaire: "ESS & FSS",
-        mission: "Measure daytime sleepiness and fatigue levels.",
-        questionCount: 15,
-        estimatedMinutes: 12
+        title: "Mental Health & Arousal",
+        questionnaire: "PHQ-9 + GAD-7 + PSAS",
+        mission: "Screen for depression, anxiety, and pre-sleep arousal.",
+        questionCount: 32,
+        estimatedMinutes: 9
     ),
     8: DayAssessmentConfig(
-        title: "Mental Wellness",
-        questionnaire: "PHQ-9 & GAD-7",
-        mission: "Screen for mood and anxiety factors affecting sleep.",
-        questionCount: 18,
-        estimatedMinutes: 15
+        title: "Breathing & Energy",
+        questionnaire: "STOP-BANG + ESS + FSS",
+        mission: "Screen for sleep apnea and measure daytime sleepiness.",
+        questionCount: 25,
+        estimatedMinutes: 7
     ),
     9: DayAssessmentConfig(
-        title: "Breathing Check",
-        questionnaire: "STOP-BANG",
-        mission: "Screen for sleep apnea risk factors.",
-        questionCount: 12,
-        estimatedMinutes: 10
+        title: "Function & Behavior",
+        questionnaire: "Sleep Hygiene + BPI + FOSQ",
+        mission: "Assess sleep habits, pain, and functional outcomes.",
+        questionCount: 33,
+        estimatedMinutes: 9
     ),
     10: DayAssessmentConfig(
-        title: "Pain Assessment",
-        questionnaire: "Brief Pain",
-        mission: "Understand how pain interferes with your sleep.",
-        questionCount: 14,
-        estimatedMinutes: 12
-    ),
-    11: DayAssessmentConfig(
-        title: "Your Chronotype",
-        questionnaire: "MEQ",
-        mission: "Discover if you're a morning lark or night owl.",
-        questionCount: 19,
-        estimatedMinutes: 15
-    ),
-    12: DayAssessmentConfig(
-        title: "Diet & Sleep",
-        questionnaire: "MEDAS",
-        mission: "Explore the connection between nutrition and rest.",
-        questionCount: 14,
-        estimatedMinutes: 12
-    ),
-    13: DayAssessmentConfig(
-        title: "Cognitive Health",
-        questionnaire: "PROMIS Cognitive",
-        mission: "Assess how sleep affects your thinking and focus.",
-        questionCount: 12,
-        estimatedMinutes: 10
-    ),
-    14: DayAssessmentConfig(
-        title: "Final Review",
-        questionnaire: "Comprehensive",
-        mission: "Complete your 14-day journey with a final assessment.",
-        questionCount: 20,
-        estimatedMinutes: 18
+        title: "Lifestyle & Rhythm",
+        questionnaire: "PROMIS + MEDAS + MEQ",
+        mission: "Complete your 10-day journey with lifestyle assessment.",
+        questionCount: 39,
+        estimatedMinutes: 11
     )
 ]
 

@@ -420,7 +420,7 @@ export default function PhysicianDashboard() {
                             </span>
                           </div>
                           <p className="text-sm text-gray-500">
-                            Day {patient.current_day} of 14 &bull; Started{" "}
+                            Day {patient.current_day} of 10 &bull; Started{" "}
                             {formatDate(patient.started_at)}
                           </p>
                         </div>

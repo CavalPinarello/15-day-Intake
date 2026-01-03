@@ -581,7 +581,7 @@ export const runFullCrossPlatformValidation = query({
 });
 
 /**
- * Get all questions grouped by module for 14-day schedule display
+ * Get all questions grouped by module for 10-day schedule display
  */
 export const getAllQuestionsByModule = query({
   args: {},

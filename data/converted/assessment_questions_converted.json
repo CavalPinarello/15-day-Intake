@@ -1672,7 +1672,6 @@
         { "ageAtLeast": 45 }
       ]
     },
-    "help_text": "This can be a sign of benign prostatic hyperplasia (BPH) or other urinary conditions.",
     "estimated_time_seconds": 15,
     "created_at": 1763104572236,
     "updated_at": 1763104572236

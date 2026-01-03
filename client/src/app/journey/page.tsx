@@ -60,13 +60,8 @@ const dayConfigurations: Record<number, { title: string; description: string }> 
   6: { title: "Insomnia Assessment", description: "ISI & DBAS-16 questionnaires" },
   7: { title: "Sleepiness Assessment", description: "ESS & FSS scales" },
   8: { title: "Mental Health Deep Dive", description: "PHQ-9 & GAD-7 assessments" },
-  9: { title: "Sleep Apnea Screening", description: "STOP-BANG questionnaire" },
-  10: { title: "Pain & Discomfort", description: "Brief Pain Inventory" },
-  11: { title: "Chronotype Assessment", description: "Morningness-Eveningness questionnaire" },
-  12: { title: "Diet & Nutrition", description: "MEDAS assessment" },
-  13: { title: "Cognitive Function", description: "PROMIS cognitive assessment" },
-  14: { title: "Sleep Hygiene Review", description: "Environmental and behavioral factors" },
-  15: { title: "Journey Completion", description: "Final review and summary" },
+  9: { title: "Function & Behavior", description: "Sleep habits, pain, and functional outcomes" },
+  10: { title: "Lifestyle & Rhythm", description: "Cognitive function, diet, and chronotype" },
 };
 
 function normalizeSection(section: string | null): QuestionnaireSection {
@@ -187,7 +182,7 @@ function JourneyPageContent() {
             <Moon className={`w-8 h-8 ${isWarm ? "text-[#F28C40]" : "text-blue-600"}`} />
           </div>
           <h2 className={`text-xl font-bold mb-2 ${textClasses.primary}`}>Welcome to Zoe Sleep</h2>
-          <p className={`mb-6 ${textClasses.secondary}`}>Sign in to start your 14-day sleep journey</p>
+          <p className={`mb-6 ${textClasses.secondary}`}>Sign in to start your 10-day sleep journey</p>
           <SignInButton mode="modal">
             <button className={`w-full py-3 px-6 ${buttonClasses.primary} font-semibold rounded-xl`}>
               Sign In to Continue
@@ -397,7 +392,7 @@ function JourneyPageContent() {
       <div className={`max-w-2xl mx-auto px-4 py-3 border-b ${isWarm ? "border-[#5C3D2E] bg-[#3D2418]/50" : "border-gray-100 bg-white/50"}`}>
         <div className="flex items-center justify-between">
           <div>
-            <span className={`text-sm ${textClasses.muted}`}>Day {currentDay} of 14</span>
+            <span className={`text-sm ${textClasses.muted}`}>Day {currentDay} of 10</span>
             {currentSection === "assessment" && (
               <h2 className={`font-medium ${textClasses.primary}`}>{dayConfig.title}</h2>
             )}

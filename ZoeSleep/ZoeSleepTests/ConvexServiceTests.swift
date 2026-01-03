@@ -123,7 +123,7 @@ final class ConvexServiceTests: XCTestCase {
         {
             "currentDay": 3,
             "completedDays": [1, 2],
-            "totalDays": 14,
+            "totalDays": 10,
             "journeyComplete": false,
             "sleepLogCompleted": true,
             "assessmentCompleted": false
@@ -136,7 +136,7 @@ final class ConvexServiceTests: XCTestCase {
         XCTAssertNotNil(progress)
         XCTAssertEqual(progress?.currentDay, 3)
         XCTAssertEqual(progress?.completedDays, [1, 2])
-        XCTAssertEqual(progress?.totalDays, 14)
+        XCTAssertEqual(progress?.totalDays, 10)
         XCTAssertEqual(progress?.sleepLogCompleted, true)
         XCTAssertEqual(progress?.assessmentCompleted, false)
     }

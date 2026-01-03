@@ -1130,7 +1130,7 @@ async function computeExpansionScheduleForUser(
   const TARGET_QUESTIONS_PER_DAY = 14;
   const MAX_QUESTIONS_PER_DAY = 18;
   const EXPANSION_START_DAY = 6;  // Expansions start Day 6 (after core Days 1-5)
-  const TOTAL_DAYS = 14;
+  const TOTAL_DAYS = 10;
 
   // Get user's triggered gateways
   const gatewayStates = await ctx.db
@@ -1460,14 +1460,14 @@ export const getJourneyState = query({
       currentDay: user.current_day,
       completedDays: completedDays.sort((a, b) => a - b),
       journeyComplete: user.onboarding_completed ?? false,
-      totalDays: 14,
+      totalDays: 10,
       // Section-level completion for current day
       sleepLogCompleted: currentDaySections.sleepLogCompleted,
       assessmentCompleted: currentDaySections.assessmentCompleted,
       // Day ready timestamp - when both required sections were completed
       // Used by iOS to calculate when next day unlocks (4 AM of next calendar day)
       dayReadyAt: currentDaySections.dayReadyAt,
-      // Expansion pack status for current day (scheduled Days 6-14 OR same-day triggered Days 1-5)
+      // Expansion pack status for current day (scheduled Days 6-10 OR same-day triggered Days 1-5)
       hasExpansionPackToday,
       expansionPackCompleted,
       expansionQuestionCount: todaysExpansionQuestionCount,
@@ -1574,10 +1574,10 @@ export const completeSection = mutation({
         return args.section === "sleepLog" ? isSleepLog : !isSleepLog;
       });
 
-      // For assessment section on expansion days (8-14), check if there are actually questions
+      // For assessment section on expansion days (6-10), check if there are actually questions
       // If no gateways triggered, there may be 0 assessment questions, which is valid
       let skipAssessmentValidation = false;
-      if (args.section === "assessment" && args.dayNumber >= 8) {
+      if (args.section === "assessment" && args.dayNumber >= 6) {
         // Check if this day has any actual assessment questions
         const dayModules = await ctx.db
           .query("day_modules")
@@ -1756,7 +1756,7 @@ export const completeSection = mutation({
     // FIX: Only auto-advance if in developer mode
     // Normal users must wait until 4 AM local time and explicitly advance via advanceDay mutation
     // This prevents bypassing the day lockout intended for circadian consistency
-    if (dayFullyCompleted && user.current_day === args.dayNumber && args.dayNumber < 14) {
+    if (dayFullyCompleted && user.current_day === args.dayNumber && args.dayNumber < 10) {
       const isDeveloperMode = user.developer_mode === true;
 
       if (isDeveloperMode) {
@@ -1774,8 +1774,8 @@ export const completeSection = mutation({
       }
     }
 
-    // Mark journey complete if day 14 is fully done
-    if (args.dayNumber === 14 && dayFullyCompleted) {
+    // Mark journey complete if day 10 is fully done
+    if (args.dayNumber === 10 && dayFullyCompleted) {
       await ctx.db.patch(args.userId, {
         onboarding_completed: true,
         onboarding_completed_at: now,
@@ -1838,7 +1838,7 @@ export const completeSection = mutation({
       assessmentCompleted,
       dayFullyCompleted,
       currentDay: newDay,
-      journeyComplete: args.dayNumber === 14 && dayFullyCompleted,
+      journeyComplete: args.dayNumber === 10 && dayFullyCompleted,
       source: args.source ?? "unknown",
     };
   },
@@ -1908,15 +1908,15 @@ export const completeDay = mutation({
     }
 
     // Advance user's current day if needed
-    if (user.current_day === args.dayNumber && args.dayNumber < 14) {
+    if (user.current_day === args.dayNumber && args.dayNumber < 10) {
       await ctx.db.patch(args.userId, {
         current_day: args.dayNumber + 1,
         last_accessed: now,
       });
     }
 
-    // Mark journey complete if day 14
-    if (args.dayNumber === 14) {
+    // Mark journey complete if day 10
+    if (args.dayNumber === 10) {
       await ctx.db.patch(args.userId, {
         onboarding_completed: true,
         onboarding_completed_at: now,
@@ -1925,8 +1925,8 @@ export const completeDay = mutation({
 
     return {
       success: true,
-      newDay: Math.min(args.dayNumber + 1, 14),
-      journeyComplete: args.dayNumber === 14,
+      newDay: Math.min(args.dayNumber + 1, 10),
+      journeyComplete: args.dayNumber === 10,
       source: args.source ?? "unknown",
     };
   },
@@ -1958,8 +1958,8 @@ export const canAdvanceDay = query({
 
     const currentDay = user.current_day || 1;
 
-    // Can't advance past day 14
-    if (currentDay >= 14) {
+    // Can't advance past day 10
+    if (currentDay >= 10) {
       return {
         canAdvance: false,
         reason: "Journey already complete",
@@ -1999,7 +1999,7 @@ export const canAdvanceDay = query({
     // Check if this SPECIFIC day has assessment content based on fixed schedule and user's gateways
     let hasAssessmentToday = true;
     if (currentDay > 5) {
-      // Days 6-14 are expansion days - check if THIS day has content for user's triggered gateways
+      // Days 6-10 are expansion days - check if THIS day has content for user's triggered gateways
       const userGateways = await ctx.db
         .query("user_gateway_states")
         .withIndex("by_user", (q) => q.eq("user_id", args.userId))
@@ -2112,8 +2112,8 @@ export const advanceDay = mutation({
 
     const currentDay = user.current_day || 1;
 
-    // Can't advance past day 14
-    if (currentDay >= 14) {
+    // Can't advance past day 10
+    if (currentDay >= 10) {
       return {
         success: false,
         error: "Journey already complete",
@@ -2155,7 +2155,7 @@ export const advanceDay = mutation({
     // Check if this SPECIFIC day has assessment content based on fixed schedule and user's gateways
     let hasAssessmentToday = true;
     if (currentDay > 5) {
-      // Days 6-14 are expansion days - check if THIS day has content for user's triggered gateways
+      // Days 6-10 are expansion days - check if THIS day has content for user's triggered gateways
       const userGateways = await ctx.db
         .query("user_gateway_states")
         .withIndex("by_user", (q) => q.eq("user_id", args.userId))
@@ -2585,7 +2585,7 @@ export const saveResponses = mutation({
     }
 
     // Auto-evaluate gateway states based on saved responses
-    // This ensures expansion packs show correctly on Days 6-14 even if iOS sync failed
+    // This ensures expansion packs show correctly on Days 6-10 even if iOS sync failed
     const savedQuestionIds = args.responses.map(r => r.questionId);
     await evaluateAndUpdateGatewayStates(ctx, args.userId, savedQuestionIds);
 
@@ -3059,7 +3059,7 @@ export const getQuestionsForUserDay = query({
       // ========== FIXED SCHEDULE MODULE LOOKUP ==========
       // Use the fixed schedule to determine which modules to load for this day
       // - Days 1-5: Core assessment by pillar/theme
-      // - Days 6-14: Expansion packs based on triggered gateways
+      // - Days 6-10: Expansion packs based on triggered gateways
       const triggeredGatewaysList = [...triggeredGatewayIds];
       const moduleIdsForDay = getModuleIdsForDay(args.dayNumber, triggeredGatewaysList);
       const dayConfig = getDayConfig(args.dayNumber);
@@ -3640,7 +3640,7 @@ export const updateGatewayState = mutation({
     console.log(`[Convex] Gateway ${args.gatewayId} for user ${args.userId}: ${args.isTriggered ? "TRIGGERED" : "not triggered"}`);
 
     // When a gateway is triggered, recompute the expansion schedule
-    // This ensures expansion packs are properly scheduled for Days 6-14
+    // This ensures expansion packs are properly scheduled for Days 6-10
     if (args.isTriggered) {
       await ctx.scheduler.runAfter(0, api.expansionScheduler.computeAndStoreSchedule, {
         userId: args.userId,
@@ -3996,7 +3996,7 @@ export const getDayMetadata = query({
 
     // Calculate assessment based on day number
     // Days 1-5: Core assessments (varying lengths)
-    // Days 6-14: May include expansion modules
+    // Days 6-10: May include expansion modules
     const dayAssessmentCounts: Record<number, { questions: number; minutes: number }> = {
       1: { questions: 12, minutes: 6 },   // Demographics + initial
       2: { questions: 10, minutes: 5 },   // PSQI Part 1
@@ -4180,7 +4180,7 @@ const EXPANSION_MODULE_METADATA: Record<string, { name: string; instrument: stri
   expansion_fosq_part1: { name: "Functional Outcomes (Part 1)", instrument: "FOSQ-10", description: "Measure sleep impact on function", icon: "figure.walk" },
   expansion_fosq_part2: { name: "Functional Outcomes (Part 2)", instrument: "FOSQ-10", description: "Measure sleep impact on function", icon: "figure.walk" },
 
-  // Day 14: Diet & Chronotype (diet_impact, sleep_timing)
+  // Day 10: Diet & Chronotype (diet_impact, sleep_timing)
   expansion_medas: { name: "Diet Assessment", instrument: "MEDAS", description: "Evaluate Mediterranean diet adherence", icon: "fork.knife" },
   expansion_meq_part1: { name: "Chronotype (Part 1)", instrument: "MEQ", description: "Determine your sleep-wake preference", icon: "clock.fill" },
   expansion_meq_part2: { name: "Chronotype (Part 2)", instrument: "MEQ", description: "Determine your sleep-wake preference", icon: "clock.fill" },
@@ -4251,7 +4251,7 @@ export const getExpansionForDay = query({
   },
   handler: async (ctx, args) => {
     // Days 1-5 are core assessments, not expansion
-    if (args.dayNumber < 6 || args.dayNumber > 14) {
+    if (args.dayNumber < 6 || args.dayNumber > 10) {
       return { hasExpansion: false, modules: [], questionCount: 0, estimatedMinutes: 0, splashTitle: "" };
     }
 
@@ -4392,7 +4392,7 @@ export const previewExpansionSchedule = query({
     const TARGET_QUESTIONS_PER_DAY = 14;
     const MAX_QUESTIONS_PER_DAY = 18;
     const EXPANSION_START_DAY = 6;
-    const TOTAL_DAYS = 14;
+    const TOTAL_DAYS = 10;
 
     // Filter modules
     const triggeredModules = EXPANSION_MODULES.filter((module) =>

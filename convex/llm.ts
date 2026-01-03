@@ -299,7 +299,7 @@ async function buildDemographicsModule(ctx: ActionCtx, userId: string): Promise<
 - Sex: ${patientDetails.demographics.sex || "Unknown"}
 - Height: ${patientDetails.demographics.height || "Unknown"}
 - Weight: ${patientDetails.demographics.weight || "Unknown"}
-- Days Completed: ${patientDetails.completedDays}/14
+- Days Completed: ${patientDetails.completedDays}/10
 - Total Responses: ${patientDetails.totalResponses}
 - Apple Health Connected: ${(patientDetails.user as any)?.apple_health_connected ? "Yes" : "No"}`;
   } catch (error) {
@@ -360,7 +360,7 @@ async function buildGatewayTriggersModule(ctx: ActionCtx, userId: string): Promi
   }
 }
 
-// Module D: Sleep Log Data (ALL 14 days - not truncated)
+// Module D: Sleep Log Data (ALL 10 days - not truncated)
 async function buildSleepLogFullModule(ctx: ActionCtx, userId: string): Promise<string | null> {
   try {
     const subjectiveSleepData = await ctx.runQuery(api.physician.getSubjectiveSleepQuality, {
@@ -664,7 +664,7 @@ Week 1 (Days 1-7):
 
     if (week2.length > 0) {
       result += `
-Week 2 (Days 8-14):
+Week 2 (Days 6-10):
 - Average Quality: ${week2AvgQuality ? week2AvgQuality.toFixed(1) + "/10" : "N/A"}
 - Average Duration: ${week2AvgDuration ? (week2AvgDuration / 60).toFixed(1) + "h" : "N/A"}
 `;
@@ -825,7 +825,7 @@ async function buildModularAnalysisPrompt(
     }
   }
 
-  const systemPrompt = `You are a board-certified sleep medicine specialist analyzing a patient's comprehensive 14-day sleep assessment.
+  const systemPrompt = `You are a board-certified sleep medicine specialist analyzing a patient's comprehensive 10-day sleep assessment.
 
 Your analysis should be:
 - Evidence-based and clinically actionable
@@ -872,7 +872,7 @@ async function buildAnalysisPrompt(
 
   // Get actual response values
   const allResponses: Array<{ questionId: string; value: string }> = [];
-  for (let day = 1; day <= 14; day++) {
+  for (let day = 1; day <= 10; day++) {
     const dayData = await ctx.runQuery(api.physician.getPatientDayData, {
       userId: userId as any,
       dayNumber: day,
@@ -903,7 +903,7 @@ async function buildAnalysisPrompt(
     .filter(([_, state]: [string, any]) => state.triggered)
     .map(([gatewayId]: [string, any]) => gatewayId);
 
-  const systemPrompt = `You are a board-certified sleep medicine specialist analyzing a patient's comprehensive 14-day sleep assessment.
+  const systemPrompt = `You are a board-certified sleep medicine specialist analyzing a patient's comprehensive 10-day sleep assessment.
 
 Your analysis should be:
 - Evidence-based and clinically actionable
@@ -922,7 +922,7 @@ Provide your analysis in JSON format with these exact keys:
 - Age: ${patientDetails.demographics.dateOfBirth ? `Born ${patientDetails.demographics.dateOfBirth}` : "Unknown"}
 - Sex: ${patientDetails.demographics.sex || "Unknown"}
 - Total Responses: ${allResponses.length}
-- Days Completed: ${patientDetails.completedDays}/14
+- Days Completed: ${patientDetails.completedDays}/10
 
 ## Triggered Gateways
 ${triggeredGateways.length > 0 ? triggeredGateways.map((g: string) => `- ${g}`).join("\n") : "None triggered"}
@@ -1175,7 +1175,7 @@ export const generateInterventionRecommendations = action({
 Patient Information:
 - Name: ${patientDetails.name || "Unknown"}
 - Total Responses: ${patientDetails.totalResponses}
-- Completed Days: ${patientDetails.completedDays}/14
+- Completed Days: ${patientDetails.completedDays}/10
 
 Questionnaire Scores:
 ${scores.map((s: any) => `- ${s.questionnaire_name}: ${s.score}/${s.max_score} (${s.category})`).join("\n")}

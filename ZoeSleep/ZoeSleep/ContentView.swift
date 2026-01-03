@@ -32,7 +32,7 @@ struct ContentView: View {
     private var phaseAwareContent: some View {
         switch journeyPhaseManager.currentPhase {
         case .intake:
-            // 14-day data collection journey
+            // 10-day data collection journey
             MainDashboardView()
 
         case .analysis:
@@ -118,7 +118,7 @@ struct MainDashboardView: View {
                     // Header
                     headerView
 
-                    // Journey Progress Card (Day X of 14)
+                    // Journey Progress Card (Day X of 10)
                     journeyProgressCard
 
                     // Today's Focus - Energy, Mood, Focus Check-In (Apple Watch style)
@@ -585,7 +585,7 @@ struct MainDashboardView: View {
                     .font(.system(size: Typography.title2, weight: .bold, design: .rounded))
                     .foregroundColor(theme.textOnCard)
 
-                Text("of 14")
+                Text("of 10")
                     .font(.system(size: Typography.title3, weight: .regular, design: .rounded))
                     .foregroundColor(theme.textOnCardSecondary)
 
@@ -596,7 +596,7 @@ struct MainDashboardView: View {
             // In debug mode: can tap any future day to jump directly to it (reads debugMode from ThemeManager)
             InteractiveProgressDots(
                 current: currentDay,
-                total: 14,
+                total: 10,
                 completedDays: validatedCompletedDays,
                 onDayTapped: { day in
                     sleepDiarySelectedDay = day
@@ -644,12 +644,12 @@ struct MainDashboardView: View {
         var daysCompleted = max(0, currentDay - 1)
 
         // If current day's sections are BOTH complete, count current day as completed too
-        // This fixes the 93% bug where Day 14 completion wasn't counted
+        // This fixes the 93% bug where Day 10 completion wasn't counted
         if isDayComplete {
             daysCompleted = currentDay
         }
 
-        return Int((Double(daysCompleted) / 14.0) * 100)
+        return Int((Double(daysCompleted) / 10.0) * 100)
     }
 
     private func progressMessage(completedCount: Int) -> String {
@@ -658,13 +658,13 @@ struct MainDashboardView: View {
             return "Let's understand your sleep"
         case 1...4:
             return "Building your sleep profile"
-        case 5...9:
+        case 5...7:
             return "Discovering patterns in your data"
-        case 10...12:
+        case 8:
             return "Almost ready for expert review"
-        case 13:
+        case 9:
             return "Final day of assessment"
-        case 14:
+        case 10:
             return "Assessment complete! Expert review begins."
         default:
             return "Assessment complete!"
@@ -715,9 +715,9 @@ struct MainDashboardView: View {
     }
 
     /// Check if there were gateways triggered that HAD expansion options (even if now completed)
-    /// NOTE: Expansion packs are ONLY served on Days 6-14, never on Days 1-5
+    /// NOTE: Expansion packs are ONLY served on Days 6-10, never on Days 1-5
     private var hadExpansionPackToday: Bool {
-        // Expansion packs are scheduled for Days 6-14, not shown immediately on Days 1-5
+        // Expansion packs are scheduled for Days 6-10, not shown immediately on Days 1-5
         guard currentDay >= 6 else { return false }
 
         // For Days 6+, check if there's a scheduled expansion for today
@@ -728,9 +728,9 @@ struct MainDashboardView: View {
     }
 
     /// Returns expansion pack info if scheduled for today (Days 6+) and not completed
-    /// NOTE: Expansion packs are ONLY served on Days 6-14, never on Days 1-5
+    /// NOTE: Expansion packs are ONLY served on Days 6-10, never on Days 1-5
     private var availableExpansionPack: ExpansionPackInfo? {
-        // Expansion packs are scheduled for Days 6-14, not shown immediately on Days 1-5
+        // Expansion packs are scheduled for Days 6-10, not shown immediately on Days 1-5
         guard currentDay >= 6 else { return nil }
         // Don't show if expansion already completed
         guard !expansionPackCompletedToday else { return nil }
@@ -1001,7 +1001,7 @@ struct MainDashboardView: View {
             print("[iOS Debug] jumpToDay blocked - debug mode not enabled")
             return
         }
-        guard targetDay >= 1 && targetDay <= 14 else {
+        guard targetDay >= 1 && targetDay <= 10 else {
             print("[iOS Debug] Invalid target day: \(targetDay)")
             return
         }
@@ -1070,7 +1070,7 @@ struct MainDashboardView: View {
             return max(1, (questionnaireManager.assessmentQuestionCountForToday + 3) / 4)
         }
 
-        // For expansion days (6-14), use the dynamic Convex schedule
+        // For expansion days (6-10), use the dynamic Convex schedule
         if currentDay > 5 {
             if let scheduled = questionnaireManager.scheduledExpansionForToday {
                 // IMPORTANT: Only return minutes if there are ACTUALLY questions
@@ -1206,7 +1206,7 @@ struct MainDashboardView: View {
     }
 
     /// Get the scheduled day text for a gateway type
-    /// Returns "Day X: Title" if schedule is known, otherwise "Days 6-14"
+    /// Returns "Day X: Title" if schedule is known, otherwise "Days 6-10"
     private func scheduledDayText(for gatewayType: GatewayType) -> String {
         if let schedule = questionnaireManager.expansionScheduleSummary,
            let gatewaySchedule = schedule.gatewaySchedule,
@@ -1220,15 +1220,15 @@ struct MainDashboardView: View {
             return "Day \(scheduledDay)"
         }
         // Fallback if schedule not loaded yet
-        return "Days 6-14"
+        return "Days 6-10"
     }
 
     // MARK: - Quick Actions Card
 
     private var quickActionsCard: some View {
         VStack(spacing: 12) {
-            // Treatment Mode (visible after Day 14 or with active interventions)
-            if currentDay > 14 {
+            // Treatment Mode (visible after Day 10 or with active interventions)
+            if currentDay > 10 {
                 NavigationLink(destination: TreatmentView().environmentObject(themeManager)) {
                     QuickActionRow(
                         icon: "list.bullet.clipboard.fill",
@@ -1283,7 +1283,7 @@ struct MainDashboardView: View {
             return "Assessment"
         }
 
-        // For expansion days (6-14), use the splashTitle from Convex FIXED_SCHEDULE
+        // For expansion days (6-10), use the splashTitle from Convex FIXED_SCHEDULE
         if let scheduled = questionnaireManager.scheduledExpansionForToday,
            let splashTitle = scheduled.splashTitle, !splashTitle.isEmpty {
             return splashTitle
@@ -1306,7 +1306,7 @@ struct MainDashboardView: View {
             return config.description
         }
 
-        // For expansion days (6-14), use splashSubtitle from Convex FIXED_SCHEDULE
+        // For expansion days (6-10), use splashSubtitle from Convex FIXED_SCHEDULE
         if let scheduled = questionnaireManager.scheduledExpansionForToday,
            let splashSubtitle = scheduled.splashSubtitle, !splashSubtitle.isEmpty {
             return splashSubtitle
@@ -2252,7 +2252,7 @@ struct SleepDiaryHistoryView: View {
             // Use negative margin to extend ScrollView edge-to-edge, then add content padding
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(1...14, id: \.self) { day in
+                    ForEach(1...10, id: \.self) { day in
                         DayPillButton(
                             day: day,
                             isSelected: day == selectedDay,

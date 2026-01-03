@@ -51,7 +51,7 @@ export default defineSchema({
     // Time Travel Mode - Calendar-based testing (new system)
     time_travel_active: v.optional(v.boolean()), // Whether Time Travel mode is active
     time_travel_simulated_date: v.optional(v.number()), // Unix timestamp of "today" in the simulation
-    time_travel_current_day: v.optional(v.number()), // Journey day (1-14) in Time Travel mode
+    time_travel_current_day: v.optional(v.number()), // Journey day (1-10) in Time Travel mode
     time_travel_day_completed: v.optional(v.boolean()), // Whether current day's tasks are done
     // Chronotype Assessment (from HealthKit sleep data analysis)
     chronotype: v.optional(v.string()), // early_riser, balanced, night_owl, adaptive
@@ -71,7 +71,7 @@ export default defineSchema({
     .index("by_clerk_id", ["clerk_id"]),
 
   // ============================================
-  // Component 1: 14-Day Onboarding Journey
+  // Component 1: 10-Day Onboarding Journey
   // ============================================
   
   days: defineTable({
@@ -312,7 +312,7 @@ export default defineSchema({
   user_sleep_data: defineTable({
     user_id: v.id("users"),
     date: v.string(), // ISO date string YYYY-MM-DD
-    day_number: v.optional(v.number()), // Journey day number (1-14)
+    day_number: v.optional(v.number()), // Journey day number (1-10)
     in_bed_time: v.optional(v.number()), // Unix timestamp (ms)
     asleep_time: v.optional(v.number()), // Unix timestamp (ms)
     wake_time: v.optional(v.number()), // Unix timestamp (ms)

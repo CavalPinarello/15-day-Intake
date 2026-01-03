@@ -832,10 +832,10 @@ export const testExpansionScheduling = query({
       }
     }
 
-    // Check all days 8-14 are covered if there are expansion modules
+    // Check all days 6-10 are covered if there are expansion modules
     if (schedule.total_expansion_questions > 0) {
       const daysWithModules = new Set(schedule.day_assignments.map(d => d.day_number));
-      const expectedDays = [8, 9, 10, 11, 12, 13, 14];
+      const expectedDays = [6, 7, 8, 9, 10];
       const missingDays = expectedDays.filter(d => !daysWithModules.has(d));
 
       if (missingDays.length > 0 && schedule.total_expansion_questions > 50) {

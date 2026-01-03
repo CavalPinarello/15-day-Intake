@@ -186,7 +186,7 @@ export const getDiscoveryHints = query({
     }
 
     // Chronotype detection hint (needs 10+ days)
-    if (dataPoints >= 10 && args.dayNumber < 14) {
+    if (dataPoints >= 10 && args.dayNumber < 10) {
       hints.push({
         hintType: "chronotype",
         hintText: "Your natural sleep rhythm is becoming clearer...",

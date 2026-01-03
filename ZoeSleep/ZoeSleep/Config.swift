@@ -62,7 +62,7 @@ struct Config {
     static let appBundleId = "com.zoesleep.app"
 
     // Journey Configuration
-    static let totalJourneyDays = 14
+    static let totalJourneyDays = 10
     static let sessionExpirationDays = 30
 
     #if DEBUG

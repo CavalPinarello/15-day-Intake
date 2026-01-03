@@ -1,12 +1,12 @@
 /**
  * Fixed Schedule Configuration
  *
- * This is the single source of truth for the 14-day assessment journey.
+ * This is the single source of truth for the 10-day assessment journey.
  * NO dynamic scheduling - each day has predetermined content.
  *
  * Structure:
  * - Days 1-5: Core Assessment (by pillar/theme)
- * - Days 6-14: Expansion Packs (gateway-triggered)
+ * - Days 6-10: Expansion Packs (gateway-triggered)
  */
 
 // Gateway types that can trigger expansion content
@@ -73,10 +73,10 @@ interface ExpansionDayConfig {
 export type DayConfig = CoreDayConfig | ExpansionDayConfig;
 
 /**
- * FIXED 14-DAY SCHEDULE
+ * FIXED 10-DAY SCHEDULE
  *
  * Days 1-5: Core Assessment (always shown)
- * Days 6-14: Expansion Packs (shown only if ANY gateway is triggered)
+ * Days 6-10: Expansion Packs (shown only if ANY gateway is triggered)
  */
 export const FIXED_SCHEDULE: Record<number, DayConfig> = {
   // ============================================
@@ -124,97 +124,58 @@ export const FIXED_SCHEDULE: Record<number, DayConfig> = {
   },
 
   // ============================================
-  // EXPANSION PACK PHASE (Days 6-14)
+  // EXPANSION PACK PHASE (Days 6-10)
+  // Consolidated from 9 days to 5 days for faster intake
   // ============================================
 
   6: {
     type: "expansion",
-    packs: ["isi", "swdsq"],
+    packs: ["isi", "swdsq", "dbas"],
     gateways: ["insomnia", "poor_sleep_quality", "shift_work"],
-    splashTitle: "Sleep & Work Patterns",
-    splashSubtitle: "Insomnia severity and shift work assessment",
-    totalQuestions: 11,
-    estimatedMinutes: 3,  // 11 questions × 15 sec = ~3 min
+    splashTitle: "Insomnia Assessment",
+    splashSubtitle: "Insomnia severity, shift work, and sleep beliefs",
+    totalQuestions: 17, // ISI(7) + SWDSQ(4) + DBAS-6(6)
+    estimatedMinutes: 5,
   },
 
   7: {
     type: "expansion",
-    packs: ["phq9", "promis"],
-    gateways: ["depression", "cognitive"],
-    splashTitle: "Mood & Thinking",
-    splashSubtitle: "Depression screening and cognitive function",
-    totalQuestions: 15,
-    estimatedMinutes: 4,  // 15 questions × 15 sec = ~4 min
+    packs: ["phq9", "gad7", "psas"],
+    gateways: ["depression", "anxiety", "insomnia"],
+    splashTitle: "Mental Health & Arousal",
+    splashSubtitle: "Depression, anxiety, and pre-sleep arousal",
+    totalQuestions: 32, // PHQ-9(9) + GAD-7(7) + PSAS(16)
+    estimatedMinutes: 9,
   },
 
   8: {
     type: "expansion",
-    packs: ["gad7", "sleep_hygiene"],
-    gateways: ["anxiety", "insomnia", "poor_sleep_quality"],
-    splashTitle: "Anxiety & Sleep Habits",
-    splashSubtitle: "Anxiety screening and sleep hygiene assessment",
-    totalQuestions: 17,
-    estimatedMinutes: 5,  // 17 questions × 15 sec = ~5 min
+    packs: ["stop_bang", "ess", "fss"],
+    gateways: ["osa", "excessive_sleepiness"],
+    splashTitle: "Breathing & Energy",
+    splashSubtitle: "Sleep apnea screening and daytime sleepiness",
+    totalQuestions: 25, // STOP-BANG(8) + ESS(8) + FSS(9)
+    estimatedMinutes: 7,
   },
 
   9: {
     type: "expansion",
-    packs: ["stop_bang"], // Berlin removed - STOP-BANG has 93% sensitivity
-    gateways: ["osa"],
-    splashTitle: "Sleep Apnea Screening",
-    splashSubtitle: "STOP-BANG sleep apnea risk assessment",
-    totalQuestions: 8,
-    estimatedMinutes: 2,  // 8 questions × 15 sec = ~2 min
+    packs: ["sleep_hygiene", "bpi_part1", "bpi_part2", "fosq"],
+    gateways: ["insomnia", "poor_sleep_quality", "pain", "excessive_sleepiness"],
+    splashTitle: "Function & Behavior",
+    splashSubtitle: "Sleep habits, pain, and functional outcomes",
+    totalQuestions: 33, // Sleep Hygiene(10) + BPI(13) + FOSQ(10)
+    estimatedMinutes: 9,
   },
 
   10: {
     type: "expansion",
-    packs: ["ess", "fss"],
-    gateways: ["excessive_sleepiness"],
-    splashTitle: "Daytime Energy",
-    splashSubtitle: "Sleepiness and fatigue severity assessment",
-    totalQuestions: 17,
-    estimatedMinutes: 5,  // 17 questions × 15 sec = ~5 min
-  },
-
-  11: {
-    type: "expansion",
-    packs: ["dbas", "bpi_part1"], // DBAS-6 (6 items) replaces DBAS-16
-    gateways: ["insomnia", "pain"],
-    splashTitle: "Beliefs & Pain (Part 1)",
-    splashSubtitle: "Sleep beliefs and pain severity assessment",
-    totalQuestions: 12, // 6 DBAS-6 + 6 BPI
-    estimatedMinutes: 3,  // 12 questions × 15 sec = ~3 min
-  },
-
-  12: {
-    type: "expansion",
-    packs: ["bpi_part2"], // Just BPI Part 2 now
-    gateways: ["pain"], // Only pain gateway needed for BPI Part 2
-    splashTitle: "Pain Impact",
-    splashSubtitle: "Pain interference with daily activities",
-    totalQuestions: 7,
-    estimatedMinutes: 2,  // 7 questions × 15 sec = ~2 min
-  },
-
-  13: {
-    type: "expansion",
-    packs: ["psas", "fosq"],
-    gateways: ["insomnia", "anxiety", "excessive_sleepiness"],
-    splashTitle: "Sleep Arousal & Function",
-    splashSubtitle: "Pre-sleep arousal and functional outcomes",
-    totalQuestions: 26,
-    estimatedMinutes: 7,  // 26 questions × 15 sec = ~7 min
-  },
-
-  14: {
-    type: "expansion",
-    packs: ["medas", "meq"],
-    gateways: ["diet_impact", "sleep_timing"],
-    splashTitle: "Diet & Chronotype",
-    splashSubtitle: "Diet assessment and sleep timing patterns",
-    totalQuestions: 33,
-    estimatedMinutes: 9,  // 33 questions × 15 sec = ~9 min
+    packs: ["promis", "medas", "meq"],
+    gateways: ["cognitive", "diet_impact", "sleep_timing"],
+    splashTitle: "Lifestyle & Rhythm",
+    splashSubtitle: "Cognitive function, diet, and chronotype",
+    totalQuestions: 39, // PROMIS(6) + MEDAS(14) + MEQ(19)
+    estimatedMinutes: 11,
   },
 };
 
@@ -315,7 +276,7 @@ export function getUpcomingAssessmentDays(triggeredGateways: string[]): {
 }[] {
   const results: { gateway: string; dayNumber: number; splashTitle: string }[] = [];
 
-  for (let day = 6; day <= 14; day++) {
+  for (let day = 6; day <= 10; day++) {
     const config = FIXED_SCHEDULE[day];
     if (config?.type === "expansion") {
       for (const gateway of config.gateways) {

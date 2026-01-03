@@ -630,7 +630,7 @@ struct DayCompletionView: View {
                         .fontWeight(.bold)
                         .foregroundColor(primaryTextColor)
 
-                    Text("You've completed your 14-day comprehensive sleep assessment")
+                    Text("You've completed your 10-day comprehensive sleep assessment")
                         .font(.headline)
                         .foregroundColor(secondaryTextColor)
                         .multilineTextAlignment(.center)
