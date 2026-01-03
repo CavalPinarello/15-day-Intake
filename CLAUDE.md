@@ -88,6 +88,9 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
+**Jan 3:** Removed "Last Night's Sleep (Apple Health)" card from sleep log - sleep log is about SUBJECTIVE sleep experience, not objective HealthKit data which can be unreliable/incomplete for new users. Removed HealthKitSleepCard component and related fetch logic.
+**Jan 3:** STOP-BANG scoring fallback - physician.ts now falls back to source questions (Q17, Q19, Q20, Q21, Q27) if SB_* prefix questions not answered, plus uses demographics (age, sex, BMI) for scoring when available.
+**Jan 3:** Onboarding simplification - streamlined HealthKit connection screen (larger icon, removed benefits list, added Skip option), removed chronotype analysis phase entirely, simplified overall flow.
 **Jan 3:** Unified Today's Focus section - merged separate Energy/Mood/Focus check-in widget and task list into ONE "Today's focus" card with 3 items: Check-In (with mini Morning/Midday/Evening circles), Sleep Log, and Assessment. Removed duplicate "Today's Focus" labeling, cleaner dashboard UX. Created CheckInTaskRow component with inline time slot circles.
 **Jan 3:** Shortened journey from 14 days to 10 days - Core assessment (Days 1-5) unchanged, expansion packs consolidated into Days 6-10 by grouping related clinical instruments (Day 6: ISI+SWDSQ+DBAS, Day 7: PHQ9+GAD7+PSAS, Day 8: STOP-BANG+ESS+FSS, Day 9: Sleep Hygiene+BPI+FOSQ, Day 10: PROMIS+MEDAS+MEQ)
 **Jan 3:** Onboarding UX improvements - removed floating magnifying glass (Enhanced Readability button) from onboarding screens, replaced small text Continue/Back buttons with visible styled buttons on HealthKit connection screen, removed Sleep Philosophy step

@@ -6,6 +6,70 @@
 
 ### Jan 3, 2026
 
+#### Removed Apple Health Sleep Card from Sleep Log
+
+Removed the "Last Night's Sleep (Apple Health)" card that was displayed at the start of the sleep log questionnaire.
+
+**Why removed:**
+- Sleep log is about **SUBJECTIVE** sleep experience - how the user *perceived* their sleep
+- Apple Health data is objective data that can be unreliable/incomplete, especially for new users
+- For new accounts on Day 1, HealthKit data often shows garbage values (e.g., 1h 10m when user slept 8h)
+- The card was confusing and mixing two different concepts
+
+**Technical changes:**
+- Removed `HealthKitSleepCard` struct (~120 lines)
+- Removed `healthKitSleepSummary` and `isLoadingHealthKit` state variables
+- Removed `fetchHealthKitSleepData()` and `parseHealthKitData()` functions
+- Removed HealthKit fetch call on view appear for sleep log section
+
+**Files changed:** `QuestionnaireView.swift`
+
+---
+
+#### STOP-BANG Scoring Fallback Logic
+
+Enhanced the STOP-BANG sleep apnea scoring in physician.ts to fall back to source questions when the dedicated SB_* questions aren't answered.
+
+**Problem:**
+- STOP-BANG questionnaire uses SB_1 through SB_8 questions
+- Some users may not have completed these dedicated questions
+- Missing scores resulted in incomplete clinical assessments
+
+**Solution:**
+Now falls back to equivalent source questions:
+- SB_1 (Snore) → Q19
+- SB_2 (Tired) → Q17 (scale ≥3)
+- SB_3 (Observed) → Q20
+- SB_4 (Pressure) → Q27
+- SB_5 (BMI >35) → calculated from demographics
+- SB_6 (Age >50) → from demographics
+- SB_7 (Neck >40cm) → Q21
+- SB_8 (Gender Male) → from demographics
+
+**Files changed:** `convex/physician.ts`
+
+---
+
+#### Onboarding Flow Simplification
+
+Streamlined the HealthKit connection screen and removed the chronotype analysis phase.
+
+**Changes:**
+- Larger HealthKit icon (80-100px vs 60-70px)
+- Removed benefits list (bed.double.fill, heart.text.square.fill, chart.line.uptrend.xyaxis)
+- Added "Skip for now" option for users who don't want to connect HealthKit
+- Removed entire sleep analysis/chronotype detection phase
+- Simplified `OnboardingStep` enum and navigation flow
+
+**Why:**
+- Chronotype analysis was complex and not providing immediate user value
+- Simpler onboarding improves completion rates
+- Users can connect HealthKit later if needed
+
+**Files changed:** `OnboardingView.swift`, `OnboardingManager.swift`, `HealthKitManager.swift`
+
+---
+
 #### Unified Today's Focus Section
 
 Merged the two separate "Today's Focus" sections on the dashboard into one unified card for cleaner UX.

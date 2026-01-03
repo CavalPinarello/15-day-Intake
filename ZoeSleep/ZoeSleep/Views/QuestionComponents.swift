@@ -198,13 +198,23 @@ struct ScaleInput: View {
                 }
             }
 
-            // Unified 1-10 slider
+            // Unified 1-10 slider with expanded touch area for easier interaction
+            // Large padding + simultaneousGesture prevents accidental back navigation
             Slider(
                 value: $displayValue,
                 in: 1...10,
                 step: 1
             )
             .accentColor(question.pillar.themeColor)
+            .frame(height: 44)  // Standard touch target height
+            .padding(.vertical, 24)  // Expand touch area above/below
+            .contentShape(Rectangle())  // Entire padded area is tappable
+            .simultaneousGesture(
+                // Capture drag gestures to prevent back navigation
+                // simultaneousGesture allows slider to still work
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in }
+            )
 
             // Current value with semantic label
             VStack(spacing: 4) {

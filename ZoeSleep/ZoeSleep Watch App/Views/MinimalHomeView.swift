@@ -59,7 +59,7 @@ struct MinimalHomeView: View {
                     ], spacing: 8) {
                         sleepTile
                         checkInTile
-                        daylightTile
+                        lightRxTile
                         protocolTile
                     }
 
@@ -110,8 +110,8 @@ struct MinimalHomeView: View {
     private var sleepTile: some View {
         Button(action: { showSleepStages = true }) {
             VStack(spacing: 6) {
-                Image(systemName: "bed.double.fill")
-                    .font(.system(size: 28))
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 28, weight: .medium))
                     .foregroundColor(.indigo)
 
                 Text("Sleep")
@@ -171,14 +171,14 @@ struct MinimalHomeView: View {
         .opacity(canDoCurrentCheckIn || allDone ? 1 : 0.7)
     }
 
-    private var daylightTile: some View {
-        Button(action: { /* TODO: Show daylight view */ }) {
+    private var lightRxTile: some View {
+        Button(action: { /* TODO: Show light prescription view */ }) {
             VStack(spacing: 6) {
                 Image(systemName: "sun.max.fill")
                     .font(.system(size: 28))
                     .foregroundColor(.yellow)
 
-                Text("Daylight")
+                Text("Light Rx")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
             }

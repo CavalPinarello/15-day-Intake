@@ -366,8 +366,10 @@ class HealthKitManager: ObservableObject {
         do {
             let dobComponents = try healthStore.dateOfBirthComponents()
             dateOfBirth = Calendar.current.date(from: dobComponents)
+            print("[HealthKit] ✅ Date of birth fetched: \(dateOfBirth?.description ?? "nil")")
         } catch {
-            print("[HealthKit] Could not fetch date of birth: \(error.localizedDescription)")
+            print("[HealthKit] ⚠️ Could not fetch date of birth: \(error.localizedDescription)")
+            print("[HealthKit] → User may need to set DOB in Health app > Profile")
         }
 
         // Fetch Biological Sex (characteristic - set once in Health app)
@@ -382,11 +384,16 @@ class HealthKitManager: ObservableObject {
                 biologicalSex = "Other"
             case .notSet:
                 biologicalSex = nil
+                print("[HealthKit] ⚠️ Biological sex not set in Health app")
             @unknown default:
                 biologicalSex = nil
             }
+            if biologicalSex != nil {
+                print("[HealthKit] ✅ Biological sex fetched: \(biologicalSex!)")
+            }
         } catch {
-            print("[HealthKit] Could not fetch biological sex: \(error.localizedDescription)")
+            print("[HealthKit] ⚠️ Could not fetch biological sex: \(error.localizedDescription)")
+            print("[HealthKit] → User may need to set sex in Health app > Profile")
         }
 
         // Fetch Height (most recent sample) - async with thread-safe update
@@ -394,6 +401,11 @@ class HealthKitManager: ObservableObject {
         fetchMostRecentHeight { height in
             lock.lock()
             fetchedHeight = height
+            if let h = height {
+                print("[HealthKit] ✅ Height fetched: \(h) cm")
+            } else {
+                print("[HealthKit] ⚠️ No height data found in HealthKit")
+            }
             lock.unlock()
             group.leave()
         }
@@ -403,6 +415,11 @@ class HealthKitManager: ObservableObject {
         fetchMostRecentWeight { weight in
             lock.lock()
             fetchedWeight = weight
+            if let w = weight {
+                print("[HealthKit] ✅ Weight fetched: \(w) kg")
+            } else {
+                print("[HealthKit] ⚠️ No weight data found in HealthKit")
+            }
             lock.unlock()
             group.leave()
         }

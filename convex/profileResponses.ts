@@ -287,7 +287,11 @@ export const injectDemographicResponses = mutation({
       );
     }
 
+    // Log STOP-BANG derivation summary
+    const stopBangDerived = details.filter(d => d.questionId.startsWith("SB_") && d.action !== "skipped");
     console.log(`[profileResponses] Injected ${injectedCount} responses, skipped ${skippedCount} for user ${args.userId}`);
+    console.log(`[profileResponses] STOP-BANG derived: ${stopBangDerived.map(d => `${d.questionId}=${d.action}`).join(", ") || "none"}`);
+    console.log(`[profileResponses] Full details: ${JSON.stringify(details.filter(d => d.questionId.startsWith("SB_")))}`);
 
     return { injectedCount, skippedCount, details };
   },

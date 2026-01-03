@@ -262,41 +262,71 @@ function calculateESS(responses: Map<string, number>): QuestionnaireScore {
 
 // STOP-BANG (Sleep Apnea Risk) - 8 yes/no questions
 // iOS uses SB_1 through SB_8 with yesNo type (1=Yes, 0=No)
+// Falls back to source questions (Q17, Q19, Q20, Q21, Q27, D2, D4, D5, D6) if SB_* not available
 function calculateSTOPBANG(responses: Map<string, number>, demographics: { age?: number; sex?: string; bmi?: number }): QuestionnaireScore {
   let score = 0;
   let answered = 0;
 
-  // S - Snore loudly (SB_1)
-  const snore = responses.get("SB_1");
+  // S - Snore loudly (SB_1 or Q19)
+  let snore = responses.get("SB_1");
+  if (snore === undefined) {
+    const q19 = responses.get("19");
+    if (q19 !== undefined) snore = q19 === 1 ? 1 : 0; // Q19 is yes/no
+  }
   if (snore !== undefined) { if (snore === 1) score++; answered++; }
 
-  // T - Tired/fatigued during daytime (SB_2)
-  const tired = responses.get("SB_2");
+  // T - Tired/fatigued during daytime (SB_2 or Q17)
+  let tired = responses.get("SB_2");
+  if (tired === undefined) {
+    const q17 = responses.get("17");
+    if (q17 !== undefined) tired = q17 >= 3 ? 1 : 0; // Q17 is 0-4 scale (Often=3, Always=4)
+  }
   if (tired !== undefined) { if (tired === 1) score++; answered++; }
 
-  // O - Observed stop breathing (SB_3)
-  const observed = responses.get("SB_3");
+  // O - Observed stop breathing (SB_3 or Q20)
+  let observed = responses.get("SB_3");
+  if (observed === undefined) {
+    const q20 = responses.get("20");
+    if (q20 !== undefined) observed = q20 === 1 ? 1 : 0; // Q20 is yes/no
+  }
   if (observed !== undefined) { if (observed === 1) score++; answered++; }
 
-  // P - Blood Pressure high (SB_4)
-  const pressure = responses.get("SB_4");
+  // P - Blood Pressure high (SB_4 or Q27)
+  let pressure = responses.get("SB_4");
+  if (pressure === undefined) {
+    const q27 = responses.get("27");
+    if (q27 !== undefined) pressure = q27 === 1 ? 1 : 0; // Q27 is yes/no
+  }
   if (pressure !== undefined) { if (pressure === 1) score++; answered++; }
 
-  // B - BMI > 35 (SB_5) - asked directly as yes/no in iOS
-  const bmi = responses.get("SB_5");
-  if (bmi !== undefined) { if (bmi === 1) score++; answered++; }
+  // B - BMI > 35 (SB_5 or calculated from D5+D6 or demographics)
+  let bmiScore = responses.get("SB_5");
+  if (bmiScore === undefined && demographics.bmi !== undefined) {
+    bmiScore = demographics.bmi > 35 ? 1 : 0;
+  }
+  if (bmiScore !== undefined) { if (bmiScore === 1) score++; answered++; }
 
-  // A - Age > 50 (SB_6) - asked directly as yes/no in iOS
-  const age = responses.get("SB_6");
-  if (age !== undefined) { if (age === 1) score++; answered++; }
+  // A - Age > 50 (SB_6 or demographics)
+  let ageScore = responses.get("SB_6");
+  if (ageScore === undefined && demographics.age !== undefined) {
+    ageScore = demographics.age > 50 ? 1 : 0;
+  }
+  if (ageScore !== undefined) { if (ageScore === 1) score++; answered++; }
 
-  // N - Neck circumference > 40cm (SB_7)
-  const neck = responses.get("SB_7");
+  // N - Neck circumference > 40cm (SB_7 or Q21)
+  let neck = responses.get("SB_7");
+  if (neck === undefined) {
+    const q21 = responses.get("21");
+    if (q21 !== undefined) neck = q21 > 40 ? 1 : 0; // Q21 is numeric cm
+  }
   if (neck !== undefined) { if (neck === 1) score++; answered++; }
 
-  // G - Gender = Male (SB_8)
-  const gender = responses.get("SB_8");
-  if (gender !== undefined) { if (gender === 1) score++; answered++; }
+  // G - Gender = Male (SB_8 or demographics)
+  let genderScore = responses.get("SB_8");
+  if (genderScore === undefined && demographics.sex !== undefined) {
+    genderScore = demographics.sex.toLowerCase() === "male" ? 1 : 0;
+  }
+  if (genderScore !== undefined) { if (genderScore === 1) score++; answered++; }
 
   let interpretation = "Not enough data";
   let severity: "normal" | "mild" | "moderate" | "severe" | "unknown" = "unknown";

@@ -685,41 +685,32 @@ struct HealthConnectStepView: View {
     // MARK: - HealthKit Connection Content
 
     private var healthKitConnectionContent: some View {
-        Group {
+        VStack(spacing: isCompact ? 16 : 24) {
+            Spacer(minLength: isCompact ? 40 : 60)
+
             // Icon - changes based on status
             ZStack {
                 Circle()
                     .fill(iconBackgroundColor.opacity(0.15))
-                    .frame(width: isCompact ? 60 : 70, height: isCompact ? 60 : 70)
+                    .frame(width: isCompact ? 80 : 100, height: isCompact ? 80 : 100)
 
                 Image(systemName: iconName)
-                    .font(.system(size: isCompact ? 28 : 34))
+                    .font(.system(size: isCompact ? 36 : 44))
                     .foregroundColor(iconColor)
             }
 
-            // Title
-            VStack(spacing: 4) {
+            // Title & subtitle
+            VStack(spacing: 8) {
                 Text("Connect Apple Health")
                     .font(isCompact ? .title3.bold() : .title2.bold())
                     .foregroundColor(palette.textPrimary)
 
-                Text(subtitleText)
-                    .font(.caption)
+                Text("Import your sleep history to personalize your experience")
+                    .font(.subheadline)
                     .foregroundColor(palette.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
             }
-
-            // Benefits (compact list)
-            VStack(alignment: .leading, spacing: 8) {
-                HealthBenefitRow(icon: "bed.double.fill", text: "Sleep tracking data", isCompact: isCompact)
-                HealthBenefitRow(icon: "heart.text.square.fill", text: "Heart rate patterns", isCompact: isCompact)
-                HealthBenefitRow(icon: "chart.line.uptrend.xyaxis", text: "Personalized insights", isCompact: isCompact)
-            }
-            .padding(12)
-            .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
-            .cornerRadius(10)
-            .padding(.horizontal, 20)
 
             Spacer()
 
@@ -741,219 +732,142 @@ struct HealthConnectStepView: View {
                 unavailableStatus
             }
 
-            // Navigation buttons (no back button - this is the first step)
-            OnboardingNavigationButtons(
-                onboardingManager: onboardingManager,
-                showBack: false,
-                nextLabel: continueButtonText
-            )
-            .padding(.horizontal, 20)
-            .padding(.bottom, isCompact ? 24 : 32)
+            // Skip option for non-connected states
+            if connectionStatus == .notConnected || connectionStatus == .denied || connectionStatus == .unavailable {
+                Button(action: { onboardingManager.nextStep() }) {
+                    Text("Skip for now")
+                        .font(.subheadline)
+                        .foregroundColor(palette.textSecondary)
+                }
+                .padding(.bottom, isCompact ? 24 : 32)
+            }
         }
     }
 
-    // MARK: - Sleep Analysis Content
+    // MARK: - Sleep Data Sync Content (simplified, action-focused)
 
     private var sleepAnalysisContent: some View {
-        Group {
-            switch analysisPhase {
-            case .fetchingSleepData, .analyzingPatterns:
-                // Progress indicator
-                VStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(palette.accent.opacity(0.15))
-                            .frame(width: isCompact ? 70 : 80, height: isCompact ? 70 : 80)
+        VStack(spacing: isCompact ? 16 : 24) {
+            Spacer(minLength: isCompact ? 40 : 60)
 
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .tint(palette.accent)
-                    }
+            // Progress/Result icon
+            ZStack {
+                Circle()
+                    .fill(palette.accent.opacity(0.15))
+                    .frame(width: isCompact ? 80 : 100, height: isCompact ? 80 : 100)
 
-                    VStack(spacing: 4) {
-                        Text(analysisPhase == .fetchingSleepData ? "Fetching Sleep History" : "Analyzing Patterns")
-                            .font(isCompact ? .title3.bold() : .title2.bold())
-                            .foregroundColor(palette.textPrimary)
-
-                        Text(analysisPhase == .fetchingSleepData
-                             ? "Retrieving your sleep data from Apple Health..."
-                             : "Calculating your sleep midpoint and chronotype...")
-                            .font(.caption)
-                            .foregroundColor(palette.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                    }
+                if analysisPhase == .complete || analysisPhase == .insufficientData {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: isCompact ? 40 : 50))
+                        .foregroundColor(.green)
+                } else {
+                    ProgressView()
+                        .scaleEffect(1.8)
+                        .tint(palette.accent)
                 }
+            }
 
-                Spacer()
+            // Status message
+            VStack(spacing: 8) {
+                Text(syncStatusTitle)
+                    .font(isCompact ? .title3.bold() : .title2.bold())
+                    .foregroundColor(palette.textPrimary)
 
-            case .complete:
-                // Show chronotype result
-                if let result = chronotypeManager.result {
-                    chronotypeResultView(result: result)
-                }
+                Text(syncStatusSubtitle)
+                    .font(.subheadline)
+                    .foregroundColor(palette.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
 
-            case .insufficientData:
-                // Not enough data message
-                insufficientDataView
-
-            case .notStarted:
-                EmptyView()
+            // Show sync summary when complete
+            if analysisPhase == .complete, let result = chronotypeManager.result {
+                syncSummaryView(result: result)
             }
 
             Spacer()
 
-            // Continue button (only show when analysis is complete)
+            // Continue button (only show when sync is complete)
             if analysisPhase == .complete || analysisPhase == .insufficientData {
-                Button(action: { onboardingManager.nextStep() }) {
-                    HStack(spacing: 8) {
-                        Text("Continue")
-                            .fontWeight(.semibold)
-                        Image(systemName: "arrow.right")
-                    }
-                    .foregroundColor(palette.isDark ? Color(red: 0.15, green: 0.10, blue: 0.08) : .white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        LinearGradient(
-                            colors: [palette.accent, palette.wave],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(12)
-                }
+                OnboardingNavigationButtons(
+                    onboardingManager: onboardingManager,
+                    showBack: false,
+                    nextLabel: "Continue"
+                )
                 .padding(.horizontal, 20)
                 .padding(.bottom, isCompact ? 24 : 32)
             }
         }
     }
 
-    // MARK: - Chronotype Result View
-
-    private func chronotypeResultView(result: ChronotypeResult) -> some View {
-        VStack(spacing: 16) {
-            // Chronotype icon and emoji
-            ZStack {
-                Circle()
-                    .fill(result.chronotypeEnum.color.opacity(0.2))
-                    .frame(width: isCompact ? 80 : 100, height: isCompact ? 80 : 100)
-
-                Text(result.emoji)
-                    .font(.system(size: isCompact ? 40 : 50))
-            }
-
-            // Title
-            VStack(spacing: 4) {
-                Text("You're a \(result.displayName)!")
-                    .font(isCompact ? .title3.bold() : .title2.bold())
-                    .foregroundColor(palette.textPrimary)
-
-                Text(result.chronotypeEnum.description)
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-            }
-
-            // Sleep stats card
-            VStack(spacing: 10) {
-                HStack {
-                    Label("Sleep Midpoint", systemImage: "clock")
-                        .font(.subheadline)
-                        .foregroundColor(palette.textSecondary)
-                    Spacer()
-                    Text(chronotypeManager.formatMidpointTime(result.avgSleepMidpoint))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(result.chronotypeEnum.color)
-                }
-
-                Divider()
-                    .background(palette.textSecondary.opacity(0.3))
-
-                HStack {
-                    Label("Usual Bedtime", systemImage: "bed.double")
-                        .font(.subheadline)
-                        .foregroundColor(palette.textSecondary)
-                    Spacer()
-                    Text(chronotypeManager.formatMidpointTime(result.avgBedtime))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(palette.textPrimary)
-                }
-
-                HStack {
-                    Label("Usual Wake Time", systemImage: "sun.max")
-                        .font(.subheadline)
-                        .foregroundColor(palette.textSecondary)
-                    Spacer()
-                    Text(chronotypeManager.formatMidpointTime(result.avgWakeTime))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(palette.textPrimary)
-                }
-
-                Divider()
-                    .background(palette.textSecondary.opacity(0.3))
-
-                HStack {
-                    Text("Based on \(result.daysAnalyzed) nights")
-                        .font(.caption)
-                        .foregroundColor(palette.textSecondary)
-                    Spacer()
-                }
-            }
-            .padding(14)
-            .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
-            .cornerRadius(12)
-            .padding(.horizontal, 20)
+    private var syncStatusTitle: String {
+        switch analysisPhase {
+        case .fetchingSleepData:
+            return "Syncing Sleep Data"
+        case .analyzingPatterns:
+            return "Analyzing Patterns"
+        case .complete:
+            return "Sync Complete"
+        case .insufficientData:
+            return "Connected"
+        case .notStarted:
+            return ""
         }
     }
 
-    // MARK: - Insufficient Data View
-
-    private var insufficientDataView: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(palette.accent.opacity(0.15))
-                    .frame(width: isCompact ? 70 : 80, height: isCompact ? 70 : 80)
-
-                Image(systemName: "chart.bar.doc.horizontal")
-                    .font(.system(size: isCompact ? 32 : 38))
-                    .foregroundColor(palette.accent)
+    private var syncStatusSubtitle: String {
+        switch analysisPhase {
+        case .fetchingSleepData:
+            return "Importing 90 days of sleep history..."
+        case .analyzingPatterns:
+            return "Calculating your sleep patterns..."
+        case .complete:
+            if let result = chronotypeManager.result {
+                return "\(result.daysAnalyzed) nights of sleep data imported"
             }
-
-            VStack(spacing: 4) {
-                Text("Learning Your Patterns")
-                    .font(isCompact ? .title3.bold() : .title2.bold())
-                    .foregroundColor(palette.textPrimary)
-
-                Text(chronotypeManager.dataStatusMessage)
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-            }
-
-            // Info card
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundColor(palette.accent)
-                    Text("What is chronotype?")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(palette.textPrimary)
-                }
-
-                Text("Your chronotype determines whether you're naturally a morning person, night owl, or somewhere in between. It's based on your typical sleep midpoint - the halfway point between when you fall asleep and wake up.")
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(12)
-            .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
-            .cornerRadius(10)
-            .padding(.horizontal, 20)
+            return "Your sleep data has been synced"
+        case .insufficientData:
+            return "We'll learn your patterns as you log sleep"
+        case .notStarted:
+            return ""
         }
+    }
+
+    // MARK: - Sync Summary View (compact, no education)
+
+    private func syncSummaryView(result: ChronotypeResult) -> some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "bed.double.fill")
+                    .foregroundColor(palette.accent)
+                Text("Avg. Bedtime")
+                    .foregroundColor(palette.textSecondary)
+                Spacer()
+                Text(chronotypeManager.formatMidpointTime(result.avgBedtime))
+                    .fontWeight(.medium)
+                    .foregroundColor(palette.textPrimary)
+            }
+            .font(.subheadline)
+
+            Divider()
+                .background(palette.textSecondary.opacity(0.2))
+
+            HStack {
+                Image(systemName: "sun.max.fill")
+                    .foregroundColor(palette.wave)
+                Text("Avg. Wake Time")
+                    .foregroundColor(palette.textSecondary)
+                Spacer()
+                Text(chronotypeManager.formatMidpointTime(result.avgWakeTime))
+                    .fontWeight(.medium)
+                    .foregroundColor(palette.textPrimary)
+            }
+            .font(.subheadline)
+        }
+        .padding(16)
+        .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+        .cornerRadius(12)
+        .padding(.horizontal, 20)
     }
 
     // MARK: - Dynamic UI Properties
@@ -982,29 +896,6 @@ struct HealthConnectStepView: View {
         case .connected: return .green
         case .denied: return .orange
         case .unavailable: return .gray
-        }
-    }
-
-    private var subtitleText: String {
-        switch connectionStatus {
-        case .notConnected:
-            return "Import sleep data for personalized insights"
-        case .connecting:
-            return "Requesting access..."
-        case .connected:
-            return "Your health data will be imported"
-        case .denied:
-            return "Enable access in Settings to import your sleep data"
-        case .unavailable:
-            return "Apple Health is not available on this device"
-        }
-    }
-
-    private var continueButtonText: String {
-        switch connectionStatus {
-        case .connected: return "Continue"
-        case .denied: return "Continue without Health data"
-        default: return "Skip for now"
         }
     }
 
@@ -1116,13 +1007,12 @@ struct HealthConnectStepView: View {
             analysisPhase = .fetchingSleepData
         }
 
-        // Fetch sleep data from HealthKit
+        // Fetch sleep data from HealthKit (90 days)
         healthKitManager.fetchSleepDataForChronotype { sleepData in
             DispatchQueue.main.async {
                 chronotypeManager.nightsFound = sleepData.count
 
                 if sleepData.isEmpty {
-                    // No sleep data at all
                     withAnimation(.easeInOut(duration: 0.3)) {
                         analysisPhase = .insufficientData
                     }
@@ -1133,23 +1023,32 @@ struct HealthConnectStepView: View {
                     analysisPhase = .analyzingPatterns
                 }
 
-                // Add brief delay for visual effect
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    // Analyze the data
+                // Analyze the data for chronotype
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     if let result = chronotypeManager.analyzeFromSleepData(sleepData) {
-                        // Sufficient data - show result
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            analysisPhase = .complete
-                        }
-                        print("[Onboarding] Chronotype determined: \(result.chronotype), midpoint: \(chronotypeManager.formatMidpointTime(result.avgSleepMidpoint))")
-                    } else {
-                        // Insufficient data
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            analysisPhase = .insufficientData
-                        }
-                        print("[Onboarding] Insufficient sleep data for chronotype: \(sleepData.count) nights")
+                        print("[Onboarding] Chronotype: \(result.chronotype), bedtime: \(chronotypeManager.formatMidpointTime(result.avgBedtime)), wake: \(chronotypeManager.formatMidpointTime(result.avgWakeTime))")
+                    }
+
+                    // Sync sleep data to Convex in background
+                    syncSleepDataToConvex()
+
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        analysisPhase = .complete
                     }
                 }
+            }
+        }
+    }
+
+    /// Sync all health data to Convex in background (doesn't block UI)
+    private func syncSleepDataToConvex() {
+        print("[Onboarding] Starting background sync of health data to Convex...")
+        healthKitManager.syncAllHealthData { result in
+            switch result {
+            case .success(let summary):
+                print("[Onboarding] ✅ Health data synced to Convex: \(summary)")
+            case .failure(let error):
+                print("[Onboarding] ⚠️ Health data sync failed (non-blocking): \(error.localizedDescription)")
             }
         }
     }
@@ -1157,27 +1056,6 @@ struct HealthConnectStepView: View {
     private func openHealthSettings() {
         if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(settingsURL)
-        }
-    }
-}
-
-struct HealthBenefitRow: View {
-    let icon: String
-    let text: String
-    var isCompact: Bool = false
-
-    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(isCompact ? .caption : .subheadline)
-                .foregroundColor(palette.accent)
-                .frame(width: 20)
-
-            Text(text)
-                .font(isCompact ? .caption : .subheadline)
-                .foregroundColor(palette.textPrimary)
         }
     }
 }

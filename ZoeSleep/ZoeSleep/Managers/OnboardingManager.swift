@@ -258,6 +258,9 @@ class OnboardingManager: ObservableObject {
             isOnboardingComplete = false
             profile.onboardingCompleted = false
             profile.userId = userId
+            // For new users, always detect locale for measurement system
+            detectSystemMeasurementSystem()
+            print("[Onboarding] Applied locale detection: \(profile.measurementSystem)")
         }
     }
 
@@ -330,31 +333,28 @@ class OnboardingManager: ObservableObject {
         }
     }
 
-    /// Reset local state for a new user
-    /// Note: hasSeenJourneyIntro is NOT reset - it's a device-level flag, not per-user
+    /// Reset local state for a new user - intro screens show for each new user
     private func resetLocalState() {
         profile = OnboardingProfile()
         currentStep = .healthConnect  // Start at HealthKit step
         isOnboardingComplete = false
-        // DO NOT reset hasSeenJourneyIntro - the intro explains the app once per device
+        hasSeenJourneyIntro = false  // Reset for new user - they need to see intro
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
-        // journeyIntroSeenKey is preserved - intro shows once per device, not per user
+        UserDefaults.standard.set(false, forKey: journeyIntroSeenKey)
         detectSystemMeasurementSystem()
     }
 
     /// Clear onboarding state when user signs out
-    /// This resets local state without touching server data
-    /// Note: hasSeenJourneyIntro is preserved - it's device-level, not per-user
     func clearForSignOut() {
         profile = OnboardingProfile()
         currentStep = .healthConnect  // Start at HealthKit step
         isOnboardingComplete = false
-        // DO NOT reset hasSeenJourneyIntro - the intro shows once per device
+        hasSeenJourneyIntro = false  // Reset for new user
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
-        // journeyIntroSeenKey is preserved - new users on same device skip intro
-        print("[Onboarding] Cleared for sign out (journey intro preserved)")
+        UserDefaults.standard.set(false, forKey: journeyIntroSeenKey)
+        print("[Onboarding] Cleared for sign out")
     }
 
     // MARK: - System Detection
