@@ -1996,17 +1996,22 @@ export const canAdvanceDay = query({
       }
     }
 
-    // Check if this is an expansion day with no gateways triggered (no assessment needed)
+    // Check if this SPECIFIC day has assessment content based on fixed schedule and user's gateways
     let hasAssessmentToday = true;
     if (currentDay > 5) {
-      // Days 6-14 are expansion days - check if any gateways triggered
+      // Days 6-14 are expansion days - check if THIS day has content for user's triggered gateways
       const userGateways = await ctx.db
         .query("user_gateway_states")
         .withIndex("by_user", (q) => q.eq("user_id", args.userId))
         .collect();
 
-      const triggeredCount = userGateways.filter((g) => g.triggered).length;
-      hasAssessmentToday = triggeredCount > 0;
+      const triggeredGateways = userGateways
+        .filter((g) => g.triggered)
+        .map((g) => g.gateway_id);
+
+      // Use fixed schedule to check if THIS day has content for user's gateways
+      // e.g., Day 10 only has ESS/FSS which requires 'excessive_sleepiness' gateway
+      hasAssessmentToday = shouldShowExpansion(currentDay, triggeredGateways);
     }
 
     // Completion check: Sleep Log always required, Assessment only if available
@@ -2147,17 +2152,22 @@ export const advanceDay = mutation({
     const assessmentCompleted = progress?.assessment_completed ?? progress?.completed ?? false;
     const dayReadyAt = progress?.day_ready_at;
 
-    // Check if this is an expansion day with no gateways triggered (no assessment needed)
+    // Check if this SPECIFIC day has assessment content based on fixed schedule and user's gateways
     let hasAssessmentToday = true;
     if (currentDay > 5) {
-      // Days 6-14 are expansion days - check if any gateways triggered
+      // Days 6-14 are expansion days - check if THIS day has content for user's triggered gateways
       const userGateways = await ctx.db
         .query("user_gateway_states")
         .withIndex("by_user", (q) => q.eq("user_id", args.userId))
         .collect();
 
-      const triggeredCount = userGateways.filter((g) => g.triggered).length;
-      hasAssessmentToday = triggeredCount > 0;
+      const triggeredGateways = userGateways
+        .filter((g) => g.triggered)
+        .map((g) => g.gateway_id);
+
+      // Use fixed schedule to check if THIS day has content for user's gateways
+      // e.g., Day 10 only has ESS/FSS which requires 'excessive_sleepiness' gateway
+      hasAssessmentToday = shouldShowExpansion(currentDay, triggeredGateways);
     }
 
     // COMPLETION CHECK: Sleep Log always required, Assessment only if available

@@ -6,6 +6,40 @@
 
 ### Jan 3, 2026
 
+#### Fix Day Advancement Bug for Expansion Days Without Assessments
+
+Fixed critical bug where users couldn't advance to the next day when the current expansion day had no assessments scheduled for their triggered gateways.
+
+**Problem:**
+- Day 10 only shows content for `excessive_sleepiness` gateway (ESS + FSS packs)
+- If user triggered `pain` but not `excessive_sleepiness`, Day 10 has no assessments
+- Old code checked if ANY gateways were triggered globally and required `assessmentCompleted = true`
+- Since there was no assessment to complete, the "Advance to Day 11" button didn't work
+- Users could only advance by tapping the manual day dots
+
+**Root Cause:**
+In `convex/watch.ts`, both `canAdvanceDay` query and `advanceDay` mutation used:
+```typescript
+const triggeredCount = userGateways.filter((g) => g.triggered).length;
+hasAssessmentToday = triggeredCount > 0;
+```
+This checked if ANY gateways were triggered, not if the SPECIFIC day had content.
+
+**Fix:**
+Changed both functions to use `shouldShowExpansion()` from `fixedSchedule.ts`:
+```typescript
+const triggeredGateways = userGateways
+  .filter((g) => g.triggered)
+  .map((g) => g.gateway_id);
+hasAssessmentToday = shouldShowExpansion(currentDay, triggeredGateways);
+```
+
+This uses the fixed schedule to check if the specific day has content for the user's triggered gateways (e.g., Day 10 requires `excessive_sleepiness` gateway).
+
+**Files changed:** `convex/watch.ts` (lines 1999-2015, 2155-2171)
+
+---
+
 #### Watch-Style Check-In Widget Improvements
 
 Enhanced the "Today's Focus" check-in widget for better visibility and instant feedback.

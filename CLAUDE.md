@@ -88,6 +88,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
+**Jan 3:** Fixed day advancement bug for expansion days without assessments - `advanceDay` mutation now uses `shouldShowExpansion()` to check if the SPECIFIC day has content for user's triggered gateways, not just if ANY gateways are triggered globally. Fixes inability to advance past Day 10 when only Pain gateway triggered (Day 10 requires excessive_sleepiness gateway for ESS/FSS packs).
 **Jan 3:** Watch-style check-in widget improvements - optimistic state updates for instant UI feedback, theme-aware colors for better contrast in all circadian phases, fixed state persistence after completion, widget title changed to "Today's Focus" with "Energy · Mood · Focus" subtitle
 **Jan 3:** Convex backend enhancements - added mood/focus parameters to midday and evening check-in mutations, expanded getCheckInHistory query to return all energy/mood/focus data per time slot for physician dashboard
 **Jan 2:** Parked XP/Gamification feature - disabled via `gamificationEnabled` flag in ThemeManager (default false), toggle available in Debug Panel > Experimental Features, code preserved for future re-enablement
