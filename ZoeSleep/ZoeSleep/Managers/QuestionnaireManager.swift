@@ -1248,6 +1248,12 @@ class QuestionnaireManager: ObservableObject {
                     if let moduleQuestions = Self.expansionQuestionsByModule[moduleId] {
                         expansionQuestions.append(contentsOf: moduleQuestions)
                     }
+
+                    // Proactively derive STOP-BANG answers when that module is being loaded
+                    // This ensures scores can be calculated even though questions are skipped
+                    if moduleId == "expansion_stop_bang" {
+                        deriveSTOPBANGAnswers()
+                    }
                 }
                 // Filter out redundant questions that can be derived from profile or core assessment
                 let filteredExpansion = filterRedundantExpansionQuestions(expansionQuestions)
@@ -1779,6 +1785,213 @@ class QuestionnaireManager: ObservableObject {
     /// Call this when saving expansion pack responses
     func getDerivedResponsesForScoring() -> [QuestionResponse] {
         return responses.values.filter { $0.isDerived == true }
+    }
+
+    // MARK: - STOP-BANG Auto-Derivation
+
+    /// Derive all 8 STOP-BANG answers from existing profile and core assessment data
+    /// This is called proactively when Day 8 (expansion_stop_bang) is loaded
+    /// All STOP-BANG questions are redundant - answers can be computed from:
+    /// - S (Snoring): Q19 gateway question
+    /// - T (Tired): Q17 gateway question
+    /// - O (Observed apnea): Q20 gateway question
+    /// - P (Blood Pressure): Q27 core assessment
+    /// - B (BMI > 35): Calculated from D5 (height) + D6 (weight)
+    /// - A (Age > 50): Calculated from D2 (birth date)
+    /// - N (Neck > 40cm): Q21 core assessment
+    /// - G (Gender = Male): D4 demographics
+    private func deriveSTOPBANGAnswers() {
+        let profile = OnboardingManager.shared.profile
+        let currentDay = journeyProgress?.currentDay ?? 8
+
+        print("[QuestionnaireManager] Deriving STOP-BANG answers from existing data...")
+
+        // SB_1: Snoring - derive from Q19 (gateway)
+        if responses["SB_1"] == nil, let q19 = responses["19"] {
+            var derived = QuestionResponse(questionId: "SB_1", dayNumber: currentDay)
+            derived.isDerived = true
+            derived.answeredAt = Date()
+            // Q19 asks "Do you snore?" with Yes/Sometimes/Rarely/Never
+            if let value = q19.stringValue?.lowercased() {
+                derived.stringValue = (value == "yes" || value == "sometimes") ? "Yes" : "No"
+                responses["SB_1"] = derived
+                print("[QuestionnaireManager] Derived SB_1 (Snoring) = \(derived.stringValue ?? "nil") from Q19")
+            }
+        }
+
+        // SB_2: Tired - derive from Q17 (gateway) - 1-10 scale
+        if responses["SB_2"] == nil, let q17 = responses["17"] {
+            var derived = QuestionResponse(questionId: "SB_2", dayNumber: currentDay)
+            derived.isDerived = true
+            derived.answeredAt = Date()
+            // Q17 is a 1-10 scale for daytime tiredness, >=5 indicates "often tired"
+            if let value = q17.numberValue {
+                derived.stringValue = value >= 5 ? "Yes" : "No"
+                responses["SB_2"] = derived
+                print("[QuestionnaireManager] Derived SB_2 (Tired) = \(derived.stringValue ?? "nil") from Q17 (scale: \(value))")
+            }
+        }
+
+        // SB_3: Observed apnea - derive from Q20 (gateway)
+        if responses["SB_3"] == nil, let q20 = responses["20"] {
+            var derived = QuestionResponse(questionId: "SB_3", dayNumber: currentDay)
+            derived.isDerived = true
+            derived.answeredAt = Date()
+            // Q20 asks "Has anyone observed you stop breathing during sleep?"
+            if let value = q20.stringValue?.lowercased() {
+                derived.stringValue = (value == "yes") ? "Yes" : "No"
+                responses["SB_3"] = derived
+                print("[QuestionnaireManager] Derived SB_3 (Observed) = \(derived.stringValue ?? "nil") from Q20")
+            }
+        }
+
+        // SB_4: Blood Pressure - derive from Q27 (core Day 4)
+        if responses["SB_4"] == nil, let q27 = responses["27"] {
+            var derived = QuestionResponse(questionId: "SB_4", dayNumber: currentDay)
+            derived.isDerived = true
+            derived.answeredAt = Date()
+            // Q27 asks "Do you have high blood pressure?" - direct yes/no
+            if let value = q27.stringValue?.lowercased() {
+                derived.stringValue = (value == "yes") ? "Yes" : "No"
+                responses["SB_4"] = derived
+                print("[QuestionnaireManager] Derived SB_4 (Pressure) = \(derived.stringValue ?? "nil") from Q27")
+            }
+        }
+
+        // SB_5: BMI > 35 - calculate from D5 (height) + D6 (weight)
+        if responses["SB_5"] == nil {
+            var derived = QuestionResponse(questionId: "SB_5", dayNumber: currentDay)
+            derived.isDerived = true
+            derived.answeredAt = Date()
+
+            // Try onboarding profile first, then questionnaire responses
+            var heightCm: Double? = profile.heightCm
+            var weightKg: Double? = profile.weightKg
+
+            if heightCm == nil || heightCm == 0, let d5 = responses["D5"] {
+                heightCm = d5.numberValue
+            }
+            if weightKg == nil || weightKg == 0, let d6 = responses["D6"] {
+                weightKg = d6.numberValue
+            }
+
+            // Also check HealthKit data
+            if heightCm == nil || heightCm == 0 {
+                heightCm = healthKitHeightCm
+            }
+            if weightKg == nil || weightKg == 0 {
+                weightKg = healthKitWeightKg
+            }
+
+            if let h = heightCm, let w = weightKg, h > 0 {
+                let heightM = h / 100.0
+                let bmi = w / (heightM * heightM)
+                derived.stringValue = bmi > 35 ? "Yes" : "No"
+                derived.numberValue = bmi  // Store actual BMI for reference
+                responses["SB_5"] = derived
+                print("[QuestionnaireManager] Derived SB_5 (BMI) = \(derived.stringValue ?? "nil") (BMI: \(String(format: "%.1f", bmi)))")
+            } else {
+                print("[QuestionnaireManager] Cannot derive SB_5 - missing height/weight data")
+            }
+        }
+
+        // SB_6: Age > 50 - calculate from D2 (birth date) or profile.birthYear
+        if responses["SB_6"] == nil {
+            var derived = QuestionResponse(questionId: "SB_6", dayNumber: currentDay)
+            derived.isDerived = true
+            derived.answeredAt = Date()
+
+            var age: Int? = nil
+
+            // Try onboarding profile birth year first
+            if profile.birthYear != 1990 {
+                let currentYear = Calendar.current.component(.year, from: Date())
+                age = currentYear - profile.birthYear
+            }
+
+            // Try HealthKit date of birth
+            if age == nil, let healthKitDOB = healthKitDateOfBirth {
+                let ageComponents = Calendar.current.dateComponents([.year], from: healthKitDOB, to: Date())
+                age = ageComponents.year
+            }
+
+            // Try D2 questionnaire response
+            if age == nil, let d2 = responses["D2"], let dobString = d2.stringValue {
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                if let dob = dateFormatter.date(from: dobString) {
+                    let ageComponents = Calendar.current.dateComponents([.year], from: dob, to: Date())
+                    age = ageComponents.year
+                }
+            }
+
+            if let calculatedAge = age {
+                derived.stringValue = calculatedAge > 50 ? "Yes" : "No"
+                derived.numberValue = Double(calculatedAge)  // Store actual age for reference
+                responses["SB_6"] = derived
+                print("[QuestionnaireManager] Derived SB_6 (Age) = \(derived.stringValue ?? "nil") (Age: \(calculatedAge))")
+            } else {
+                print("[QuestionnaireManager] Cannot derive SB_6 - missing birth date data")
+            }
+        }
+
+        // SB_7: Neck > 40cm - derive from Q21 (core Day 4)
+        if responses["SB_7"] == nil, let q21 = responses["21"] {
+            var derived = QuestionResponse(questionId: "SB_7", dayNumber: currentDay)
+            derived.isDerived = true
+            derived.answeredAt = Date()
+            // Q21 asks for neck circumference in cm
+            if let neckCm = q21.numberValue {
+                derived.stringValue = neckCm > 40 ? "Yes" : "No"
+                derived.numberValue = neckCm  // Store actual measurement for reference
+                responses["SB_7"] = derived
+                print("[QuestionnaireManager] Derived SB_7 (Neck) = \(derived.stringValue ?? "nil") (Neck: \(neckCm)cm)")
+            }
+        }
+
+        // SB_8: Gender = Male - derive from D4 or profile
+        if responses["SB_8"] == nil {
+            var derived = QuestionResponse(questionId: "SB_8", dayNumber: currentDay)
+            derived.isDerived = true
+            derived.answeredAt = Date()
+
+            var isMale: Bool? = nil
+
+            // Check onboarding profile
+            if profile.gender.lowercased() == "male" {
+                isMale = true
+            } else if profile.gender.lowercased() == "female" {
+                isMale = false
+            }
+
+            // Check HealthKit biological sex
+            if isMale == nil {
+                if let hkSex = healthKitBiologicalSex?.lowercased() {
+                    isMale = (hkSex == "male")
+                }
+            }
+
+            // Check D4 questionnaire response
+            if isMale == nil, let d4 = responses["D4"] {
+                if let value = d4.stringValue?.lowercased() {
+                    isMale = (value == "male")
+                }
+            }
+
+            if let male = isMale {
+                derived.stringValue = male ? "Yes" : "No"
+                responses["SB_8"] = derived
+                print("[QuestionnaireManager] Derived SB_8 (Gender) = \(derived.stringValue ?? "nil")")
+            } else {
+                print("[QuestionnaireManager] Cannot derive SB_8 - missing gender data")
+            }
+        }
+
+        // Log summary of STOP-BANG derivation
+        let derivedCount = ["SB_1", "SB_2", "SB_3", "SB_4", "SB_5", "SB_6", "SB_7", "SB_8"]
+            .filter { responses[$0] != nil }
+            .count
+        print("[QuestionnaireManager] STOP-BANG derivation complete: \(derivedCount)/8 questions auto-filled")
     }
 
     /// Filter out expansion questions that are redundant (already answered in core assessment, derivable from profile,

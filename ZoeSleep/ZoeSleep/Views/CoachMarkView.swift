@@ -151,39 +151,33 @@ struct CoachMarkView: View {
 
     @State private var isAppearing: Bool = false
     @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @EnvironmentObject var themeManager: ThemeManager
 
-    // MARK: - Circadian Colors
+    // MARK: - Circadian Colors (Theme-based)
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var palette: CircadianPalette { themeManager.circadianPalette }
 
     private var bubbleBackground: Color {
-        palette.isDark
-            ? Color(red: 0.15, green: 0.10, blue: 0.05)
-            : Color(uiColor: .systemBackground)  // Fully opaque white
+        theme.cardBackground
     }
 
     private var bubbleBorder: Color {
         palette.isDark
-            ? Color(red: 0.95, green: 0.6, blue: 0.2).opacity(0.4)
-            : Color.gray.opacity(0.2)
+            ? theme.accent.opacity(0.4)
+            : theme.secondaryText.opacity(0.2)
     }
 
     private var titleColor: Color {
-        palette.isDark
-            ? Color(red: 0.996, green: 0.953, blue: 0.780)
-            : Color.primary
+        theme.primaryText
     }
 
     private var messageColor: Color {
-        palette.isDark
-            ? Color(red: 0.988, green: 0.827, blue: 0.302).opacity(0.9)
-            : Color.secondary
+        theme.secondaryText.opacity(0.9)
     }
 
     private var accentColor: Color {
-        palette.isDark
-            ? Color(red: 0.95, green: 0.6, blue: 0.2)
-            : Color.accentColor
+        theme.accent
     }
 
     // MARK: - Body
@@ -273,7 +267,7 @@ struct CoachMarkView: View {
             Button(action: onDismiss) {
                 Text(content.buttonText)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundColor(palette.isDark ? .black : .white)
+                    .foregroundColor(theme.textOnPrimary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(accentColor)

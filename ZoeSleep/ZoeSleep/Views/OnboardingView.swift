@@ -30,32 +30,30 @@ struct OnboardingView: View {
                         .padding(.horizontal, 20)
                     }
 
-                    // Content - starts with name (no welcome step, splash serves as welcome)
-                    // REVISED ORDER: HealthKit moved early to enable skip of body metrics
+                    // FLOW: HealthKit FIRST to get data, then only ask what we couldn't get
                     TabView(selection: $onboardingManager.currentStep) {
-                        NameStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
-                            .tag(OnboardingStep.name)
-
-                        // HealthKit early - allows pre-filling of body metrics
+                        // Step 0: HealthKit FIRST - get height, weight, age, sex
                         HealthConnectStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .environmentObject(healthKitManager)
                             .tag(OnboardingStep.healthConnect)
 
-                        // Measurement system - auto-skipped (uses locale detection)
-                        MeasurementSystemStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
-                            .tag(OnboardingStep.measurementSystem)
+                        // Step 1: Name (can't get from HealthKit)
+                        NameStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
+                            .tag(OnboardingStep.name)
 
-                        // Height/Weight - skipped if HealthKit provided data
+                        // Step 2: Height/Weight - skipped if HealthKit provided data
                         HeightWeightStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.heightWeight)
 
-                        // Gender/Age - skipped if HealthKit provided data
+                        // Step 3: Gender/Age - skipped if HealthKit provided data
                         GenderAgeStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.genderAge)
 
+                        // Step 4: Wearables
                         WearablesStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.wearables)
 
+                        // Step 5: Ready
                         ReadyStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.ready)
                     }
@@ -213,113 +211,6 @@ struct NameStepView: View {
             )
             .padding(.horizontal, 20)
             .padding(.bottom, isCompact ? 24 : 32)
-        }
-    }
-}
-
-// MARK: - Measurement System Step (Compact)
-
-struct MeasurementSystemStepView: View {
-    @ObservedObject var onboardingManager: OnboardingManager
-    let screenHeight: CGFloat
-
-    private var isCompact: Bool { screenHeight < 700 }
-    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
-
-    var body: some View {
-        VStack(spacing: isCompact ? 16 : 24) {
-            Spacer(minLength: isCompact ? 30 : 50)
-
-            // Icon
-            Image(systemName: "ruler")
-                .font(.system(size: isCompact ? 36 : 44))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [palette.accent, palette.wave],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            // Title
-            VStack(spacing: 6) {
-                Text("Measurement Units")
-                    .font(isCompact ? .title3.bold() : .title2.bold())
-                    .foregroundColor(palette.textPrimary)
-
-                Text("Based on your region")
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
-            }
-
-            // Options
-            VStack(spacing: 12) {
-                ForEach(MeasurementSystem.allCases) { system in
-                    MeasurementSystemCard(
-                        system: system,
-                        isSelected: onboardingManager.profile.measurementSystem == system.rawValue,
-                        isCompact: isCompact,
-                        onTap: {
-                            withAnimation(.spring(response: 0.3)) {
-                                onboardingManager.profile.measurementSystem = system.rawValue
-                            }
-                        }
-                    )
-                }
-            }
-            .padding(.horizontal, 20)
-
-            Spacer()
-
-            // Navigation
-            OnboardingNavigationButtons(
-                onboardingManager: onboardingManager,
-                showBack: true
-            )
-            .padding(.horizontal, 20)
-            .padding(.bottom, isCompact ? 24 : 32)
-        }
-    }
-}
-
-struct MeasurementSystemCard: View {
-    let system: MeasurementSystem
-    let isSelected: Bool
-    let isCompact: Bool
-    let onTap: () -> Void
-
-    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(system.rawValue)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(palette.textPrimary)
-
-                    Text("\(system.heightUnit) / \(system.weightUnit)")
-                        .font(.caption2)
-                        .foregroundColor(palette.textSecondary)
-                }
-
-                Spacer()
-
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(palette.accent)
-                        .font(.title3)
-                }
-            }
-            .padding(isCompact ? 12 : 14)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isSelected ? palette.accent.opacity(0.15) : (palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03)))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isSelected ? palette.accent : Color.clear, lineWidth: 1.5)
-            )
         }
     }
 }
@@ -850,10 +741,10 @@ struct HealthConnectStepView: View {
                 unavailableStatus
             }
 
-            // Navigation buttons
+            // Navigation buttons (no back button - this is the first step)
             OnboardingNavigationButtons(
                 onboardingManager: onboardingManager,
-                showBack: true,
+                showBack: false,
                 nextLabel: continueButtonText
             )
             .padding(.horizontal, 20)

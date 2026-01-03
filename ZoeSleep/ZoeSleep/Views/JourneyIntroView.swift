@@ -2,7 +2,7 @@
 //  JourneyIntroView.swift
 //  Zoe Sleep - Sleep Better, Live Longer
 //
-//  Introduces users to the 14-day sleep journey
+//  Introduces users to the 10-day sleep journey
 //  4 screens: 360° understanding, daily routine, expert review, lifelong maintenance
 //
 

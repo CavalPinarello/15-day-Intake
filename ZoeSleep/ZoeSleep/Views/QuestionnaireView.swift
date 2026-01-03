@@ -61,7 +61,7 @@ struct QuestionnaireView: View {
     @State private var showingSaveError: Bool = false
     @State private var retryAction: (() -> Void)? = nil
 
-    // Day Splash Screen (hero-framed intro for ALL 14 days)
+    // Day Splash Screen (hero-framed intro for ALL 10 days)
     @State private var showingDaySplash: Bool = false
     @State private var daySplashInfo: DaySplashInfo? = nil
 
@@ -94,13 +94,9 @@ struct QuestionnaireView: View {
         currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
     }
 
-    // Hardcoded background color to avoid white flash during navigation
+    // Theme-based background color to avoid white flash during navigation
     private var loadingBackgroundColor: Color {
-        if TimePeriod.current == .evening || TimePeriod.current == .night {
-            return Color(red: 0.08, green: 0.06, blue: 0.04) // Dark evening brown
-        } else {
-            return Color(red: 0.98, green: 0.96, blue: 0.93) // Warm cream for daytime
-        }
+        themeManager.circadianPalette.backgroundStart
     }
 
     var body: some View {
@@ -111,7 +107,7 @@ struct QuestionnaireView: View {
 
             // Content layer
             if showingDaySplash, let splashInfo = daySplashInfo {
-                // Hero-framed day splash for ALL 14 days
+                // Hero-framed day splash for ALL 10 days
                 DaySplashView(
                     dayInfo: splashInfo,
                     triggeredGateways: questionnaireManager.gatewayStates.filter { $0.triggered }.map { $0.gatewayType },
@@ -1290,11 +1286,12 @@ struct QuestionnaireView: View {
                 let convertedSleepLog = questionsResponse.sleepLog.map { convertConvexQuestion($0, isSleepLog: true) }
 
                 // Filter out demographic questions (D2, D4, D5, D6) if profile has the data
+                // Also filter STOP-BANG questions (SB_1-SB_8) - all can be derived from existing data
                 // The data is auto-injected as responses, so scoring still works
                 print("[iOS] Filtering assessment questions. Original count: \(questionsResponse.assessment.count)")
                 print("[iOS] Question IDs before filter: \(questionsResponse.assessment.map { $0.id })")
                 let filteredAssessment = questionsResponse.assessment
-                    .filter { !shouldSkipDemographicQuestion($0.id) }
+                    .filter { !shouldSkipDemographicQuestion($0.id) && !shouldSkipSTOPBANGQuestion($0.id) }
                     .map { convertConvexQuestion($0, isSleepLog: false) }
                 print("[iOS] Questions after filter: \(filteredAssessment.count)")
                 let convertedAssessment = filteredAssessment
@@ -1821,6 +1818,63 @@ struct QuestionnaireView: View {
                 return shouldSkip
             }
             print("[iOS] D6 check: weightKg=nil, shouldSkip=false")
+            return false
+        default:
+            return false
+        }
+    }
+
+    /// Check if a STOP-BANG question should be skipped because it can be derived from profile data
+    /// All 8 STOP-BANG questions are redundant - we already have the data from onboarding/core assessment
+    private func shouldSkipSTOPBANGQuestion(_ questionId: String) -> Bool {
+        let profile = OnboardingManager.shared.profile
+        let currentYear = Calendar.current.component(.year, from: Date())
+
+        switch questionId {
+        case "SB_1": // Snore loudly - derived from Q19 gateway
+            // Always skip - Q19 was asked on Day 1 as gateway trigger
+            print("[iOS] SB_1: Skipping (derived from Q19)")
+            return true
+        case "SB_2": // Tired during day - derived from Q17 gateway
+            // Always skip - Q17 was asked on Day 1 as gateway trigger
+            print("[iOS] SB_2: Skipping (derived from Q17)")
+            return true
+        case "SB_3": // Observed stop breathing - derived from Q20 gateway
+            // Always skip - Q20 was asked on Day 1 as gateway trigger
+            print("[iOS] SB_3: Skipping (derived from Q20)")
+            return true
+        case "SB_4": // Blood Pressure - derived from Q27
+            // Always skip - Q27 was asked on Day 4
+            print("[iOS] SB_4: Skipping (derived from Q27)")
+            return true
+        case "SB_5": // BMI > 35 - calculated from height + weight
+            if let height = profile.heightCm, let weight = profile.weightKg,
+               height >= 100 && height <= 250 && weight >= 30 && weight <= 300 {
+                print("[iOS] SB_5: Skipping (BMI calculated from profile: h=\(height)cm, w=\(weight)kg)")
+                return true
+            }
+            print("[iOS] SB_5: Cannot skip - no valid height/weight in profile")
+            return false
+        case "SB_6": // Age > 50 - calculated from birth year
+            let validBirthYear = profile.birthYear > 1900 && profile.birthYear < currentYear
+            if validBirthYear {
+                let age = currentYear - profile.birthYear
+                print("[iOS] SB_6: Skipping (age \(age) calculated from birthYear \(profile.birthYear))")
+                return true
+            }
+            print("[iOS] SB_6: Cannot skip - no valid birthYear in profile")
+            return false
+        case "SB_7": // Neck > 40cm - derived from Q21 (core Day 4)
+            // Always skip - Q21 was asked on Day 4
+            print("[iOS] SB_7: Skipping (derived from Q21)")
+            return true
+        case "SB_8": // Gender = Male - from profile
+            let gender = profile.gender.lowercased()
+            if !gender.isEmpty && gender != "prefer not to say" {
+                print("[iOS] SB_8: Skipping (gender '\(profile.gender)' from profile)")
+                return true
+            }
+            print("[iOS] SB_8: Cannot skip - no valid gender in profile")
             return false
         default:
             return false

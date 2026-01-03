@@ -417,24 +417,40 @@ struct ColorTheme {
     /// Card background with smoothly interpolated time-based warmth
     /// CIRCADIAN: Cards smoothly transition throughout the day
     var cardBackground: Color {
+        // CRITICAL: Use circadian card backgrounds in dark phases for proper contrast
+        // Text colors use bright cream/gold in dark phases, so cards MUST be dark too
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            return currentPalette.cardBackground  // Dark brown for dark phases
+        }
         if accentColorOption != nil {
             return Color(.secondarySystemBackground)
         }
         return palette.cardBackground  // Smoothly interpolated!
     }
 
-    // MARK: - Status Colors (Consistent across time periods)
+    // MARK: - Status Colors (Circadian-aware - no harsh colors at night)
 
     var success: Color {
-        Color(hex: "#10B981")!  // Emerald green
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            // Warm golden for dark phases (avoids green's blue light)
+            return Color(hex: "#D4A543")!
+        }
+        return Color(hex: "#10B981")!  // Emerald green for day
     }
 
     var warning: Color {
-        Color(hex: "#F59E0B")!  // Amber
+        Color(hex: "#F59E0B")!  // Amber - already circadian-safe
     }
 
     var error: Color {
-        Color(hex: "#EF4444")!  // Red
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            // Warm coral-red for dark phases (softer on eyes)
+            return Color(hex: "#E07A5F")!
+        }
+        return Color(hex: "#EF4444")!  // Bright red for day
     }
 
     var info: Color {
@@ -458,9 +474,14 @@ struct ColorTheme {
         primary
     }
 
-    /// Pending/Inactive state
+    /// Pending/Inactive state - circadian-aware for proper contrast
     var inactive: Color {
-        Color(hex: "#9CA3AF")!.opacity(0.4)  // Gray
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            // Warm muted amber for dark backgrounds
+            return Color(red: 0.6, green: 0.45, blue: 0.25).opacity(0.5)
+        }
+        return Color(hex: "#9CA3AF")!.opacity(0.4)  // Gray for light backgrounds
     }
 
     // MARK: - Text Colors (Sleep-Optimized, INTERPOLATED for dark evening backgrounds)
@@ -776,8 +797,13 @@ struct ColorTheme {
     /// Background gradient for full-screen views - SMOOTHLY INTERPOLATED
     /// Colors transition gradually throughout the day for natural feel
     var backgroundGradient: LinearGradient {
+        // CRITICAL: Use circadian backgrounds in dark phases for proper contrast
+        let currentPalette = CircadianPalette.current
+        if currentPalette.isDark {
+            return currentPalette.backgroundGradient  // Dark gradient for dark phases
+        }
         if accentColorOption != nil {
-            // Non-circadian mode: use subtle system background
+            // Non-circadian mode during day: use subtle system background
             return LinearGradient(
                 colors: [Color(.systemBackground), Color(.secondarySystemBackground)],
                 startPoint: .top,

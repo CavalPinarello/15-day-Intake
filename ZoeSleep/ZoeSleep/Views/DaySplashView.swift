@@ -2,7 +2,7 @@
 //  DaySplashView.swift
 //  Zoe Sleep for Longevity System
 //
-//  Single-screen compact splash for all 14 days of the journey
+//  Single-screen compact splash for all 10 days of the journey
 //  Hero-framed to make the user the protagonist of their sleep discovery
 //
 //  DESIGN: Fits on one iPhone screen without scrolling (~400pt content)
@@ -23,39 +23,16 @@ struct DaySplashView: View {
     @State private var isAnimating = false
     @EnvironmentObject var themeManager: ThemeManager
 
-    // MARK: - Circadian Colors
+    // MARK: - Theme Colors (uses centralized ColorTheme)
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var palette: CircadianPalette { themeManager.circadianPalette }
 
-    private var primaryTextColor: Color {
-        palette.isDark
-            ? Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright warm cream
-            : Color.primary
-    }
-
-    private var secondaryTextColor: Color {
-        palette.isDark
-            ? Color(red: 0.988, green: 0.827, blue: 0.302).opacity(0.8)  // Golden yellow
-            : Color.secondary
-    }
-
-    private var accentColor: Color {
-        palette.isDark
-            ? Color(red: 0.95, green: 0.6, blue: 0.2)  // Warm amber
-            : Color.accentColor
-    }
-
-    private var backgroundColor: Color {
-        palette.isDark
-            ? Color(red: 0.08, green: 0.05, blue: 0.02)  // Very dark warm brown
-            : Color(.systemBackground)
-    }
-
-    private var cardBackgroundColor: Color {
-        palette.isDark
-            ? Color(red: 0.15, green: 0.10, blue: 0.05)  // Dark card
-            : Color(.secondarySystemBackground)
-    }
+    private var primaryTextColor: Color { theme.primaryText }
+    private var secondaryTextColor: Color { theme.secondaryText }
+    private var accentColor: Color { theme.accent }
+    private var backgroundColor: Color { palette.backgroundStart }
+    private var cardBackgroundColor: Color { theme.cardBackground }
 
     // MARK: - Body
 
@@ -186,7 +163,7 @@ struct DaySplashView: View {
                 StatBadgeCompact(
                     icon: "checkmark.seal.fill",
                     value: instruments.count == 1 ? instruments[0] : "\(instruments.count) validated",
-                    color: .green
+                    color: theme.success
                 )
             }
         }
@@ -198,7 +175,7 @@ struct DaySplashView: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("WHAT YOU'LL DISCOVER", systemImage: "lightbulb.fill")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundColor(Color.yellow.opacity(palette.isDark ? 1.0 : 0.8))
+                .foregroundColor(theme.accent)
 
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(dayInfo.discoveries.prefix(3), id: \.self) { discovery in
@@ -244,7 +221,7 @@ struct DaySplashView: View {
                 Image(systemName: "arrow.right")
                     .font(.system(size: 14, weight: .semibold))
             }
-            .foregroundColor(palette.isDark ? Color.black : Color.white)
+            .foregroundColor(theme.textOnPrimary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(accentColor)
@@ -260,8 +237,10 @@ struct StatBadgeCompact: View {
     let icon: String
     let value: String
     let color: Color
+    @EnvironmentObject var themeManager: ThemeManager
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var palette: CircadianPalette { themeManager.circadianPalette }
 
     var body: some View {
         HStack(spacing: 5) {
@@ -271,15 +250,11 @@ struct StatBadgeCompact: View {
 
             Text(value)
                 .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundColor(palette.isDark ? Color.white.opacity(0.9) : Color.primary)
+                .foregroundColor(theme.primaryText)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(
-            palette.isDark
-                ? Color.white.opacity(0.08)
-                : Color(.tertiarySystemBackground)
-        )
+        .background(theme.cardBackground.opacity(0.6))
         .cornerRadius(8)
     }
 }
@@ -304,9 +279,9 @@ struct StatBadgeCompact: View {
     .environmentObject(ThemeManager.shared)
 }
 
-#Preview("Day 14 - Final") {
+#Preview("Day 10 - Final") {
     DaySplashView(
-        dayInfo: DaySplashLibrary.day14,
+        dayInfo: DaySplashLibrary.day10,
         triggeredGateways: [.osa, .pain],
         onContinue: {}
     )

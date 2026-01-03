@@ -6,6 +6,35 @@
 
 ### Jan 3, 2026
 
+#### Unified Today's Focus Section
+
+Merged the two separate "Today's Focus" sections on the dashboard into one unified card for cleaner UX.
+
+**Problem:**
+- Dashboard had two cards with similar "Today's Focus" naming:
+  1. `QuickCheckInWidget` showing Energy/Mood/Focus with 3 time slot circles
+  2. Task list card showing Sleep Log and Assessment rows
+- This was confusing and created visual clutter
+
+**Solution:**
+- Removed standalone `QuickCheckInWidget` from dashboard
+- Created new `CheckInTaskRow` component with inline mini circles (Morning/Midday/Evening)
+- Integrated check-in row as first item in unified task list
+- Now one "Today's focus" card with 3 items:
+  1. **Check-In** - with mini time slot circles, taps to open modal
+  2. **Sleep Log** - ~3 min
+  3. **Assessment** - ~X min (when available)
+
+**Technical Changes:**
+- Created `CheckInTaskRow` struct (lines 2051-2189 in ContentView.swift)
+- Updated `completedTaskCount` and `totalTaskCount` to include check-in
+- Added `showingCheckIn` state and modal presentation to MainDashboardView
+- Added check-in status loading to `loadProgress()` and `refreshFromConvex()`
+
+**Files changed:** `ContentView.swift`
+
+---
+
 #### Shortened Journey from 14 Days to 10 Days
 
 Major change to reduce user fatigue and accelerate launch timeline. The intake journey is now 10 days instead of 14 days.

@@ -5,17 +5,25 @@
 //  Animated aurora borealis background effect
 //  Vibrant, luminescent waves that flow across the screen
 //
+//  CIRCADIAN-AWARE: Uses warm amber/orange colors after dusk (no blue light)
+//
 
 import SwiftUI
 
 /// Animated aurora borealis background - vibrant and luminescent
+/// CIRCADIAN: Automatically uses warm colors at night to protect sleep
 struct AuroraBorealisView: View {
     @State private var phase: CGFloat = 0
     @State private var pulseScale: CGFloat = 1.0
     @State private var glowIntensity: CGFloat = 0.6
 
-    // Vibrant aurora colors - bright and luminescent
-    private let auroraColors: [Color] = [
+    // Check if we're in a dark circadian phase (no blue light allowed)
+    private var isDarkPhase: Bool {
+        CircadianPalette.current.isDark
+    }
+
+    // Daytime aurora colors - vibrant blues/cyans (blue light OK)
+    private let dayAuroraColors: [Color] = [
         Color(red: 0.0, green: 0.8, blue: 0.9),   // Bright cyan
         Color(red: 0.1, green: 0.9, blue: 0.8),   // Turquoise
         Color(red: 0.2, green: 0.7, blue: 0.9),   // Sky blue
@@ -23,6 +31,21 @@ struct AuroraBorealisView: View {
         Color(red: 0.3, green: 0.9, blue: 0.7),   // Seafoam
         Color(red: 0.1, green: 0.5, blue: 0.8),   // Ocean blue
     ]
+
+    // Evening/night aurora colors - warm amber/orange/red (NO blue light)
+    private let nightAuroraColors: [Color] = [
+        Color(red: 0.95, green: 0.6, blue: 0.2),   // Warm amber
+        Color(red: 0.9, green: 0.5, blue: 0.15),   // Golden orange
+        Color(red: 0.85, green: 0.45, blue: 0.1),  // Deep amber
+        Color(red: 0.8, green: 0.35, blue: 0.1),   // Burnt orange
+        Color(red: 0.95, green: 0.7, blue: 0.3),   // Light gold
+        Color(red: 0.9, green: 0.4, blue: 0.15),   // Sunset orange
+    ]
+
+    // Circadian-aware aurora colors
+    private var auroraColors: [Color] {
+        isDarkPhase ? nightAuroraColors : dayAuroraColors
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -44,11 +67,17 @@ struct AuroraBorealisView: View {
                     .opacity(0.7 - CGFloat(index) * 0.08)
                 }
 
-                // Extra glow layer for luminescence
+                // Extra glow layer for luminescence (circadian-aware)
                 RadialGradient(
                     colors: [
-                        Color(red: 0.1, green: 0.8, blue: 0.8).opacity(glowIntensity * 0.4),
-                        Color(red: 0.0, green: 0.5, blue: 0.6).opacity(glowIntensity * 0.2),
+                        (isDarkPhase
+                            ? Color(red: 0.95, green: 0.6, blue: 0.2)  // Warm amber glow
+                            : Color(red: 0.1, green: 0.8, blue: 0.8)   // Cyan glow
+                        ).opacity(glowIntensity * 0.4),
+                        (isDarkPhase
+                            ? Color(red: 0.8, green: 0.4, blue: 0.1)
+                            : Color(red: 0.0, green: 0.5, blue: 0.6)
+                        ).opacity(glowIntensity * 0.2),
                         Color.clear
                     ],
                     center: .init(x: 0.3, y: 0.3),
@@ -57,11 +86,17 @@ struct AuroraBorealisView: View {
                 )
                 .scaleEffect(pulseScale)
 
-                // Second glow spot
+                // Second glow spot (circadian-aware)
                 RadialGradient(
                     colors: [
-                        Color(red: 0.2, green: 0.9, blue: 0.7).opacity(glowIntensity * 0.3),
-                        Color(red: 0.1, green: 0.6, blue: 0.7).opacity(glowIntensity * 0.15),
+                        (isDarkPhase
+                            ? Color(red: 0.95, green: 0.7, blue: 0.3)  // Golden glow
+                            : Color(red: 0.2, green: 0.9, blue: 0.7)   // Seafoam glow
+                        ).opacity(glowIntensity * 0.3),
+                        (isDarkPhase
+                            ? Color(red: 0.85, green: 0.5, blue: 0.15)
+                            : Color(red: 0.1, green: 0.6, blue: 0.7)
+                        ).opacity(glowIntensity * 0.15),
                         Color.clear
                     ],
                     center: .init(x: 0.7, y: 0.5),
@@ -224,6 +259,7 @@ struct AuroraShimmerView: View {
 
 /// Enhanced aurora borealis with more dramatic, fluid animations
 /// Designed for splash screen with vertical flowing curtains
+/// CIRCADIAN: Uses warm colors at night to protect sleep
 struct EnhancedAuroraBorealisView: View {
     @State private var phase: CGFloat = 0
     @State private var verticalFlow: CGFloat = 0
@@ -231,20 +267,51 @@ struct EnhancedAuroraBorealisView: View {
     @State private var glowIntensity: CGFloat = 0.5
     @State private var colorShift: CGFloat = 0
 
-    // Rich aurora color palette
-    private let primaryColors: [Color] = [
+    // Check if we're in a dark circadian phase (no blue light allowed)
+    private var isDarkPhase: Bool {
+        CircadianPalette.current.isDark
+    }
+
+    // Daytime primary colors - rich blues/cyans (blue light OK)
+    private let dayPrimaryColors: [Color] = [
         Color(red: 0.0, green: 0.85, blue: 0.85),   // Bright cyan
         Color(red: 0.1, green: 0.95, blue: 0.75),   // Electric turquoise
         Color(red: 0.0, green: 0.75, blue: 0.95),   // Deep sky blue
         Color(red: 0.2, green: 0.85, blue: 0.65),   // Seafoam green
     ]
 
-    private let secondaryColors: [Color] = [
+    // Evening/night primary colors - warm amber/gold (NO blue light)
+    private let nightPrimaryColors: [Color] = [
+        Color(red: 0.95, green: 0.65, blue: 0.2),   // Warm amber
+        Color(red: 0.9, green: 0.55, blue: 0.15),   // Golden orange
+        Color(red: 0.98, green: 0.75, blue: 0.35),  // Light gold
+        Color(red: 0.85, green: 0.5, blue: 0.1),    // Deep amber
+    ]
+
+    // Daytime secondary colors - soft blues (blue light OK)
+    private let daySecondaryColors: [Color] = [
         Color(red: 0.3, green: 0.6, blue: 0.9),    // Soft blue
         Color(red: 0.1, green: 0.7, blue: 0.8),    // Teal
         Color(red: 0.0, green: 0.55, blue: 0.75),  // Ocean
         Color(red: 0.15, green: 0.8, blue: 0.7),   // Aquamarine
     ]
+
+    // Evening/night secondary colors - warm orange/red (NO blue light)
+    private let nightSecondaryColors: [Color] = [
+        Color(red: 0.9, green: 0.45, blue: 0.15),   // Burnt orange
+        Color(red: 0.85, green: 0.4, blue: 0.1),    // Deep orange
+        Color(red: 0.95, green: 0.6, blue: 0.25),   // Amber glow
+        Color(red: 0.8, green: 0.35, blue: 0.1),    // Sunset red
+    ]
+
+    // Circadian-aware color palettes
+    private var primaryColors: [Color] {
+        isDarkPhase ? nightPrimaryColors : dayPrimaryColors
+    }
+
+    private var secondaryColors: [Color] {
+        isDarkPhase ? nightSecondaryColors : daySecondaryColors
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -288,12 +355,21 @@ struct EnhancedAuroraBorealisView: View {
                     .opacity(0.5 - CGFloat(index) * 0.07)
                 }
 
-                // Central luminous glow that pulses
+                // Central luminous glow that pulses (circadian-aware)
                 RadialGradient(
                     colors: [
-                        Color(red: 0.1, green: 0.9, blue: 0.85).opacity(glowIntensity * 0.35),
-                        Color(red: 0.0, green: 0.7, blue: 0.8).opacity(glowIntensity * 0.2),
-                        Color(red: 0.0, green: 0.5, blue: 0.6).opacity(glowIntensity * 0.1),
+                        (isDarkPhase
+                            ? Color(red: 0.95, green: 0.65, blue: 0.2)   // Warm amber
+                            : Color(red: 0.1, green: 0.9, blue: 0.85)   // Cyan
+                        ).opacity(glowIntensity * 0.35),
+                        (isDarkPhase
+                            ? Color(red: 0.85, green: 0.5, blue: 0.15)
+                            : Color(red: 0.0, green: 0.7, blue: 0.8)
+                        ).opacity(glowIntensity * 0.2),
+                        (isDarkPhase
+                            ? Color(red: 0.75, green: 0.4, blue: 0.1)
+                            : Color(red: 0.0, green: 0.5, blue: 0.6)
+                        ).opacity(glowIntensity * 0.1),
                         Color.clear
                     ],
                     center: .init(x: 0.5, y: 0.35),
@@ -302,11 +378,17 @@ struct EnhancedAuroraBorealisView: View {
                 )
                 .scaleEffect(pulseScale)
 
-                // Secondary glow - upper left
+                // Secondary glow - upper left (circadian-aware)
                 RadialGradient(
                     colors: [
-                        Color(red: 0.2, green: 0.95, blue: 0.8).opacity(glowIntensity * 0.25),
-                        Color(red: 0.1, green: 0.7, blue: 0.75).opacity(glowIntensity * 0.12),
+                        (isDarkPhase
+                            ? Color(red: 0.98, green: 0.75, blue: 0.35)  // Light gold
+                            : Color(red: 0.2, green: 0.95, blue: 0.8)   // Turquoise
+                        ).opacity(glowIntensity * 0.25),
+                        (isDarkPhase
+                            ? Color(red: 0.9, green: 0.55, blue: 0.2)
+                            : Color(red: 0.1, green: 0.7, blue: 0.75)
+                        ).opacity(glowIntensity * 0.12),
                         Color.clear
                     ],
                     center: .init(x: 0.2, y: 0.2),
@@ -315,10 +397,13 @@ struct EnhancedAuroraBorealisView: View {
                 )
                 .scaleEffect(pulseScale * 0.95)
 
-                // Tertiary glow - lower right
+                // Tertiary glow - lower right (circadian-aware)
                 RadialGradient(
                     colors: [
-                        Color(red: 0.0, green: 0.8, blue: 0.9).opacity(glowIntensity * 0.2),
+                        (isDarkPhase
+                            ? Color(red: 0.95, green: 0.6, blue: 0.2)   // Amber
+                            : Color(red: 0.0, green: 0.8, blue: 0.9)   // Cyan
+                        ).opacity(glowIntensity * 0.2),
                         Color.clear
                     ],
                     center: .init(x: 0.8, y: 0.6),

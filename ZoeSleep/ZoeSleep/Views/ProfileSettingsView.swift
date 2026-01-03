@@ -158,7 +158,7 @@ struct ProfileSettingsView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.caption2)
-                        Text("Day \(questionnaireManager.currentDay) of 14")
+                        Text("Day \(questionnaireManager.currentDay) of 10")
                             .font(.caption)
                     }
                     .foregroundColor(theme.primary)

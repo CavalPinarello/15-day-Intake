@@ -52,14 +52,16 @@ struct MinimalHomeView: View {
                 if !convexService.isAuthenticated {
                     notAuthenticatedCard
                 } else {
-                    // MARK: - Group 1: Sleep
-                    sleepCard
-
-                    // MARK: - Group 2: Energy, Focus, Mood (Check-ins)
-                    checkInCard
-
-                    // MARK: - Group 3: Protocol
-                    protocolCard
+                    // 2x2 Grid
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: 8),
+                        GridItem(.flexible(), spacing: 8)
+                    ], spacing: 8) {
+                        sleepTile
+                        checkInTile
+                        daylightTile
+                        protocolTile
+                    }
 
                     // Debug info (dev only)
                     #if DEBUG
@@ -103,184 +105,115 @@ struct MinimalHomeView: View {
         }
     }
 
-    // MARK: - Group 1: Sleep Card
+    // MARK: - Grid Tiles
 
-    private var sleepCard: some View {
+    private var sleepTile: some View {
         Button(action: { showSleepStages = true }) {
-            HStack(spacing: 14) {
-                // Icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.indigo.opacity(0.3))
-                        .frame(width: 56, height: 56)
+            VStack(spacing: 6) {
+                Image(systemName: "bed.double.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(.indigo)
 
-                    Image(systemName: "bed.double.fill")
-                        .font(.system(size: 26))
-                        .foregroundColor(.indigo)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Sleep")
-                        .font(.system(size: watchSize.titleFontSize, weight: .bold))
-                        .foregroundColor(.white)
-
-                    Text("Stages & Timing")
-                        .font(.system(size: watchSize.captionFontSize))
-                        .foregroundColor(.white.opacity(0.6))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.4))
+                Text("Sleep")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
             }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(cardBackground)
-            )
+            .frame(maxWidth: .infinity, minHeight: 70)
+            .background(RoundedRectangle(cornerRadius: 12).fill(cardBackground))
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Group 2: Check-In Card (Energy, Mood, Focus)
-
-    private var checkInCard: some View {
+    private var checkInTile: some View {
         let canDoCurrentCheckIn = canDoCheckIn(for: currentCheckInWindow.checkInType ?? .morning)
         let allDone = (checkInStatus?.morningDone ?? false) &&
                       (checkInStatus?.middayDone ?? false) &&
                       (checkInStatus?.eveningDone ?? false)
+        let doneCount = [checkInStatus?.morningDone, checkInStatus?.middayDone, checkInStatus?.eveningDone]
+            .compactMap { $0 }.filter { $0 }.count
 
         return Button(action: {
             if canDoCurrentCheckIn {
                 showCheckInFlow = true
             }
         }) {
-            VStack(spacing: 12) {
-                HStack(spacing: 14) {
-                    // Icon
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(palette.accent.opacity(0.3))
-                            .frame(width: 56, height: 56)
-
-                        Image(systemName: "heart.circle.fill")
-                            .font(.system(size: 26))
-                            .foregroundColor(palette.accent)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Check-in")
-                            .font(.system(size: watchSize.titleFontSize, weight: .bold))
-                            .foregroundColor(.white)
-
-                        Text("Energy · Mood · Focus")
-                            .font(.system(size: watchSize.captionFontSize))
-                            .foregroundColor(.white.opacity(0.6))
-                    }
-
-                    Spacer()
+            VStack(spacing: 6) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(palette.accent)
 
                     if allDone {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 12))
                             .foregroundColor(.green)
-                    } else if canDoCurrentCheckIn {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.4))
-                    } else {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.white.opacity(0.4))
+                            .offset(x: 6, y: -4)
+                    } else if doneCount > 0 {
+                        Text("\(doneCount)/3")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(palette.accent))
+                            .offset(x: 8, y: -4)
                     }
                 }
 
-                // Status dots for AM / PM / Eve
-                HStack(spacing: 20) {
-                    checkInDot(label: "AM", isDone: checkInStatus?.morningDone ?? false, isActive: currentCheckInWindow == .morning)
-                    checkInDot(label: "PM", isDone: checkInStatus?.middayDone ?? false, isActive: currentCheckInWindow == .afternoon)
-                    checkInDot(label: "Eve", isDone: checkInStatus?.eveningDone ?? false, isActive: currentCheckInWindow == .evening)
-                }
+                Text("Check-in")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
             }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(cardBackground)
-            )
+            .frame(maxWidth: .infinity, minHeight: 70)
+            .background(RoundedRectangle(cornerRadius: 12).fill(cardBackground))
         }
         .buttonStyle(.plain)
         .disabled(!canDoCurrentCheckIn && !allDone)
-        .opacity(canDoCurrentCheckIn || allDone ? 1 : 0.6)
+        .opacity(canDoCurrentCheckIn || allDone ? 1 : 0.7)
     }
 
-    private func checkInDot(label: String, isDone: Bool, isActive: Bool) -> some View {
-        VStack(spacing: 4) {
-            Circle()
-                .fill(isDone ? Color.green : (isActive ? palette.accent : Color.gray.opacity(0.3)))
-                .frame(width: 14, height: 14)
+    private var daylightTile: some View {
+        Button(action: { /* TODO: Show daylight view */ }) {
+            VStack(spacing: 6) {
+                Image(systemName: "sun.max.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(.yellow)
 
-            Text(label)
-                .font(.system(size: watchSize.captionFontSize - 2, weight: .medium))
-                .foregroundColor(.white.opacity(0.6))
+                Text("Daylight")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity, minHeight: 70)
+            .background(RoundedRectangle(cornerRadius: 12).fill(cardBackground))
         }
+        .buttonStyle(.plain)
     }
 
-    // MARK: - Group 3: Protocol Card
-
-    private var protocolCard: some View {
-        let hasTasks = taskStatus?.protocolTasks.isEmpty == false
+    private var protocolTile: some View {
         let pendingCount = taskStatus?.pendingProtocolCount ?? 0
 
         return Button(action: { showTasks = true }) {
-            HStack(spacing: 14) {
-                // Icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.orange.opacity(0.3))
-                        .frame(width: 56, height: 56)
-
-                    Image(systemName: "stethoscope")
-                        .font(.system(size: 26))
+            VStack(spacing: 6) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "list.clipboard.fill")
+                        .font(.system(size: 28))
                         .foregroundColor(.orange)
-                }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Protocol")
-                        .font(.system(size: watchSize.titleFontSize, weight: .bold))
-                        .foregroundColor(.white)
-
-                    if hasTasks {
-                        Text("\(pendingCount) remaining")
-                            .font(.system(size: watchSize.captionFontSize))
-                            .foregroundColor(.white.opacity(0.6))
-                    } else {
-                        Text("No tasks yet")
-                            .font(.system(size: watchSize.captionFontSize))
-                            .foregroundColor(.white.opacity(0.4))
+                    if pendingCount > 0 {
+                        Text("\(pendingCount)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 16, height: 16)
+                            .background(Circle().fill(Color.orange))
+                            .offset(x: 6, y: -4)
                     }
                 }
 
-                Spacer()
-
-                if hasTasks && pendingCount > 0 {
-                    Text("\(pendingCount)")
-                        .font(.system(size: watchSize.fontSize, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(Color.orange))
-                } else {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.4))
-                }
+                Text("Protocol")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
             }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(cardBackground)
-            )
+            .frame(maxWidth: .infinity, minHeight: 70)
+            .background(RoundedRectangle(cornerRadius: 12).fill(cardBackground))
         }
         .buttonStyle(.plain)
     }

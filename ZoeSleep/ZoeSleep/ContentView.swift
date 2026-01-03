@@ -92,6 +92,11 @@ struct MainDashboardView: View {
     @State private var showProgressCoachMark = false
     @ObservedObject private var guideManager = FirstTimeGuideManager.shared
 
+    // Check-in modal state (for unified Today's Focus)
+    @State private var showingCheckIn = false
+    @State private var selectedCheckInSlot: CheckInTimeSlot?
+    @ObservedObject private var checkInManager = CheckInManager.shared
+
     // Poll every 5 seconds when app is active (for cross-device sync)
     private let refreshInterval: TimeInterval = 5.0
 
@@ -121,9 +126,6 @@ struct MainDashboardView: View {
                     // Journey Progress Card (Day X of 10)
                     journeyProgressCard
 
-                    // Today's Focus - Energy, Mood, Focus Check-In (Apple Watch style)
-                    QuickCheckInWidget()
-
                     // Catch-up Card (if there are missed days)
                     if !missedDays.isEmpty {
                         catchUpCard
@@ -151,6 +153,15 @@ struct MainDashboardView: View {
         .sheet(isPresented: $showingJourneyOverview) {
             JourneyOverviewView(currentDay: $currentDay)
                 .environmentObject(themeManager)
+        }
+        .fullScreenCover(isPresented: $showingCheckIn) {
+            if let slot = selectedCheckInSlot {
+                WatchStyleCheckInView(
+                    timeSlot: slot,
+                    onComplete: handleCheckInComplete
+                )
+                .environmentObject(themeManager)
+            }
         }
         // Hidden NavigationLink for programmatic navigation to Sleep Diary
         .background(
@@ -348,6 +359,9 @@ struct MainDashboardView: View {
         if let progress = questionnaireManager.journeyProgress {
             await questionnaireManager.loadAssessmentQuestionCountForDay(progress.currentDay)
         }
+
+        // Load check-in status for Today's Focus
+        await checkInManager.loadTodayStatus()
 
         await MainActor.run {
             // Check if there was an error during the refresh
@@ -860,6 +874,12 @@ struct MainDashboardView: View {
                             .foregroundColor(theme.textOnCardMuted)
                     }
 
+                    // Check-In row (Energy, Mood, Focus)
+                    CheckInTaskRow { slot in
+                        selectedCheckInSlot = slot
+                        showingCheckIn = true
+                    }
+
                     // Sleep Log row
                     if sleepLogDone {
                         TaskRowView(
@@ -934,8 +954,15 @@ struct MainDashboardView: View {
         return !getTriggeredGatewaysForToday().isEmpty
     }
 
+    private var checkInAllDone: Bool {
+        checkInManager.morningCheckInCompleted &&
+        checkInManager.middayCheckInCompleted &&
+        checkInManager.eveningCheckInCompleted
+    }
+
     private var completedTaskCount: Int {
         var count = 0
+        if checkInAllDone { count += 1 }
         if sleepLogDone { count += 1 }
         if hasAssessmentToday && assessmentDone { count += 1 }
         // Include expansion pack if triggered and completed (same-day deep dive on Days 1-5)
@@ -944,11 +971,23 @@ struct MainDashboardView: View {
     }
 
     private var totalTaskCount: Int {
-        var count = 1 // Always have sleep log
+        var count = 2 // Always have check-in and sleep log
         if hasAssessmentToday { count += 1 }
         // Include expansion pack in total (same-day deep dive on Days 1-5)
         if hadExpansionPackToday { count += 1 }
         return count
+    }
+
+    private func handleCheckInComplete(energy: EnergyLevel, mood: MoodLevel, focus: FocusLevel) {
+        guard let slot = selectedCheckInSlot else { return }
+        Task {
+            await checkInManager.submitWatchStyleCheckIn(
+                timeSlot: slot,
+                energy: energy,
+                mood: mood,
+                focus: focus
+            )
+        }
     }
 
     private func advanceToNextDay() {
@@ -1127,16 +1166,11 @@ struct MainDashboardView: View {
             3: "Sleep and mental health are closely connected. These questions help us see the full picture.",
             4: "Physical health factors can significantly impact sleep. We're checking for anything relevant.",
             5: "Your environment and daily habits play a big role in sleep quality.",
-            6: "Based on your responses, we're taking a deeper look at insomnia symptoms.",
-            7: "Your natural sleep-wake cycle affects when you sleep best.",
-            8: "We're checking in on mood and anxiety, which can affect sleep quality.",
-            9: "Daytime sleepiness tells us important things about your sleep quality.",
-            10: "We're screening for sleep apnea, a common but often undiagnosed condition.",
-            11: "Pain and physical discomfort can disrupt sleep. We're assessing if this applies to you.",
-            12: "Your body clock affects when you feel sleepy and alert.",
-            13: "What you eat can affect how you sleep. We're looking at dietary factors.",
-            14: "Sometimes our beliefs about sleep can make problems worse.",
-            15: "We're wrapping up your assessment and preparing your personalized recommendations.",
+            6: "We're measuring your insomnia severity and assessing shift work impacts.",
+            7: "Depression, anxiety, and pre-sleep arousal patterns profoundly affect rest.",
+            8: "Screening for sleep apnea and measuring daytime sleepiness.",
+            9: "Your sleep habits, pain patterns, and functional outcomes matter for treatment.",
+            10: "Cognitive function, diet, and your natural chronotype rhythm complete your portrait.",
         ]
         return explanations[currentDay] ?? "These questions help us understand your unique sleep needs."
     }
@@ -1341,6 +1375,9 @@ struct MainDashboardView: View {
 
             // Load missed days for catch-up feature
             await loadMissedDays()
+
+            // Load check-in status for Today's Focus
+            await checkInManager.loadTodayStatus()
         }
     }
 
@@ -2048,6 +2085,147 @@ struct TaskRowView: View {
             RoundedRectangle(cornerRadius: CornerRadius.small)
                 .fill(isCompleted ? Color.clear : theme.backgroundTint.opacity(0.3))
         )
+    }
+}
+
+// MARK: - Check-In Task Row (with mini time slot circles)
+
+struct CheckInTaskRow: View {
+    @ObservedObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var checkInManager = CheckInManager.shared
+    let onTapSlot: (CheckInTimeSlot) -> Void
+
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    private var morningDone: Bool { checkInManager.morningCheckInCompleted }
+    private var middayDone: Bool { checkInManager.middayCheckInCompleted }
+    private var eveningDone: Bool { checkInManager.eveningCheckInCompleted }
+    private var allDone: Bool { morningDone && middayDone && eveningDone }
+    private var completedCount: Int { [morningDone, middayDone, eveningDone].filter { $0 }.count }
+    private var currentSlot: CheckInTimeSlot? { CheckInTimeSlot.current }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Title row (same style as TaskRowView)
+            HStack(alignment: .top, spacing: Spacing.md) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(allDone ? theme.success.opacity(0.15) : theme.primary.opacity(0.15))
+                        .frame(width: 40, height: 40)
+
+                    if allDone {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(theme.success)
+                    } else {
+                        Image(systemName: "heart.text.square.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(theme.primary)
+                    }
+                }
+
+                // Title and subtitle
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Check-In")
+                            .font(.system(size: Typography.body, weight: .semibold, design: .rounded))
+                            .foregroundColor(allDone ? theme.textOnCardMuted : theme.textOnCard)
+                            .strikethrough(allDone, color: theme.textOnCardMuted)
+
+                        Spacer()
+
+                        // Completion badge
+                        Text("\(completedCount)/3")
+                            .font(.system(size: Typography.caption2, weight: .medium, design: .rounded))
+                            .foregroundColor(allDone ? theme.success : theme.textOnCardMuted)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(allDone ? theme.success.opacity(0.15) : theme.backgroundTint.opacity(0.4))
+                            .clipShape(Capsule())
+                    }
+
+                    Text("Energy, Mood, Focus")
+                        .font(.system(size: Typography.caption, design: .rounded))
+                        .foregroundColor(theme.textOnCardSecondary)
+                }
+            }
+
+            // Time slot circles
+            HStack(spacing: 20) {
+                timeSlotCircle(slot: .morning, isDone: morningDone)
+                timeSlotCircle(slot: .midday, isDone: middayDone)
+                timeSlotCircle(slot: .evening, isDone: eveningDone)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 4)
+        }
+        .padding(.vertical, Spacing.sm)
+        .padding(.horizontal, Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.small)
+                .fill(allDone ? Color.clear : theme.backgroundTint.opacity(0.3))
+        )
+    }
+
+    private func timeSlotCircle(slot: CheckInTimeSlot, isDone: Bool) -> some View {
+        let isActive = currentSlot == slot && !isDone
+        let inactiveRingColor = theme.primaryText.opacity(0.25)
+        let inactiveIconColor = theme.primaryText.opacity(0.4)
+        let inactiveLabelColor = theme.secondaryText
+
+        return Button {
+            if !isDone && (isActive || currentSlot == nil) {
+                onTapSlot(slot)
+            }
+        } label: {
+            VStack(spacing: 6) {
+                ZStack {
+                    // Background fill for inactive
+                    if !isDone && !isActive {
+                        Circle()
+                            .fill(theme.primaryText.opacity(0.05))
+                            .frame(width: 36, height: 36)
+                    }
+
+                    // Ring stroke
+                    Circle()
+                        .stroke(
+                            isDone ? Color.green.opacity(0.5) : (isActive ? slot.color : inactiveRingColor),
+                            lineWidth: isDone ? 2 : (isActive ? 2 : 1.5)
+                        )
+                        .frame(width: 36, height: 36)
+
+                    // Fill for completed
+                    if isDone {
+                        Circle()
+                            .fill(Color.green.opacity(0.15))
+                            .frame(width: 32, height: 32)
+
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.green)
+                    } else {
+                        Image(systemName: slot.sfSymbol)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(isActive ? slot.color : inactiveIconColor)
+                    }
+
+                    // Active indicator ring
+                    if isActive {
+                        Circle()
+                            .stroke(slot.color.opacity(0.5), lineWidth: 1.5)
+                            .frame(width: 42, height: 42)
+                    }
+                }
+
+                Text(slot.label)
+                    .font(.system(size: 10, weight: isActive ? .semibold : .medium))
+                    .foregroundColor(isDone ? .green : (isActive ? theme.primaryText : inactiveLabelColor))
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isDone || (!isActive && currentSlot != nil))
     }
 }
 

@@ -198,7 +198,7 @@ struct AnswerDerivationSystem {
 
     // MARK: - Typical Sleep Pattern Derivation
 
-    /// Derive typical sleep patterns from 14-day diary data
+    /// Derive typical sleep patterns from 10-day diary data
     /// Used to auto-fill core questions about typical bedtime/wake time
     static func deriveTypicalPatterns(from diaryEntries: [DerivationSleepEntry]) -> TypicalSleepPatterns? {
         guard diaryEntries.count >= 5 else { return nil } // Need at least 5 days

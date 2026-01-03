@@ -80,22 +80,19 @@ enum WearableDevice: String, CaseIterable, Identifiable {
 }
 
 /// Onboarding step enum
-/// NOTE: No welcome step - splash screen serves as welcome, onboarding starts with name
-/// REVISED: HealthKit moved earlier to enable auto-fill of demographics
+/// FLOW: HealthKit FIRST to get all available data, then only ask what we couldn't get
 enum OnboardingStep: Int, CaseIterable {
-    case name = 0
-    case healthConnect = 1      // Moved earlier - before body metrics
-    case measurementSystem = 2  // Auto-detected from locale, may be skipped
-    case heightWeight = 3       // Skipped entirely if HealthKit provides data
-    case genderAge = 4          // Skipped if HealthKit provides data
-    case wearables = 5
-    case ready = 6
+    case healthConnect = 0      // FIRST - get height, weight, age, sex from HealthKit
+    case name = 1               // Ask for name (can't get from HealthKit)
+    case heightWeight = 2       // Skipped if HealthKit provided data
+    case genderAge = 3          // Skipped if HealthKit provided data
+    case wearables = 4
+    case ready = 5
 
     var title: String {
         switch self {
-        case .name: return "Your Name"
         case .healthConnect: return "Health Data"
-        case .measurementSystem: return "Units"
+        case .name: return "Your Name"
         case .heightWeight: return "Body Metrics"
         case .genderAge: return "About You"
         case .wearables: return "Devices"
@@ -155,7 +152,7 @@ class OnboardingManager: ObservableObject {
 
     // MARK: - Published Properties
 
-    @Published var currentStep: OnboardingStep = .name
+    @Published var currentStep: OnboardingStep = .healthConnect
     @Published var profile: OnboardingProfile = OnboardingProfile()
     @Published var isOnboardingComplete: Bool = false
     @Published var isCheckingServerState: Bool = false
@@ -337,7 +334,7 @@ class OnboardingManager: ObservableObject {
     /// Note: hasSeenJourneyIntro is NOT reset - it's a device-level flag, not per-user
     private func resetLocalState() {
         profile = OnboardingProfile()
-        currentStep = .name  // Start at name step (no welcome step)
+        currentStep = .healthConnect  // Start at HealthKit step
         isOnboardingComplete = false
         // DO NOT reset hasSeenJourneyIntro - the intro explains the app once per device
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
@@ -351,7 +348,7 @@ class OnboardingManager: ObservableObject {
     /// Note: hasSeenJourneyIntro is preserved - it's device-level, not per-user
     func clearForSignOut() {
         profile = OnboardingProfile()
-        currentStep = .name  // Start at name step (no welcome step)
+        currentStep = .healthConnect  // Start at HealthKit step
         isOnboardingComplete = false
         // DO NOT reset hasSeenJourneyIntro - the intro shows once per device
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
@@ -460,22 +457,17 @@ class OnboardingManager: ObservableObject {
         }
     }
 
-    /// Check if a step should be skipped (has pre-filled data)
+    /// Check if a step should be skipped (has pre-filled data from HealthKit)
     func shouldSkipStep(_ step: OnboardingStep) -> Bool {
         switch step {
-        case .name:
-            // Skip if name is already filled
-            return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .healthConnect:
-            // Never skip - always show HealthKit permission request
+            // Never skip - always show HealthKit permission request first
             return false
-        case .measurementSystem:
-            // Skip measurement system - auto-detected from locale
-            // User can change in settings if needed
-            return true
+        case .name:
+            // Never skip name - we can't get it from HealthKit
+            return false
         case .heightWeight:
-            // Skip entirely if HealthKit provided height and weight data
-            // This is the key change from Issue 2
+            // Skip if HealthKit provided valid height and weight data
             guard let height = profile.heightCm, let weight = profile.weightKg else {
                 return false  // Don't skip if no data available
             }
@@ -483,11 +475,13 @@ class OnboardingManager: ObservableObject {
                    height > 100 && height < 250 &&
                    weight > 30 && weight < 300
         case .genderAge:
-            // Skip if we got complete data from HealthKit
-            return profile.hasConnectedHealthKit &&
-                   profile.gender != Gender.preferNotToSay.rawValue &&
-                   profile.birthYear > 1920 && profile.birthYear < Calendar.current.component(.year, from: Date()) - 10
-        default:
+            // Skip if HealthKit provided both gender and age
+            let hasValidGender = profile.gender != Gender.preferNotToSay.rawValue
+            let hasValidAge = profile.birthYear > 1920 && profile.birthYear < Calendar.current.component(.year, from: Date()) - 10
+            return profile.hasConnectedHealthKit && hasValidGender && hasValidAge
+        case .wearables:
+            return false
+        case .ready:
             return false
         }
     }
@@ -519,10 +513,10 @@ class OnboardingManager: ObservableObject {
 
     var canProceed: Bool {
         switch currentStep {
+        case .healthConnect:
+            return true // Can proceed even without connecting
         case .name:
             return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .measurementSystem:
-            return true
         case .heightWeight:
             guard let height = profile.heightCm, let weight = profile.weightKg else {
                 return false
@@ -531,8 +525,6 @@ class OnboardingManager: ObservableObject {
         case .genderAge:
             return profile.birthYear > 1900 && profile.birthYear <= Calendar.current.component(.year, from: Date())
         case .wearables:
-            return true // Optional step
-        case .healthConnect:
             return true // Optional step
         case .ready:
             return true

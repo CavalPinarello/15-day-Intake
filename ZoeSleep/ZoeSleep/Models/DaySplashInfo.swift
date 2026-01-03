@@ -3,7 +3,7 @@
 //  Zoe Sleep for Longevity System
 //
 //  Data model for day splash screens - hero-framed journey content
-//  Each day of the 14-day journey has a mission and discoveries
+//  Each day of the 10-day journey has a mission and discoveries
 //
 
 import Foundation
@@ -31,7 +31,7 @@ struct DaySplashInfo {
 
     /// Progress indicator text
     var progressText: String {
-        "Day \(dayNumber) of 14"
+        "Day \(dayNumber) of 10"
     }
 
     /// Formatted time estimate

@@ -267,7 +267,7 @@ struct ProfileView: View {
                         }
 
                         // Current Day
-                        Text("Day \(user.currentDay) of 14")
+                        Text("Day \(user.currentDay) of 10")
                             .font(.caption)
                             .foregroundColor(theme.primary)
                     }

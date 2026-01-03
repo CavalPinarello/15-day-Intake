@@ -190,7 +190,7 @@ struct AnalysisPendingView: View {
                 // Reset local state
                 await MainActor.run {
                     // Clear day splash tracking
-                    for day in 1...14 {
+                    for day in 1...10 {
                         UserDefaults.standard.removeObject(forKey: "daySplashShown_day\(day)_assessment")
                         UserDefaults.standard.removeObject(forKey: "expansionSplashShown_day\(day)")
                     }

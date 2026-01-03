@@ -18,56 +18,36 @@ struct SleepFactRewardCard: View {
     @State private var isPulsing: Bool = false
     @State private var autoDismissTask: Task<Void, Never>?
     @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @EnvironmentObject var themeManager: ThemeManager
 
-    // MARK: - Circadian Colors
+    // MARK: - Circadian Colors (Theme-based)
 
-    private var isEvening: Bool {
-        TimePeriod.current == .evening || TimePeriod.current == .night
-    }
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var palette: CircadianPalette { themeManager.circadianPalette }
 
     /// Celebration accent color (circadian-safe)
     private var celebrationColor: Color {
-        if isEvening {
-            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
-        } else {
-            return Color(red: 0.961, green: 0.620, blue: 0.043)  // Amber #F59E0B
-        }
+        theme.accent
     }
 
     /// Secondary accent for subtle elements
     private var secondaryAccent: Color {
-        if isEvening {
-            return Color(red: 0.95, green: 0.6, blue: 0.2)  // Warm amber
-        } else {
-            return Color(red: 0.85, green: 0.5, blue: 0.15)  // Deep amber
-        }
+        theme.accent.opacity(0.8)
     }
 
     /// Title text color
     private var titleColor: Color {
-        if isEvening {
-            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
-        } else {
-            return Color.primary
-        }
+        theme.primaryText
     }
 
     /// Body text color
     private var bodyColor: Color {
-        if isEvening {
-            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
-        } else {
-            return Color.secondary
-        }
+        theme.secondaryText
     }
 
     /// Citation/stat text color
     private var mutedColor: Color {
-        if isEvening {
-            return Color(red: 0.961, green: 0.620, blue: 0.043)  // Amber #F59E0B
-        } else {
-            return Color.secondary.opacity(0.7)
-        }
+        theme.secondaryText.opacity(0.7)
     }
 
     /// Card background

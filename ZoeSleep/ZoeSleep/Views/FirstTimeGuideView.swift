@@ -17,40 +17,18 @@ struct FirstTimeGuideView: View {
     @State private var isAppearing: Bool = false
     @State private var bulletIndex: Int = 0
     @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @EnvironmentObject var themeManager: ThemeManager
 
-    // MARK: - Circadian Colors
+    // MARK: - Theme Colors (uses centralized ColorTheme)
 
-    private var palette: CircadianPalette { CircadianPalette.current }
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var palette: CircadianPalette { themeManager.circadianPalette }
 
-    private var primaryTextColor: Color {
-        palette.isDark
-            ? Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright warm cream
-            : Color.primary
-    }
-
-    private var secondaryTextColor: Color {
-        palette.isDark
-            ? Color(red: 0.988, green: 0.827, blue: 0.302).opacity(0.85)  // Golden yellow
-            : Color.secondary
-    }
-
-    private var accentColor: Color {
-        palette.isDark
-            ? Color(red: 0.95, green: 0.6, blue: 0.2)  // Warm amber
-            : Color.accentColor
-    }
-
-    private var backgroundColor: Color {
-        palette.isDark
-            ? Color(red: 0.06, green: 0.04, blue: 0.02)  // Very dark warm
-            : Color(.systemBackground)
-    }
-
-    private var cardBackgroundColor: Color {
-        palette.isDark
-            ? Color(red: 0.12, green: 0.08, blue: 0.04)  // Dark card
-            : Color(.secondarySystemBackground)
-    }
+    private var primaryTextColor: Color { theme.primaryText }
+    private var secondaryTextColor: Color { theme.secondaryText }
+    private var accentColor: Color { theme.accent }
+    private var backgroundColor: Color { palette.backgroundStart }
+    private var cardBackgroundColor: Color { theme.cardBackground }
 
     // MARK: - Body
 
@@ -198,7 +176,7 @@ struct FirstTimeGuideView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 18))
                     }
-                    .foregroundColor(palette.isDark ? Color.black : Color.white)
+                    .foregroundColor(theme.textOnPrimary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(accentColor)

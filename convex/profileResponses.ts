@@ -213,6 +213,80 @@ export const injectDemographicResponses = mutation({
       );
     }
 
+    // === Derive STOP-BANG answers from core questionnaire responses ===
+    // These questions were asked during Days 1-5 as gateway triggers or core assessment
+
+    // Helper to get a user's response
+    const getResponse = async (questionId: string) => {
+      return ctx.db
+        .query("user_assessment_responses")
+        .withIndex("by_user_question", (q) =>
+          q.eq("user_id", args.userId).eq("question_id", questionId)
+        )
+        .first();
+    };
+
+    // SB_1: Snore loudly? (from Q19 gateway)
+    const q19 = await getResponse("19");
+    if (q19?.response_value) {
+      const value = q19.response_value.toLowerCase();
+      const snoresLoudly = value === "yes" || value === "sometimes";
+      await upsertDerivedResponse(
+        "SB_1",
+        snoresLoudly ? "Yes" : "No",
+        snoresLoudly ? 1 : 0,
+        "19"
+      );
+    }
+
+    // SB_2: Tired during day? (from Q17 gateway - 1-10 scale)
+    const q17 = await getResponse("17");
+    if (q17?.response_number !== undefined) {
+      const isTired = q17.response_number >= 5;
+      await upsertDerivedResponse(
+        "SB_2",
+        isTired ? "Yes" : "No",
+        isTired ? 1 : 0,
+        "17"
+      );
+    }
+
+    // SB_3: Observed stop breathing? (from Q20 gateway)
+    const q20 = await getResponse("20");
+    if (q20?.response_value) {
+      const observedApnea = q20.response_value.toLowerCase() === "yes";
+      await upsertDerivedResponse(
+        "SB_3",
+        observedApnea ? "Yes" : "No",
+        observedApnea ? 1 : 0,
+        "20"
+      );
+    }
+
+    // SB_4: High blood Pressure? (from Q27 core Day 4)
+    const q27 = await getResponse("27");
+    if (q27?.response_value) {
+      const hasHighBP = q27.response_value.toLowerCase() === "yes";
+      await upsertDerivedResponse(
+        "SB_4",
+        hasHighBP ? "Yes" : "No",
+        hasHighBP ? 1 : 0,
+        "27"
+      );
+    }
+
+    // SB_7: Neck > 40cm? (from Q21 core Day 4)
+    const q21 = await getResponse("21");
+    if (q21?.response_number !== undefined) {
+      const neckOver40 = q21.response_number > 40;
+      await upsertDerivedResponse(
+        "SB_7",
+        neckOver40 ? "Yes" : "No",
+        neckOver40 ? 1 : 0,
+        "21"
+      );
+    }
+
     console.log(`[profileResponses] Injected ${injectedCount} responses, skipped ${skippedCount} for user ${args.userId}`);
 
     return { injectedCount, skippedCount, details };

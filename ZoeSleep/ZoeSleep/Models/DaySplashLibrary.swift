@@ -2,19 +2,19 @@
 //  DaySplashLibrary.swift
 //  Zoe Sleep for Longevity System
 //
-//  Hero-framed content for all 14 days of the sleep discovery journey
+//  Hero-framed content for all 10 days of the sleep discovery journey
 //  Each day positions the user as the hero uncovering insights about their sleep
 //
 //  FIXED SCHEDULE:
 //  Days 1-5: Core Assessment (by pillar/theme)
-//  Days 6-14: Expansion Packs (gateway-triggered)
+//  Days 6-10: Expansion Packs (gateway-triggered)
 //
 
 import Foundation
 
 // MARK: - Day Splash Library
 
-/// Library of splash screen content for all 14 days
+/// Library of splash screen content for all 10 days
 /// Hero-framing: User is the protagonist on a discovery journey
 struct DaySplashLibrary {
 
@@ -105,159 +105,91 @@ struct DaySplashLibrary {
         clinicalInstruments: nil
     )
 
-    // MARK: - Expansion Days (6-14) - Gateway-Triggered
+    // MARK: - Expansion Days (6-10) - Gateway-Triggered
 
     static let day6 = DaySplashInfo(
         dayNumber: 6,
         icon: "moon.zzz.fill",
-        title: "Sleep & Work Patterns",
-        missionStatement: "Measure your insomnia severity and assess shift work impacts. Understanding these patterns unlocks targeted solutions.",
+        title: "Insomnia Assessment",
+        missionStatement: "Measure your insomnia severity, assess shift work impacts, and explore beliefs about sleep that may be affecting your rest.",
         discoveries: [
             "Your clinical insomnia severity score (ISI)",
-            "Shift work disorder screening",
-            "The worry-sleep cycle in your life"
+            "Shift work disorder screening (SWDSQ)",
+            "Sleep beliefs affecting your rest (DBAS)"
         ],
-        questionCount: 11,
-        estimatedMinutes: 8,
+        questionCount: 17,
+        estimatedMinutes: 5,
         triggeredByGateways: [.insomnia, .poorSleepQuality, .shiftWork],
         isExpansionDay: true,
-        clinicalInstruments: ["ISI", "SWDSQ"]
+        clinicalInstruments: ["ISI", "SWDSQ", "DBAS"]
     )
 
     static let day7 = DaySplashInfo(
         dayNumber: 7,
-        icon: "heart.circle.fill",
-        title: "Mood & Thinking",
-        missionStatement: "Deep dive into depression screening and cognitive function. Your mental state profoundly affects your rest.",
+        icon: "brain.head.profile",
+        title: "Mental Health & Arousal",
+        missionStatement: "Deep dive into depression and anxiety screening, plus understand how pre-sleep arousal affects your nights.",
         discoveries: [
             "Comprehensive depression screening (PHQ-9)",
-            "Cognitive function assessment",
-            "The bidirectional mood-sleep relationship"
+            "Anxiety severity assessment (GAD-7)",
+            "Pre-sleep arousal patterns (PSAS)"
         ],
-        questionCount: 15,
-        estimatedMinutes: 10,
-        triggeredByGateways: [.depression, .cognitive],
+        questionCount: 32,
+        estimatedMinutes: 9,
+        triggeredByGateways: [.depression, .anxiety, .insomnia],
         isExpansionDay: true,
-        clinicalInstruments: ["PHQ-9", "PROMIS Cognitive"]
+        clinicalInstruments: ["PHQ-9", "GAD-7", "PSAS"]
     )
 
     static let day8 = DaySplashInfo(
         dayNumber: 8,
-        icon: "checkmark.shield.fill",
-        title: "Anxiety & Sleep Habits",
-        missionStatement: "Screen for anxiety and audit your sleep hygiene. Small habit changes can transform your nights.",
+        icon: "lungs.fill",
+        title: "Breathing & Energy",
+        missionStatement: "Screen for sleep apnea risk and measure how sleepiness and fatigue affect your daily life.",
         discoveries: [
-            "Your anxiety severity score (GAD-7)",
-            "Sleep hygiene assessment",
-            "Habits helping or hurting your rest"
+            "Sleep apnea risk screening (STOP-BANG)",
+            "Daytime sleepiness score (ESS)",
+            "Fatigue severity assessment (FSS)"
         ],
-        questionCount: 17,
-        estimatedMinutes: 12,
-        triggeredByGateways: [.anxiety, .insomnia, .poorSleepQuality],
+        questionCount: 25,
+        estimatedMinutes: 7,
+        triggeredByGateways: [.osa, .excessiveSleepiness],
         isExpansionDay: true,
-        clinicalInstruments: ["GAD-7", "Sleep Hygiene Index"]
+        clinicalInstruments: ["STOP-BANG", "ESS", "FSS"]
     )
 
     static let day9 = DaySplashInfo(
         dayNumber: 9,
-        icon: "lungs.fill",
-        title: "Sleep Apnea Screening",
-        missionStatement: "STOP-BANG screening for sleep apnea risk. Breathing issues during sleep can have serious health impacts.",
+        icon: "checklist",
+        title: "Function & Behavior",
+        missionStatement: "Audit your sleep hygiene habits, assess pain's impact on rest, and understand how sleep affects your daily functioning.",
         discoveries: [
-            "STOP-BANG risk assessment",
-            "Your sleep apnea risk profile",
-            "Breathing pattern insights"
+            "Sleep hygiene assessment",
+            "Pain severity and interference (BPI)",
+            "Functional outcomes of sleep (FOSQ)"
         ],
-        questionCount: 8,
-        estimatedMinutes: 5,
-        triggeredByGateways: [.osa],
+        questionCount: 33,
+        estimatedMinutes: 9,
+        triggeredByGateways: [.insomnia, .poorSleepQuality, .pain, .excessiveSleepiness],
         isExpansionDay: true,
-        clinicalInstruments: ["STOP-BANG"]
+        clinicalInstruments: ["Sleep Hygiene", "BPI", "FOSQ"]
     )
 
     static let day10 = DaySplashInfo(
         dayNumber: 10,
-        icon: "bolt.fill",
-        title: "Daytime Energy",
-        missionStatement: "Measure how sleepiness and fatigue are affecting your daily life. Energy issues impact every aspect of functioning.",
+        icon: "clock.fill",
+        title: "Lifestyle & Rhythm",
+        missionStatement: "Complete your Sleep 360 portrait with cognitive function assessment, diet analysis, and chronotype profiling.",
         discoveries: [
-            "Your daytime sleepiness score (ESS)",
-            "Fatigue severity assessment (FSS)",
-            "The energy-sleep feedback loop"
-        ],
-        questionCount: 17,
-        estimatedMinutes: 12,
-        triggeredByGateways: [.excessiveSleepiness],
-        isExpansionDay: true,
-        clinicalInstruments: ["ESS", "FSS"]
-    )
-
-    static let day11 = DaySplashInfo(
-        dayNumber: 11,
-        icon: "brain",
-        title: "Beliefs & Pain (Part 1)",
-        missionStatement: "Examine your beliefs about sleep and assess pain's impact on rest. Both psychological and physical factors matter.",
-        discoveries: [
-            "Dysfunctional beliefs about sleep (DBAS-6)",
-            "Pain severity assessment (BPI Part 1)",
-            "How thoughts affect your sleep"
-        ],
-        questionCount: 12,
-        estimatedMinutes: 8,
-        triggeredByGateways: [.insomnia, .pain],
-        isExpansionDay: true,
-        clinicalInstruments: ["DBAS-6", "BPI Part 1"]
-    )
-
-    static let day12 = DaySplashInfo(
-        dayNumber: 12,
-        icon: "brain.head.profile",
-        title: "Pain Impact",
-        missionStatement: "Complete your pain assessment to understand how pain interferes with daily activities and sleep.",
-        discoveries: [
-            "Pain interference patterns (BPI Part 2)",
-            "Daily activity impact",
-            "Patterns connecting pain and rest"
-        ],
-        questionCount: 7,
-        estimatedMinutes: 5,
-        triggeredByGateways: [.pain],
-        isExpansionDay: true,
-        clinicalInstruments: ["BPI Part 2"]
-    )
-
-    static let day13 = DaySplashInfo(
-        dayNumber: 13,
-        icon: "sparkles",
-        title: "Sleep Arousal & Function",
-        missionStatement: "Understand pre-sleep arousal and how sleep impacts your daily functioning. The final pieces of your sleep puzzle.",
-        discoveries: [
-            "Pre-sleep arousal patterns (PSAS)",
-            "Functional outcomes of sleep (FOSQ)",
-            "How racing thoughts affect your nights"
-        ],
-        questionCount: 26,
-        estimatedMinutes: 18,
-        triggeredByGateways: [.insomnia, .anxiety, .excessiveSleepiness],
-        isExpansionDay: true,
-        clinicalInstruments: ["PSAS", "FOSQ-10"]
-    )
-
-    static let day14 = DaySplashInfo(
-        dayNumber: 14,
-        icon: "trophy.fill",
-        title: "Diet & Chronotype",
-        missionStatement: "Complete your Sleep 360 portrait with diet assessment and chronotype analysis. Understanding your biological rhythm and nutrition.",
-        discoveries: [
+            "Cognitive function assessment (PROMIS)",
             "Mediterranean diet adherence (MEDAS)",
-            "Your chronotype profile (MEQ)",
-            "Optimal eating and sleeping patterns"
+            "Your chronotype profile (MEQ)"
         ],
-        questionCount: 33,
-        estimatedMinutes: 22,
-        triggeredByGateways: [.dietImpact, .sleepTiming],
+        questionCount: 39,
+        estimatedMinutes: 11,
+        triggeredByGateways: [.cognitive, .dietImpact, .sleepTiming],
         isExpansionDay: true,
-        clinicalInstruments: ["MEDAS", "MEQ"]
+        clinicalInstruments: ["PROMIS", "MEDAS", "MEQ"]
     )
 
     // MARK: - Lookup Methods
@@ -275,10 +207,6 @@ struct DaySplashLibrary {
         case 8: return day8
         case 9: return day9
         case 10: return day10
-        case 11: return day11
-        case 12: return day12
-        case 13: return day13
-        case 14: return day14
         default: return nil
         }
     }
@@ -307,7 +235,7 @@ struct DaySplashLibrary {
         // Core days (1-5) always show splash
         if !info.isExpansionDay { return true }
 
-        // Expansion days (6-14) only show if their gateways were triggered
+        // Expansion days (6-10) only show if their gateways were triggered
         guard let requiredGateways = info.triggeredByGateways else { return true }
         return requiredGateways.contains { triggeredGateways.contains($0) }
     }
@@ -320,8 +248,7 @@ struct DaySplashLibrary {
 
         let emojis: [Int: String] = [
             1: "👤", 2: "💤", 3: "🧠", 4: "💪", 5: "☕",
-            6: "😴", 7: "💚", 8: "✓", 9: "🫁", 10: "⚡",
-            11: "🧠", 12: "🧠", 13: "✨", 14: "🏆"
+            6: "😴", 7: "🧠", 8: "🫁", 9: "📋", 10: "🕐"
         ]
 
         let shortMissions: [Int: String] = [
@@ -331,14 +258,10 @@ struct DaySplashLibrary {
             4: "Physical health factors",
             5: "Daily habits review",
             6: "Insomnia & shift work",
-            7: "Mood & thinking",
-            8: "Anxiety & sleep habits",
-            9: "Sleep apnea assessment",
-            10: "Energy & fatigue",
-            11: "Beliefs & pain (1/2)",
-            12: "Beliefs & pain (2/2)",
-            13: "Arousal & function",
-            14: "Diet & chronotype"
+            7: "Mental health & arousal",
+            8: "Breathing & energy",
+            9: "Function & behavior",
+            10: "Lifestyle & rhythm"
         ]
 
         return WatchDayInvitation(
@@ -376,7 +299,7 @@ extension DaySplashLibrary {
     Based on what we've learned, we've prepared personalized deep-dives for you.
     """
 
-    /// Message shown after completing Day 14 (journey complete)
+    /// Message shown after completing Day 10 (journey complete)
     static let journeyCompleteMessage = """
     Congratulations! Your Sleep 360 portrait is complete.
 

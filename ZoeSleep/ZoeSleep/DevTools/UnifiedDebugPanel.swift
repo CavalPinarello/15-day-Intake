@@ -597,7 +597,7 @@ struct UnifiedDebugPanel: View {
 
     // MARK: - Time Travel Mode Section
 
-    @State private var timeTravelSelectedDate: Date = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
+    @State private var timeTravelSelectedDate: Date = Calendar.current.date(byAdding: .day, value: -10, to: Date()) ?? Date()
 
     private var timeTravelModeSection: some View {
         Section {

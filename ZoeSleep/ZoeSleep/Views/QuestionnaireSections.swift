@@ -259,35 +259,13 @@ struct SectionTransitionView: View {
     let onContinue: () -> Void
 
     @State private var isAnimating = false
+    @EnvironmentObject var themeManager: ThemeManager
 
-    // Circadian-aware colors
-    private var isEvening: Bool {
-        TimePeriod.current == .evening || TimePeriod.current == .night
-    }
-
-    private var primaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
-        } else {
-            return Color.primary
-        }
-    }
-
-    private var secondaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
-        } else {
-            return Color.secondary
-        }
-    }
-
-    private var backgroundColor: Color {
-        if isEvening {
-            return Color(red: 0.12, green: 0.08, blue: 0.05)  // Dark warm brown
-        } else {
-            return Color(.systemBackground)
-        }
-    }
+    // Theme colors (uses centralized ColorTheme)
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var primaryTextColor: Color { theme.primaryText }
+    private var secondaryTextColor: Color { theme.secondaryText }
+    private var backgroundColor: Color { theme.cardBackground }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -382,35 +360,13 @@ struct SectionQuestionCard<Content: View>: View {
     let section: QuestionnaireSection
     let question: Question
     let content: () -> Content
+    @EnvironmentObject var themeManager: ThemeManager
 
-    // Circadian text colors
-    private var isEvening: Bool {
-        TimePeriod.current == .evening || TimePeriod.current == .night
-    }
-
-    private var questionTextColor: Color {
-        if isEvening {
-            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
-        } else {
-            return Color.primary
-        }
-    }
-
-    private var secondaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
-        } else {
-            return Color.secondary
-        }
-    }
-
-    private var helpTextColor: Color {
-        if isEvening {
-            return Color(red: 0.961, green: 0.620, blue: 0.043)  // Amber #F59E0B
-        } else {
-            return Color.secondary
-        }
-    }
+    // Theme colors (uses centralized ColorTheme)
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var questionTextColor: Color { theme.primaryText }
+    private var secondaryTextColor: Color { theme.secondaryText }
+    private var helpTextColor: Color { theme.secondaryText.opacity(0.9) }
 
     init(section: QuestionnaireSection, question: Question, @ViewBuilder content: @escaping () -> Content) {
         self.section = section
@@ -507,47 +463,19 @@ struct DayCompletionView: View {
 
     @State private var isAnimating = false
     @State private var showConfetti = false
+    @EnvironmentObject var themeManager: ThemeManager
 
-    // Circadian-aware colors
-    private var isEvening: Bool {
-        TimePeriod.current == .evening || TimePeriod.current == .night
-    }
+    // Theme colors (uses centralized ColorTheme)
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var palette: CircadianPalette { themeManager.circadianPalette }
+    private var primaryTextColor: Color { theme.primaryText }
+    private var secondaryTextColor: Color { theme.secondaryText }
+    private var viewBackgroundColor: Color { palette.backgroundStart }
+    private var cardBackgroundColor: Color { theme.cardBackground }
 
-    private var primaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
-        } else {
-            return Color.primary
-        }
-    }
-
-    private var secondaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
-        } else {
-            return Color.secondary
-        }
-    }
-
-    private var viewBackgroundColor: Color {
-        if isEvening {
-            return Color(red: 0.12, green: 0.08, blue: 0.05)  // Dark warm brown
-        } else {
-            return Color(.systemBackground)
-        }
-    }
-
-    private var cardBackgroundColor: Color {
-        if isEvening {
-            return Color(red: 0.18, green: 0.12, blue: 0.08)  // Slightly lighter dark brown
-        } else {
-            return Color(.secondarySystemBackground)
-        }
-    }
-
-    // Computed: Is this the final day of the 14-day journey?
+    // Computed: Is this the final day of the 10-day journey?
     private var isJourneyComplete: Bool {
-        dayNumber >= 14 && (isFullDayComplete || completedSection == .assessment)
+        dayNumber >= 10 && (isFullDayComplete || completedSection == .assessment)
     }
 
     // Computed: Is this a full day completion or section-only?
@@ -1123,35 +1051,14 @@ struct FlowLayout: Layout {
 struct EmptyAssessmentView: View {
     let dayNumber: Int
     let onDismiss: () -> Void
+    @EnvironmentObject var themeManager: ThemeManager
 
-    // Circadian-aware colors
-    private var isEvening: Bool {
-        TimePeriod.current == .evening || TimePeriod.current == .night
-    }
-
-    private var backgroundColor: Color {
-        if isEvening {
-            return Color(red: 0.12, green: 0.08, blue: 0.05)
-        } else {
-            return Color(.systemBackground)
-        }
-    }
-
-    private var primaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.996, green: 0.953, blue: 0.780)
-        } else {
-            return Color.primary
-        }
-    }
-
-    private var secondaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.988, green: 0.827, blue: 0.302)
-        } else {
-            return Color.secondary
-        }
-    }
+    // Theme colors (uses centralized ColorTheme)
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var palette: CircadianPalette { themeManager.circadianPalette }
+    private var backgroundColor: Color { palette.backgroundStart }
+    private var primaryTextColor: Color { theme.primaryText }
+    private var secondaryTextColor: Color { theme.secondaryText }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -1160,12 +1067,12 @@ struct EmptyAssessmentView: View {
             // Success icon
             ZStack {
                 Circle()
-                    .fill(Color.green.opacity(0.1))
+                    .fill(theme.success.opacity(0.1))
                     .frame(width: 100, height: 100)
 
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(.green)
+                    .foregroundColor(theme.success)
             }
 
             VStack(spacing: 12) {
@@ -1186,10 +1093,10 @@ struct EmptyAssessmentView: View {
             Button(action: onDismiss) {
                 Text("Continue")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(theme.textOnPrimary)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.green)
+                    .background(theme.success)
                     .cornerRadius(12)
             }
             .padding(.horizontal)
@@ -1208,43 +1115,15 @@ struct ExpansionPackIntroView: View {
     let onSkip: (() -> Void)?  // Optional - allow skipping if not mandatory
 
     @State private var isAnimating = false
+    @EnvironmentObject var themeManager: ThemeManager
 
-    // Circadian-aware colors
-    private var isEvening: Bool {
-        TimePeriod.current == .evening || TimePeriod.current == .night
-    }
-
-    private var primaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
-        } else {
-            return Color.primary
-        }
-    }
-
-    private var secondaryTextColor: Color {
-        if isEvening {
-            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
-        } else {
-            return Color.secondary
-        }
-    }
-
-    private var backgroundColor: Color {
-        if isEvening {
-            return Color(red: 0.12, green: 0.08, blue: 0.05)  // Dark warm brown
-        } else {
-            return Color(.systemBackground)
-        }
-    }
-
-    private var cardBackgroundColor: Color {
-        if isEvening {
-            return Color(red: 0.22, green: 0.15, blue: 0.10)  // Slightly lighter dark brown
-        } else {
-            return Color(.secondarySystemBackground)
-        }
-    }
+    // Theme colors (uses centralized ColorTheme)
+    private var theme: ColorTheme { themeManager.currentTheme }
+    private var palette: CircadianPalette { themeManager.circadianPalette }
+    private var primaryTextColor: Color { theme.primaryText }
+    private var secondaryTextColor: Color { theme.secondaryText }
+    private var backgroundColor: Color { palette.backgroundStart }
+    private var cardBackgroundColor: Color { theme.cardBackground }
 
     var body: some View {
         VStack(spacing: 24) {

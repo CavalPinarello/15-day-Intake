@@ -88,6 +88,7 @@ iPhone ←→ Convex ←→ Dashboard
 
 See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for complete history.
 
+**Jan 3:** Unified Today's Focus section - merged separate Energy/Mood/Focus check-in widget and task list into ONE "Today's focus" card with 3 items: Check-In (with mini Morning/Midday/Evening circles), Sleep Log, and Assessment. Removed duplicate "Today's Focus" labeling, cleaner dashboard UX. Created CheckInTaskRow component with inline time slot circles.
 **Jan 3:** Shortened journey from 14 days to 10 days - Core assessment (Days 1-5) unchanged, expansion packs consolidated into Days 6-10 by grouping related clinical instruments (Day 6: ISI+SWDSQ+DBAS, Day 7: PHQ9+GAD7+PSAS, Day 8: STOP-BANG+ESS+FSS, Day 9: Sleep Hygiene+BPI+FOSQ, Day 10: PROMIS+MEDAS+MEQ)
 **Jan 3:** Onboarding UX improvements - removed floating magnifying glass (Enhanced Readability button) from onboarding screens, replaced small text Continue/Back buttons with visible styled buttons on HealthKit connection screen, removed Sleep Philosophy step
 **Jan 3:** Analysis pending screen polish - hidden "My Data" button (feature not ready), changed profile icon from person silhouette to user's initial in circle for consistency with main dashboard

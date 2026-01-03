@@ -1027,7 +1027,7 @@ class ConvexService {
         let daysAgo: Int?
     }
 
-    /// Backdate journey start to simulate being further in the 14-day journey (Debug Mode only)
+    /// Backdate journey start to simulate being further in the 10-day journey (Debug Mode only)
     /// Example: backdating 7 days makes the app think you started a week ago (Day 8)
     func backdateUserStart(daysAgo: Int) async throws -> BackdateResponse {
         guard let userId = currentUserId else {
@@ -1074,9 +1074,9 @@ class ConvexService {
         let daysCompleted: Int?
     }
 
-    /// Speed run through multiple days or the full 14-day journey (Debug Mode only)
+    /// Speed run through multiple days or the full 10-day journey (Debug Mode only)
     /// Generates mock questionnaire answers for all days up to targetDay
-    func speedRunFullJourney(phenotype: String = "normal", targetDay: Int = 14) async throws -> SpeedRunResponse {
+    func speedRunFullJourney(phenotype: String = "normal", targetDay: Int = 10) async throws -> SpeedRunResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }

@@ -342,13 +342,13 @@ struct WatchHomeView: View {
                     )
                 )
 
-            Text("of 14")
+            Text("of 10")
                 .font(.caption)
                 .foregroundColor(palette.textSecondary)
 
             // Progress dots
             HStack(spacing: 3) {
-                ForEach(1...14, id: \.self) { day in
+                ForEach(1...10, id: \.self) { day in
                     Circle()
                         .fill(day <= currentDay ? palette.accent : palette.textSecondary.opacity(0.3))
                         .frame(width: day == currentDay ? 6 : 4, height: day == currentDay ? 6 : 4)
