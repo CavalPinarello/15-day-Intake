@@ -4,6 +4,37 @@
 
 ## January 2026
 
+### Jan 4, 2026
+
+#### Fixed "Other" Dose Option Bug in Sleep Log
+
+Fixed a bug where clicking "Other" in the medication dose selector would not properly allow entering custom dose values.
+
+**Problem:**
+- User clicks "Other" to enter a custom dose like "15 mg"
+- Text field appears correctly
+- When typing "1" to start "15", the "1" matches a preset dose button
+- The `isUsingCustomDose` check returned `false` because "1" is in `commonDoses`
+- Text field would disappear, preventing custom entry
+
+**Root cause:**
+The code was checking if the dose value was in the common doses list to determine if custom mode was active. This failed when the user's partial input matched a preset value.
+
+**Solution:**
+- Added `@State private var customDoseCategories: Set<String>` to explicitly track which categories are in custom dose entry mode
+- Updated `isUsingCustomDose(for:)` to check this state set instead of inferring from dose value
+- Preset dose buttons now remove category from the set (exit custom mode)
+- "Other" button adds/removes category from the set
+- Added `.onAppear` to initialize state for existing custom doses when navigating back
+- Added validation in `canProceed` to block advancing when `dose == "custom"` (placeholder, no value entered)
+- Fixed badge to not show "custom mg" placeholder
+
+**Files changed:**
+- `ZoeSleep/ZoeSleep/Views/QuestionComponents.swift` - MedicationSelectInput component
+- `ZoeSleep/ZoeSleep/Views/QuestionnaireView.swift` - validation logic
+
+---
+
 ### Jan 3, 2026
 
 #### Removed Apple Health Sleep Card from Sleep Log

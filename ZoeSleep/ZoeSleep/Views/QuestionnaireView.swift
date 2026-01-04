@@ -1148,7 +1148,9 @@ struct QuestionnaireView: View {
             guard let response = responses[question.id] else { return false }
             // Check for new MedicationSelection format
             if let selections = response as? [MedicationSelection] {
-                return !selections.isEmpty
+                // Must have at least one selection AND no "custom" placeholders
+                // (user clicked "Other" but didn't type a value yet)
+                return !selections.isEmpty && !selections.contains { $0.dose == "custom" }
             }
             // Legacy support for old [String] format
             return !(response as? [String] ?? []).isEmpty

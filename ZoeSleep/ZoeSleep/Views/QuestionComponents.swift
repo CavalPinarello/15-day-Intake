@@ -1511,6 +1511,10 @@ struct MedicationSelectInput: View {
     @Binding var medications: [MedicationSelection]
     var theme: ColorTheme = ColorTheme.shared
 
+    // Track which categories are in custom dose entry mode
+    // This persists even when the typed value matches a common dose (e.g., typing "1" to start "15")
+    @State private var customDoseCategories: Set<String> = []
+
     // Circadian-aware check
     private var isEvening: Bool {
         TimePeriod.current == .evening || TimePeriod.current == .night
@@ -1526,6 +1530,13 @@ struct MedicationSelectInput: View {
     // Get the selection for a category
     private func selectionFor(_ categoryId: String) -> MedicationSelection? {
         medications.first { $0.categoryId == categoryId }
+    }
+
+    // Check if using custom dose mode for a category
+    private func isUsingCustomDose(for category: MedicationCategory) -> Bool {
+        // Use the explicit tracking set - once "Other" is clicked, stay in custom mode
+        // until user clicks a preset dose button
+        return customDoseCategories.contains(category.id)
     }
 
     var body: some View {
@@ -1562,8 +1573,8 @@ struct MedicationSelectInput: View {
 
                             Spacer()
 
-                            // Show selected dose if available
-                            if let selection = selectionFor(category.id), let dose = selection.dose, !dose.isEmpty {
+                            // Show selected dose if available (but not the "custom" placeholder)
+                            if let selection = selectionFor(category.id), let dose = selection.dose, !dose.isEmpty, dose != "custom" {
                                 Text("\(dose) \(category.doseUnit)")
                                     .font(.caption)
                                     .fontWeight(.semibold)
@@ -1606,6 +1617,20 @@ struct MedicationSelectInput: View {
                     if isSelected(category.id) {
                         dosePickerView(for: category)
                             .padding(.top, -1)  // Overlap with parent border
+                    }
+                }
+            }
+        }
+        .onAppear {
+            // Initialize custom dose tracking for medications with non-standard doses
+            // This handles the case when navigating back to this question
+            for medication in medications {
+                if let dose = medication.dose, !dose.isEmpty {
+                    // Check if dose is custom (not in common doses or is "custom" placeholder)
+                    if let category = MedicationCategory.allCategories.first(where: { $0.id == medication.categoryId }) {
+                        if dose == "custom" || !category.commonDoses.contains(dose) {
+                            customDoseCategories.insert(medication.categoryId)
+                        }
                     }
                 }
             }
@@ -1653,6 +1678,8 @@ struct MedicationSelectInput: View {
                         ForEach(category.commonDoses, id: \.self) { dose in
                             Button(action: {
                                 setDose(dose, for: category.id)
+                                // Exit custom dose mode when selecting a preset
+                                customDoseCategories.remove(category.id)
                             }) {
                                 Text("\(dose)")
                                     .font(.subheadline)
@@ -1660,12 +1687,12 @@ struct MedicationSelectInput: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 8)
                                     .background(
-                                        getDose(for: category.id) == dose
+                                        getDose(for: category.id) == dose && !isUsingCustomDose(for: category)
                                             ? pillarColor.opacity(0.2)
                                             : CircadianColors.secondaryBackground.opacity(0.5)
                                     )
                                     .foregroundColor(
-                                        getDose(for: category.id) == dose
+                                        getDose(for: category.id) == dose && !isUsingCustomDose(for: category)
                                             ? pillarColor
                                             : CircadianColors.primary
                                     )
@@ -1673,10 +1700,10 @@ struct MedicationSelectInput: View {
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 6)
                                             .stroke(
-                                                getDose(for: category.id) == dose
+                                                getDose(for: category.id) == dose && !isUsingCustomDose(for: category)
                                                     ? pillarColor
                                                     : CircadianColors.border.opacity(0.5),
-                                                lineWidth: getDose(for: category.id) == dose ? 2 : 1
+                                                lineWidth: getDose(for: category.id) == dose && !isUsingCustomDose(for: category) ? 2 : 1
                                             )
                                     )
                             }
@@ -1686,9 +1713,11 @@ struct MedicationSelectInput: View {
                         // Custom dose option
                         Button(action: {
                             // Toggle custom dose mode
-                            if getDose(for: category.id) == "custom" {
+                            if isUsingCustomDose(for: category) {
+                                customDoseCategories.remove(category.id)
                                 setDose(nil, for: category.id)
                             } else {
+                                customDoseCategories.insert(category.id)
                                 setDose("custom", for: category.id)
                             }
                         }) {
@@ -1698,12 +1727,12 @@ struct MedicationSelectInput: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
                                 .background(
-                                    getDose(for: category.id) == "custom"
+                                    isUsingCustomDose(for: category)
                                         ? pillarColor.opacity(0.2)
                                         : CircadianColors.secondaryBackground.opacity(0.5)
                                 )
                                 .foregroundColor(
-                                    getDose(for: category.id) == "custom"
+                                    isUsingCustomDose(for: category)
                                         ? pillarColor
                                         : CircadianColors.primary
                                 )
@@ -1711,10 +1740,10 @@ struct MedicationSelectInput: View {
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
                                         .stroke(
-                                            getDose(for: category.id) == "custom"
+                                            isUsingCustomDose(for: category)
                                                 ? pillarColor
                                                 : CircadianColors.border.opacity(0.5),
-                                            lineWidth: getDose(for: category.id) == "custom" ? 2 : 1
+                                            lineWidth: isUsingCustomDose(for: category) ? 2 : 1
                                         )
                                 )
                         }
@@ -1722,7 +1751,7 @@ struct MedicationSelectInput: View {
                     }
 
                     // Custom dose text field
-                    if getDose(for: category.id) == "custom" {
+                    if isUsingCustomDose(for: category) {
                         TextField("Enter dose in \(category.doseUnit)", text: customDoseBinding(for: category.id))
                             .keyboardType(.decimalPad)
                             .foregroundColor(CircadianColors.primary)
@@ -1781,6 +1810,8 @@ struct MedicationSelectInput: View {
     private func toggleCategory(_ categoryId: String) {
         if let index = medications.firstIndex(where: { $0.categoryId == categoryId }) {
             medications.remove(at: index)
+            // Clean up custom dose tracking when unselecting
+            customDoseCategories.remove(categoryId)
         } else {
             medications.append(MedicationSelection(categoryId: categoryId))
         }
