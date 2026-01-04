@@ -6,6 +6,41 @@
 
 ### Jan 4, 2026
 
+#### Sleep Data Source Selector for iOS Debug Panel
+
+Added ability to compare sleep data from different HealthKit sources (e.g., Apple Watch vs Oura Ring) in the iOS Debug Panel to diagnose issues with overlapping data causing impossible percentages.
+
+**Problem Solved:**
+When users have multiple wearables (e.g., Apple Watch Ultra + Oura Ring), HealthKit may return overlapping samples from both devices, causing:
+- Impossible sleep percentages (e.g., 88% awake + 69% light sleep = 186%)
+- Duration matching but stage distribution being wrong
+- Confusing sleep efficiency calculations
+
+**Solution:**
+1. **iOS Debug Panel** (Settings → Debug → HealthKit Data):
+   - New "Sleep Data Source" selector with horizontal chip UI
+   - "All (Merged)" option shows multi-source merged data with priority rules
+   - Individual source chips (Apple Watch, Oura Ring, etc.) for per-source analysis
+   - Refresh button to re-discover available sources
+   - Info text showing current selection and number of sources
+
+2. **Watch App**: Always uses Apple Watch sleep data only (no selector needed)
+
+**New Code:**
+- `HealthKitManager.getAvailableSleepSources()` - Uses HKSourceQuery to discover all apps/devices that wrote sleep data
+- `HealthKitManager.fetchSleepDataBySource()` - Fetches sleep data filtered by specific source
+- Enhanced `SleepDataSource` struct with `Identifiable`, `Hashable`, `displayName`, `iconName`, `isAppleWatch`, `isOura`
+- `HealthKitDebugViewModel.discoverSleepSources()` - Discovers sources on debug panel load
+- `HealthKitDebugViewModel.refreshSleepDataWithSource()` - Re-fetches with source filter
+- `sleepSourceSelector` view component with chip-based source picker
+
+**Files Changed:**
+- `ZoeSleep/Managers/HealthKitManager.swift` - Added source discovery and filtering methods
+- `ZoeSleep/DevTools/HealthKitDetailedDebugView.swift` - Added source selector UI
+- `ZoeSleep Watch App/HealthKitWatchManager.swift` - Bug fixes for overlap merging
+
+---
+
 #### Simplified Notification System (3 Reminders Per Day)
 
 Drastically simplified the notification system to prevent user fatigue. Previously had up to 11 notifications per day (multiple "nudges" per time slot), now only 3 well-timed reminders.
