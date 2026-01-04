@@ -201,6 +201,34 @@ The code was checking if the dose value was in the common doses list to determin
 
 ---
 
+#### Removed "GATEWAY:" Prefix from Question Display Text
+
+Gateway questions (insomnia, mental health, OSA, etc.) no longer show internal "GATEWAY:" label prefix to users in the iOS app.
+
+**Problem:**
+- Questions like "GATEWAY: Do you have trouble falling asleep, staying asleep, or waking too early?" showed the internal "GATEWAY:" label
+- This label was meant for spreadsheet organization during development, not for end users
+
+**Solution:**
+- Removed "GATEWAY:" prefix from all question_text fields in data files
+- The `tier: "GATEWAY"` field remains intact for conditional logic
+- Re-seeded Convex database to apply changes
+
+**Files changed:**
+- `data/converted/assessment_questions_converted.json` - Primary seed file, 7 occurrences
+- `data/sleep360_questions.json` - 9 occurrences
+- `data/standardized_questions_sample.json` - 5 occurrences
+- `server/sleep_log_questions.json` - 1 occurrence
+- `docs/database/Sleep_360_Complete_Database.md` - 9 occurrences (documentation)
+
+**Example change:**
+```
+Before: "GATEWAY: Do you have trouble falling asleep, staying asleep, or waking too early?"
+After:  "Do you have trouble falling asleep, staying asleep, or waking too early?"
+```
+
+---
+
 ### Jan 3, 2026
 
 #### Removed Apple Health Sleep Card from Sleep Log
