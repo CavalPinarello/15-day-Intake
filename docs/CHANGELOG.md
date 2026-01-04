@@ -6,6 +6,64 @@
 
 ### Jan 4, 2026
 
+#### Chronotype Assessment During HealthKit Onboarding
+
+Added automatic chronotype assessment during HealthKit authorization, giving users immediate insights about their sleep patterns.
+
+**New ChronotypeManager.swift:**
+- Analyzes 90 days of sleep data from HealthKit
+- Calculates sleep midpoint (halfway between asleep_time and wake_time)
+- Classifies chronotype using Gaussian scoring on midpoint values:
+  - **Early Riser** 🌅 - midpoint ~1:30-2:30 AM (warm gold color)
+  - **Balanced** ⚖️ - midpoint ~3:00-3:30 AM (calm blue-green color)
+  - **Night Owl** 🦉 - midpoint ~4:00-5:00 AM (deep purple color)
+  - **Adaptive** 🔄 - high variability, std dev > 1.5 hours (neutral gray color)
+- Persists results to UserDefaults for offline access
+- Published properties for SwiftUI observation
+
+**Inline analysis during onboarding:**
+- After HealthKit authorization, shows analysis progress:
+  - "Fetching your sleep history..."
+  - "Analyzing sleep patterns..."
+  - "Calculating your chronotype..."
+- Progress bar with animated gradient
+- If 90+ nights: Shows chronotype result card with emoji, description, midpoint, bedtime, wake time
+- If <90 nights: Shows "Learning Your Patterns" card explaining we'll estimate over coming weeks
+
+**Sleep Profile section in Profile settings:**
+- New section after Personal Information
+- Displays chronotype with color-coded emoji
+- Shows sleep midpoint (e.g., "3:30 AM")
+- Shows usual bedtime and wake time
+- If not yet assessed, shows "Assessing..." placeholder
+
+**HealthKit sync improvements:**
+- `fetchDemographics()` now uses `DispatchGroup` for proper async handling
+- Thread-safe storage with `NSLock` for concurrent access
+- New `refreshDemographics(completion:)` method for on-demand refresh
+- New `fetchSleepDataForChronotype(completion:)` method returns 90 days of data
+
+**Backend schema updates (`convex/schema.ts`):**
+```typescript
+// Added to users table:
+chronotype: v.optional(v.string()),  // early_riser, balanced, night_owl, adaptive
+avg_sleep_midpoint: v.optional(v.number()),  // Hours
+avg_bedtime: v.optional(v.number()),  // Hours
+avg_wake_time: v.optional(v.number()),  // Hours
+chronotype_assessed_at: v.optional(v.number()),  // Unix timestamp
+chronotype_nights_analyzed: v.optional(v.number()),
+```
+
+**Files changed:**
+- **NEW:** `ZoeSleep/ZoeSleep/Managers/ChronotypeManager.swift` - Analysis logic
+- `ZoeSleep/ZoeSleep/Managers/HealthKitManager.swift` - DispatchGroup, thread safety, new methods
+- `ZoeSleep/ZoeSleep/Views/OnboardingView.swift` - Inline analysis UI
+- `ZoeSleep/ZoeSleep/Views/ProfileSettingsView.swift` - Sleep Profile section
+- `ZoeSleep/ZoeSleep/Utilities/NavigationGestureControl.swift` - Added to Xcode project
+- `convex/schema.ts` - Chronotype fields
+
+---
+
 #### Test Day Unlock Debug Feature
 
 Added a comprehensive debug tool to test the 4 AM day unlock mechanism without waiting for real time.
@@ -62,8 +120,7 @@ Completely restructured the onboarding flow for better user experience: personal
 **Key changes:**
 - **Units step added** - Shows locale-detected measurement preference with example display (e.g., "175 cm / 70 kg" vs "5'9\" / 154 lbs")
 - **HealthKit moved to end** - Since it's optional and doesn't affect other steps
-- **Removed chronotype analysis** - No more "Syncing Sleep Data" / "Analyzing Patterns" UI during onboarding. Will add chronotype analysis later as part of core questionnaire.
-- **Simplified HealthKit step** - Just permissions, demographics fetch, and background sleep sync. No "wow moments" or analysis display.
+- **HealthKit step includes chronotype analysis** - After authorization, analyzes 90 days of sleep data with inline progress, shows chronotype result or "we'll estimate later" message
 
 **Bug fix - markHealthKitConnected() timing:**
 - **Before:** Flag was set immediately after authorization, BEFORE demographics were fetched
