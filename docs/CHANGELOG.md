@@ -6,6 +6,46 @@
 
 ### Jan 4, 2026
 
+#### Test Day Unlock Debug Feature
+
+Added a comprehensive debug tool to test the 4 AM day unlock mechanism without waiting for real time.
+
+**New features:**
+- **Test Day Unlock section** in Debug Panel simulates 10 seconds before 4 AM unlock
+- Uses `testTimestamp` parameter to send simulated time to server
+- Live countdown shows lock→unlock transition at each second
+- Auto-advances to next day on successful unlock
+
+**Architecture change - Separated `bypassTimeCheck` from `debugMode`:**
+- **Before:** `debugMode: true` automatically bypassed time check
+- **After:** Time bypass requires explicit `bypassTimeCheck: true`
+- Debug mode now only enables debug UI features, NOT time bypass
+- New toggle "Bypass 4 AM Time Check" in Journey Controls (off by default)
+
+**Day Advancement Logging:**
+- New `DayAdvancementLogger` tracks all advancement attempts
+- Shows statistics: total attempts, successes, failures, retries
+- Success rate percentage with color coding
+- Recent events list with detailed status (sleep log, assessment, bypass flags)
+- Events persisted to UserDefaults
+
+**Backend changes (`convex/watch.ts`):**
+- `canAdvanceDay` and `advanceDay` now accept `bypassTimeCheck` and `testTimestamp` parameters
+- Time check uses `testTimestamp` when provided (for testing), otherwise real time
+- Returns `dayReadyAt` and `unlockTime` for UI display
+
+**New files:**
+- `ZoeSleep/ZoeSleep/DevTools/UnlockTestManager.swift` - Test orchestration
+- `ZoeSleep/ZoeSleep/DevTools/DayAdvancementLogger.swift` - Event logging
+
+**Files changed:**
+- `convex/watch.ts` - Added parameters, separated bypass logic
+- `ZoeSleep/ZoeSleep/Services/ConvexService.swift` - Added parameters
+- `ZoeSleep/ZoeSleep/DevTools/UnifiedDebugPanel.swift` - New sections
+- `ZoeSleep/ZoeSleep/ContentView.swift` - Updated advance call
+
+---
+
 #### Onboarding Flow Reordered and Simplified
 
 Completely restructured the onboarding flow for better user experience: personal connection first, HealthKit at the end.
