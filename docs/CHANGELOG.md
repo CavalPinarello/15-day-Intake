@@ -6,6 +6,45 @@
 
 ### Jan 4, 2026
 
+#### Simplified Notification System (3 Reminders Per Day)
+
+Drastically simplified the notification system to prevent user fatigue. Previously had up to 11 notifications per day (multiple "nudges" per time slot), now only 3 well-timed reminders.
+
+**New Architecture:**
+| Time | Reminder | Content |
+|------|----------|---------|
+| 9:00 AM | Morning | Sleep log + Assessment + Morning energy check-in |
+| 1:00 PM | Afternoon | Midday energy check-in (skipped if Watch installed) |
+| 8:00 PM | Evening | Evening energy check-in + Any incomplete tasks |
+
+**Watch Integration:**
+- If Apple Watch app is installed, iPhone skips the 1:00 PM afternoon reminder
+- Watch handles midday check-ins natively via complication/app
+- UI shows "(Watch handles this)" indicator in Settings
+- State syncs bidirectionally via WatchConnectivity:
+  - Check-in completion (morning/midday/evening)
+  - Sleep log completion
+  - Assessment completion
+
+**What was removed:**
+- 9 redundant "nudge" notifications (was: 7:15/9:00/10:30 AM, 12:30/2:15/4:00 PM, 7:30/8:30/9:30 PM)
+- `morningCheckInNudgeIDs`, `middayCheckInNudgeIDs`, `eveningCheckInNudgeIDs` arrays
+- Complex nudge scheduling logic
+
+**New Settings UI (`NotificationsSettingsView.swift`):**
+- Three clear sections: Morning, Afternoon, Evening
+- Each with toggle + time picker
+- Descriptive footers explaining what each reminder includes
+- Watch status indicator for afternoon section
+
+**Files changed:**
+- `NotificationManager.swift` - Simplified to 3 reminders, added `scheduleAfternoonReminder()`, updated `cancelDailyTaskReminder()`
+- `NotificationsSettingsView.swift` - Redesigned UI with three sections
+- `ZoeSleepApp.swift` - Simplified daily refresh to `checkAndRefreshNotificationsForNewDay()`
+- `CheckInManager.swift` - Updated cancellation logic for simplified system
+
+---
+
 #### Chronotype Assessment During HealthKit Onboarding
 
 Added automatic chronotype assessment during HealthKit authorization, giving users immediate insights about their sleep patterns.
