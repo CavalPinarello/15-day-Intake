@@ -807,39 +807,68 @@ struct DayCompletionView: View {
                         // This prevents showing "0 questions remaining" on days with no assessment
                         if assessmentQuestionsCount > 0 || completedAssessment {
                             let assessmentDone = isFullDayComplete || completedSection == .assessment || completedAssessment
-                            HStack {
-                                Image(systemName: "clipboard.fill")
-                                    .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                            let canProceed = completedSection == .sleepLog && !assessmentDone && onProceedToNextSection != nil
 
-                                VStack(alignment: .leading) {
-                                    Text("Day Assessment")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(primaryTextColor)
+                            VStack(spacing: 0) {
+                                HStack {
+                                    Image(systemName: "clipboard.fill")
+                                        .font(.title2)
+                                        .foregroundColor(QuestionnaireSection.assessment.accentColor)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Day Assessment")
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(primaryTextColor)
+                                        if assessmentDone {
+                                            Text("\(assessmentQuestionsCount) questions completed")
+                                                .font(.subheadline)
+                                                .foregroundColor(secondaryTextColor)
+                                        } else {
+                                            Text("\(assessmentQuestionsCount) questions remaining")
+                                                .font(.subheadline)
+                                                .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                                        }
+                                    }
+
+                                    Spacer()
+
                                     if assessmentDone {
-                                        Text("\(assessmentQuestionsCount) questions completed")
-                                            .font(.caption)
-                                            .foregroundColor(secondaryTextColor)
-                                    } else {
-                                        Text("\(assessmentQuestionsCount) questions remaining")
-                                            .font(.caption)
-                                            .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.title2)
+                                            .foregroundColor(.green)
                                     }
                                 }
+                                .padding()
 
-                                Spacer()
+                                // Embedded Proceed button when assessment is available
+                                if canProceed {
+                                    Divider()
+                                        .background(QuestionnaireSection.assessment.accentColor.opacity(0.3))
 
-                                if assessmentDone {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                } else {
-                                    Image(systemName: "arrow.right.circle.fill")
-                                        .foregroundColor(QuestionnaireSection.assessment.accentColor)
+                                    Button(action: {
+                                        onProceedToNextSection?()
+                                    }) {
+                                        HStack {
+                                            Text("Proceed")
+                                                .font(.headline)
+                                                .fontWeight(.semibold)
+                                            Image(systemName: "arrow.right")
+                                                .font(.headline)
+                                        }
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(QuestionnaireSection.assessment.accentColor)
+                                    }
                                 }
                             }
-                            .padding()
                             .background(QuestionnaireSection.assessment.backgroundColor)
                             .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(canProceed ? QuestionnaireSection.assessment.accentColor : Color.clear, lineWidth: 2)
+                            )
                         }
                     }
                     .padding(.horizontal)
@@ -885,23 +914,9 @@ struct DayCompletionView: View {
 
                     Spacer(minLength: 20)
 
-                    // Button: Either "Proceed to Assessment" or "Continue"
-                    if completedSection == .sleepLog, let proceedAction = onProceedToNextSection {
-                        Button(action: proceedAction) {
-                            HStack {
-                                Text("Proceed to Day Assessment")
-                                Image(systemName: "arrow.right")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(QuestionnaireSection.assessment.accentColor)
-                            .cornerRadius(12)
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom, 20)
-                    } else {
+                    // Continue button - only show when day is complete or no assessment to proceed to
+                    // (Proceed action is now embedded in the Assessment card above)
+                    if completedSection != .sleepLog || assessmentQuestionsCount == 0 {
                         Button(action: onDone) {
                             Text("Continue")
                                 .font(.headline)

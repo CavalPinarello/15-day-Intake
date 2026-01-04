@@ -83,17 +83,15 @@ enum WearableDevice: String, CaseIterable, Identifiable {
 /// FLOW: Personal connection first, then HealthKit at the end for sleep history sync
 enum OnboardingStep: Int, CaseIterable {
     case name = 0               // First - personal connection
-    case units = 1              // Unit preference (auto-detected, editable)
-    case heightWeight = 2       // Body metrics using selected units
-    case genderAge = 3          // About you
-    case wearables = 4          // Devices
-    case healthConnect = 5      // Sync sleep/activity history (optional)
-    case ready = 6
+    case heightWeight = 1       // Units + body metrics combined
+    case genderAge = 2          // About you
+    case wearables = 3          // Devices
+    case healthConnect = 4      // Sync sleep/activity history (optional)
+    case ready = 5
 
     var title: String {
         switch self {
         case .name: return "Your Name"
-        case .units: return "Preferences"
         case .heightWeight: return "Body Metrics"
         case .genderAge: return "About You"
         case .wearables: return "Devices"
@@ -173,6 +171,7 @@ class OnboardingManager: ObservableObject {
     private let onboardingCompleteKey = "onboardingComplete"
     private let lastUserIdKey = "lastOnboardingUserId"
     private let journeyIntroSeenKey = "hasSeenJourneyIntro"
+    private let currentStepKey = "onboardingCurrentStep"
 
     // MARK: - Initialization
 
@@ -344,6 +343,7 @@ class OnboardingManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
         UserDefaults.standard.set(false, forKey: journeyIntroSeenKey)
+        UserDefaults.standard.set(0, forKey: currentStepKey)  // Reset step to name
         detectSystemMeasurementSystem()
     }
 
@@ -356,6 +356,7 @@ class OnboardingManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.set(false, forKey: onboardingCompleteKey)
         UserDefaults.standard.set(false, forKey: journeyIntroSeenKey)
+        UserDefaults.standard.set(0, forKey: currentStepKey)  // Reset step to name
         print("[Onboarding] Cleared for sign out")
     }
 
@@ -453,6 +454,8 @@ class OnboardingManager: ObservableObject {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             currentStep = nextStep
         }
+        // Save progress after each step advance
+        saveLocalProfile()
     }
 
     /// Check if a step should be skipped
@@ -478,12 +481,16 @@ class OnboardingManager: ObservableObject {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             currentStep = prevStep
         }
+        // Save progress after going back
+        saveLocalProfile()
     }
 
     func goToStep(_ step: OnboardingStep) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             currentStep = step
         }
+        // Save progress after step change
+        saveLocalProfile()
     }
 
     // MARK: - Validation
@@ -492,8 +499,6 @@ class OnboardingManager: ObservableObject {
         switch currentStep {
         case .name:
             return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .units:
-            return true // Always valid - user can keep auto-detected value
         case .heightWeight:
             guard let height = profile.heightCm, let weight = profile.weightKg else {
                 return false
@@ -539,6 +544,9 @@ class OnboardingManager: ObservableObject {
             UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
         }
         UserDefaults.standard.set(isOnboardingComplete, forKey: onboardingCompleteKey)
+        // Persist current step so user doesn't lose progress if app restarts
+        UserDefaults.standard.set(currentStep.rawValue, forKey: currentStepKey)
+        print("[Onboarding] Saved profile and step: \(currentStep.title)")
     }
 
     private func loadLocalProfile() {
@@ -547,6 +555,16 @@ class OnboardingManager: ObservableObject {
             self.profile = decoded
             self.isOnboardingComplete = decoded.onboardingCompleted
             updateImperialFromMetric()
+        }
+
+        // Restore current step from persistence
+        let savedStep = UserDefaults.standard.integer(forKey: currentStepKey)
+        if let step = OnboardingStep(rawValue: savedStep) {
+            // Only restore step if not completed - otherwise start fresh
+            if !isOnboardingComplete {
+                self.currentStep = step
+                print("[Onboarding] Restored step: \(step.title)")
+            }
         }
 
         // Check legacy key as well

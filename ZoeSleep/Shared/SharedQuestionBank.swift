@@ -536,7 +536,7 @@ struct SharedQuestionBank {
         ),
         SharedQuestion(
             id: "12",
-            text: "How many hours per day do you spend looking at screens for work?",
+            text: "How many hours per day do you spend looking at screens (work or entertainment)?",
             pillar: .social,
             type: .number,
             minValue: 0,

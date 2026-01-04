@@ -548,9 +548,25 @@ extension WatchConnectivityManager: WCSessionDelegate {
             // iPhone completed a section - refresh our state
             let section = message["section"] as? String ?? "unknown"
             let dayNumber = message["dayNumber"] as? Int ?? 0
-            print("[Watch] iPhone completed section '\(section)' for day \(dayNumber) - refreshing state")
+            let sleepLogCompleted = message["sleepLogCompleted"] as? Bool ?? false
+            let assessmentCompleted = message["assessmentCompleted"] as? Bool ?? false
+            print("[Watch] iPhone completed section '\(section)' for day \(dayNumber) - refreshing state (sleepLog=\(sleepLogCompleted), assessment=\(assessmentCompleted))")
             Task {
                 await WatchConvexService.shared.refreshFromConvex()
+                // Post notification to update any listening views (MinimalHomeView, MinimalTasksView)
+                await MainActor.run {
+                    NotificationCenter.default.post(
+                        name: .watchSectionCompletionDidChange,
+                        object: nil,
+                        userInfo: [
+                            "section": section,
+                            "dayNumber": dayNumber,
+                            "sleepLogCompleted": sleepLogCompleted,
+                            "assessmentCompleted": assessmentCompleted,
+                            "source": "iphone"
+                        ]
+                    )
+                }
             }
             replyHandler?(["received": true])
 
@@ -766,4 +782,5 @@ struct WatchConnectivityLogEntry: Identifiable {
 
 extension Notification.Name {
     static let watchCheckInStatusDidChange = Notification.Name("watchCheckInStatusDidChange")
+    static let watchSectionCompletionDidChange = Notification.Name("watchSectionCompletionDidChange")
 }

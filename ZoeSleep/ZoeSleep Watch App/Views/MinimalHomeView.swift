@@ -113,6 +113,12 @@ struct MinimalHomeView: View {
             print("[MinimalHomeView] Received check-in sync notification: \(timeSlot)")
             loadData()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .watchSectionCompletionDidChange)) { notification in
+            // iPhone completed a section (sleep log or assessment) - refresh task status
+            let section = notification.userInfo?["section"] as? String ?? "unknown"
+            print("[MinimalHomeView] Received section completion sync: \(section)")
+            loadData()
+        }
     }
 
     // MARK: - Grid Tiles

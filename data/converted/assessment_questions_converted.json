@@ -219,6 +219,13 @@
     "validation_rules": {
       "required": true
     },
+    "conditional_logic": {
+      "show_if": {
+        "question_id": "53A",
+        "operator": "in",
+        "value": ["fulltime", "parttime", "student"]
+      }
+    },
     "trigger": "shift_work",
     "estimated_time_seconds": 30,
     "created_at": 1763104572235,
@@ -349,7 +356,7 @@
   },
   {
     "question_id": "53D",
-    "question_text": "How many hours per day do you spend looking at screens for work?",
+    "question_text": "How many hours per day do you spend looking at screens (work or entertainment)?",
     "pillar": "Social",
     "tier": "CORE",
     "answer_format": "number_scroll",

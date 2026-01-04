@@ -1649,7 +1649,7 @@ struct MedicationSelectInput: View {
                         .font(.caption)
                         .foregroundColor(CircadianColors.secondary)
 
-                    TextField("e.g., \(category.subtitle?.components(separatedBy: ", ").first ?? "Enter name")", text: medicationNameBinding(for: category.id))
+                    TextField("", text: medicationNameBinding(for: category.id), prompt: Text("e.g., \(category.subtitle?.components(separatedBy: ", ").first ?? "Enter name")").foregroundColor(CircadianColors.secondary))
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
@@ -1752,7 +1752,7 @@ struct MedicationSelectInput: View {
 
                     // Custom dose text field
                     if isUsingCustomDose(for: category) {
-                        TextField("Enter dose in \(category.doseUnit)", text: customDoseBinding(for: category.id))
+                        TextField("", text: customDoseBinding(for: category.id), prompt: Text("Enter dose in \(category.doseUnit)").foregroundColor(CircadianColors.secondary))
                             .keyboardType(.decimalPad)
                             .foregroundColor(CircadianColors.primary)
                             .padding(.horizontal, 12)
@@ -1776,7 +1776,7 @@ struct MedicationSelectInput: View {
                         .font(.caption)
                         .foregroundColor(CircadianColors.secondary)
 
-                    TextField("e.g., 10 mg", text: customDoseBinding(for: category.id))
+                    TextField("", text: customDoseBinding(for: category.id), prompt: Text("e.g., 10 mg").foregroundColor(CircadianColors.secondary))
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
@@ -2152,7 +2152,7 @@ struct PrescriptionMedSelectInput: View {
                         .font(.caption)
                         .foregroundColor(CircadianColors.secondary)
 
-                    TextField("e.g., \(category.subtitle?.components(separatedBy: ", ").first ?? "Enter name")", text: medicationNameBinding(for: category.id))
+                    TextField("", text: medicationNameBinding(for: category.id), prompt: Text("e.g., \(category.subtitle?.components(separatedBy: ", ").first ?? "Enter name")").foregroundColor(CircadianColors.secondary))
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
@@ -2193,7 +2193,7 @@ struct PrescriptionMedSelectInput: View {
                         .font(.caption)
                         .foregroundColor(CircadianColors.secondary)
 
-                    TextField("e.g., 10 \(category.doseUnit)", text: customDoseBinding(for: category.id))
+                    TextField("", text: customDoseBinding(for: category.id), prompt: Text("e.g., 10 \(category.doseUnit)").foregroundColor(CircadianColors.secondary))
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
@@ -2393,7 +2393,7 @@ struct SupplementSelectInput: View {
                         .font(.caption)
                         .foregroundColor(CircadianColors.secondary)
 
-                    TextField("Enter supplement name", text: supplementNameBinding(for: category.id))
+                    TextField("", text: supplementNameBinding(for: category.id), prompt: Text("Enter supplement name").foregroundColor(CircadianColors.secondary))
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
@@ -2434,7 +2434,7 @@ struct SupplementSelectInput: View {
                         .font(.caption)
                         .foregroundColor(CircadianColors.secondary)
 
-                    TextField("e.g., 500 \(category.doseUnit)", text: customDoseBinding(for: category.id))
+                    TextField("", text: customDoseBinding(for: category.id), prompt: Text("e.g., 500 \(category.doseUnit)").foregroundColor(CircadianColors.secondary))
                         .foregroundColor(CircadianColors.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
@@ -2611,7 +2611,7 @@ struct SurgeryDetailsInput: View {
                     .font(.caption)
                     .foregroundColor(CircadianColors.secondary)
 
-                TextField("e.g., Knee replacement, Appendectomy", text: procedureNameBinding(for: index))
+                TextField("", text: procedureNameBinding(for: index), prompt: Text("e.g., Knee replacement, Appendectomy").foregroundColor(CircadianColors.secondary))
                     .foregroundColor(CircadianColors.primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
@@ -2626,7 +2626,7 @@ struct SurgeryDetailsInput: View {
                     .font(.caption)
                     .foregroundColor(CircadianColors.secondary)
 
-                TextField("e.g., March 2025, Jan 2024", text: procedureDateBinding(for: index))
+                TextField("", text: procedureDateBinding(for: index), prompt: Text("e.g., March 2025, Jan 2024").foregroundColor(CircadianColors.secondary))
                     .foregroundColor(CircadianColors.primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)

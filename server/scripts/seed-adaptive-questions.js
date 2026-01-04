@@ -225,7 +225,7 @@ const day3AssessmentQuestions = [
     pillar: 'Physical Health'
   },
   {
-    question_text: 'How many hours per day do you spend looking at screens for work?',
+    question_text: 'How many hours per day do you spend looking at screens (work or entertainment)?',
     question_type: 'number',
     options: { min: 0, max: 18, unit: 'hours' },
     order_index: 11,

@@ -72,7 +72,7 @@ This document contains the complete Sleep 360° assessment framework with all qu
   - *Scale/Type*: Yes/No
   - *Time*: 0.5 min
 
-**53D**: How many hours per day do you spend looking at screens for work?
+**53D**: How many hours per day do you spend looking at screens (work or entertainment)?
   - *Scale/Type*: Number (hours)
   - *Time*: 0.5 min
 

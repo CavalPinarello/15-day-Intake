@@ -1511,7 +1511,6 @@ struct ConvexConditionalLogic: Codable {
         // Check for show_if wrapper format first
         if let showIf = try? container.decode(ShowIfContent.self, forKey: .showIf) {
             self.questionId = showIf.questionId
-            self.equals = showIf.value
             self.greaterThan = showIf.greaterThan
             self.lessThan = nil
             self.greaterThanOrEqual = nil
@@ -1521,6 +1520,17 @@ struct ConvexConditionalLogic: Codable {
             self.ageOver = nil
             self.all = nil
             self.any = nil
+
+            // Handle different operators
+            if showIf.operatorType == "in" {
+                // "in" operator uses array of values
+                self.equals = nil
+                self.inValues = showIf.inValues
+            } else {
+                // "equals" operator (default) uses single value
+                self.equals = showIf.value
+                self.inValues = nil
+            }
             return
         }
 
@@ -1589,11 +1599,14 @@ struct ConvexConditionalLogic: Codable {
 
     private struct ShowIfContent: Codable {
         let questionId: String
-        let value: String?
+        let operatorType: String?  // "equals", "in", etc.
+        let value: String?         // Single value for "equals" operator
+        let inValues: [String]?    // Array of values for "in" operator
         let greaterThan: Double?
 
         enum CodingKeys: String, CodingKey {
             case questionId = "question_id"
+            case operatorType = "operator"
             case value
             case greaterThan = "greater_than"
         }
@@ -1601,16 +1614,25 @@ struct ConvexConditionalLogic: Codable {
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.questionId = try container.decode(String.self, forKey: .questionId)
+            self.operatorType = try? container.decodeIfPresent(String.self, forKey: .operatorType)
 
-            // Handle value as either String or number
-            if let stringValue = try? container.decodeIfPresent(String.self, forKey: .value) {
+            // Handle value as either String, number, or array (for "in" operator)
+            if let arrayValue = try? container.decodeIfPresent([String].self, forKey: .value) {
+                // Array value - used with "in" operator
+                self.inValues = arrayValue
+                self.value = nil
+            } else if let stringValue = try? container.decodeIfPresent(String.self, forKey: .value) {
                 self.value = stringValue
+                self.inValues = nil
             } else if let intValue = try? container.decodeIfPresent(Int.self, forKey: .value) {
                 self.value = String(intValue)
+                self.inValues = nil
             } else if let doubleValue = try? container.decodeIfPresent(Double.self, forKey: .value) {
                 self.value = String(Int(doubleValue))
+                self.inValues = nil
             } else {
                 self.value = nil
+                self.inValues = nil
             }
 
             self.greaterThan = try container.decodeIfPresent(Double.self, forKey: .greaterThan)

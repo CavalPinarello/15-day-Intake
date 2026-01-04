@@ -72,17 +72,21 @@ struct AuthenticationView: View {
                     TextField("Email", text: isSignUp ? $signUpEmail : $identifier)
                         .padding()
                         .background(Color.white.opacity(0.9))
+                        .foregroundColor(Color(red: 0.15, green: 0.1, blue: 0.05))
                         .cornerRadius(10)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                         .textContentType(.emailAddress)
+                        .tint(Color(red: 0.6, green: 0.4, blue: 0.2)) // Cursor color
 
                     // Password
                     SecureField("Password", text: $password)
                         .padding()
                         .background(Color.white.opacity(0.9))
+                        .foregroundColor(Color(red: 0.15, green: 0.1, blue: 0.05))
                         .cornerRadius(10)
+                        .tint(Color(red: 0.6, green: 0.4, blue: 0.2)) // Cursor color
 
                     // Sign In/Up Button
                     Button(action: {

@@ -36,28 +36,24 @@ struct OnboardingView: View {
                         NameStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.name)
 
-                        // Step 1: Units - measurement preference (auto-detected, editable)
-                        UnitsStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
-                            .tag(OnboardingStep.units)
-
-                        // Step 2: Height/Weight
+                        // Step 1: Units + Height/Weight combined
                         HeightWeightStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.heightWeight)
 
-                        // Step 3: Gender/Age
+                        // Step 2: Gender/Age
                         GenderAgeStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.genderAge)
 
-                        // Step 4: Wearables
+                        // Step 3: Wearables
                         WearablesStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.wearables)
 
-                        // Step 5: HealthKit - sync sleep/activity history (optional)
+                        // Step 4: HealthKit - sync sleep/activity history (optional)
                         HealthConnectStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .environmentObject(healthKitManager)
                             .tag(OnboardingStep.healthConnect)
 
-                        // Step 6: Ready
+                        // Step 5: Ready
                         ReadyStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.ready)
                     }
@@ -219,106 +215,7 @@ struct NameStepView: View {
     }
 }
 
-// MARK: - Units Step (NEW)
-
-struct UnitsStepView: View {
-    @ObservedObject var onboardingManager: OnboardingManager
-    let screenHeight: CGFloat
-
-    private var isCompact: Bool { screenHeight < 700 }
-    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
-
-    private var isMetric: Bool {
-        onboardingManager.profile.measurementSystem == MeasurementSystem.metric.rawValue
-    }
-
-    var body: some View {
-        VStack(spacing: isCompact ? 16 : 24) {
-            Spacer(minLength: isCompact ? 30 : 50)
-
-            // Icon
-            Image(systemName: "ruler")
-                .font(.system(size: isCompact ? 36 : 44))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [palette.accent, palette.wave],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            // Title
-            VStack(spacing: 6) {
-                Text("Measurement Preferences")
-                    .font(isCompact ? .title3.bold() : .title2.bold())
-                    .foregroundColor(palette.textPrimary)
-
-                Text("Based on your device settings")
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
-            }
-
-            // Unit System Picker - Large and clear
-            VStack(spacing: 12) {
-                Picker("Units", selection: Binding(
-                    get: {
-                        MeasurementSystem(rawValue: onboardingManager.profile.measurementSystem) ?? .metric
-                    },
-                    set: { newValue in
-                        onboardingManager.profile.measurementSystem = newValue.rawValue
-                    }
-                )) {
-                    ForEach(MeasurementSystem.allCases) { system in
-                        Text(system.rawValue).tag(system)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 32)
-
-                // Example display showing what each unit means
-                HStack(spacing: 20) {
-                    VStack(spacing: 4) {
-                        Text("Height")
-                            .font(.caption2)
-                            .foregroundColor(palette.textSecondary)
-                        Text(isMetric ? "175 cm" : "5' 9\"")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(palette.textPrimary)
-                    }
-
-                    Rectangle()
-                        .fill(palette.textSecondary.opacity(0.3))
-                        .frame(width: 1, height: 30)
-
-                    VStack(spacing: 4) {
-                        Text("Weight")
-                            .font(.caption2)
-                            .foregroundColor(palette.textSecondary)
-                        Text(isMetric ? "70 kg" : "154 lbs")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(palette.textPrimary)
-                    }
-                }
-                .padding(12)
-                .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
-                .cornerRadius(10)
-            }
-            .padding(.top, 8)
-
-            Spacer()
-
-            // Navigation
-            OnboardingNavigationButtons(
-                onboardingManager: onboardingManager,
-                showBack: true
-            )
-            .padding(.horizontal, 20)
-            .padding(.bottom, isCompact ? 24 : 32)
-        }
-    }
-}
-
-// MARK: - Height & Weight Step (Compact - Single Screen)
+// MARK: - Height & Weight Step (Combined with Units)
 
 struct HeightWeightStepView: View {
     @ObservedObject var onboardingManager: OnboardingManager
@@ -332,13 +229,13 @@ struct HeightWeightStepView: View {
     }
 
     var body: some View {
-        VStack(spacing: isCompact ? 12 : 16) {
-            Spacer(minLength: isCompact ? 20 : 40)
+        VStack(spacing: isCompact ? 10 : 14) {
+            Spacer(minLength: isCompact ? 16 : 28)
 
-            // Icon & Title (compact)
-            VStack(spacing: 6) {
+            // Icon & Title
+            VStack(spacing: 4) {
                 Image(systemName: "figure.stand")
-                    .font(.system(size: isCompact ? 32 : 40))
+                    .font(.system(size: isCompact ? 28 : 36))
                     .foregroundStyle(
                         LinearGradient(
                             colors: [palette.accent, palette.wave],
@@ -350,14 +247,31 @@ struct HeightWeightStepView: View {
                 Text("Body Metrics")
                     .font(isCompact ? .title3.bold() : .title2.bold())
                     .foregroundColor(palette.textPrimary)
-
-                // Show current unit system (selected in previous step)
-                Text(isMetric ? "Using metric units" : "Using imperial units")
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
             }
 
-            // Height & Weight in single compact view
+            // Unit System Picker
+            VStack(spacing: 6) {
+                Text("Measurement system")
+                    .font(.caption)
+                    .foregroundColor(palette.textSecondary)
+
+                Picker("Units", selection: Binding(
+                    get: {
+                        MeasurementSystem(rawValue: onboardingManager.profile.measurementSystem) ?? .metric
+                    },
+                    set: { newValue in
+                        onboardingManager.profile.measurementSystem = newValue.rawValue
+                    }
+                )) {
+                    ForEach(MeasurementSystem.allCases) { system in
+                        Text(system.rawValue).tag(system)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            .padding(.horizontal, 20)
+
+            // Height & Weight sliders
             VStack(spacing: isCompact ? 10 : 14) {
                 // Height
                 MetricInputRow(
@@ -809,11 +723,18 @@ struct HealthConnectStepView: View {
             }
         }
         .onAppear {
+            // Log current state for debugging
+            print("[Onboarding] HealthConnect step appeared - HK available: \(healthKitManager.isHealthKitAvailable), HK authorized: \(healthKitManager.isAuthorized), profile connected: \(onboardingManager.profile.hasConnectedHealthKit)")
+
             // Check initial status
             if !healthKitManager.isHealthKitAvailable {
                 connectionStatus = .unavailable
+                print("[Onboarding] HealthKit unavailable on this device")
             } else if onboardingManager.profile.hasConnectedHealthKit && healthKitManager.isAuthorized {
                 connectionStatus = .connected
+                print("[Onboarding] HealthKit already connected")
+            } else {
+                print("[Onboarding] HealthKit ready to connect")
             }
         }
         .alert("Connection Issue", isPresented: $showingError) {
@@ -974,22 +895,28 @@ struct HealthConnectStepView: View {
     // MARK: - Actions
 
     private func connectHealthKit() {
+        print("[Onboarding] Starting HealthKit connection flow...")
         connectionStatus = .connecting
 
         healthKitManager.requestAuthorization { success, error in
             // Ensure UI updates happen on main thread
             DispatchQueue.main.async {
+                print("[Onboarding] HealthKit authorization callback - success: \(success), error: \(error?.localizedDescription ?? "none")")
+
                 if success {
                     connectionStatus = .connected
+                    print("[Onboarding] HealthKit authorized, fetching demographics...")
 
                     // Wait for demographics to be fully fetched (height/weight are async)
                     healthKitManager.refreshDemographics { demographics in
                         DispatchQueue.main.async {
+                            print("[Onboarding] Demographics callback received")
                             onboardingManager.populateFromHealthKit(demographics: demographics)
                             print("[Onboarding] HealthKit demographics populated - Height: \(demographics.heightCm ?? 0), Weight: \(demographics.weightKg ?? 0), Age: \(demographics.age ?? 0)")
 
                             // Only mark as connected AFTER we have the data
                             onboardingManager.markHealthKitConnected()
+                            print("[Onboarding] HealthKit marked as connected in profile")
 
                             // Check what data we actually got vs what we need
                             let hasHeight = onboardingManager.profile.heightCm != nil
@@ -1014,15 +941,16 @@ struct HealthConnectStepView: View {
 
                             // Sync sleep data to Convex in background (no analysis)
                             syncSleepDataToConvex()
+                            print("[Onboarding] HealthKit connection flow completed successfully")
                         }
                     }
                 } else {
                     // Authorization was denied or failed
                     connectionStatus = .denied
                     if let error = error {
-                        print("[HealthKit] Authorization denied: \(error.localizedDescription)")
+                        print("[Onboarding] ❌ HealthKit authorization error: \(error.localizedDescription)")
                     } else {
-                        print("[HealthKit] Authorization denied by user")
+                        print("[Onboarding] ❌ HealthKit authorization denied by user (no error)")
                     }
                     // Show helpful message
                     errorMessage = "To import your sleep data, please enable Apple Health access in Settings > Privacy & Security > Health > Zoe Sleep."

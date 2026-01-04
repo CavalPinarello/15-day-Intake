@@ -33,22 +33,25 @@ struct ZoeSleepApp: App {
                 .environmentObject(ThemeManager.shared)
                 .environmentObject(onboardingManager)
                 .onAppear {
-                    // Request HealthKit authorization when authenticated
-                    if authManager.isAuthenticated {
+                    // Only request HealthKit authorization AFTER onboarding is complete
+                    // During onboarding, HealthKit is requested at the HealthConnect step
+                    if authManager.isAuthenticated && onboardingManager.hasCompletedOnboarding {
                         healthKitManager.requestAuthorization { success, error in
                             if let error = error {
                                 print("HealthKit authorization error: \(error)")
                             }
                         }
 
-                        // Send current state to Watch (including theme settings)
-                        watchConnectivity.sendUserDataToWatch()
-                        watchConnectivity.sendThemeSettingsToWatch()
-
                         // Schedule notifications from saved settings
                         Task {
                             await NotificationManager.shared.scheduleFromSavedSettings()
                         }
+                    }
+
+                    // Send Watch sync even during onboarding (for theme settings)
+                    if authManager.isAuthenticated {
+                        watchConnectivity.sendUserDataToWatch()
+                        watchConnectivity.sendThemeSettingsToWatch()
                     }
                 }
                 .onChange(of: scenePhase) { _, newPhase in

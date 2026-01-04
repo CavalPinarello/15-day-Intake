@@ -43,7 +43,7 @@
   },
   {
     "id": "53D",
-    "text": "How many hours per day do you spend looking at screens for work?",
+    "text": "How many hours per day do you spend looking at screens (work or entertainment)?",
     "pillar": "Social",
     "scale_type": "Number (hours)",
     "is_gateway": false

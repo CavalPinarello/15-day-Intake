@@ -178,16 +178,18 @@ struct MinimalTasksView: View {
     }
 
     // MARK: - Sleep Log Card (Informational)
+    // Uses convexService directly so it updates in real-time when iPhone syncs completion
 
     private var sleepLogCard: some View {
-        HStack(spacing: 12) {
+        let isDone = convexService.sleepLogCompleted
+        return HStack(spacing: 12) {
             // Icon
             ZStack {
                 Circle()
-                    .fill(localTaskStatus.sleepLogDone ? Color.green.opacity(0.2) : Color.purple.opacity(0.2))
+                    .fill(isDone ? Color.green.opacity(0.2) : Color.purple.opacity(0.2))
                     .frame(width: 44, height: 44)
 
-                if localTaskStatus.sleepLogDone {
+                if isDone {
                     Image(systemName: "checkmark")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.green)
@@ -201,9 +203,10 @@ struct MinimalTasksView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Sleep Log")
                     .font(.system(size: watchSize.fontSize, weight: .semibold))
-                    .foregroundColor(localTaskStatus.sleepLogDone ? .white.opacity(0.6) : .white)
+                    .foregroundColor(isDone ? .white.opacity(0.6) : .white)
+                    .strikethrough(isDone, color: .white.opacity(0.6))
 
-                Text(localTaskStatus.sleepLogDone ? "Done" : "Complete on iPhone")
+                Text(isDone ? "Done" : "Complete on iPhone")
                     .font(.system(size: watchSize.captionFontSize))
                     .foregroundColor(.white.opacity(0.6))
             }
@@ -214,22 +217,24 @@ struct MinimalTasksView: View {
         .frame(minHeight: watchSize.rowHeight)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(cardBackground.opacity(localTaskStatus.sleepLogDone ? 0.5 : 1))
+                .fill(cardBackground.opacity(isDone ? 0.5 : 1))
         )
-        .opacity(localTaskStatus.sleepLogDone ? 0.7 : 1)
+        .opacity(isDone ? 0.7 : 1)
     }
 
     // MARK: - Assessment Card (Informational)
+    // Uses convexService directly so it updates in real-time when iPhone syncs completion
 
     private var assessmentCard: some View {
-        HStack(spacing: 12) {
+        let isDone = convexService.assessmentCompleted
+        return HStack(spacing: 12) {
             // Icon
             ZStack {
                 Circle()
-                    .fill(localTaskStatus.assessmentDone ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
+                    .fill(isDone ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
                     .frame(width: 44, height: 44)
 
-                if localTaskStatus.assessmentDone {
+                if isDone {
                     Image(systemName: "checkmark")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.green)
@@ -243,9 +248,10 @@ struct MinimalTasksView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Assessment")
                     .font(.system(size: watchSize.fontSize, weight: .semibold))
-                    .foregroundColor(localTaskStatus.assessmentDone ? .white.opacity(0.6) : .white)
+                    .foregroundColor(isDone ? .white.opacity(0.6) : .white)
+                    .strikethrough(isDone, color: .white.opacity(0.6))
 
-                Text(localTaskStatus.assessmentDone ? "Done" : "Complete on iPhone")
+                Text(isDone ? "Done" : "Complete on iPhone")
                     .font(.system(size: watchSize.captionFontSize))
                     .foregroundColor(.white.opacity(0.6))
             }
@@ -256,9 +262,9 @@ struct MinimalTasksView: View {
         .frame(minHeight: watchSize.rowHeight)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(cardBackground.opacity(localTaskStatus.assessmentDone ? 0.5 : 1))
+                .fill(cardBackground.opacity(isDone ? 0.5 : 1))
         )
-        .opacity(localTaskStatus.assessmentDone ? 0.7 : 1)
+        .opacity(isDone ? 0.7 : 1)
     }
 
     // MARK: - Deeper Dive Card (Today's Expansion Pack)

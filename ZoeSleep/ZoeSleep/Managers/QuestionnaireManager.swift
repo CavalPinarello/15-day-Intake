@@ -597,7 +597,7 @@ class QuestionnaireManager: ObservableObject {
         // DAY 3: Sleep Timing + Mental Health Gateways
         3: [
             Question(id: "11", text: "How many days per week do you get morning sunlight exposure within an hour of waking?", pillar: .sleepTiming, questionType: .singleSelect, options: ["Never (0 days)", "1-2 days", "3-4 days", "5-6 days", "Daily (7 days)"], helpText: "Morning sunlight helps regulate your circadian rhythm"),
-            Question(id: "12", text: "How many hours per day do you spend looking at screens for work?", pillar: .social, questionType: .number, minValue: 0, maxValue: 18, step: nil, unit: "hours"),
+            Question(id: "12", text: "How many hours per day do you spend looking at screens (work or entertainment)?", pillar: .social, questionType: .number, minValue: 0, maxValue: 18, step: nil, unit: "hours"),
             Question(id: "13", text: "How often do you use electronic devices within 1 hour of bedtime?", pillar: .sleepTiming, questionType: .singleSelect, options: ["Never", "Rarely", "Sometimes", "Often", "Always"]),
             Question(id: "14", text: "On a scale of 1-10, how would you rate your current stress level?", pillar: .mentalHealth, questionType: .scale, scaleMin: 1, scaleMax: 10, scaleMinLabel: "No stress", scaleMaxLabel: "Extremely stressed"),
             Question(
