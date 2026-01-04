@@ -76,6 +76,9 @@ struct ZoeSleepApp: App {
     /// Examples:
     ///   zoesleep://sleeplog - Open sleep log questionnaire
     ///   zoesleep://assessment - Open assessment questionnaire
+    ///   zoesleep://checkin/morning - Open morning check-in
+    ///   zoesleep://checkin/midday - Open midday check-in
+    ///   zoesleep://checkin/evening - Open evening check-in
     ///   zoesleep://home - Open home/dashboard
     private func handleDeepLink(_ url: URL) {
         print("[iOS] Received deep link: \(url)")
@@ -83,6 +86,7 @@ struct ZoeSleepApp: App {
         guard url.scheme == "zoesleep" else { return }
 
         let action = url.host ?? ""
+        let pathComponents = url.pathComponents.filter { $0 != "/" }
 
         switch action {
         case "sleeplog":
@@ -98,9 +102,21 @@ struct ZoeSleepApp: App {
                 object: nil,
                 userInfo: ["destination": "assessment"]
             )
+        case "checkin":
+            // Handle check-in deep links: zoesleep://checkin/morning, zoesleep://checkin/midday, zoesleep://checkin/evening
+            let checkInType = pathComponents.first ?? "morning"
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": "checkin_\(checkInType)"]
+            )
         case "home", "":
-            // Just opening the app - no specific navigation needed
-            print("[iOS] Deep link to home - app opened")
+            // Just opening the app - navigate to home
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": "home"]
+            )
         default:
             print("[iOS] Unknown deep link action: \(action)")
         }
@@ -112,30 +128,31 @@ struct ZoeSleepApp: App {
             await QuestionnaireManager.shared.loadJourneyProgress()
             print("[iOS] Refreshed journey state on app activation")
 
-            // Check if we need to reset check-in nudges for a new day
-            await checkAndResetCheckInNudgesForNewDay()
+            // Check if we need to refresh notifications for a new day
+            await checkAndRefreshNotificationsForNewDay()
         }
     }
 
-    /// Check if it's a new day and reset check-in nudge notifications with fresh random messages
-    private func checkAndResetCheckInNudgesForNewDay() async {
+    /// Check if it's a new day and refresh notification messages
+    /// This ensures variety in notification messages (not the same every day)
+    private func checkAndRefreshNotificationsForNewDay() async {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-        let lastRefreshKey = "lastCheckInNudgeRefreshDate"
+        let lastRefreshKey = "lastNotificationRefreshDate"
 
         // Get the last refresh date
         if let lastRefreshDate = UserDefaults.standard.object(forKey: lastRefreshKey) as? Date {
             let lastRefreshDay = calendar.startOfDay(for: lastRefreshDate)
 
-            // If same day, no need to reset
+            // If same day, no need to refresh
             if lastRefreshDay == today {
                 return
             }
         }
 
-        // New day - reset check-in nudges with fresh random messages
-        print("[iOS] New day detected - resetting check-in nudges with fresh messages")
-        await NotificationManager.shared.resetCheckInNudgesForNewDay()
+        // New day - reschedule notifications with fresh random messages
+        print("[iOS] New day detected - refreshing notification messages")
+        await NotificationManager.shared.scheduleFromSavedSettings()
 
         // Update the last refresh date
         UserDefaults.standard.set(Date(), forKey: lastRefreshKey)

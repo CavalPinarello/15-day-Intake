@@ -387,7 +387,7 @@ struct TreatmentTasksCard: View {
 #Preview("Treatment Tasks") {
     NavigationStack {
         TreatmentTasksView()
-            .environmentObject(WatchConnectivityManager())
+            .environmentObject(WatchConnectivityManager.shared)
             .environmentObject(WatchThemeManager.shared)
     }
 }

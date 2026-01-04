@@ -19,43 +19,48 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var isUserAuthenticated = false
     @Published var currentUserDay = 1
 
+    // Debug log for connectivity events (max 100 entries, newest first)
+    @Published var connectivityLog: [WatchConnectivityLogEntry] = []
+
     private var session: WCSession?
     private var pendingCallbacks: [String: (Any?) -> Void] = [:]
 
     override init() {
         super.init()
         setupWatchConnectivity()
+        log("WatchConnectivityManager initialized")
+    }
+
+    // MARK: - Debug Logging
+
+    func log(_ message: String, level: WatchConnectivityLogEntry.Level = .info) {
+        let entry = WatchConnectivityLogEntry(message: message, level: level)
+        connectivityLog.insert(entry, at: 0)
+        // Keep only last 100 entries
+        if connectivityLog.count > 100 {
+            connectivityLog.removeLast()
+        }
+        print("[WatchConnectivity] \(level.emoji) \(message)")
+    }
+
+    func clearLog() {
+        connectivityLog.removeAll()
+        log("Log cleared")
     }
     
     func activate() {
+        log("Activating WCSession...")
         session?.activate()
     }
-    
+
     private func setupWatchConnectivity() {
         if WCSession.isSupported() {
             session = WCSession.default
             session?.delegate = self
-        }
-    }
-    
-    // MARK: - Open iPhone App
-
-    /// Open the iPhone app to a specific screen
-    /// - Parameter action: The deep link action (sleeplog, assessment, home)
-    func openPhoneApp(action: String = "home") {
-        guard let url = URL(string: "zoesleep://\(action)") else {
-            print("[Watch] Invalid deep link URL for action: \(action)")
-            return
-        }
-
-        // Note: WKExtension.shared().openSystemURL() is deprecated in watchOS 9+
-        // For watchOS 9+, we use WKApplication.shared().openSystemURL()
-        if #available(watchOS 9.0, *) {
-            WKApplication.shared().openSystemURL(url)
+            log("WCSession configured, delegate set")
         } else {
-            WKExtension.shared().openSystemURL(url)
+            log("WCSession not supported on this device", level: .warning)
         }
-        print("[Watch] Requested iPhone app open with action: \(action)")
     }
 
     // MARK: - Data Requests
@@ -453,9 +458,24 @@ extension WatchConnectivityManager: WCSessionDelegate {
             self.isConnected = activationState == .activated
 
             if let error = error {
-                print("Watch connectivity activation failed: \(error.localizedDescription)")
+                self.log("Activation failed: \(error.localizedDescription)", level: .error)
             } else {
-                print("Watch connectivity activated successfully")
+                let stateStr = activationState == .activated ? "activated" : (activationState == .inactive ? "inactive" : "notActivated")
+                self.log("Session \(stateStr), isReachable: \(session.isReachable)", level: .success)
+                self.requestDataFromiPhone()
+            }
+        }
+    }
+
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        DispatchQueue.main.async {
+            let wasConnected = self.isConnected
+            self.isConnected = session.isReachable
+            self.log("Reachability changed: \(wasConnected) → \(session.isReachable)", level: session.isReachable ? .success : .warning)
+
+            // If we just became reachable, request fresh data
+            if session.isReachable && !wasConnected {
+                self.log("iPhone became reachable - requesting data")
                 self.requestDataFromiPhone()
             }
         }
@@ -463,12 +483,16 @@ extension WatchConnectivityManager: WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
         DispatchQueue.main.async {
+            let action = message["action"] as? String ?? "unknown"
+            self.log("Received message: \(action) (with reply)")
             self.handleIncomingMessage(message, replyHandler: replyHandler)
         }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         DispatchQueue.main.async {
+            let action = message["action"] as? String ?? "unknown"
+            self.log("Received message: \(action) (no reply)")
             self.handleIncomingMessage(message, replyHandler: nil)
         }
     }
@@ -476,7 +500,8 @@ extension WatchConnectivityManager: WCSessionDelegate {
     /// Handle userInfo transfers (used when Watch is not reachable during iPhone login)
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
         DispatchQueue.main.async {
-            print("[Watch] Received userInfo transfer from iPhone")
+            let action = userInfo["action"] as? String ?? "unknown"
+            self.log("Received userInfo transfer: \(action)", level: .success)
             // Handle as a message - it may contain credentials or user data
             self.handleIncomingMessage(userInfo, replyHandler: nil)
         }
@@ -534,7 +559,13 @@ extension WatchConnectivityManager: WCSessionDelegate {
             handleUserLogout()
             replyHandler?(["received": true, "cleared": true])
 
+        case "checkInCompleted":
+            // iPhone completed a check-in - update Watch state
+            handleCheckInCompleted(message)
+            replyHandler?(["received": true])
+
         default:
+            log("Unknown action received: \(action)", level: .warning)
             replyHandler?(["error": "Unknown action: \(action)"])
         }
     }
@@ -567,7 +598,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     // MARK: - Logout Handler
 
     private func handleUserLogout() {
-        print("[Watch] ⚠️ Received logout notification from iPhone - clearing credentials")
+        log("Received logout notification from iPhone - clearing credentials", level: .warning)
 
         // Clear local state
         isUserAuthenticated = false
@@ -577,7 +608,33 @@ extension WatchConnectivityManager: WCSessionDelegate {
         let convexService = WatchConvexService.shared
         convexService.clearCredentials()
 
-        print("[Watch] ✅ Credentials cleared - Watch will sync with next iPhone login")
+        log("Credentials cleared - Watch will sync with next iPhone login", level: .success)
+    }
+
+    // MARK: - Check-In Sync Handler
+
+    private func handleCheckInCompleted(_ message: [String: Any]) {
+        guard let timeSlotStr = message["timeSlot"] as? String,
+              let date = message["date"] as? String else {
+            log("Check-in sync missing timeSlot or date", level: .error)
+            return
+        }
+
+        let source = message["source"] as? String ?? "unknown"
+        log("Received check-in completion: \(timeSlotStr) for \(date) from \(source)", level: .success)
+
+        // Post notification to update any listening views
+        NotificationCenter.default.post(
+            name: .watchCheckInStatusDidChange,
+            object: nil,
+            userInfo: ["timeSlot": timeSlotStr, "date": date, "source": source]
+        )
+
+        // Refresh state from Convex to get latest check-in status
+        Task {
+            await WatchConvexService.shared.refreshFromConvex()
+            log("Refreshed state after check-in sync")
+        }
     }
 
     // MARK: - Theme Settings Handler
@@ -657,4 +714,56 @@ struct WatchTreatmentTask: Identifiable {
     let timing: String?
     let shortInstructions: String
     var isCompleted: Bool
+}
+
+// MARK: - Connectivity Log Entry
+
+struct WatchConnectivityLogEntry: Identifiable {
+    let id = UUID()
+    let timestamp: Date
+    let message: String
+    let level: Level
+
+    enum Level: String {
+        case info = "INFO"
+        case success = "SUCCESS"
+        case warning = "WARNING"
+        case error = "ERROR"
+
+        var emoji: String {
+            switch self {
+            case .info: return "ℹ️"
+            case .success: return "✅"
+            case .warning: return "⚠️"
+            case .error: return "❌"
+            }
+        }
+
+        var color: String {
+            switch self {
+            case .info: return "blue"
+            case .success: return "green"
+            case .warning: return "orange"
+            case .error: return "red"
+            }
+        }
+    }
+
+    init(message: String, level: Level = .info) {
+        self.timestamp = Date()
+        self.message = message
+        self.level = level
+    }
+
+    var formattedTime: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: timestamp)
+    }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let watchCheckInStatusDidChange = Notification.Name("watchCheckInStatusDidChange")
 }

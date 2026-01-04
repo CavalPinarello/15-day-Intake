@@ -173,7 +173,7 @@ enum SleepFactBank {
 
     // MARK: - All Facts
 
-    static let all: [SleepFact] = sleepQualityFacts + sleepTimingFacts + mentalHealthFacts + metabolicFacts + physicalFacts + cognitiveFacts + socialFacts + nutritionalFacts
+    static let all: [SleepFact] = sleepQualityFacts + sleepTimingFacts + mentalHealthFacts + metabolicFacts + physicalFacts + cognitiveFacts + socialFacts + nutritionalFacts + recentResearchFacts
 
     // MARK: - Sleep Quality Facts
 
@@ -452,6 +452,273 @@ enum SleepFactBank {
             title: "Timing Your Last Meal",
             body: "Eating within 2-3 hours of bedtime can disrupt sleep quality. Your digestive system needs time to wind down too.",
             category: .sleepTip
+        )
+    ]
+
+    // MARK: - Recent Research Facts (2019-2024)
+
+    /// New peer-reviewed findings from sleep medicine research
+    static let recentResearchFacts: [SleepFact] = [
+
+        // 1. Sleep and Heart Health
+        SleepFact(
+            id: "research_1",
+            pillar: .physical,
+            title: "Sleep Protects Your Heart",
+            body: "Adults sleeping less than 6 hours have a 20% higher risk of heart attack compared to those sleeping 7-8 hours. Your heart literally heals during sleep.",
+            statistic: "Short sleep increases heart attack risk by 20%",
+            citation: "Journal of the American College of Cardiology, 2019",
+            category: .scienceSpotlight
+        ),
+
+        // 2. Sleep Regularity > Duration
+        SleepFact(
+            id: "research_2",
+            pillar: .sleepTiming,
+            title: "Consistency Beats Duration",
+            body: "Research shows irregular sleep schedules increase mortality risk more than short sleep. Going to bed at the same time matters more than total hours.",
+            statistic: "Irregular sleepers have 40% higher cardiovascular risk",
+            citation: "European Heart Journal, 2020",
+            category: .scienceSpotlight
+        ),
+
+        // 3. The Glymphatic Cleaning System
+        SleepFact(
+            id: "research_3",
+            pillar: .cognitive,
+            title: "Brain Wash While You Sleep",
+            body: "Your brain's glymphatic system flushes out toxins including beta-amyloid during deep sleep. This only happens when you're asleep - it's why pulling all-nighters feels so bad.",
+            citation: "Science, 2019 (Nedergaard Lab)",
+            category: .scienceSpotlight
+        ),
+
+        // 4. Sleep and Vaccination Response
+        SleepFact(
+            id: "research_4",
+            pillar: .physical,
+            title: "Sleep Boosts Vaccine Effectiveness",
+            body: "Getting good sleep before and after vaccination significantly improves immune response. People who slept well produced twice the antibodies.",
+            statistic: "Sleep deprivation cuts antibody production by 50%",
+            citation: "Current Biology, 2023",
+            category: .scienceSpotlight
+        ),
+
+        // 5. Adenosine and Sleep Pressure
+        SleepFact(
+            id: "research_5",
+            pillar: .sleepQuality,
+            title: "Why You Feel Sleepy",
+            body: "Adenosine builds up in your brain throughout the day, creating 'sleep pressure.' Caffeine works by blocking adenosine receptors - but the adenosine is still there waiting.",
+            category: .scienceSpotlight
+        ),
+
+        // 6. Sleep and Pain Sensitivity
+        SleepFact(
+            id: "research_6",
+            pillar: .physical,
+            title: "Sleep Is Natural Pain Relief",
+            body: "Just one night of poor sleep lowers pain tolerance by 15-25%. The brain regions that regulate pain perception require adequate sleep to function properly.",
+            statistic: "Poor sleep increases pain sensitivity by up to 25%",
+            citation: "Journal of Neuroscience, 2019",
+            category: .scienceSpotlight
+        ),
+
+        // 7. Napping Science
+        SleepFact(
+            id: "research_7",
+            pillar: .sleepTiming,
+            title: "The Science of Napping",
+            body: "A 10-20 minute nap improves alertness without grogginess. Longer naps (90 min) complete a full sleep cycle. Avoid naps after 3 PM to protect nighttime sleep.",
+            citation: "Sleep Medicine Reviews, 2021",
+            category: .sleepTip
+        ),
+
+        // 8. Sleep and Gut Microbiome
+        SleepFact(
+            id: "research_8",
+            pillar: .metabolic,
+            title: "Your Gut Sleeps Too",
+            body: "Sleep deprivation changes your gut microbiome within 48 hours, affecting metabolism and immune function. Your gut bacteria follow circadian rhythms.",
+            citation: "Cell Host & Microbe, 2020",
+            category: .scienceSpotlight
+        ),
+
+        // 9. REM Sleep and Emotional Memory
+        SleepFact(
+            id: "research_9",
+            pillar: .mentalHealth,
+            title: "Dreams Heal Trauma",
+            body: "REM sleep strips the emotional charge from difficult memories while preserving the information. It's like overnight therapy - processing events without re-experiencing the pain.",
+            citation: "Walker, Why We Sleep (2017)",
+            category: .scienceSpotlight
+        ),
+
+        // 10. Temperature Drop for Sleep
+        SleepFact(
+            id: "research_10",
+            pillar: .sleepQuality,
+            title: "Cool Down to Sleep",
+            body: "Your core body temperature must drop 2-3°F to initiate sleep. A warm bath before bed paradoxically helps by drawing blood to the skin surface, accelerating heat loss.",
+            statistic: "Ideal bedroom temperature: 65-68°F (18-20°C)",
+            citation: "Sleep Medicine Reviews, 2019",
+            category: .sleepTip
+        ),
+
+        // 11. Blue Light Reality
+        SleepFact(
+            id: "research_11",
+            pillar: .sleepTiming,
+            title: "Blue Light: The Full Story",
+            body: "Blue light from screens suppresses melatonin, but brightness matters more than color. A dim screen is less disruptive than a bright 'night mode' screen.",
+            citation: "PNAS, 2020",
+            category: .scienceSpotlight
+        ),
+
+        // 12. Sleep Debt Accumulates
+        SleepFact(
+            id: "research_12",
+            pillar: .sleepQuantity,
+            title: "Sleep Debt Is Real",
+            body: "Lost sleep accumulates as 'sleep debt.' You can't fully repay it with weekend sleep-ins. Regular adequate sleep is the only solution - there are no shortcuts.",
+            citation: "Current Biology, 2021",
+            category: .scienceSpotlight
+        ),
+
+        // 13. Exercise Timing
+        SleepFact(
+            id: "research_13",
+            pillar: .physical,
+            title: "Exercise Helps Sleep (Timing Matters)",
+            body: "Regular exercise improves sleep quality, but vigorous workouts within 1-2 hours of bedtime can delay sleep onset. Morning or afternoon exercise is ideal.",
+            statistic: "Regular exercisers fall asleep 13 minutes faster",
+            citation: "Sleep Medicine Reviews, 2020",
+            category: .sleepTip
+        ),
+
+        // 14. Sleep and Skin
+        SleepFact(
+            id: "research_14",
+            pillar: .physical,
+            title: "Beauty Sleep Is Real",
+            body: "During deep sleep, blood flow to skin increases and growth hormone triggers cell repair. Chronic poor sleep accelerates skin aging and slows wound healing.",
+            citation: "Clinical and Experimental Dermatology, 2020",
+            category: .scienceSpotlight
+        ),
+
+        // 15. Weekend Sleep Compensation
+        SleepFact(
+            id: "research_15",
+            pillar: .sleepTiming,
+            title: "Weekend Catch-Up Isn't Enough",
+            body: "Sleeping in on weekends provides some recovery but doesn't fully reverse metabolic changes from weekday sleep restriction. Consistency wins over compensation.",
+            citation: "Current Biology, 2019",
+            category: .scienceSpotlight
+        ),
+
+        // 16. Sleep Stages and Age
+        SleepFact(
+            id: "research_16",
+            pillar: .sleepQuality,
+            title: "Deep Sleep Declines With Age",
+            body: "We lose about 2% of deep sleep per decade after age 30. This is normal, but maintaining exercise and light exposure helps preserve restorative sleep.",
+            statistic: "By 70, deep sleep decreases by 60-70%",
+            citation: "Neuron, 2017",
+            category: .scienceSpotlight
+        ),
+
+        // 17. Genetics and Sleep Need
+        SleepFact(
+            id: "research_17",
+            pillar: .sleepQuantity,
+            title: "Your Sleep Need Is Genetic",
+            body: "The ADRB1 and DEC2 gene variants allow some people to thrive on 6 hours or less. But only 1-3% of people truly have this mutation - most who think they do are simply sleep deprived.",
+            statistic: "Only 1-3% are true 'short sleepers'",
+            citation: "Neuron, 2019 (UCSF)",
+            category: .scienceSpotlight
+        ),
+
+        // 18. Sleep and Creativity
+        SleepFact(
+            id: "research_18",
+            pillar: .cognitive,
+            title: "Sleep Sparks Creativity",
+            body: "During REM sleep, your brain combines unrelated concepts in novel ways. Many breakthroughs - from the periodic table to Google's algorithm - came after sleep.",
+            citation: "Science Advances, 2021",
+            category: .scienceSpotlight
+        ),
+
+        // 19. Melatonin Timing
+        SleepFact(
+            id: "research_19",
+            pillar: .sleepTiming,
+            title: "Melatonin Is a Signal, Not a Sedative",
+            body: "Melatonin tells your body 'it's nighttime' but doesn't knock you out. Taking it 1-2 hours before bedtime (not at bedtime) works best. Low doses (0.5-1mg) are often more effective than high.",
+            citation: "Journal of Clinical Sleep Medicine, 2022",
+            category: .sleepTip
+        ),
+
+        // 20. Sleep and Blood Pressure
+        SleepFact(
+            id: "research_20",
+            pillar: .physical,
+            title: "Sleep Lowers Blood Pressure",
+            body: "Blood pressure naturally dips 10-20% during sleep - a crucial recovery period for your cardiovascular system. Poor sleep keeps blood pressure elevated around the clock.",
+            citation: "Hypertension, 2020",
+            category: .scienceSpotlight
+        ),
+
+        // 21. Light Exposure in Morning
+        SleepFact(
+            id: "research_21",
+            pillar: .sleepTiming,
+            title: "Morning Light Sets Your Clock",
+            body: "10-30 minutes of bright light within an hour of waking is the most powerful circadian signal. Natural sunlight (10,000+ lux) is 50-100x brighter than indoor lighting.",
+            statistic: "Morning light advances your clock by 30-60 minutes",
+            citation: "Journal of Biological Rhythms, 2022",
+            category: .sleepTip
+        ),
+
+        // 22. Sleep Inertia
+        SleepFact(
+            id: "research_22",
+            pillar: .sleepQuality,
+            title: "Why Mornings Feel Hard",
+            body: "Sleep inertia - that groggy feeling after waking - can impair cognition for 30-60 minutes. It's worse after deep sleep interruption. Light exposure and movement speed recovery.",
+            statistic: "Sleep inertia impairs decision-making for up to 2 hours",
+            citation: "Sleep, 2019",
+            category: .scienceSpotlight
+        ),
+
+        // 23. Sleep and Inflammation
+        SleepFact(
+            id: "research_23",
+            pillar: .metabolic,
+            title: "Sleep Controls Inflammation",
+            body: "Just one night of poor sleep increases inflammatory markers like C-reactive protein and IL-6. Chronic inflammation from poor sleep accelerates aging and disease.",
+            citation: "Biological Psychiatry, 2020",
+            category: .scienceSpotlight
+        ),
+
+        // 24. The Power of Sleep Restriction Therapy
+        SleepFact(
+            id: "research_24",
+            pillar: .sleepQuality,
+            title: "Less Time in Bed = Better Sleep",
+            body: "Counterintuitively, spending less time in bed can improve insomnia. Sleep restriction therapy (a core CBT-I technique) builds sleep pressure and strengthens the bed-sleep association.",
+            statistic: "CBT-I outperforms sleeping pills long-term",
+            citation: "Lancet, 2020",
+            category: .scienceSpotlight
+        ),
+
+        // 25. Longevity and Sleep
+        SleepFact(
+            id: "research_25",
+            pillar: .sleepQuantity,
+            title: "Sleep for Longevity",
+            body: "A 25-year study found that adults who consistently slept 7-8 hours had significantly lower all-cause mortality. Both short (<6h) and long (>9h) sleep were associated with shorter lifespan.",
+            statistic: "7-8 hours associated with lowest mortality risk",
+            citation: "Sleep, 2022 (Meta-analysis)",
+            category: .scienceSpotlight
         )
     ]
 

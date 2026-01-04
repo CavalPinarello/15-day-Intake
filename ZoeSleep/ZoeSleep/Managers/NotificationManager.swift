@@ -29,6 +29,10 @@ enum NotificationType: String {
     case overdueTask = "overdue_task"
     case taskReminder = "task_reminder"
 
+    // Specific task types for deep linking
+    case sleepLogReminder = "sleep_log_reminder"
+    case assessmentReminder = "assessment_reminder"
+
     // Check-in nudge types (separate from daily task reminders)
     case morningCheckInNudge = "checkin_nudge_morning"
     case middayCheckInNudge = "checkin_nudge_midday"
@@ -889,7 +893,8 @@ class NotificationManager: NSObject, ObservableObject {
         content.body = randomMessage.body
         content.sound = .default
         content.categoryIdentifier = NotificationType.morningCheckIn.rawValue
-        content.userInfo = ["type": "morning_task_reminder"]
+        // Include destination for deep linking - morning = sleep log
+        content.userInfo = ["type": "morning_task_reminder", "destination": "sleeplog"]
 
         var dateComponents = DateComponents()
         dateComponents.hour = hour
@@ -944,7 +949,8 @@ class NotificationManager: NSObject, ObservableObject {
         content.body = randomMessage.body
         content.sound = .default
         content.categoryIdentifier = NotificationType.eveningReminder.rawValue
-        content.userInfo = ["type": "evening_task_reminder"]
+        // Include destination for deep linking - evening = assessment (if not completed)
+        content.userInfo = ["type": "evening_task_reminder", "destination": "assessment"]
 
         var dateComponents = DateComponents()
         dateComponents.hour = hour
@@ -971,12 +977,13 @@ class NotificationManager: NSObject, ObservableObject {
         await updatePendingCount()
     }
 
-    /// Schedule both reminders using saved settings from UserDefaults
+    /// Schedule all reminders using saved settings from UserDefaults
     /// Call this on app launch to restore notification schedule
+    /// Only 3 reminders per day: Morning (9 AM), Afternoon (1 PM), Evening (8 PM)
     func scheduleFromSavedSettings() async {
         let defaults = UserDefaults.standard
 
-        // Morning reminder
+        // Morning reminder (sleep log, assessment, morning energy check-in)
         let morningEnabled = defaults.object(forKey: Self.dailyReminderEnabledKey) as? Bool ?? true
         let morningHour = defaults.object(forKey: Self.dailyReminderHourKey) as? Int ?? 9
         let morningMinute = defaults.object(forKey: Self.dailyReminderMinuteKey) as? Int ?? 0
@@ -984,224 +991,146 @@ class NotificationManager: NSObject, ObservableObject {
         print("[Notifications] Scheduling from saved settings - morning: \(morningEnabled) at \(morningHour):\(String(format: "%02d", morningMinute))")
         await scheduleDailyTaskReminder(enabled: morningEnabled, hour: morningHour, minute: morningMinute)
 
-        // Evening reminder
+        // Afternoon reminder (midday energy check-in - skipped if Watch app installed)
+        let afternoonEnabled = defaults.object(forKey: Self.afternoonReminderEnabledKey) as? Bool ?? true
+        let afternoonHour = defaults.object(forKey: Self.afternoonReminderHourKey) as? Int ?? 13
+        let afternoonMinute = defaults.object(forKey: Self.afternoonReminderMinuteKey) as? Int ?? 0
+
+        print("[Notifications] Scheduling from saved settings - afternoon: \(afternoonEnabled) at \(afternoonHour):\(String(format: "%02d", afternoonMinute))")
+        await scheduleAfternoonReminder(enabled: afternoonEnabled, hour: afternoonHour, minute: afternoonMinute)
+
+        // Evening reminder (evening energy check-in + incomplete tasks)
         let eveningEnabled = defaults.object(forKey: Self.eveningReminderEnabledKey) as? Bool ?? true
         let eveningHour = defaults.object(forKey: Self.eveningReminderHourKey) as? Int ?? 20
         let eveningMinute = defaults.object(forKey: Self.eveningReminderMinuteKey) as? Int ?? 0
 
         print("[Notifications] Scheduling from saved settings - evening: \(eveningEnabled) at \(eveningHour):\(String(format: "%02d", eveningMinute))")
         await scheduleEveningReminder(enabled: eveningEnabled, hour: eveningHour, minute: eveningMinute)
-
-        // Check-in nudges
-        await scheduleCheckInNudgesFromSavedSettings()
     }
 
-    /// Cancel all daily task reminders (morning and evening)
+    /// Cancel all daily task reminders (morning, afternoon, and evening)
     func cancelDailyTaskReminder() {
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.morningReminderID, Self.eveningReminderID])
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.morningReminderID, Self.afternoonReminderID, Self.eveningReminderID])
         print("[Notifications] Cancelled all daily task reminders")
     }
 
-    // MARK: - Check-In Nudge Notifications
+    // MARK: - Afternoon Energy Check-In Reminder
 
-    /// Notification identifiers for check-in nudges (3 nudges per time period)
-    private static let morningCheckInNudgeIDs = ["checkin_morning_1", "checkin_morning_2", "checkin_morning_3"]
-    private static let middayCheckInNudgeIDs = ["checkin_midday_1", "checkin_midday_2", "checkin_midday_3"]
-    private static let eveningCheckInNudgeIDs = ["checkin_evening_1", "checkin_evening_2", "checkin_evening_3"]
+    /// Notification identifier for afternoon reminder
+    private static let afternoonReminderID = "afternoon_energy_reminder"
 
-    /// UserDefaults keys for check-in nudge settings
-    static let checkInNudgesEnabledKey = "checkInNudgesEnabled"
+    /// UserDefaults keys for afternoon reminder
+    static let afternoonReminderEnabledKey = "afternoonReminderEnabled"
+    static let afternoonReminderHourKey = "afternoonReminderHour"
+    static let afternoonReminderMinuteKey = "afternoonReminderMinute"
 
-    /// Check-in nudge schedule times
-    /// Morning: 7:15 AM, 9:00 AM, 10:30 AM
-    /// Midday: 12:30 PM, 2:15 PM, 4:00 PM
-    /// Evening: 7:30 PM, 8:30 PM, 9:30 PM
-    private static let morningNudgeTimes = [(7, 15), (9, 0), (10, 30)]
-    private static let middayNudgeTimes = [(12, 30), (14, 15), (16, 0)]
-    private static let eveningNudgeTimes = [(19, 30), (20, 30), (21, 30)]
-
-    /// Schedule all check-in nudges (morning, midday, evening)
-    func scheduleCheckInNudges(enabled: Bool) async {
-        // Save preference
-        UserDefaults.standard.set(enabled, forKey: Self.checkInNudgesEnabledKey)
-
+    /// Schedule afternoon energy check-in reminder (default 1:00 PM)
+    /// This reminder is for the midday energy/mood/focus check-in
+    /// If the user has an Apple Watch, this can be handled by the Watch instead
+    func scheduleAfternoonReminder(enabled: Bool, hour: Int, minute: Int, skipIfWatchInstalled: Bool = true) async {
         guard isAuthorized else {
-            print("[Notifications] Not authorized, skipping check-in nudges")
+            print("[Notifications] Not authorized, skipping afternoon reminder")
             return
         }
 
-        // Cancel all existing check-in nudges first
-        cancelAllCheckInNudges()
+        // Cancel existing afternoon reminder
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.afternoonReminderID])
+
+        // Save settings
+        UserDefaults.standard.set(enabled, forKey: Self.afternoonReminderEnabledKey)
+        UserDefaults.standard.set(hour, forKey: Self.afternoonReminderHourKey)
+        UserDefaults.standard.set(minute, forKey: Self.afternoonReminderMinuteKey)
 
         guard enabled else {
-            print("[Notifications] Check-in nudges disabled")
+            print("[Notifications] Afternoon reminder disabled")
             return
         }
 
-        // Schedule morning nudges
-        await scheduleMorningCheckInNudges()
+        // Skip iPhone notification if Watch is installed (Watch handles midday check-ins)
+        if skipIfWatchInstalled && iOSWatchConnectivityManager.shared.isWatchAppInstalled {
+            print("[Notifications] Skipping afternoon reminder - Watch app handles midday check-ins")
+            return
+        }
 
-        // Schedule midday nudges
-        await scheduleMiddayCheckInNudges()
+        let prompt = CheckInNudgeMessages.randomMiddayPrompt()
 
-        // Schedule evening nudges
-        await scheduleEveningCheckInNudges()
+        let content = UNMutableNotificationContent()
+        content.title = prompt.title
+        content.body = prompt.body
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.middayCheckInNudge.rawValue
+        content.userInfo = ["type": "afternoon_energy_reminder", "destination": "checkin_midday"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: dateComponents,
+            repeats: true
+        )
+
+        let request = UNNotificationRequest(
+            identifier: Self.afternoonReminderID,
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await notificationCenter.add(request)
+            print("[Notifications] Scheduled afternoon reminder at \(hour):\(String(format: "%02d", minute))")
+        } catch {
+            print("[Notifications] Error scheduling afternoon reminder: \(error)")
+        }
 
         await updatePendingCount()
-        print("[Notifications] Scheduled all check-in nudges (9 total)")
-    }
-
-    /// Schedule morning check-in nudges (7:15 AM, 9:00 AM, 10:30 AM)
-    private func scheduleMorningCheckInNudges() async {
-        for (index, (hour, minute)) in Self.morningNudgeTimes.enumerated() {
-            let prompt = CheckInNudgeMessages.randomMorningPrompt()
-
-            let content = UNMutableNotificationContent()
-            content.title = prompt.title
-            content.body = prompt.body
-            content.sound = .default
-            content.categoryIdentifier = NotificationType.morningCheckInNudge.rawValue
-            content.userInfo = ["type": "checkin_nudge", "period": "morning", "checkInType": "morning"]
-
-            var dateComponents = DateComponents()
-            dateComponents.hour = hour
-            dateComponents.minute = minute
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
-
-            let request = UNNotificationRequest(
-                identifier: Self.morningCheckInNudgeIDs[index],
-                content: content,
-                trigger: trigger
-            )
-
-            do {
-                try await notificationCenter.add(request)
-                print("[Notifications] Scheduled morning check-in nudge \(index + 1) at \(hour):\(String(format: "%02d", minute))")
-            } catch {
-                print("[Notifications] Error scheduling morning nudge: \(error)")
-            }
-        }
-    }
-
-    /// Schedule midday check-in nudges (12:30 PM, 2:15 PM, 4:00 PM)
-    private func scheduleMiddayCheckInNudges() async {
-        for (index, (hour, minute)) in Self.middayNudgeTimes.enumerated() {
-            let prompt = CheckInNudgeMessages.randomMiddayPrompt()
-
-            let content = UNMutableNotificationContent()
-            content.title = prompt.title
-            content.body = prompt.body
-            content.sound = .default
-            content.categoryIdentifier = NotificationType.middayCheckInNudge.rawValue
-            content.userInfo = ["type": "checkin_nudge", "period": "midday", "checkInType": "midday"]
-
-            var dateComponents = DateComponents()
-            dateComponents.hour = hour
-            dateComponents.minute = minute
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
-
-            let request = UNNotificationRequest(
-                identifier: Self.middayCheckInNudgeIDs[index],
-                content: content,
-                trigger: trigger
-            )
-
-            do {
-                try await notificationCenter.add(request)
-                print("[Notifications] Scheduled midday check-in nudge \(index + 1) at \(hour):\(String(format: "%02d", minute))")
-            } catch {
-                print("[Notifications] Error scheduling midday nudge: \(error)")
-            }
-        }
-    }
-
-    /// Schedule evening check-in nudges (7:30 PM, 8:30 PM, 9:30 PM)
-    private func scheduleEveningCheckInNudges() async {
-        for (index, (hour, minute)) in Self.eveningNudgeTimes.enumerated() {
-            let prompt = CheckInNudgeMessages.randomEveningPrompt()
-
-            let content = UNMutableNotificationContent()
-            content.title = prompt.title
-            content.body = prompt.body
-            content.sound = .default
-            content.categoryIdentifier = NotificationType.eveningCheckInNudge.rawValue
-            content.userInfo = ["type": "checkin_nudge", "period": "evening", "checkInType": "evening"]
-
-            var dateComponents = DateComponents()
-            dateComponents.hour = hour
-            dateComponents.minute = minute
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
-
-            let request = UNNotificationRequest(
-                identifier: Self.eveningCheckInNudgeIDs[index],
-                content: content,
-                trigger: trigger
-            )
-
-            do {
-                try await notificationCenter.add(request)
-                print("[Notifications] Scheduled evening check-in nudge \(index + 1) at \(hour):\(String(format: "%02d", minute))")
-            } catch {
-                print("[Notifications] Error scheduling evening nudge: \(error)")
-            }
-        }
     }
 
     /// Cancel check-in nudges for a specific time period (morning, midday, or evening)
+    /// This method now just cancels the single reminder for that period
     func cancelCheckInNudges(for period: String) {
-        let identifiers: [String]
         switch period.lowercased() {
         case "morning":
-            identifiers = Self.morningCheckInNudgeIDs
+            // Morning check-in is bundled with morning task reminder - don't cancel it
+            // The morning reminder also includes sleep log/assessment
+            print("[Notifications] Morning check-in completed (reminder stays for other tasks)")
         case "midday":
-            identifiers = Self.middayCheckInNudgeIDs
+            notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.afternoonReminderID])
+            print("[Notifications] Cancelled afternoon energy reminder")
         case "evening":
-            identifiers = Self.eveningCheckInNudgeIDs
+            // Evening check-in is bundled with evening reminder - don't cancel it
+            // The evening reminder also includes sleep log/assessment if incomplete
+            print("[Notifications] Evening check-in completed (reminder stays for other tasks)")
         default:
             print("[Notifications] Unknown check-in period: \(period)")
-            return
         }
-
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
-        print("[Notifications] Cancelled \(period) check-in nudges")
     }
 
     /// Cancel all check-in nudges
     func cancelAllCheckInNudges() {
-        let allIdentifiers = Self.morningCheckInNudgeIDs + Self.middayCheckInNudgeIDs + Self.eveningCheckInNudgeIDs
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: allIdentifiers)
-        print("[Notifications] Cancelled all check-in nudges")
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.afternoonReminderID])
+        print("[Notifications] Cancelled afternoon energy reminder")
     }
 
-    /// Reset check-in nudges for a new day
-    /// Call this at midnight or when the app becomes active on a new day
+    /// Reset check-in reminders for a new day with fresh random messages
     func resetCheckInNudgesForNewDay() async {
-        let enabled = UserDefaults.standard.object(forKey: Self.checkInNudgesEnabledKey) as? Bool ?? true
+        // Re-schedule afternoon reminder if enabled (with fresh random message)
+        let enabled = UserDefaults.standard.object(forKey: Self.afternoonReminderEnabledKey) as? Bool ?? true
+        let hour = UserDefaults.standard.object(forKey: Self.afternoonReminderHourKey) as? Int ?? 13
+        let minute = UserDefaults.standard.object(forKey: Self.afternoonReminderMinuteKey) as? Int ?? 0
 
         if enabled {
-            // Reschedule all nudges with fresh random messages
-            await scheduleCheckInNudges(enabled: true)
-            print("[Notifications] Reset check-in nudges for new day")
+            await scheduleAfternoonReminder(enabled: true, hour: hour, minute: minute)
+            print("[Notifications] Reset afternoon reminder for new day")
         }
     }
 
-    /// Schedule check-in nudges from saved settings
-    /// Call this on app launch to restore notification schedule
+    /// Schedule check-in reminders from saved settings
     func scheduleCheckInNudgesFromSavedSettings() async {
-        let enabled = UserDefaults.standard.object(forKey: Self.checkInNudgesEnabledKey) as? Bool ?? true
-        await scheduleCheckInNudges(enabled: enabled)
+        let enabled = UserDefaults.standard.object(forKey: Self.afternoonReminderEnabledKey) as? Bool ?? true
+        let hour = UserDefaults.standard.object(forKey: Self.afternoonReminderHourKey) as? Int ?? 13
+        let minute = UserDefaults.standard.object(forKey: Self.afternoonReminderMinuteKey) as? Int ?? 0
+        await scheduleAfternoonReminder(enabled: enabled, hour: hour, minute: minute)
     }
 
     /// Send an immediate smart notification based on current task completion status
@@ -1332,11 +1261,51 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         let userInfo = response.notification.request.content.userInfo
         let categoryIdentifier = response.notification.request.content.categoryIdentifier
 
-        // Handle based on notification type
+        // Check for explicit destination in userInfo (takes precedence)
+        if let destination = userInfo["destination"] as? String {
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": destination]
+            )
+            completionHandler()
+            return
+        }
+
+        // Handle based on notification type/category
         switch categoryIdentifier {
+        case NotificationType.sleepLogReminder.rawValue:
+            // Navigate directly to sleep log questionnaire
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": "sleeplog"]
+            )
+
+        case NotificationType.assessmentReminder.rawValue:
+            // Navigate directly to assessment questionnaire
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": "assessment"]
+            )
+
         case NotificationType.morningCheckIn.rawValue:
-            // Navigate to morning check-in
-            NotificationCenter.default.post(name: .showMorningCheckIn, object: nil)
+            // Morning task reminder - check userInfo for specific destination
+            // Default to sleep log since that's the primary morning task
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": "sleeplog"]
+            )
+
+        case NotificationType.afternoonReminder.rawValue, NotificationType.eveningReminder.rawValue:
+            // Afternoon/evening reminders - navigate to assessment
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": "assessment"]
+            )
 
         case NotificationType.bedtimeReminder.rawValue:
             // Navigate to evening report
@@ -1354,34 +1323,54 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
 
         case NotificationType.morningCheckInNudge.rawValue:
             // Navigate to morning check-in (energy/mood/focus)
-            NotificationCenter.default.post(
-                name: .showWatchStyleCheckIn,
-                object: nil,
-                userInfo: ["checkInType": "morning"]
-            )
+            // Skip if Watch app is installed (user completes on Watch)
+            handleCheckInNotification(checkInType: "morning")
 
         case NotificationType.middayCheckInNudge.rawValue:
             // Navigate to midday check-in (energy/mood/focus)
-            NotificationCenter.default.post(
-                name: .showWatchStyleCheckIn,
-                object: nil,
-                userInfo: ["checkInType": "midday"]
-            )
+            // Skip if Watch app is installed (user completes on Watch)
+            handleCheckInNotification(checkInType: "midday")
 
         case NotificationType.eveningCheckInNudge.rawValue:
             // Navigate to evening check-in (energy/mood/focus)
-            NotificationCenter.default.post(
-                name: .showWatchStyleCheckIn,
-                object: nil,
-                userInfo: ["checkInType": "evening"]
-            )
+            // Skip if Watch app is installed (user completes on Watch)
+            handleCheckInNotification(checkInType: "evening")
 
         default:
-            // Navigate to treatment view
-            NotificationCenter.default.post(name: .showTreatment, object: nil)
+            // Navigate to home/dashboard
+            NotificationCenter.default.post(
+                name: .deepLinkNavigationRequest,
+                object: nil,
+                userInfo: ["destination": "home"]
+            )
         }
 
         completionHandler()
+    }
+
+    /// Handle check-in notification tap - only show iOS check-in if Watch app not installed
+    private nonisolated func handleCheckInNotification(checkInType: String) {
+        // Check if Watch app is installed on main thread
+        DispatchQueue.main.async {
+            let hasWatchApp = iOSWatchConnectivityManager.shared.isWatchAppInstalled
+
+            if hasWatchApp {
+                // User has Watch - just open the app (they complete check-ins on Watch)
+                print("[Notifications] Watch app installed - skipping iOS check-in UI")
+                NotificationCenter.default.post(
+                    name: .deepLinkNavigationRequest,
+                    object: nil,
+                    userInfo: ["destination": "home"]
+                )
+            } else {
+                // No Watch - show iOS check-in UI
+                NotificationCenter.default.post(
+                    name: .showWatchStyleCheckIn,
+                    object: nil,
+                    userInfo: ["checkInType": checkInType]
+                )
+            }
+        }
     }
 }
 

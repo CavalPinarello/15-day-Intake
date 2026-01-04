@@ -21,6 +21,7 @@ struct StreakFreezeCard: View {
 
     @EnvironmentObject var themeManager: ThemeManager
 
+    private var theme: ColorTheme { themeManager.currentTheme }
     private var isEvening: Bool {
         TimePeriod.current == .evening || TimePeriod.current == .night
     }
@@ -37,12 +38,12 @@ struct StreakFreezeCard: View {
 
                         Text("Streak Freeze")
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(isEvening ? Color(red: 0.996, green: 0.953, blue: 0.780) : .primary)
+                            .foregroundColor(theme.primaryText)
                     }
 
                     Text("Protect your streak when you miss a day")
                         .font(.system(size: 12, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryText)
                 }
 
                 Spacer()
@@ -50,7 +51,7 @@ struct StreakFreezeCard: View {
                 // Availability indicator
                 ZStack {
                     Circle()
-                        .fill(hasFreezeAvailable ? Color.cyan.opacity(0.2) : Color.gray.opacity(0.2))
+                        .fill(hasFreezeAvailable ? Color.cyan.opacity(0.2) : theme.secondaryText.opacity(0.2))
                         .frame(width: 40, height: 40)
 
                     if hasFreezeAvailable {
@@ -60,7 +61,7 @@ struct StreakFreezeCard: View {
                     } else {
                         Text("0")
                             .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundColor(.gray)
+                            .foregroundColor(theme.secondaryText)
                     }
                 }
             }

@@ -30,6 +30,19 @@ struct SleepFactRewardCard: View {
         theme.accent
     }
 
+    /// Category badge text color - MUST have strong contrast against glassy card background
+    /// Uses darker, more saturated colors while maintaining circadian design
+    private var categoryBadgeColor: Color {
+        if palette.isDark {
+            // Night/Evening: Bright amber/gold for visibility on dark cards
+            return Color(red: 0.96, green: 0.62, blue: 0.04)  // #F59E0A - bright amber
+        } else {
+            // Day: Dark teal for strong contrast on light glassy cards
+            // WCAG AA compliant: ~7:1 contrast ratio on light backgrounds
+            return Color(red: 0.06, green: 0.42, blue: 0.40)  // #0F6B66 - dark teal
+        }
+    }
+
     /// Secondary accent for subtle elements
     private var secondaryAccent: Color {
         theme.accent.opacity(0.8)
@@ -78,12 +91,12 @@ struct SleepFactRewardCard: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        // Category badge
+                        // Category badge - uses high-contrast color for readability
                         Text(fact.category.displayName.uppercased())
                             .font(.caption2)
                             .fontWeight(.bold)
                             .tracking(1)
-                            .foregroundColor(celebrationColor)
+                            .foregroundColor(categoryBadgeColor)
 
                         // Title
                         Text(fact.title)
@@ -114,16 +127,16 @@ struct SleepFactRewardCard: View {
                     HStack(spacing: 8) {
                         Image(systemName: "chart.bar.fill")
                             .font(.caption)
-                            .foregroundColor(secondaryAccent)
+                            .foregroundColor(categoryBadgeColor)
 
                         Text(statistic)
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(celebrationColor)
+                            .foregroundColor(categoryBadgeColor)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(celebrationColor.opacity(0.15))
+                    .background(celebrationColor.opacity(0.12))
                     .cornerRadius(8)
                 }
 

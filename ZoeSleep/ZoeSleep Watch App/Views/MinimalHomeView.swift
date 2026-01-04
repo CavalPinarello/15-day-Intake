@@ -19,6 +19,7 @@ struct MinimalHomeView: View {
     @State private var showCheckInFlow = false
     @State private var showTasks = false
     @State private var showSleepStages = false
+    @State private var showLightRx = false
     @State private var isLoading = true
     @State private var isSigningIn = false
     @State private var signInError: String?
@@ -92,6 +93,9 @@ struct MinimalHomeView: View {
         .sheet(isPresented: $showSleepStages) {
             SleepStagesView()
         }
+        .sheet(isPresented: $showLightRx) {
+            LightRxView()
+        }
         .sheet(isPresented: $showTasks) {
             MinimalTasksView(
                 taskStatus: taskStatus ?? .empty,
@@ -102,6 +106,12 @@ struct MinimalHomeView: View {
             loadData()
             startTimeUpdates()
             WatchNotificationManager.shared.resetForNewDay()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .watchCheckInStatusDidChange)) { notification in
+            // iPhone completed a check-in - refresh our check-in status
+            let timeSlot = notification.userInfo?["timeSlot"] as? String ?? "unknown"
+            print("[MinimalHomeView] Received check-in sync notification: \(timeSlot)")
+            loadData()
         }
     }
 
@@ -159,9 +169,14 @@ struct MinimalHomeView: View {
                     }
                 }
 
-                Text("Check-in")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
+                VStack(spacing: 1) {
+                    Text("Check-in")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                    Text("Energy · Focus")
+                        .font(.system(size: 9))
+                        .foregroundColor(.white.opacity(0.6))
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 70)
             .background(RoundedRectangle(cornerRadius: 12).fill(cardBackground))
@@ -172,7 +187,7 @@ struct MinimalHomeView: View {
     }
 
     private var lightRxTile: some View {
-        Button(action: { /* TODO: Show light prescription view */ }) {
+        Button(action: { showLightRx = true }) {
             VStack(spacing: 6) {
                 Image(systemName: "sun.max.fill")
                     .font(.system(size: 28))

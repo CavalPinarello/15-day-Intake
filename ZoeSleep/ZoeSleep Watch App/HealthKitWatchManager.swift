@@ -12,12 +12,16 @@ import Combine
 
 @MainActor
 class HealthKitWatchManager: ObservableObject {
+    static let shared = HealthKitWatchManager()
+
     private let healthStore = HKHealthStore()
     @Published var lastNightSleep: SleepData?
+    @Published var lastNightSleepSession: SleepSession?  // Detailed sleep stages
     @Published var todayActivity: ActivityData?
     @Published var heartRateData: [HeartRateReading] = []
     @Published var daylightExposure: DaylightExposureData?
     @Published var isAuthorized = false
+    @Published var isLoadingSleepData = false
 
     // Watch-specific health data types
     private var watchHealthTypes: Set<HKSampleType> {
@@ -38,7 +42,7 @@ class HealthKitWatchManager: ObservableObject {
         return types
     }
     
-    init() {
+    private init() {
         checkHealthKitAvailability()
     }
     
@@ -341,6 +345,315 @@ class HealthKitWatchManager: ObservableObject {
             healthStore.execute(query)
         }
     }
+
+    // MARK: - Detailed Sleep Stage Data (Real HealthKit)
+
+    /// Load detailed sleep stages from HealthKit for last night
+    /// This returns REAL data from Apple Watch sleep tracking
+    func loadDetailedSleepStages() async -> SleepSession? {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            print("[HealthKit] Not available on this device")
+            return nil
+        }
+
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            print("[HealthKit] Sleep analysis type not available")
+            return nil
+        }
+
+        await MainActor.run {
+            isLoadingSleepData = true
+        }
+
+        let calendar = Calendar.current
+        let now = Date()
+
+        // Look for sleep from yesterday 6 PM to today noon (covers typical sleep window)
+        let yesterdayEvening = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: calendar.date(byAdding: .day, value: -1, to: now)!)!
+        let todayNoon = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: now)!
+
+        let predicate = HKQuery.predicateForSamples(withStart: yesterdayEvening, end: todayNoon, options: .strictStartDate)
+
+        let sleepSession: SleepSession? = await withCheckedContinuation { continuation in
+            let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+
+            let query = HKSampleQuery(
+                sampleType: sleepType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [sortDescriptor]
+            ) { _, samples, error in
+
+                if let error = error {
+                    print("[HealthKit] Sleep query error: \(error.localizedDescription)")
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                guard let sleepSamples = samples as? [HKCategorySample], !sleepSamples.isEmpty else {
+                    print("[HealthKit] No sleep samples found")
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                // Log all sources found
+                let allSources = Set(sleepSamples.map { $0.sourceRevision.source.name })
+                print("[HealthKit] Found \(sleepSamples.count) sleep samples from sources: \(allSources)")
+
+                // Watch app ALWAYS uses Apple Watch data only
+                // Filter out Oura, Garmin, and other third-party sources
+                let filteredSamples = sleepSamples.filter {
+                    let name = $0.sourceRevision.source.name.lowercased()
+                    return name.contains("watch") || name.contains("apple")
+                }
+
+                print("[HealthKit] Using \(filteredSamples.count)/\(sleepSamples.count) Apple Watch samples")
+
+                guard !filteredSamples.isEmpty else {
+                    print("[HealthKit] No samples after source filtering")
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                // Convert HealthKit samples to our sleep stage segments
+                var segments: [SleepStageSegment] = []
+                var bedtime: Date?
+                var wakeTime: Date?
+
+                for sample in filteredSamples {
+                    // Map HealthKit sleep values to our SleepStage enum
+                    let stage: SleepStage
+
+                    switch sample.value {
+                    case HKCategoryValueSleepAnalysis.inBed.rawValue:
+                        // In bed but not asleep - treat as awake
+                        stage = .awake
+                    case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
+                        // Generic asleep (older data) - treat as light sleep
+                        stage = .lightN2
+                    case HKCategoryValueSleepAnalysis.awake.rawValue:
+                        stage = .awake
+                    case HKCategoryValueSleepAnalysis.asleepCore.rawValue:
+                        // Core sleep = Light sleep (N1/N2)
+                        stage = .lightN2
+                    case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
+                        // Deep sleep (N3/N4)
+                        stage = .deepN3
+                    case HKCategoryValueSleepAnalysis.asleepREM.rawValue:
+                        stage = .rem
+                    default:
+                        // Unknown - skip
+                        continue
+                    }
+
+                    // Track bedtime and wake time
+                    if bedtime == nil || sample.startDate < bedtime! {
+                        bedtime = sample.startDate
+                    }
+                    if wakeTime == nil || sample.endDate > wakeTime! {
+                        wakeTime = sample.endDate
+                    }
+
+                    let segment = SleepStageSegment(
+                        id: UUID(),
+                        stage: stage,
+                        startTime: sample.startDate,
+                        endTime: sample.endDate
+                    )
+                    segments.append(segment)
+
+                    print("[HealthKit] Stage: \(stage.displayName) from \(sample.startDate) to \(sample.endDate)")
+                }
+
+                guard let actualBedtime = bedtime, let actualWakeTime = wakeTime, !segments.isEmpty else {
+                    print("[HealthKit] Could not determine bedtime/waketime")
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                // Sort segments by start time
+                segments.sort { $0.startTime < $1.startTime }
+
+                // CRITICAL: Merge overlapping segments to prevent double-counting
+                // HealthKit can return overlapping samples from multiple sources (Watch, iPhone, etc.)
+                segments = self.mergeOverlappingSegments(segments)
+
+                // Create the sleep session with real data
+                let session = SleepSession(
+                    id: UUID(),
+                    date: now,
+                    bedtime: actualBedtime,
+                    wakeTime: actualWakeTime,
+                    stages: segments,
+                    heartRateData: nil,  // Could be loaded separately
+                    respiratoryRate: nil,
+                    hrv: nil,
+                    skinTemperature: nil,
+                    bloodOxygen: nil,
+                    movementScore: nil
+                )
+
+                let totalHours = session.totalDurationHours
+                let efficiency = session.sleepEfficiency
+                let percentages = session.stagePercentages
+
+                print("[HealthKit] Sleep session created:")
+                print("  Duration: \(String(format: "%.1f", totalHours)) hours")
+                print("  Efficiency: \(Int(efficiency * 100))%")
+                print("  Deep: \(Int((percentages[.deep] ?? 0) * 100))%")
+                print("  REM: \(Int((percentages[.rem] ?? 0) * 100))%")
+                print("  Light: \(Int((percentages[.light] ?? 0) * 100))%")
+                print("  Awake: \(Int((percentages[.awake] ?? 0) * 100))%")
+
+                continuation.resume(returning: session)
+            }
+
+            healthStore.execute(query)
+        }
+
+        await MainActor.run {
+            self.lastNightSleepSession = sleepSession
+            isLoadingSleepData = false
+        }
+
+        return sleepSession
+    }
+
+    // MARK: - Segment Merging (Fix for Overlapping Samples)
+
+    /// Merge overlapping sleep segments to prevent double-counting time
+    /// When segments overlap, prioritize the most specific sleep stage
+    private func mergeOverlappingSegments(_ segments: [SleepStageSegment]) -> [SleepStageSegment] {
+        guard !segments.isEmpty else { return [] }
+
+        // Priority: higher value = more important to keep when merging
+        // Deep sleep > REM > Light > Awake (we want to count the most restorative stage)
+        func stagePriority(_ stage: SleepStage) -> Int {
+            switch stage {
+            case .deepN4: return 6
+            case .deepN3: return 5
+            case .rem: return 4
+            case .remLight: return 3
+            case .lightN2: return 2
+            case .lightN1: return 1
+            case .awake: return 0
+            }
+        }
+
+        // Create time-point events for all segment starts and ends
+        struct TimeEvent: Comparable {
+            let time: Date
+            let isStart: Bool
+            let segment: SleepStageSegment
+
+            static func == (lhs: TimeEvent, rhs: TimeEvent) -> Bool {
+                lhs.time == rhs.time && lhs.isStart == rhs.isStart
+            }
+
+            static func < (lhs: TimeEvent, rhs: TimeEvent) -> Bool {
+                if lhs.time == rhs.time {
+                    // Process starts before ends at same time
+                    return lhs.isStart && !rhs.isStart
+                }
+                return lhs.time < rhs.time
+            }
+        }
+
+        var events: [TimeEvent] = []
+        for segment in segments {
+            events.append(TimeEvent(time: segment.startTime, isStart: true, segment: segment))
+            events.append(TimeEvent(time: segment.endTime, isStart: false, segment: segment))
+        }
+        events.sort()
+
+        // Process events to create non-overlapping segments
+        var result: [SleepStageSegment] = []
+        var activeSegments: [SleepStageSegment] = []
+        var lastTime: Date?
+
+        for event in events {
+            // If we have active segments and time has advanced, create output segment
+            if let last = lastTime, last < event.time, !activeSegments.isEmpty {
+                // Find highest priority stage among active segments
+                let bestSegment = activeSegments.max(by: { stagePriority($0.stage) < stagePriority($1.stage) })!
+
+                let merged = SleepStageSegment(
+                    id: UUID(),
+                    stage: bestSegment.stage,
+                    startTime: last,
+                    endTime: event.time
+                )
+                result.append(merged)
+            }
+
+            // Update active segments
+            if event.isStart {
+                activeSegments.append(event.segment)
+            } else {
+                activeSegments.removeAll { $0.id == event.segment.id }
+            }
+
+            lastTime = event.time
+        }
+
+        // Merge consecutive segments with the same stage
+        var consolidated: [SleepStageSegment] = []
+        for segment in result {
+            if let last = consolidated.last, last.stage == segment.stage, last.endTime == segment.startTime {
+                // Extend the previous segment
+                consolidated[consolidated.count - 1] = SleepStageSegment(
+                    id: last.id,
+                    stage: last.stage,
+                    startTime: last.startTime,
+                    endTime: segment.endTime
+                )
+            } else {
+                consolidated.append(segment)
+            }
+        }
+
+        print("[HealthKit] Merged \(segments.count) overlapping samples into \(consolidated.count) segments")
+
+        return consolidated
+    }
+
+    // MARK: - Sleep Data Source Discovery
+
+    /// Query HealthKit for all sources that have contributed sleep data
+    /// Returns list of available sources (Apple Watch, Oura, etc.)
+    func getAvailableSleepDataSources() async -> [WatchSleepDataSource] {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            print("[HealthKit] Sleep analysis type not available")
+            return []
+        }
+
+        return await withCheckedContinuation { continuation in
+            let query = HKSourceQuery(sampleType: sleepType, samplePredicate: nil) { _, sources, error in
+                if let error = error {
+                    print("[HealthKit] Source query error: \(error.localizedDescription)")
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                guard let sources = sources else {
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                let dataSources = sources.map { WatchSleepDataSource.from(source: $0) }
+                    .sorted { $0.name < $1.name }
+
+                print("[HealthKit] Found \(dataSources.count) sleep data sources:")
+                for source in dataSources {
+                    print("  - \(source.name) (\(source.id))")
+                }
+
+                continuation.resume(returning: dataSources)
+            }
+
+            healthStore.execute(query)
+        }
+    }
 }
 
 // Watch-specific health data models
@@ -375,5 +688,22 @@ struct DaylightExposureData {
 
     var needsMoreLight: Bool {
         totalMinutes < targetMinutes
+    }
+}
+
+/// Represents a sleep data source from HealthKit (e.g., Apple Watch, Oura Ring)
+struct WatchSleepDataSource: Identifiable, Hashable, Codable {
+    let id: String       // bundleIdentifier
+    let name: String     // Human-readable name (e.g., "Apple Watch", "Oura")
+
+    var isAppleWatch: Bool {
+        name.lowercased().contains("watch")
+    }
+
+    static func from(source: HKSource) -> WatchSleepDataSource {
+        WatchSleepDataSource(
+            id: source.bundleIdentifier,
+            name: source.name
+        )
     }
 }

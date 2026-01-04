@@ -352,6 +352,7 @@ struct WatchSettingsView: View {
             }
         }
     }
+
 }
 
 // MARK: - Watch Size Detection
@@ -494,5 +495,5 @@ enum WatchSizeDetector {
 #Preview {
     WatchSettingsView()
         .environmentObject(WatchThemeManager.shared)
-        .environmentObject(WatchConnectivityManager())
+        .environmentObject(WatchConnectivityManager.shared)
 }

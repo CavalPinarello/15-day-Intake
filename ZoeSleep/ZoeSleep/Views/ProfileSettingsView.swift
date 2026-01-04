@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import WatchConnectivity
 
 struct ProfileSettingsView: View {
     @EnvironmentObject var authManager: AuthenticationManager
@@ -21,6 +22,8 @@ struct ProfileSettingsView: View {
     @State private var showingBodyMetricsEditor = false
     @State private var isSyncingToWatch = false
     @State private var watchSyncSuccess = false
+    @State private var isReconnectingWatch = false
+    @State private var watchReconnectSuccess = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -41,8 +44,10 @@ struct ProfileSettingsView: View {
                 // MARK: - Personal Info Section
                 personalInfoSection
 
-                // MARK: - Sleep Profile Section
-                sleepProfileSection
+                // MARK: - Sleep Profile Section (BETA - hidden by default)
+                if themeManager.sleepProfileEnabled {
+                    sleepProfileSection
+                }
 
                 // MARK: - Units Section
                 unitsSection
@@ -283,6 +288,50 @@ struct ProfileSettingsView: View {
                 .disabled(isSyncingToWatch)
                 .accessibleTapTarget()
             }
+
+            // Force Reconnect button (always visible)
+            Button {
+                forceReconnectWatch()
+            } label: {
+                HStack {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .frame(width: 28)
+
+                    Text("Force Reconnect")
+
+                    Spacer()
+
+                    if isReconnectingWatch {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else if watchReconnectSuccess {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                    }
+                }
+            }
+            .disabled(isReconnectingWatch)
+            .accessibleTapTarget()
+
+            // Debug log link (only in debug mode)
+            if themeManager.debugMode {
+                NavigationLink {
+                    WatchConnectivityDebugView()
+                        .environmentObject(themeManager)
+                } label: {
+                    HStack {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .frame(width: 28)
+                            .foregroundColor(.orange)
+                        Text("Connectivity Log")
+                        Spacer()
+                        Text("\(watchConnectivity.connectivityLog.count)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .accessibleTapTarget()
+            }
         } header: {
             Text("Apple Watch")
         } footer: {
@@ -317,6 +366,38 @@ struct ProfileSettingsView: View {
             // Reset success indicator after 2 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 watchSyncSuccess = false
+            }
+        }
+    }
+
+    private func forceReconnectWatch() {
+        isReconnectingWatch = true
+        watchReconnectSuccess = false
+
+        // Log the attempt
+        watchConnectivity.log("Force reconnect initiated by user")
+
+        // Re-activate the WCSession
+        WCSession.default.activate()
+
+        // If we have credentials, try to sync them
+        if let userId = ConvexService.shared.userId,
+           let username = KeychainHelper.load(forKey: "convex_username") {
+            watchConnectivity.syncCredentialsToWatch(userId: userId, username: username)
+            watchConnectivity.sendUserDataToWatch()
+        }
+
+        // Give time for the reconnection attempt
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            isReconnectingWatch = false
+            // Show success if now connected, otherwise still show checkmark to indicate we tried
+            watchReconnectSuccess = true
+            watchConnectivity.log("Force reconnect completed - isReachable: \(WCSession.default.isReachable)",
+                                  level: WCSession.default.isReachable ? .success : .warning)
+
+            // Reset success indicator after 3 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                watchReconnectSuccess = false
             }
         }
     }

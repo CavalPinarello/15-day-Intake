@@ -119,6 +119,12 @@ struct UnifiedDebugPanel: View {
     // Time Travel Manager
     @StateObject private var timeTravelManager = TimeTravelManager.shared
 
+    // Unlock Test Manager
+    @StateObject private var unlockTestManager = UnlockTestManager.shared
+
+    // Day Advancement Logger
+    @ObservedObject private var advancementLogger = DayAdvancementLogger.shared
+
     // State
     @State private var selectedMode: DataGenerationMode = .fullRandom
     @State private var selectedGateways: Set<GatewayType> = []
@@ -178,13 +184,22 @@ struct UnifiedDebugPanel: View {
                 // MARK: - Section 6: Time Travel Mode
                 timeTravelModeSection
 
+                // MARK: - Section 6.5: Test Day Unlock
+                testDayUnlockSection
+
                 // MARK: - Section 7: Journey Controls
                 journeyControlsSection
+
+                // MARK: - Section 7.5: Day Advancement Log
+                dayAdvancementLogSection
 
                 // MARK: - Section 8: Experimental Features
                 experimentalFeaturesSection
 
-                // MARK: - Section 9: Repair Tools
+                // MARK: - Section 9: Watch Connectivity
+                watchConnectivitySection
+
+                // MARK: - Section 10: Repair Tools
                 repairToolsSection
             }
             .listStyle(.insetGrouped)
@@ -873,10 +888,295 @@ struct UnifiedDebugPanel: View {
         return max(0, components.day ?? 0)
     }
 
+    // MARK: - Test Day Unlock Section
+
+    private var testDayUnlockSection: some View {
+        Section {
+            // Status Display
+            VStack(alignment: .leading, spacing: 8) {
+                // Completion Status
+                HStack {
+                    Image(systemName: unlockTestManager.sleepLogCompleted ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(unlockTestManager.sleepLogCompleted ? .green : .secondary)
+                    Text("Sleep Log")
+                        .font(.subheadline)
+                    Spacer()
+                    Text(unlockTestManager.sleepLogCompleted ? "Done" : "Pending")
+                        .font(.caption)
+                        .foregroundColor(unlockTestManager.sleepLogCompleted ? .green : .orange)
+                }
+
+                HStack {
+                    Image(systemName: unlockTestManager.assessmentCompleted ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(unlockTestManager.assessmentCompleted ? .green : .secondary)
+                    Text("Assessment")
+                        .font(.subheadline)
+                    Spacer()
+                    Text(unlockTestManager.assessmentCompleted ? "Done" : "Pending")
+                        .font(.caption)
+                        .foregroundColor(unlockTestManager.assessmentCompleted ? .green : .orange)
+                }
+
+                Divider()
+
+                // Timing Info
+                if unlockTestManager.isReadyForTest {
+                    HStack {
+                        Text("Day completed:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(unlockTestManager.formattedDayReadyAt)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+
+                    HStack {
+                        Text("Unlock time:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(unlockTestManager.formattedUnlockTime)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.cyan)
+                    }
+
+                    if let timeRemaining = unlockTestManager.timeUntilNaturalUnlock {
+                        HStack {
+                            Text("Natural unlock in:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(timeRemaining)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(timeRemaining == "Already unlocked" ? .green : .orange)
+                        }
+                    }
+                } else {
+                    Text("Complete sleep log & assessment to enable unlock testing")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .italic()
+                }
+            }
+            .padding(.vertical, 4)
+
+            // Test Running State
+            if unlockTestManager.isTestRunning {
+                VStack(spacing: 12) {
+                    // Progress
+                    HStack {
+                        Text("Testing unlock...")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text("\(unlockTestManager.currentTestSecond)/10")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    // Progress Bar
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(height: 8)
+                                .cornerRadius(4)
+
+                            Rectangle()
+                                .fill(Color.cyan)
+                                .frame(width: geometry.size.width * CGFloat(unlockTestManager.currentTestSecond) / 10.0, height: 8)
+                                .cornerRadius(4)
+                                .animation(.easeInOut(duration: 0.2), value: unlockTestManager.currentTestSecond)
+                        }
+                    }
+                    .frame(height: 8)
+
+                    // Results so far
+                    if !unlockTestManager.testResults.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 4) {
+                                ForEach(unlockTestManager.testResults) { result in
+                                    VStack(spacing: 2) {
+                                        Image(systemName: result.isUnlocked ? "lock.open.fill" : "lock.fill")
+                                            .font(.caption2)
+                                            .foregroundColor(result.isUnlocked ? .green : .red)
+                                        Text(result.formattedTime)
+                                            .font(.system(size: 8))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 2)
+                                    .background(result.isUnlocked ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+                                    .cornerRadius(4)
+                                }
+                            }
+                        }
+                    }
+
+                    // Cancel Button
+                    Button {
+                        unlockTestManager.cancelTest()
+                    } label: {
+                        HStack {
+                            Image(systemName: "stop.fill")
+                            Text("Cancel Test")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.red)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            // Test Outcome
+            if let outcome = unlockTestManager.testOutcome {
+                HStack {
+                    switch outcome {
+                    case .success(let second, let newDay):
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Unlock Successful!")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.green)
+                            Text("Unlocked at second \(second), advanced to Day \(newDay)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                    case .failure(let reason):
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.red)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Test Failed")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.red)
+                            Text(reason)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                    case .alreadyUnlocked:
+                        Image(systemName: "lock.open.fill")
+                            .foregroundColor(.cyan)
+                        Text("Already unlocked - use regular advance")
+                            .font(.subheadline)
+                            .foregroundColor(.cyan)
+
+                    case .notReady(let reason):
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text(reason)
+                            .font(.subheadline)
+                            .foregroundColor(.orange)
+
+                    case .cancelled:
+                        Image(systemName: "stop.circle.fill")
+                            .foregroundColor(.secondary)
+                        Text("Test cancelled")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+            }
+
+            // Start Test Button (when not running)
+            if !unlockTestManager.isTestRunning {
+                Button {
+                    Task {
+                        await unlockTestManager.startTest()
+                        // Refresh questionnaire progress after test
+                        await questionnaireManager.loadJourneyProgress()
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        HStack {
+                            Image(systemName: "clock.badge.checkmark")
+                            Text("Start Unlock Test")
+                                .fontWeight(.semibold)
+                            Spacer()
+                            if unlockTestManager.isAdvancing {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                        .foregroundColor(unlockTestManager.isReadyForTest ? .white : .secondary)
+
+                        if unlockTestManager.isReadyForTest {
+                            Text(unlockTestManager.testScenarioDescription)
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .disabled(!unlockTestManager.isReadyForTest || unlockTestManager.isAdvancing)
+                .listRowBackground(unlockTestManager.isReadyForTest ? Color.cyan : Color.gray.opacity(0.3))
+
+                // Reset outcome button
+                if unlockTestManager.testOutcome != nil {
+                    Button {
+                        unlockTestManager.reset()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.counterclockwise")
+                            Text("Reset Test Results")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
+                }
+            }
+        } header: {
+            HStack {
+                Label("Test Day Unlock (4 AM)", systemImage: "clock.badge.checkmark")
+                Spacer()
+                if unlockTestManager.isTestRunning {
+                    Text("TESTING")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(.cyan))
+                }
+            }
+        } footer: {
+            Text("Simulates timestamps from 10 seconds before 4 AM to verify unlock logic. Auto-advances on success.")
+        }
+        .task {
+            await unlockTestManager.refreshStatus()
+        }
+    }
+
     // MARK: - Journey Controls Section
 
     private var journeyControlsSection: some View {
         Section {
+            // Bypass Time Check Toggle
+            Toggle(isOn: $themeManager.unlockTimeOverride) {
+                HStack {
+                    Image(systemName: "clock.badge.xmark")
+                        .foregroundColor(.orange)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Bypass 4 AM Time Check")
+                            .font(.subheadline)
+                        Text("Skip waiting until 4 AM to advance days")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .tint(.orange)
+
             // Reset Progress
             Button {
                 resetProgress()
@@ -903,7 +1203,95 @@ struct UnifiedDebugPanel: View {
         } header: {
             Label("Journey Controls", systemImage: "slider.horizontal.3")
         } footer: {
-            Text("Use Time Travel Mode above for testing. Reset clears all data and returns to Day 1.")
+            Text("Bypass Time Check allows advancing days immediately. Use Test Day Unlock above to test the actual 4 AM logic.")
+        }
+    }
+
+    // MARK: - Day Advancement Log Section
+
+    private var dayAdvancementLogSection: some View {
+        Section {
+            // Statistics summary
+            HStack(spacing: 16) {
+                StatBox(
+                    title: "Total",
+                    value: "\(advancementLogger.totalAttempts)",
+                    color: .blue
+                )
+                StatBox(
+                    title: "Success",
+                    value: "\(advancementLogger.successfulAdvances)",
+                    color: .green
+                )
+                StatBox(
+                    title: "Failed",
+                    value: "\(advancementLogger.failedAdvances)",
+                    color: .red
+                )
+                StatBox(
+                    title: "Retries",
+                    value: "\(advancementLogger.retryAttempts)",
+                    color: .orange
+                )
+            }
+            .padding(.vertical, 4)
+
+            // Success rate
+            if advancementLogger.totalAttempts > 0 {
+                HStack {
+                    Text("Success Rate")
+                        .font(.subheadline)
+                    Spacer()
+                    Text(String(format: "%.1f%%", advancementLogger.successRate))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(advancementLogger.successRate > 80 ? .green : advancementLogger.successRate > 50 ? .orange : .red)
+                }
+            }
+
+            // Last error (if recent)
+            if advancementLogger.hasRecentError, let error = advancementLogger.lastError {
+                HStack(alignment: .top) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.red)
+                        .frame(width: 20)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Last Error")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+            }
+
+            // Recent events
+            if !advancementLogger.events.isEmpty {
+                DisclosureGroup("Recent Events (\(advancementLogger.events.count))") {
+                    ForEach(advancementLogger.events.prefix(10)) { event in
+                        DayAdvancementEventRow(event: event)
+                    }
+                }
+            }
+
+            // Clear log button
+            Button(role: .destructive) {
+                advancementLogger.clearEvents()
+            } label: {
+                HStack {
+                    Image(systemName: "trash")
+                    Text("Clear Log")
+                }
+                .foregroundColor(.red)
+            }
+            .disabled(advancementLogger.events.isEmpty)
+        } header: {
+            Label("Day Advancement Log", systemImage: "list.bullet.clipboard")
+        } footer: {
+            Text("Tracks all day advancement attempts to help debug issues. Events are persisted across app launches.")
         }
     }
 
@@ -974,10 +1362,181 @@ struct UnifiedDebugPanel: View {
                 }
             }
             .tint(.orange)
+
+            Toggle(isOn: $themeManager.sleepProfileEnabled) {
+                HStack {
+                    Image(systemName: "moon.zzz")
+                        .foregroundColor(.purple)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 4) {
+                            Text("Sleep Profile")
+                                .font(.subheadline)
+                            Text("BETA")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.purple.opacity(0.8))
+                                .cornerRadius(4)
+                        }
+                        Text("Chronotype & sleep times in Profile")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .tint(.purple)
+
+            // Reset chronotype analysis button (only show when Sleep Profile is enabled)
+            if themeManager.sleepProfileEnabled {
+                Button {
+                    ChronotypeManager.shared.clearSavedResult()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.counterclockwise")
+                            .foregroundColor(.purple)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Reset Chronotype Analysis")
+                                .font(.subheadline)
+                            Text("Clear cached result to re-analyze")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                }
+
+                // Travel History debug view
+                NavigationLink {
+                    TravelHistoryDebugView()
+                        .environmentObject(themeManager)
+                } label: {
+                    HStack {
+                        Image(systemName: "airplane")
+                            .foregroundColor(.blue)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 1) {
+                            HStack(spacing: 4) {
+                                Text("Travel History")
+                                    .font(.subheadline)
+                                Text("BETA")
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(Color.blue.opacity(0.8))
+                                    .cornerRadius(4)
+                            }
+                            Text("Detect timezone shifts from sleep data")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
         } header: {
             Label("Experimental Features", systemImage: "flask")
         } footer: {
             Text("These features are still in development. Enable to test them on the main dashboard.")
+        }
+    }
+
+    // MARK: - Watch Connectivity Section
+
+    @ObservedObject private var watchManager = iOSWatchConnectivityManager.shared
+
+    private var watchConnectivitySection: some View {
+        Section {
+            // Connection Status
+            HStack {
+                Image(systemName: watchManager.isWatchConnected ? "applewatch.radiowaves.left.and.right" : "applewatch.slash")
+                    .foregroundColor(watchManager.isWatchConnected ? .green : .red)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Watch Connection")
+                        .font(.subheadline)
+                    Text(watchManager.isWatchConnected ? "Connected & Reachable" : "Not Reachable")
+                        .font(.caption2)
+                        .foregroundColor(watchManager.isWatchConnected ? .green : .red)
+                }
+                Spacer()
+                Circle()
+                    .fill(watchManager.isWatchConnected ? Color.green : Color.red)
+                    .frame(width: 10, height: 10)
+            }
+
+            // App Installed Status
+            HStack {
+                Image(systemName: "applewatch")
+                    .foregroundColor(watchManager.isWatchAppInstalled ? .blue : .gray)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Watch App")
+                        .font(.subheadline)
+                    Text(watchManager.isWatchAppInstalled ? "Installed" : "Not Installed")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                if watchManager.isWatchAppInstalled {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                }
+            }
+
+            // Sync Actions
+            Button {
+                watchManager.sendUserDataToWatch()
+                watchManager.log("Manual user data sync triggered")
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+                    Text("Force Sync User Data")
+                        .font(.subheadline)
+                }
+            }
+
+            // View Log NavigationLink
+            NavigationLink {
+                WatchConnectivityLogView()
+            } label: {
+                HStack {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .foregroundColor(.purple)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Connectivity Log")
+                            .font(.subheadline)
+                        Text("\(watchManager.connectivityLog.count) entries")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            // Clear Log
+            Button {
+                watchManager.clearLog()
+            } label: {
+                HStack {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                        .frame(width: 24)
+                    Text("Clear Log")
+                        .font(.subheadline)
+                        .foregroundColor(.red)
+                }
+            }
+        } header: {
+            Label("Watch Connectivity", systemImage: "applewatch")
+        } footer: {
+            Text("Monitor and debug Apple Watch communication. The log shows all connectivity events.")
         }
     }
 
@@ -1182,7 +1741,8 @@ struct UnifiedDebugPanel: View {
 
         Task {
             do {
-                let response = try await ConvexService.shared.advanceToNextDay(debugMode: true)
+                // Use the explicit bypass toggle, not debugMode
+                let response = try await ConvexService.shared.advanceToNextDay(bypassTimeCheck: themeManager.unlockTimeOverride)
                 await MainActor.run {
                     if response.success {
                         questionnaireManager.currentDay = response.newDay ?? questionnaireManager.currentDay
@@ -1441,6 +2001,447 @@ struct StatusBadge: View {
                     .cornerRadius(4)
             }
         }
+    }
+}
+
+// MARK: - Watch Connectivity Log View
+
+struct WatchConnectivityLogView: View {
+    @ObservedObject private var watchManager = iOSWatchConnectivityManager.shared
+    @State private var filterLevel: iOSConnectivityLogEntry.Level? = nil
+
+    var filteredLog: [iOSConnectivityLogEntry] {
+        if let level = filterLevel {
+            return watchManager.connectivityLog.filter { $0.level == level }
+        }
+        return watchManager.connectivityLog
+    }
+
+    var body: some View {
+        List {
+            // Status Summary
+            Section {
+                HStack {
+                    Image(systemName: "applewatch")
+                    Text("Watch")
+                    Spacer()
+                    Text(watchManager.isWatchConnected ? "Connected" : "Not Reachable")
+                        .foregroundColor(watchManager.isWatchConnected ? .green : .red)
+                }
+                HStack {
+                    Image(systemName: "app.badge")
+                    Text("App Installed")
+                    Spacer()
+                    Text(watchManager.isWatchAppInstalled ? "Yes" : "No")
+                        .foregroundColor(watchManager.isWatchAppInstalled ? .green : .orange)
+                }
+            } header: {
+                Text("Status")
+            }
+
+            // Filter
+            Section {
+                Picker("Filter", selection: $filterLevel) {
+                    Text("All (\(watchManager.connectivityLog.count))").tag(nil as iOSConnectivityLogEntry.Level?)
+                    Text("Info").tag(iOSConnectivityLogEntry.Level.info as iOSConnectivityLogEntry.Level?)
+                    Text("Success").tag(iOSConnectivityLogEntry.Level.success as iOSConnectivityLogEntry.Level?)
+                    Text("Warning").tag(iOSConnectivityLogEntry.Level.warning as iOSConnectivityLogEntry.Level?)
+                    Text("Error").tag(iOSConnectivityLogEntry.Level.error as iOSConnectivityLogEntry.Level?)
+                }
+                .pickerStyle(.segmented)
+            }
+
+            // Log Entries
+            Section {
+                if filteredLog.isEmpty {
+                    Text("No log entries")
+                        .foregroundColor(.secondary)
+                        .italic()
+                } else {
+                    ForEach(filteredLog) { entry in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(entry.level.emoji)
+                                Text(entry.formattedTime)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .monospacedDigit()
+                                Spacer()
+                                Text(entry.level.rawValue)
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(colorForLevel(entry.level))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(colorForLevel(entry.level).opacity(0.15))
+                                    .cornerRadius(4)
+                            }
+                            Text(entry.message)
+                                .font(.caption)
+                                .foregroundColor(.primary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            } header: {
+                HStack {
+                    Text("Log Entries")
+                    Spacer()
+                    Text("\(filteredLog.count) entries")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Connectivity Log")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    watchManager.clearLog()
+                } label: {
+                    Image(systemName: "trash")
+                }
+            }
+        }
+    }
+
+    private func colorForLevel(_ level: iOSConnectivityLogEntry.Level) -> Color {
+        switch level {
+        case .info: return .blue
+        case .success: return .green
+        case .warning: return .orange
+        case .error: return .red
+        }
+    }
+}
+
+// MARK: - Travel History Debug View
+
+struct TravelHistoryDebugView: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    @ObservedObject var chronotypeManager = ChronotypeManager.shared
+    @ObservedObject var healthKitManager = HealthKitManager(authManager: nil)
+
+    @State private var isLoading = false
+    @State private var sleepData: [[String: Any]] = []
+    @State private var errorMessage: String?
+
+    var body: some View {
+        List {
+            // Status Section
+            Section {
+                if isLoading {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Fetching 1 year of sleep data...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                } else if let error = errorMessage {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("\(sleepData.count) nights loaded")
+                            .font(.subheadline)
+                    }
+                }
+
+                Button {
+                    fetchAndAnalyze()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text(sleepData.isEmpty ? "Analyze Travel History" : "Re-analyze")
+                    }
+                }
+                .disabled(isLoading)
+            } header: {
+                Text("Data Source")
+            } footer: {
+                Text("Fetches up to 1 year of sleep data from Apple Health and detects timezone shifts.")
+            }
+
+            // Summary Section
+            if !chronotypeManager.detectedEpochs.isEmpty {
+                Section {
+                    let stableNights = chronotypeManager.detectedEpochs.filter { !$0.isJetLagged }.reduce(0) { $0 + $1.nightCount }
+                    let jetLagNights = chronotypeManager.detectedEpochs.filter { $0.isJetLagged }.reduce(0) { $0 + $1.nightCount }
+                    let uniqueLocations = Set(chronotypeManager.detectedEpochs.map { $0.inferredTimezone }).count
+
+                    HStack {
+                        Label("Location Changes", systemImage: "airplane")
+                        Spacer()
+                        Text("\(chronotypeManager.detectedEpochs.count - 1)")
+                            .foregroundColor(.secondary)
+                    }
+
+                    HStack {
+                        Label("Unique Timezones", systemImage: "globe")
+                        Spacer()
+                        Text("\(uniqueLocations)")
+                            .foregroundColor(.secondary)
+                    }
+
+                    HStack {
+                        Label("Stable Nights", systemImage: "moon.zzz.fill")
+                        Spacer()
+                        Text("\(stableNights)")
+                            .foregroundColor(.green)
+                    }
+
+                    HStack {
+                        Label("Jet Lag Nights", systemImage: "clock.badge.exclamationmark")
+                        Spacer()
+                        Text("\(jetLagNights)")
+                            .foregroundColor(.orange)
+                    }
+                } header: {
+                    Text("Summary")
+                }
+            }
+
+            // Epochs Section
+            if !chronotypeManager.detectedEpochs.isEmpty {
+                Section {
+                    ForEach(chronotypeManager.detectedEpochs) { epoch in
+                        HStack {
+                            // Icon
+                            Image(systemName: epoch.isJetLagged ? "airplane" : "mappin.circle.fill")
+                                .foregroundColor(epoch.isJetLagged ? .orange : .blue)
+                                .frame(width: 24)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack {
+                                    Text(epoch.displayName)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+
+                                    if epoch.isJetLagged {
+                                        Text("Jet Lag")
+                                            .font(.caption2)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Color.orange)
+                                            .cornerRadius(4)
+                                    }
+                                }
+
+                                Text(epoch.dateRange)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("\(epoch.nightCount) nights")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+
+                                Text("UTC bed: \(String(format: "%.1f", epoch.avgUtcBedtimeHour))h")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                } header: {
+                    Text("Detected Location Epochs")
+                } footer: {
+                    Text("Timezone shifts >4 hours between consecutive nights indicate travel. First 3 nights after travel are marked as jet lag.")
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Travel History")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if sleepData.isEmpty {
+                fetchAndAnalyze()
+            }
+        }
+    }
+
+    private func fetchAndAnalyze() {
+        isLoading = true
+        errorMessage = nil
+
+        // Fetch 365 days of sleep data
+        healthKitManager.fetchSleepData(daysBack: 365) { result in
+            DispatchQueue.main.async {
+                isLoading = false
+
+                switch result {
+                case .success(let data):
+                    sleepData = data
+                    if data.isEmpty {
+                        errorMessage = "No sleep data found in Apple Health"
+                    } else {
+                        // Run travel analysis
+                        chronotypeManager.analyzeTravel(from: data)
+                    }
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Day Advancement Log Helper Views
+
+/// Small stat box for the log section
+private struct StatBox: View {
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// Row for displaying a day advancement event
+private struct DayAdvancementEventRow: View {
+    let event: DayAdvancementEvent
+
+    private var eventColor: Color {
+        switch event.eventColor {
+        case "green": return .green
+        case "red": return .red
+        case "orange": return .orange
+        default: return .blue
+        }
+    }
+
+    private var timeAgo: String {
+        let interval = Date().timeIntervalSince(event.timestamp)
+        if interval < 60 {
+            return "Just now"
+        } else if interval < 3600 {
+            let mins = Int(interval / 60)
+            return "\(mins)m ago"
+        } else if interval < 86400 {
+            let hours = Int(interval / 3600)
+            return "\(hours)h ago"
+        } else {
+            let days = Int(interval / 86400)
+            return "\(days)d ago"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Event icon
+            Image(systemName: event.eventIcon)
+                .foregroundColor(eventColor)
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                // Event type and day
+                HStack {
+                    Text(event.eventType.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
+                        .font(.caption)
+                        .fontWeight(.medium)
+
+                    if let toDay = event.toDay {
+                        Text("Day \(event.fromDay) → \(toDay)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Day \(event.fromDay)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Error message if failed
+                if let error = event.errorMessage {
+                    Text(error)
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                        .lineLimit(1)
+                }
+
+                // Status flags
+                HStack(spacing: 4) {
+                    if let sleepLog = event.sleepLogCompleted {
+                        AdvancementStatusBadge(label: "SL", isComplete: sleepLog)
+                    }
+                    if let assessment = event.assessmentCompleted {
+                        AdvancementStatusBadge(label: "AS", isComplete: assessment)
+                    }
+                    if event.bypassedTimeCheck {
+                        Text("bypassed")
+                            .font(.system(size: 8))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(Color.orange)
+                            .cornerRadius(2)
+                    }
+                    if event.debugMode {
+                        Text("debug")
+                            .font(.system(size: 8))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(Color.purple)
+                            .cornerRadius(2)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Time
+            Text(timeAgo)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+/// Small badge showing completion status for day advancement events
+private struct AdvancementStatusBadge: View {
+    let label: String
+    let isComplete: Bool
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: isComplete ? "checkmark" : "xmark")
+                .font(.system(size: 6, weight: .bold))
+            Text(label)
+                .font(.system(size: 8, weight: .medium))
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 3)
+        .padding(.vertical, 1)
+        .background(isComplete ? Color.green : Color.red)
+        .cornerRadius(2)
     }
 }
 

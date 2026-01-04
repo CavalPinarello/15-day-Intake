@@ -1885,7 +1885,7 @@
   },
   {
     "question_id": "3",
-    "question_text": "GATEWAY: Do you have trouble falling asleep, staying asleep, or waking too early?",
+    "question_text": "Do you have trouble falling asleep, staying asleep, or waking too early?",
     "pillar": "Sleep Quality",
     "tier": "GATEWAY",
     "answer_format": "single_select_chips",
@@ -4761,7 +4761,7 @@
   },
   {
     "question_id": "17",
-    "question_text": "GATEWAY: Do you feel excessively tired or sleepy during the day?",
+    "question_text": "Do you feel excessively tired or sleepy during the day?",
     "pillar": "Cognitive",
     "tier": "GATEWAY",
     "answer_format": "slider_scale",
@@ -4787,7 +4787,7 @@
   },
   {
     "question_id": "18",
-    "question_text": "GATEWAY: Memory problems, difficulty concentrating, or mental fog?",
+    "question_text": "Memory problems, difficulty concentrating, or mental fog?",
     "pillar": "Cognitive",
     "tier": "GATEWAY",
     "answer_format": "single_select_chips",
@@ -5768,7 +5768,7 @@
   },
   {
     "question_id": "19",
-    "question_text": "GATEWAY: Do you snore loudly?",
+    "question_text": "Do you snore loudly?",
     "pillar": "Physical",
     "tier": "GATEWAY",
     "answer_format": "single_select_chips",
@@ -5795,7 +5795,7 @@
   },
   {
     "question_id": "20",
-    "question_text": "GATEWAY: Has anyone observed you stop breathing during sleep?",
+    "question_text": "Has anyone observed you stop breathing during sleep?",
     "pillar": "Physical",
     "tier": "GATEWAY",
     "answer_format": "single_select_chips",
@@ -5822,7 +5822,7 @@
   },
   {
     "question_id": "22",
-    "question_text": "GATEWAY: Do you have pain that affects your sleep?",
+    "question_text": "Do you have pain that affects your sleep?",
     "pillar": "Physical",
     "tier": "GATEWAY",
     "answer_format": "single_select_chips",
@@ -5878,7 +5878,7 @@
   },
   {
     "question_id": "24",
-    "question_text": "GATEWAY: Do you exercise regularly?",
+    "question_text": "Do you exercise regularly?",
     "pillar": "Physical",
     "tier": "GATEWAY",
     "answer_format": "single_select_chips",

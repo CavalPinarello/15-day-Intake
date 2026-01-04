@@ -30,22 +30,21 @@ struct OnboardingView: View {
                         .padding(.horizontal, 20)
                     }
 
-                    // FLOW: HealthKit FIRST to get data, then only ask what we couldn't get
+                    // FLOW: Personal connection first, HealthKit at the end for sleep history
                     TabView(selection: $onboardingManager.currentStep) {
-                        // Step 0: HealthKit FIRST - get height, weight, age, sex
-                        HealthConnectStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
-                            .environmentObject(healthKitManager)
-                            .tag(OnboardingStep.healthConnect)
-
-                        // Step 1: Name (can't get from HealthKit)
+                        // Step 0: Name - personal connection first
                         NameStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.name)
 
-                        // Step 2: Height/Weight - skipped if HealthKit provided data
+                        // Step 1: Units - measurement preference (auto-detected, editable)
+                        UnitsStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
+                            .tag(OnboardingStep.units)
+
+                        // Step 2: Height/Weight
                         HeightWeightStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.heightWeight)
 
-                        // Step 3: Gender/Age - skipped if HealthKit provided data
+                        // Step 3: Gender/Age
                         GenderAgeStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.genderAge)
 
@@ -53,7 +52,12 @@ struct OnboardingView: View {
                         WearablesStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.wearables)
 
-                        // Step 5: Ready
+                        // Step 5: HealthKit - sync sleep/activity history (optional)
+                        HealthConnectStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
+                            .environmentObject(healthKitManager)
+                            .tag(OnboardingStep.healthConnect)
+
+                        // Step 6: Ready
                         ReadyStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.ready)
                     }
@@ -204,6 +208,105 @@ struct NameStepView: View {
 
             Spacer()
 
+            // Navigation - no back button since this is the first step
+            OnboardingNavigationButtons(
+                onboardingManager: onboardingManager,
+                showBack: false
+            )
+            .padding(.horizontal, 20)
+            .padding(.bottom, isCompact ? 24 : 32)
+        }
+    }
+}
+
+// MARK: - Units Step (NEW)
+
+struct UnitsStepView: View {
+    @ObservedObject var onboardingManager: OnboardingManager
+    let screenHeight: CGFloat
+
+    private var isCompact: Bool { screenHeight < 700 }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
+
+    private var isMetric: Bool {
+        onboardingManager.profile.measurementSystem == MeasurementSystem.metric.rawValue
+    }
+
+    var body: some View {
+        VStack(spacing: isCompact ? 16 : 24) {
+            Spacer(minLength: isCompact ? 30 : 50)
+
+            // Icon
+            Image(systemName: "ruler")
+                .font(.system(size: isCompact ? 36 : 44))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [palette.accent, palette.wave],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            // Title
+            VStack(spacing: 6) {
+                Text("Measurement Preferences")
+                    .font(isCompact ? .title3.bold() : .title2.bold())
+                    .foregroundColor(palette.textPrimary)
+
+                Text("Based on your device settings")
+                    .font(.caption)
+                    .foregroundColor(palette.textSecondary)
+            }
+
+            // Unit System Picker - Large and clear
+            VStack(spacing: 12) {
+                Picker("Units", selection: Binding(
+                    get: {
+                        MeasurementSystem(rawValue: onboardingManager.profile.measurementSystem) ?? .metric
+                    },
+                    set: { newValue in
+                        onboardingManager.profile.measurementSystem = newValue.rawValue
+                    }
+                )) {
+                    ForEach(MeasurementSystem.allCases) { system in
+                        Text(system.rawValue).tag(system)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 32)
+
+                // Example display showing what each unit means
+                HStack(spacing: 20) {
+                    VStack(spacing: 4) {
+                        Text("Height")
+                            .font(.caption2)
+                            .foregroundColor(palette.textSecondary)
+                        Text(isMetric ? "175 cm" : "5' 9\"")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(palette.textPrimary)
+                    }
+
+                    Rectangle()
+                        .fill(palette.textSecondary.opacity(0.3))
+                        .frame(width: 1, height: 30)
+
+                    VStack(spacing: 4) {
+                        Text("Weight")
+                            .font(.caption2)
+                            .foregroundColor(palette.textSecondary)
+                        Text(isMetric ? "70 kg" : "154 lbs")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(palette.textPrimary)
+                    }
+                }
+                .padding(12)
+                .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+                .cornerRadius(10)
+            }
+            .padding(.top, 8)
+
+            Spacer()
+
             // Navigation
             OnboardingNavigationButtons(
                 onboardingManager: onboardingManager,
@@ -247,36 +350,12 @@ struct HeightWeightStepView: View {
                 Text("Body Metrics")
                     .font(isCompact ? .title3.bold() : .title2.bold())
                     .foregroundColor(palette.textPrimary)
-            }
 
-            // Unit System Picker
-            Picker("Units", selection: Binding(
-                get: {
-                    MeasurementSystem(rawValue: onboardingManager.profile.measurementSystem) ?? .metric
-                },
-                set: { newValue in
-                    onboardingManager.profile.measurementSystem = newValue.rawValue
-                    // Sync temp values when switching systems
-                    if newValue == .metric {
-                        // Imperial → Metric: Update temp metric values from imperial
-                        let totalInches = Double(onboardingManager.tempHeightFeet * 12 + onboardingManager.tempHeightInches)
-                        onboardingManager.tempHeightCm = totalInches * 2.54
-                        onboardingManager.tempWeightKg = onboardingManager.tempWeightLbs / 2.20462
-                    } else {
-                        // Metric → Imperial: Update temp imperial values from metric
-                        let totalInches = onboardingManager.tempHeightCm / 2.54
-                        onboardingManager.tempHeightFeet = Int(totalInches / 12)
-                        onboardingManager.tempHeightInches = Int(totalInches) % 12
-                        onboardingManager.tempWeightLbs = onboardingManager.tempWeightKg * 2.20462
-                    }
-                }
-            )) {
-                ForEach(MeasurementSystem.allCases) { system in
-                    Text(system.rawValue).tag(system)
-                }
+                // Show current unit system (selected in previous step)
+                Text(isMetric ? "Using metric units" : "Using imperial units")
+                    .font(.caption)
+                    .foregroundColor(palette.textSecondary)
             }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 40)
 
             // Height & Weight in single compact view
             VStack(spacing: isCompact ? 10 : 14) {
@@ -627,39 +706,106 @@ enum HealthKitConnectionStatus {
     case unavailable  // HealthKit not available on device
 }
 
-/// Sleep analysis phase during onboarding
-enum SleepAnalysisPhase {
-    case notStarted
-    case fetchingSleepData
-    case analyzingPatterns
-    case complete
-    case insufficientData
-}
-
 struct HealthConnectStepView: View {
     @ObservedObject var onboardingManager: OnboardingManager
-    @ObservedObject var chronotypeManager = ChronotypeManager.shared
     @EnvironmentObject var healthKitManager: HealthKitManager
     @State private var connectionStatus: HealthKitConnectionStatus = .notConnected
-    @State private var analysisPhase: SleepAnalysisPhase = .notStarted
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var showMissingDataMessage = false
+    @State private var missingDataItems: [String] = []
     let screenHeight: CGFloat
 
     private var isCompact: Bool { screenHeight < 700 }
     private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
 
     var body: some View {
-        VStack(spacing: isCompact ? 12 : 16) {
-            Spacer(minLength: isCompact ? 20 : 35)
+        VStack(spacing: isCompact ? 16 : 24) {
+            Spacer(minLength: isCompact ? 40 : 60)
 
-            // Show different content based on analysis phase
-            if analysisPhase == .notStarted {
-                // Standard HealthKit connection UI
-                healthKitConnectionContent
-            } else {
-                // Sleep analysis / chronotype UI
-                sleepAnalysisContent
+            // Icon - changes based on status
+            ZStack {
+                Circle()
+                    .fill(iconBackgroundColor.opacity(0.15))
+                    .frame(width: isCompact ? 80 : 100, height: isCompact ? 80 : 100)
+
+                Image(systemName: iconName)
+                    .font(.system(size: isCompact ? 36 : 44))
+                    .foregroundColor(iconColor)
+            }
+
+            // Title & subtitle
+            VStack(spacing: 8) {
+                Text("Sync Your Sleep History")
+                    .font(isCompact ? .title3.bold() : .title2.bold())
+                    .foregroundColor(palette.textPrimary)
+
+                Text("Import your sleep and activity data to compare how you feel with what your body shows")
+                    .font(.subheadline)
+                    .foregroundColor(palette.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
+            // Show missing data message if some demographics weren't retrieved
+            if showMissingDataMessage && connectionStatus == .connected {
+                missingDataBanner
+            }
+
+            Spacer()
+
+            // Status-specific UI
+            switch connectionStatus {
+            case .notConnected:
+                connectButton
+
+            case .connecting:
+                connectingIndicator
+
+            case .connected:
+                VStack(spacing: 16) {
+                    connectedStatus
+
+                    OnboardingNavigationButtons(
+                        onboardingManager: onboardingManager,
+                        showBack: true,
+                        nextLabel: "Continue"
+                    )
+                    .padding(.horizontal, 20)
+                }
+
+            case .denied:
+                deniedStatus
+
+            case .unavailable:
+                unavailableStatus
+            }
+
+            // Skip and back options for non-connected states
+            if connectionStatus == .notConnected || connectionStatus == .denied || connectionStatus == .unavailable {
+                VStack(spacing: 8) {
+                    Button(action: { onboardingManager.nextStep() }) {
+                        Text("Skip for now")
+                            .font(.subheadline)
+                            .foregroundColor(palette.textSecondary)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { onboardingManager.previousStep() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                            Text("Back")
+                        }
+                        .font(.caption)
+                        .foregroundColor(palette.textSecondary.opacity(0.7))
+                    }
+                }
+                .padding(.bottom, isCompact ? 24 : 32)
+            } else if connectionStatus == .connected {
+                Spacer().frame(height: isCompact ? 24 : 32)
             }
         }
         .onAppear {
@@ -682,192 +828,46 @@ struct HealthConnectStepView: View {
         }
     }
 
-    // MARK: - HealthKit Connection Content
+    // MARK: - Missing Data Banner
 
-    private var healthKitConnectionContent: some View {
-        VStack(spacing: isCompact ? 16 : 24) {
-            Spacer(minLength: isCompact ? 40 : 60)
+    private var missingDataBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "info.circle.fill")
+                .foregroundColor(.orange)
 
-            // Icon - changes based on status
-            ZStack {
-                Circle()
-                    .fill(iconBackgroundColor.opacity(0.15))
-                    .frame(width: isCompact ? 80 : 100, height: isCompact ? 80 : 100)
-
-                Image(systemName: iconName)
-                    .font(.system(size: isCompact ? 36 : 44))
-                    .foregroundColor(iconColor)
-            }
-
-            // Title & subtitle
-            VStack(spacing: 8) {
-                Text("Connect Apple Health")
-                    .font(isCompact ? .title3.bold() : .title2.bold())
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Some info wasn't found in Health")
+                    .font(.caption.weight(.medium))
                     .foregroundColor(palette.textPrimary)
 
-                Text("Import your sleep history to personalize your experience")
-                    .font(.subheadline)
+                Text("We'll ask about \(formatMissingItems()) next")
+                    .font(.caption2)
                     .foregroundColor(palette.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
             }
 
             Spacer()
-
-            // Status-specific UI
-            switch connectionStatus {
-            case .notConnected:
-                connectButton
-
-            case .connecting:
-                connectingIndicator
-
-            case .connected:
-                connectedStatus
-
-            case .denied:
-                deniedStatus
-
-            case .unavailable:
-                unavailableStatus
-            }
-
-            // Skip option for non-connected states
-            if connectionStatus == .notConnected || connectionStatus == .denied || connectionStatus == .unavailable {
-                Button(action: { onboardingManager.nextStep() }) {
-                    Text("Skip for now")
-                        .font(.subheadline)
-                        .foregroundColor(palette.textSecondary)
-                }
-                .padding(.bottom, isCompact ? 24 : 32)
-            }
         }
-    }
-
-    // MARK: - Sleep Data Sync Content (simplified, action-focused)
-
-    private var sleepAnalysisContent: some View {
-        VStack(spacing: isCompact ? 16 : 24) {
-            Spacer(minLength: isCompact ? 40 : 60)
-
-            // Progress/Result icon
-            ZStack {
-                Circle()
-                    .fill(palette.accent.opacity(0.15))
-                    .frame(width: isCompact ? 80 : 100, height: isCompact ? 80 : 100)
-
-                if analysisPhase == .complete || analysisPhase == .insufficientData {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: isCompact ? 40 : 50))
-                        .foregroundColor(.green)
-                } else {
-                    ProgressView()
-                        .scaleEffect(1.8)
-                        .tint(palette.accent)
-                }
-            }
-
-            // Status message
-            VStack(spacing: 8) {
-                Text(syncStatusTitle)
-                    .font(isCompact ? .title3.bold() : .title2.bold())
-                    .foregroundColor(palette.textPrimary)
-
-                Text(syncStatusSubtitle)
-                    .font(.subheadline)
-                    .foregroundColor(palette.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-            }
-
-            // Show sync summary when complete
-            if analysisPhase == .complete, let result = chronotypeManager.result {
-                syncSummaryView(result: result)
-            }
-
-            Spacer()
-
-            // Continue button (only show when sync is complete)
-            if analysisPhase == .complete || analysisPhase == .insufficientData {
-                OnboardingNavigationButtons(
-                    onboardingManager: onboardingManager,
-                    showBack: false,
-                    nextLabel: "Continue"
-                )
-                .padding(.horizontal, 20)
-                .padding(.bottom, isCompact ? 24 : 32)
-            }
-        }
-    }
-
-    private var syncStatusTitle: String {
-        switch analysisPhase {
-        case .fetchingSleepData:
-            return "Syncing Sleep Data"
-        case .analyzingPatterns:
-            return "Analyzing Patterns"
-        case .complete:
-            return "Sync Complete"
-        case .insufficientData:
-            return "Connected"
-        case .notStarted:
-            return ""
-        }
-    }
-
-    private var syncStatusSubtitle: String {
-        switch analysisPhase {
-        case .fetchingSleepData:
-            return "Importing 90 days of sleep history..."
-        case .analyzingPatterns:
-            return "Calculating your sleep patterns..."
-        case .complete:
-            if let result = chronotypeManager.result {
-                return "\(result.daysAnalyzed) nights of sleep data imported"
-            }
-            return "Your sleep data has been synced"
-        case .insufficientData:
-            return "We'll learn your patterns as you log sleep"
-        case .notStarted:
-            return ""
-        }
-    }
-
-    // MARK: - Sync Summary View (compact, no education)
-
-    private func syncSummaryView(result: ChronotypeResult) -> some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "bed.double.fill")
-                    .foregroundColor(palette.accent)
-                Text("Avg. Bedtime")
-                    .foregroundColor(palette.textSecondary)
-                Spacer()
-                Text(chronotypeManager.formatMidpointTime(result.avgBedtime))
-                    .fontWeight(.medium)
-                    .foregroundColor(palette.textPrimary)
-            }
-            .font(.subheadline)
-
-            Divider()
-                .background(palette.textSecondary.opacity(0.2))
-
-            HStack {
-                Image(systemName: "sun.max.fill")
-                    .foregroundColor(palette.wave)
-                Text("Avg. Wake Time")
-                    .foregroundColor(palette.textSecondary)
-                Spacer()
-                Text(chronotypeManager.formatMidpointTime(result.avgWakeTime))
-                    .fontWeight(.medium)
-                    .foregroundColor(palette.textPrimary)
-            }
-            .font(.subheadline)
-        }
-        .padding(16)
-        .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
-        .cornerRadius(12)
+        .padding(12)
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+        )
         .padding(.horizontal, 20)
+    }
+
+    private func formatMissingItems() -> String {
+        guard !missingDataItems.isEmpty else { return "" }
+
+        if missingDataItems.count == 1 {
+            return missingDataItems[0]
+        } else if missingDataItems.count == 2 {
+            return "\(missingDataItems[0]) and \(missingDataItems[1])"
+        } else {
+            let allButLast = missingDataItems.dropLast().joined(separator: ", ")
+            return "\(allButLast), and \(missingDataItems.last!)"
+        }
     }
 
     // MARK: - Dynamic UI Properties
@@ -905,7 +905,7 @@ struct HealthConnectStepView: View {
         Button(action: connectHealthKit) {
             HStack(spacing: 6) {
                 Image(systemName: "heart.fill")
-                Text("Connect Apple Health")
+                Text("Sync Sleep History")
             }
             .font(.subheadline.weight(.semibold))
             .foregroundColor(.white)
@@ -913,7 +913,9 @@ struct HealthConnectStepView: View {
             .padding(.vertical, 14)
             .background(Color.red)
             .cornerRadius(12)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.horizontal, 20)
     }
 
@@ -962,9 +964,9 @@ struct HealthConnectStepView: View {
     private var unavailableStatus: some View {
         HStack(spacing: 6) {
             Image(systemName: "xmark.circle.fill")
-                .foregroundColor(.gray)
+                .foregroundColor(palette.textSecondary)
             Text("Not Available")
-                .foregroundColor(.gray)
+                .foregroundColor(palette.textSecondary)
                 .font(.subheadline.weight(.medium))
         }
     }
@@ -975,66 +977,56 @@ struct HealthConnectStepView: View {
         connectionStatus = .connecting
 
         healthKitManager.requestAuthorization { success, error in
-            if success {
-                connectionStatus = .connected
-                onboardingManager.markHealthKitConnected()
-
-                // Wait for demographics to be fully fetched (height/weight are async)
-                healthKitManager.refreshDemographics { demographics in
-                    onboardingManager.populateFromHealthKit(demographics: demographics)
-                    print("[Onboarding] HealthKit demographics populated - Height: \(demographics.heightCm ?? 0), Weight: \(demographics.weightKg ?? 0), Age: \(demographics.age ?? 0)")
-
-                    // Now start chronotype analysis
-                    startChronotypeAnalysis()
-                }
-            } else {
-                // Authorization was denied or failed
-                connectionStatus = .denied
-                if let error = error {
-                    print("[HealthKit] Authorization denied: \(error.localizedDescription)")
-                } else {
-                    print("[HealthKit] Authorization denied by user")
-                }
-                // Show helpful message
-                errorMessage = "To import your sleep data, please enable Apple Health access in Settings > Privacy & Security > Health > Zoe Sleep."
-                showingError = true
-            }
-        }
-    }
-
-    private func startChronotypeAnalysis() {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            analysisPhase = .fetchingSleepData
-        }
-
-        // Fetch sleep data from HealthKit (90 days)
-        healthKitManager.fetchSleepDataForChronotype { sleepData in
+            // Ensure UI updates happen on main thread
             DispatchQueue.main.async {
-                chronotypeManager.nightsFound = sleepData.count
+                if success {
+                    connectionStatus = .connected
 
-                if sleepData.isEmpty {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        analysisPhase = .insufficientData
+                    // Wait for demographics to be fully fetched (height/weight are async)
+                    healthKitManager.refreshDemographics { demographics in
+                        DispatchQueue.main.async {
+                            onboardingManager.populateFromHealthKit(demographics: demographics)
+                            print("[Onboarding] HealthKit demographics populated - Height: \(demographics.heightCm ?? 0), Weight: \(demographics.weightKg ?? 0), Age: \(demographics.age ?? 0)")
+
+                            // Only mark as connected AFTER we have the data
+                            onboardingManager.markHealthKitConnected()
+
+                            // Check what data we actually got vs what we need
+                            let hasHeight = onboardingManager.profile.heightCm != nil
+                            let hasWeight = onboardingManager.profile.weightKg != nil
+                            let hasGender = onboardingManager.profile.gender != Gender.preferNotToSay.rawValue
+                            let currentYear = Calendar.current.component(.year, from: Date())
+                            let hasAge = onboardingManager.profile.birthYear >= 1920 && onboardingManager.profile.birthYear < currentYear - 10
+
+                            var missing: [String] = []
+                            if !hasHeight { missing.append("height") }
+                            if !hasWeight { missing.append("weight") }
+                            if !hasGender { missing.append("gender") }
+                            if !hasAge { missing.append("age") }
+
+                            if !missing.isEmpty {
+                                print("[Onboarding] ⚠️ Missing data from HealthKit: \(missing.joined(separator: ", "))")
+                                missingDataItems = missing
+                                showMissingDataMessage = true
+                            } else {
+                                print("[Onboarding] ✅ All required data retrieved from HealthKit")
+                            }
+
+                            // Sync sleep data to Convex in background (no analysis)
+                            syncSleepDataToConvex()
+                        }
                     }
-                    return
-                }
-
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    analysisPhase = .analyzingPatterns
-                }
-
-                // Analyze the data for chronotype
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if let result = chronotypeManager.analyzeFromSleepData(sleepData) {
-                        print("[Onboarding] Chronotype: \(result.chronotype), bedtime: \(chronotypeManager.formatMidpointTime(result.avgBedtime)), wake: \(chronotypeManager.formatMidpointTime(result.avgWakeTime))")
+                } else {
+                    // Authorization was denied or failed
+                    connectionStatus = .denied
+                    if let error = error {
+                        print("[HealthKit] Authorization denied: \(error.localizedDescription)")
+                    } else {
+                        print("[HealthKit] Authorization denied by user")
                     }
-
-                    // Sync sleep data to Convex in background
-                    syncSleepDataToConvex()
-
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        analysisPhase = .complete
-                    }
+                    // Show helpful message
+                    errorMessage = "To import your sleep data, please enable Apple Health access in Settings > Privacy & Security > Health > Zoe Sleep."
+                    showingError = true
                 }
             }
         }
@@ -1043,12 +1035,24 @@ struct HealthConnectStepView: View {
     /// Sync all health data to Convex in background (doesn't block UI)
     private func syncSleepDataToConvex() {
         print("[Onboarding] Starting background sync of health data to Convex...")
+        print("[Onboarding] ConvexService authenticated: \(ConvexService.shared.isAuthenticated)")
+
+        guard ConvexService.shared.isAuthenticated else {
+            print("[Onboarding] ⚠️ Cannot sync - not authenticated with Convex yet")
+            return
+        }
+
         healthKitManager.syncAllHealthData { result in
-            switch result {
-            case .success(let summary):
-                print("[Onboarding] ✅ Health data synced to Convex: \(summary)")
-            case .failure(let error):
-                print("[Onboarding] ⚠️ Health data sync failed (non-blocking): \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let summary):
+                    print("[Onboarding] ✅ Health data synced to Convex:")
+                    for (key, value) in summary {
+                        print("  - \(key): \(value)")
+                    }
+                case .failure(let error):
+                    print("[Onboarding] ❌ Health data sync failed: \(error.localizedDescription)")
+                }
             }
         }
     }
@@ -1090,7 +1094,7 @@ struct ReadyStepView: View {
                     .font(.system(size: isCompact ? 50 : 60))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Color(hex: "#4ECDC4")!, Color(hex: "#44BD32")!],
+                            colors: [Color(hex: "#4ECDC4") ?? .teal, Color(hex: "#44BD32") ?? .green],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )

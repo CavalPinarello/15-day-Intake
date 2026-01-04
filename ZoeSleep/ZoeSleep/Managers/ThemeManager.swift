@@ -216,6 +216,13 @@ class ThemeManager: ObservableObject {
         }
     }
 
+    /// Sleep Profile section in Profile view (BETA - chronotype calculation needs fixing)
+    @Published var sleepProfileEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(sleepProfileEnabled, forKey: "sleepProfileEnabled")
+        }
+    }
+
     /// Show Sleep Science Cards - the educational splash screens between questions
     /// These explain the science behind each day's assessment
     @Published var showSleepScienceCards: Bool = true {
@@ -323,6 +330,7 @@ class ThemeManager: ObservableObject {
         self.showSleepInsights = UserDefaults.standard.bool(forKey: "showSleepInsights")
         self.gamificationEnabled = UserDefaults.standard.bool(forKey: "gamificationEnabled")
         self.showWatchStyleCheckIns = UserDefaults.standard.bool(forKey: "showWatchStyleCheckIns")
+        self.sleepProfileEnabled = UserDefaults.standard.bool(forKey: "sleepProfileEnabled")
 
         // Load Sleep Science Cards setting (enabled by default)
         if UserDefaults.standard.object(forKey: "showSleepScienceCards") == nil {
@@ -697,6 +705,7 @@ struct ProgressDots: View {
 }
 
 /// Interactive progress dots - tap completed days to navigate to Sleep Diary
+/// Current day pulses when incomplete and is tappable to start questionnaires
 /// In debug mode, can tap ANY day (including future) to jump directly to it
 struct InteractiveProgressDots: View {
     let current: Int
@@ -704,11 +713,20 @@ struct InteractiveProgressDots: View {
     let completedDays: [Int]
     let onDayTapped: (Int) -> Void
 
+    // Whether current day's tasks are complete
+    var isCurrentDayComplete: Bool = false
+
+    // Callback for tapping current day to start questionnaire
+    var onCurrentDayTapped: (() -> Void)? = nil
+
     // Debug mode support - callback for jumping to future days
     var onDebugJumpToDay: ((Int) -> Void)? = nil
 
     @ObservedObject private var themeManager = ThemeManager.shared
     private var theme: ColorTheme { themeManager.currentTheme }
+
+    // Pulsing animation state
+    @State private var isPulsing = false
 
     // Read debug mode directly from themeManager for reliable updates
     private var isDebugMode: Bool { themeManager.debugMode }
@@ -726,21 +744,32 @@ struct InteractiveProgressDots: View {
                 let isCurrent = day == current
                 // In debug mode, can jump to ANY day except current
                 let isDebugTappable = isDebugMode && !isCurrent
+                // Current day is tappable when incomplete (to start questionnaires)
+                let isCurrentTappable = isCurrent && !isCurrentDayComplete && !isDebugMode
 
                 ZStack {
+                    // Pulsing ring for incomplete current day
+                    if isCurrent && !isCurrentDayComplete {
+                        Circle()
+                            .stroke(theme.primary.opacity(0.4), lineWidth: 2)
+                            .frame(width: 18, height: 18)
+                            .scaleEffect(isPulsing ? 1.3 : 1.0)
+                            .opacity(isPulsing ? 0 : 0.6)
+                    }
+
                     // Invisible tap target (larger area)
                     Rectangle()
                         .fill(Color.clear)
-                        .frame(width: 20, height: 20)
+                        .frame(width: 24, height: 24)
 
                     // Visual dot
                     Circle()
-                        .fill(dotColor(for: index))
+                        .fill(dotColor(for: index, isCurrent: isCurrent))
                         .frame(width: isCurrent ? 10 : 8, height: isCurrent ? 10 : 8)
                         .overlay(
                             // Visual indicator for tappable dots
                             Circle()
-                                .stroke(strokeColor(isCompleted: isCompleted, isDebugTappable: isDebugTappable), lineWidth: isDebugTappable ? 2 : 1)
+                                .stroke(strokeColor(isCompleted: isCompleted, isDebugTappable: isDebugTappable, isCurrentTappable: isCurrentTappable), lineWidth: isDebugTappable || isCurrentTappable ? 2 : 1)
                                 .frame(width: isCurrent ? 14 : 12, height: isCurrent ? 14 : 12)
                         )
                 }
@@ -750,6 +779,12 @@ struct InteractiveProgressDots: View {
                     if isDebugTappable {
                         // Debug mode: Jump to any day (forward or backward)
                         onDebugJumpToDay?(day)
+                    } else if isCurrentTappable {
+                        // Current day tapped - start questionnaires
+                        // Provide haptic feedback
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                        onCurrentDayTapped?()
                     } else if isCompleted && !isDebugMode {
                         // Normal mode: View completed day's diary
                         onDayTapped(day)
@@ -757,11 +792,31 @@ struct InteractiveProgressDots: View {
                 }
             }
         }
+        .onAppear {
+            // Start pulsing animation for incomplete current day
+            if !isCurrentDayComplete {
+                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false)) {
+                    isPulsing = true
+                }
+            }
+        }
+        .onChange(of: isCurrentDayComplete) { _, newValue in
+            // Stop or start pulsing based on completion status
+            if newValue {
+                isPulsing = false
+            } else {
+                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false)) {
+                    isPulsing = true
+                }
+            }
+        }
     }
 
-    private func strokeColor(isCompleted: Bool, isDebugTappable: Bool) -> Color {
+    private func strokeColor(isCompleted: Bool, isDebugTappable: Bool, isCurrentTappable: Bool) -> Color {
         if isDebugTappable {
             return Color.purple  // Purple border for debug-tappable future days
+        } else if isCurrentTappable {
+            return theme.primary  // Highlight border for tappable current day
         } else if isCompleted {
             return theme.primary.opacity(0.5)
         } else {
@@ -769,11 +824,15 @@ struct InteractiveProgressDots: View {
         }
     }
 
-    private func dotColor(for index: Int) -> Color {
-        if index < current {
+    private func dotColor(for index: Int, isCurrent: Bool) -> Color {
+        let day = index + 1
+        if day < current {
             return theme.primary  // Completed - full circadian-aware color
+        } else if isCurrent {
+            // Current day - brighter to indicate it's actionable
+            return isCurrentDayComplete ? theme.primary : theme.primary.opacity(0.8)
         } else {
-            // Inactive - more visible in dark mode
+            // Future days - more visible in dark mode
             return theme.primary.opacity(isEveningOrNight ? 0.4 : 0.25)
         }
     }

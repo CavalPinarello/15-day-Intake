@@ -520,7 +520,7 @@ struct TaskCard: View {
             Button(action: onToggle) {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundColor(task.isCompleted ? .green : .gray)
+                    .foregroundColor(task.isCompleted ? theme.success : theme.secondaryText)
             }
 
             // Content
@@ -530,21 +530,21 @@ struct TaskCard: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .strikethrough(task.isCompleted)
-                        .foregroundColor(task.isCompleted ? .secondary : .primary)
+                        .foregroundColor(task.isCompleted ? theme.secondaryText : theme.primaryText)
 
                     if let category = task.category {
                         Text(category)
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.gray.opacity(0.15))
+                            .background(theme.secondaryText.opacity(0.15))
                             .cornerRadius(4)
                     }
                 }
 
                 Text(task.instructions)
                     .font(.caption)
-                    .foregroundColor(task.isCompleted ? .secondary.opacity(0.7) : .secondary)
+                    .foregroundColor(task.isCompleted ? theme.secondaryText.opacity(0.7) : theme.secondaryText)
                     .lineLimit(2)
 
                 if let frequency = task.frequency {
@@ -554,7 +554,7 @@ struct TaskCard: View {
                         Text(frequency)
                             .font(.caption2)
                     }
-                    .foregroundColor(.secondary.opacity(0.7))
+                    .foregroundColor(theme.secondaryText.opacity(0.7))
                 }
             }
 
@@ -563,20 +563,20 @@ struct TaskCard: View {
             // Note button
             Button(action: onNote) {
                 Image(systemName: "text.bubble")
-                    .foregroundColor(.gray)
+                    .foregroundColor(theme.secondaryText)
             }
         }
         .padding()
         .background(
             task.isCompleted
-                ? Color.green.opacity(0.08)
-                : Color(.systemBackground)
+                ? theme.success.opacity(0.08)
+                : theme.cardBackground
         )
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(
-                    task.isCompleted ? Color.green.opacity(0.3) : Color.gray.opacity(0.2),
+                    task.isCompleted ? theme.success.opacity(0.3) : theme.secondaryText.opacity(0.2),
                     lineWidth: 1
                 )
         )

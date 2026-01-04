@@ -554,7 +554,7 @@ class WatchConvexService: ObservableObject {
             self.assessmentCompleted = response.assessmentCompleted
 
             // Notify iPhone that section was completed (triggers immediate refresh)
-            WatchConnectivityManager().notifyiPhoneSectionCompleted(
+            WatchConnectivityManager.shared.notifyiPhoneSectionCompleted(
                 section: section,
                 dayNumber: dayNumber
             )

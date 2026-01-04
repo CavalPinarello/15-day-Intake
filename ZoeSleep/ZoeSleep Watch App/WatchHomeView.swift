@@ -892,5 +892,5 @@ struct WatchHomeView: View {
 #Preview {
     WatchHomeView()
         .environmentObject(WatchThemeManager.shared)
-        .environmentObject(WatchConnectivityManager())
+        .environmentObject(WatchConnectivityManager.shared)
 }

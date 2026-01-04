@@ -6,6 +6,41 @@
 
 ### Jan 4, 2026
 
+#### Onboarding Flow Reordered and Simplified
+
+Completely restructured the onboarding flow for better user experience: personal connection first, HealthKit at the end.
+
+**New onboarding order:**
+1. **Name** - Personal connection first ("What should we call you?")
+2. **Units** (NEW) - Measurement preference (auto-detected from locale, user can change)
+3. **Height/Weight** - Body metrics with sliders
+4. **Gender/Age** - Demographics
+5. **Wearables** - Device selection
+6. **HealthKit** - Sleep history sync (optional, at end)
+7. **Ready** - Confirmation screen
+
+**Key changes:**
+- **Units step added** - Shows locale-detected measurement preference with example display (e.g., "175 cm / 70 kg" vs "5'9\" / 154 lbs")
+- **HealthKit moved to end** - Since it's optional and doesn't affect other steps
+- **Removed chronotype analysis** - No more "Syncing Sleep Data" / "Analyzing Patterns" UI during onboarding. Will add chronotype analysis later as part of core questionnaire.
+- **Simplified HealthKit step** - Just permissions, demographics fetch, and background sleep sync. No "wow moments" or analysis display.
+
+**Bug fix - markHealthKitConnected() timing:**
+- **Before:** Flag was set immediately after authorization, BEFORE demographics were fetched
+- **After:** Flag is set AFTER demographics are actually fetched and populated
+- Fixes skip logic that was incorrectly skipping height/weight steps
+
+**Missing data banner:**
+- Added orange info banner when HealthKit can't provide some demographics
+- Shows: "Some info wasn't found in Health. We'll ask about height, weight next"
+- Sets user expectations for manual questions
+
+**Files changed:**
+- `ZoeSleep/ZoeSleep/Views/OnboardingView.swift` - New flow, removed chronotype UI, simplified HealthKit step
+- `ZoeSleep/ZoeSleep/Managers/OnboardingManager.swift` - Updated step enum, skip logic
+
+---
+
 #### Coach Mark System Overhaul
 
 Fixed guide pop-up bubbles that were clipped and pointing to wrong UI elements. Completely rebuilt the positioning system.

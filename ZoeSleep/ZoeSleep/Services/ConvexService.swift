@@ -486,12 +486,13 @@ class ConvexService {
         ]
 
         if let info = deviceInfo {
-            args["deviceInfo"] = [
-                "deviceName": info.deviceName as Any,
-                "deviceModel": info.deviceModel as Any,
-                "osVersion": info.osVersion as Any,
-                "appVersion": info.appVersion as Any
-            ]
+            // Only include non-nil values - Convex rejects null for optional fields
+            var deviceInfoDict: [String: Any] = [:]
+            if let deviceName = info.deviceName { deviceInfoDict["deviceName"] = deviceName }
+            if let deviceModel = info.deviceModel { deviceInfoDict["deviceModel"] = deviceModel }
+            if let osVersion = info.osVersion { deviceInfoDict["osVersion"] = osVersion }
+            if let appVersion = info.appVersion { deviceInfoDict["appVersion"] = appVersion }
+            args["deviceInfo"] = deviceInfoDict
         }
 
         let response: SignInResponse = try await client.mutation("ios:signIn", args: args)
@@ -520,12 +521,13 @@ class ConvexService {
             args["fullName"] = fullName
         }
         if let info = deviceInfo {
-            args["deviceInfo"] = [
-                "deviceName": info.deviceName as Any,
-                "deviceModel": info.deviceModel as Any,
-                "osVersion": info.osVersion as Any,
-                "appVersion": info.appVersion as Any
-            ]
+            // Only include non-nil values - Convex rejects null for optional fields
+            var deviceInfoDict: [String: Any] = [:]
+            if let deviceName = info.deviceName { deviceInfoDict["deviceName"] = deviceName }
+            if let deviceModel = info.deviceModel { deviceInfoDict["deviceModel"] = deviceModel }
+            if let osVersion = info.osVersion { deviceInfoDict["osVersion"] = osVersion }
+            if let appVersion = info.appVersion { deviceInfoDict["appVersion"] = appVersion }
+            args["deviceInfo"] = deviceInfoDict
         }
 
         let response: SignInWithAppleResponse = try await client.mutation("ios:signInWithApple", args: args)
@@ -546,12 +548,13 @@ class ConvexService {
         ]
 
         if let info = deviceInfo {
-            args["deviceInfo"] = [
-                "deviceName": info.deviceName as Any,
-                "deviceModel": info.deviceModel as Any,
-                "osVersion": info.osVersion as Any,
-                "appVersion": info.appVersion as Any
-            ]
+            // Only include non-nil values - Convex rejects null for optional fields
+            var deviceInfoDict: [String: Any] = [:]
+            if let deviceName = info.deviceName { deviceInfoDict["deviceName"] = deviceName }
+            if let deviceModel = info.deviceModel { deviceInfoDict["deviceModel"] = deviceModel }
+            if let osVersion = info.osVersion { deviceInfoDict["osVersion"] = osVersion }
+            if let appVersion = info.appVersion { deviceInfoDict["appVersion"] = appVersion }
+            args["deviceInfo"] = deviceInfoDict
         }
 
         let response: RegisterResponse = try await client.mutation("ios:register", args: args)
@@ -929,6 +932,9 @@ class ConvexService {
         let timeUnlocked: Bool
         let currentDay: Int?
         let nextDay: Int?
+        // Additional fields for unlock testing
+        let dayReadyAt: Double?
+        let unlockTime: Double?
     }
 
     struct ResetProgressResponse: Codable {
@@ -946,30 +952,44 @@ class ConvexService {
 
     /// Check if user can advance to the next day
     /// Requirements: Both Sleep Log AND Assessment must be completed
-    /// In debug mode: Bypasses time check but NOT completion check
-    func canAdvanceDay(debugMode: Bool = false) async throws -> CanAdvanceDayResponse {
+    /// - bypassTimeCheck: Explicitly bypass 4 AM time check
+    /// - testTimestamp: Uses simulated time to test unlock logic
+    func canAdvanceDay(debugMode: Bool = false, bypassTimeCheck: Bool = false, testTimestamp: Double? = nil) async throws -> CanAdvanceDayResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
-        return try await client.query("watch:canAdvanceDay", args: [
+        var args: [String: Any] = [
             "userId": userId,
-            "debugMode": debugMode
-        ])
+            "debugMode": debugMode,
+            "bypassTimeCheck": bypassTimeCheck
+        ]
+        if let testTimestamp = testTimestamp {
+            args["testTimestamp"] = testTimestamp
+        }
+
+        return try await client.query("watch:canAdvanceDay", args: args)
     }
 
     /// Advance user to the next day
     /// STRICT: Both sections must be completed first
-    /// - debugMode: true bypasses time check (4 AM) but NOT completion check
-    func advanceToNextDay(debugMode: Bool = false) async throws -> AdvanceDayResponse {
+    /// - bypassTimeCheck: Explicitly bypass 4 AM time check
+    /// - testTimestamp: Uses simulated time to test unlock logic
+    func advanceToNextDay(debugMode: Bool = false, bypassTimeCheck: Bool = false, testTimestamp: Double? = nil) async throws -> AdvanceDayResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
-        return try await client.mutation("watch:advanceDay", args: [
+        var args: [String: Any] = [
             "userId": userId,
-            "debugMode": debugMode
-        ])
+            "debugMode": debugMode,
+            "bypassTimeCheck": bypassTimeCheck
+        ]
+        if let testTimestamp = testTimestamp {
+            args["testTimestamp"] = testTimestamp
+        }
+
+        return try await client.mutation("watch:advanceDay", args: args)
     }
 
     /// Advance user to a specific day number (convenience method)

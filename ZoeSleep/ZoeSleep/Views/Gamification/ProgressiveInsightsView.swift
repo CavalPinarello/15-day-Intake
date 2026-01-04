@@ -318,6 +318,7 @@ struct InsightUnlockCard: View {
 
     @EnvironmentObject var themeManager: ThemeManager
 
+    private var theme: ColorTheme { themeManager.currentTheme }
     private var isEvening: Bool {
         TimePeriod.current == .evening || TimePeriod.current == .night
     }
@@ -327,7 +328,7 @@ struct InsightUnlockCard: View {
             // Icon
             ZStack {
                 Circle()
-                    .fill(insight.isUnlocked ? insight.category.color.opacity(0.2) : Color.gray.opacity(0.1))
+                    .fill(insight.isUnlocked ? insight.category.color.opacity(0.2) : theme.secondaryText.opacity(0.1))
                     .frame(width: 44, height: 44)
 
                 if insight.isUnlocked {
@@ -337,7 +338,7 @@ struct InsightUnlockCard: View {
                 } else {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 16))
-                        .foregroundColor(.gray)
+                        .foregroundColor(theme.secondaryText)
                 }
             }
 
@@ -346,8 +347,8 @@ struct InsightUnlockCard: View {
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundColor(
                     insight.isUnlocked
-                        ? (isEvening ? Color(red: 0.996, green: 0.953, blue: 0.780) : .primary)
-                        : .gray
+                        ? theme.primaryText
+                        : theme.secondaryText
                 )
                 .multilineTextAlignment(.center)
                 .lineLimit(2)

@@ -223,7 +223,6 @@ class SleepAnalyzer: ObservableObject {
         case .earlyRiser: optimalMidpoint = 1.5  // 1:30 AM
         case .balanced: optimalMidpoint = 3.0    // 3:00 AM
         case .nightOwl: optimalMidpoint = 4.0    // 4:00 AM
-        case .adaptive: optimalMidpoint = 3.5    // 3:30 AM
         }
 
         var midpointDeviation = abs(midpointHour - optimalMidpoint)
@@ -687,14 +686,6 @@ class SleepAnalyzer: ObservableObject {
                 title: "Morning Light Therapy",
                 description: "Get bright light exposure within 30 min of waking to help shift your rhythm earlier.",
                 priority: 3,
-                actionType: .behavior
-            ))
-        case .adaptive:
-            recommendations.append(SleepRecommendation(
-                category: .recovery,
-                title: "Relaxation Techniques",
-                description: "Adaptive sleepers benefit from 10 min of deep breathing or meditation before bed.",
-                priority: 2,
                 actionType: .behavior
             ))
         case .balanced:

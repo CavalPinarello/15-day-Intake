@@ -73,16 +73,6 @@ struct JourneyIntroView: View {
                     .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 24 : 32)
                 }
 
-                // Floating accessibility button
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        EnhancedReadabilityButton(lightStyle: true, edgePadding: 0)
-                            .padding(.trailing, 24)
-                    }
-                    .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 60 : 72)
-                }
             }
         }
         .ignoresSafeArea()

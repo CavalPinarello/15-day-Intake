@@ -1942,7 +1942,9 @@ export const completeDay = mutation({
 export const canAdvanceDay = query({
   args: {
     userId: v.id("users"),
-    debugMode: v.optional(v.boolean()),
+    debugMode: v.optional(v.boolean()), // Enables debug features (does NOT bypass time check)
+    bypassTimeCheck: v.optional(v.boolean()), // Explicitly bypass 4 AM time check
+    testTimestamp: v.optional(v.number()), // Simulated time for testing 4 AM unlock
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -2020,11 +2022,16 @@ export const canAdvanceDay = query({
 
     // Check time restriction (4 AM unlock)
     // The next day unlocks at 4 AM of the calendar day AFTER the day was completed
-    // In debug mode, skip time check
-    let timeUnlocked = args.debugMode ?? false;
+    // bypassTimeCheck: explicitly skip time check (separate from debugMode)
+    // testTimestamp: use simulated time to test the unlock logic
+    let timeUnlocked = args.bypassTimeCheck === true;
+
+    // Calculate unlock time for response (useful for UI)
+    let unlockTime: number | undefined;
 
     if (!timeUnlocked) {
-      const now = new Date();
+      // Use testTimestamp if provided (for testing), otherwise real time
+      const now = args.testTimestamp ? new Date(args.testTimestamp) : new Date();
 
       if (dayReadyAt) {
         // We have the exact completion timestamp - calculate proper unlock time
@@ -2036,11 +2043,13 @@ export const canAdvanceDay = query({
 
         if (readyDate < readyDayStart) {
           // Completed before 4 AM - unlock at 4 AM same day
+          unlockTime = readyDayStart.getTime();
           timeUnlocked = now >= readyDayStart;
         } else {
           // Completed after 4 AM - unlock at 4 AM next day
           const nextDayAt4AM = new Date(readyDayStart);
           nextDayAt4AM.setDate(nextDayAt4AM.getDate() + 1);
+          unlockTime = nextDayAt4AM.getTime();
           timeUnlocked = now >= nextDayAt4AM;
         }
       } else {
@@ -2076,6 +2085,9 @@ export const canAdvanceDay = query({
       timeUnlocked,
       currentDay,
       nextDay: currentDay + 1,
+      // Additional fields for unlock testing UI
+      dayReadyAt,
+      unlockTime,
     };
   },
 });
@@ -2090,7 +2102,9 @@ export const canAdvanceDay = query({
 export const advanceDay = mutation({
   args: {
     userId: v.id("users"),
-    debugMode: v.optional(v.boolean()),
+    debugMode: v.optional(v.boolean()), // Enables debug features (does NOT bypass time check)
+    bypassTimeCheck: v.optional(v.boolean()), // Explicitly bypass 4 AM time check
+    testTimestamp: v.optional(v.number()), // Simulated time for testing 4 AM unlock
     sessionToken: v.optional(v.string()), // Session token for authorization
   },
   handler: async (ctx, args) => {
@@ -2193,10 +2207,14 @@ export const advanceDay = mutation({
       };
     }
 
-    // Time check (only in normal mode)
+    // Time check (only when not explicitly bypassed)
     // The next day unlocks at 4 AM of the calendar day AFTER the day was completed
-    if (!args.debugMode) {
-      const now = new Date();
+    // bypassTimeCheck: explicitly skip time check (separate from debugMode)
+    // testTimestamp: use simulated time to test the unlock logic
+    const skipTimeCheck = args.bypassTimeCheck === true;
+    if (!skipTimeCheck) {
+      // Use testTimestamp if provided (for testing), otherwise real time
+      const now = args.testTimestamp ? new Date(args.testTimestamp) : new Date();
       let timeUnlocked = false;
 
       if (dayReadyAt) {

@@ -11,8 +11,8 @@ import WatchConnectivity
 
 @main
 struct ZoeSleep_Watch_App: App {
-    @StateObject private var watchConnectivity = WatchConnectivityManager()
-    @StateObject private var healthManager = HealthKitWatchManager()
+    @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
+    @StateObject private var healthManager = HealthKitWatchManager.shared
     @StateObject private var convexService = WatchConvexService.shared
     @StateObject private var notificationManager = WatchNotificationManager.shared
     @ObservedObject private var themeManager = WatchThemeManager.shared

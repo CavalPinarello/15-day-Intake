@@ -52,6 +52,25 @@ struct QuickCheckInFlowView: View {
                 .animation(.easeInOut(duration: 0.5), value: focusLevel)
                 .animation(.easeInOut(duration: 0.4), value: currentPage)
 
+            // Close button in top-left corner
+            VStack {
+                HStack {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.7))
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(Color.black.opacity(0.3)))
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                }
+                .padding(.leading, 8)
+                .padding(.top, 4)
+                Spacer()
+            }
+            .zIndex(100)  // Ensure it's above other content
+
             if showSuccess {
                 CheckInSuccessView {
                     dismiss()
@@ -149,7 +168,7 @@ struct EnergyCheckInPage: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             IntensityDisplayView(
                 selection: energyLevel,
                 title: "How's your energy?",
@@ -158,17 +177,18 @@ struct EnergyCheckInPage: View {
             )
 
             Button(action: onNext) {
-                HStack {
+                HStack(spacing: 4) {
                     Text("Next")
                     Image(systemName: "chevron.right")
                 }
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .frame(maxWidth: .infinity)
-                .frame(height: 36)
+                .frame(height: 32)
             }
             .buttonStyle(.borderedProminent)
             .tint(.white.opacity(0.25))
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 4)
         }
         .focusable()
         .focused($isFocused)
@@ -218,7 +238,7 @@ struct MoodCheckInPage: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             IntensityDisplayView(
                 selection: moodLevel,
                 title: "How's your mood?",
@@ -226,27 +246,28 @@ struct MoodCheckInPage: View {
                 iconBounce: iconBounce
             )
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                 }
                 .buttonStyle(.bordered)
-                .frame(width: 40, height: 36)
+                .frame(width: 36, height: 32)
 
                 Button(action: onNext) {
-                    HStack {
+                    HStack(spacing: 4) {
                         Text("Next")
                         Image(systemName: "chevron.right")
                     }
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 36)
+                    .frame(height: 32)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.white.opacity(0.25))
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 4)
         }
         .focusable()
         .focused($isFocused)
@@ -297,7 +318,7 @@ struct FocusCheckInPage: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             IntensityDisplayView(
                 selection: focusLevel,
                 title: "How focused?",
@@ -305,16 +326,16 @@ struct FocusCheckInPage: View {
                 iconBounce: iconBounce
             )
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                 }
                 .buttonStyle(.bordered)
-                .frame(width: 40, height: 36)
+                .frame(width: 36, height: 32)
 
                 Button(action: onSubmit) {
-                    HStack {
+                    HStack(spacing: 4) {
                         if isSubmitting {
                             ProgressView()
                                 .tint(.white)
@@ -323,15 +344,16 @@ struct FocusCheckInPage: View {
                             Text("Done")
                         }
                     }
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 36)
+                    .frame(height: 32)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.white.opacity(0.35))
                 .disabled(isSubmitting)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 4)
         }
         .focusable()
         .focused($isFocused)
@@ -410,78 +432,66 @@ struct IntensityDisplayView<T: IntensitySelectable>: View {
         3.0 - (Double(intensityRatio) * 1.5) // 3s at low, 1.5s at high
     }
 
-    var body: some View {
-        VStack(spacing: 8) {
-            // Title
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white.opacity(0.9))
+    // Smaller base size for watch screen
+    private let baseCircleSize: CGFloat = 50
 
-            // Dynamic icon with intensity-based size and glow
+    var body: some View {
+        VStack(spacing: 4) {
+            // Title - positioned below safe area for time
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.white.opacity(0.9))
+                .padding(.top, 4)
+
+            // Compact icon with intensity-based size
             ZStack {
-                // Outer pulse ring (only visible at higher levels)
+                // Outer pulse ring (only at higher levels)
                 if intensityRatio > 0.3 {
                     Circle()
                         .stroke(Color.white.opacity(ringOpacity * 0.5), lineWidth: 1)
-                        .frame(width: 80 * circleScale, height: 80 * circleScale)
-                        .scaleEffect(1.0 + pulsePhase * 0.08)
+                        .frame(width: baseCircleSize * circleScale, height: baseCircleSize * circleScale)
+                        .scaleEffect(1.0 + pulsePhase * 0.06)
                         .opacity(Double(1.0 - pulsePhase * 0.5))
                 }
 
-                // Glow background
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color.white.opacity(glowOpacity), Color.white.opacity(0)],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 50 * circleScale
-                        )
-                    )
-                    .frame(width: 90 * circleScale, height: 90 * circleScale)
-
                 // Main circle ring
                 Circle()
-                    .stroke(Color.white.opacity(ringOpacity), lineWidth: 2 + intensityRatio * 1)
-                    .frame(width: 68 * circleScale, height: 68 * circleScale)
+                    .stroke(Color.white.opacity(ringOpacity), lineWidth: 2)
+                    .frame(width: (baseCircleSize - 8) * circleScale, height: (baseCircleSize - 8) * circleScale)
 
                 // Inner filled circle
                 Circle()
                     .fill(Color.white.opacity(0.08 + intensityRatio * 0.12))
-                    .frame(width: 60 * circleScale, height: 60 * circleScale)
+                    .frame(width: (baseCircleSize - 14) * circleScale, height: (baseCircleSize - 14) * circleScale)
 
                 // Icon - grows with intensity
                 Image(systemName: icon)
-                    .font(.system(size: 26 * iconScale, weight: intensityRatio > 0.5 ? .regular : .light))
+                    .font(.system(size: 18 * iconScale, weight: intensityRatio > 0.5 ? .regular : .light))
                     .foregroundColor(.white.opacity(0.7 + intensityRatio * 0.3))
                     .scaleEffect(iconBounce)
             }
+            .frame(height: 56)  // Fixed height to prevent layout shifts
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: selection.intensityIndex)
             .animation(.spring(response: 0.2, dampingFraction: 0.5), value: iconBounce)
 
             // Label
             Text(selection.label)
-                .font(.system(size: 17, weight: intensityRatio > 0.6 ? .bold : .semibold))
+                .font(.system(size: 15, weight: intensityRatio > 0.6 ? .bold : .semibold))
                 .foregroundColor(.white.opacity(0.85 + intensityRatio * 0.15))
                 .animation(.easeInOut(duration: 0.2), value: selection.intensityIndex)
 
-            // Intensity bar
-            HStack(spacing: 3) {
+            // Intensity bar - more compact
+            HStack(spacing: 2) {
                 ForEach(T.allOptions, id: \.intensityIndex) { option in
                     RoundedRectangle(cornerRadius: 2)
                         .fill(option.intensityIndex <= selection.intensityIndex
                               ? Color.white.opacity(0.7 + intensityRatio * 0.3)
                               : Color.white.opacity(0.15))
-                        .frame(height: 5)
+                        .frame(height: 4)
                         .animation(.spring(response: 0.3), value: selection.intensityIndex)
                 }
             }
-            .padding(.horizontal, 20)
-
-            // Hint
-            Text("Rotate Crown")
-                .font(.system(size: 9))
-                .foregroundColor(.white.opacity(0.4))
+            .padding(.horizontal, 24)
         }
         .onAppear {
             startPulseAnimation()

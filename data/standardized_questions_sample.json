@@ -799,7 +799,7 @@
   },
   {
     "question_id": "3",
-    "question_text": "GATEWAY: Do you have trouble falling asleep, staying asleep, or waking too early?",
+    "question_text": "Do you have trouble falling asleep, staying asleep, or waking too early?",
     "answer_format": "single_select_chips",
     "format_config": {
       "options": [
@@ -819,7 +819,7 @@
   },
   {
     "question_id": "15",
-    "question_text": "GATEWAY: In past 2 weeks, felt down, depressed, or hopeless?",
+    "question_text": "In past 2 weeks, felt down, depressed, or hopeless?",
     "answer_format": "slider_scale",
     "format_config": {
       "min": 0,
@@ -842,7 +842,7 @@
   },
   {
     "question_id": "16",
-    "question_text": "GATEWAY: In past 2 weeks, felt nervous, anxious, or on edge?",
+    "question_text": "In past 2 weeks, felt nervous, anxious, or on edge?",
     "answer_format": "slider_scale",
     "format_config": {
       "min": 0,
@@ -865,7 +865,7 @@
   },
   {
     "question_id": "17",
-    "question_text": "GATEWAY: Do you feel excessively tired or sleepy during the day?",
+    "question_text": "Do you feel excessively tired or sleepy during the day?",
     "answer_format": "slider_scale",
     "format_config": {
       "min": 1,
@@ -888,7 +888,7 @@
   },
   {
     "question_id": "19",
-    "question_text": "GATEWAY: Do you snore loudly?",
+    "question_text": "Do you snore loudly?",
     "answer_format": "single_select_chips",
     "format_config": {
       "options": [

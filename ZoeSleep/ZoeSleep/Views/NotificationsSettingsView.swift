@@ -3,6 +3,7 @@
 //  Zoe Sleep - Sleep Better, Live Longer
 //
 //  Notification preferences settings
+//  Simplified to 3 daily reminders: Morning (9 AM), Afternoon (1 PM), Evening (8 PM)
 //
 
 import SwiftUI
@@ -12,11 +13,13 @@ struct NotificationsSettingsView: View {
     @State private var notificationsEnabled = false
     @State private var morningReminderEnabled = true
     @State private var morningTime = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
+    @State private var afternoonReminderEnabled = true
+    @State private var afternoonTime = Calendar.current.date(from: DateComponents(hour: 13, minute: 0)) ?? Date()
     @State private var eveningReminderEnabled = true
     @State private var eveningTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date()
-    @State private var checkInNudgesEnabled = true
     @State private var showingPermissionAlert = false
     @ObservedObject private var timeFormatManager = TimeFormatManager.shared
+    @ObservedObject private var watchConnectivity = iOSWatchConnectivityManager.shared
 
     // Force DatePicker to use 12-hour or 24-hour format based on user preference
     private var pickerLocale: Locale {
@@ -48,19 +51,25 @@ struct NotificationsSettingsView: View {
                     } else {
                         // Cancel all reminders when disabled
                         NotificationManager.shared.cancelDailyTaskReminder()
+                        NotificationManager.shared.cancelAllCheckInNudges()
                     }
                 }
             } header: {
                 Text("Notifications")
+            } footer: {
+                Text("You'll receive up to 3 reminders per day: morning, afternoon, and evening.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
 
             if notificationsEnabled {
+                // MARK: - Morning Reminder
                 Section {
                     Toggle(isOn: $morningReminderEnabled) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Morning Reminder")
                                 .font(.headline)
-                            Text("Reminder to log your sleep")
+                            Text("Sleep log, assessment & energy check-in")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -77,19 +86,63 @@ struct NotificationsSettingsView: View {
                             }
                     }
                 } header: {
-                    Text("Morning Reminder")
+                    Text("Morning")
                 } footer: {
-                    Text("Reminds you to complete your sleep log after waking up.")
+                    Text("Reminds you to complete your sleep log, daily assessment, and morning energy check-in.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
 
+                // MARK: - Afternoon Reminder
+                Section {
+                    Toggle(isOn: $afternoonReminderEnabled) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Afternoon Reminder")
+                                .font(.headline)
+                            HStack(spacing: 4) {
+                                Text("Midday energy check-in")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                if watchConnectivity.isWatchAppInstalled {
+                                    Text("(Watch handles this)")
+                                        .font(.caption2)
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                    .onChange(of: afternoonReminderEnabled) { _, _ in
+                        saveAndScheduleAfternoonReminder()
+                    }
+
+                    if afternoonReminderEnabled && !watchConnectivity.isWatchAppInstalled {
+                        DatePicker("Time", selection: $afternoonTime, displayedComponents: .hourAndMinute)
+                            .environment(\.locale, pickerLocale)
+                            .onChange(of: afternoonTime) { _, _ in
+                                saveAndScheduleAfternoonReminder()
+                            }
+                    }
+                } header: {
+                    Text("Afternoon")
+                } footer: {
+                    if watchConnectivity.isWatchAppInstalled {
+                        Text("Your Apple Watch will handle midday check-in reminders.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Reminds you to complete your midday energy, mood, and focus check-in.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // MARK: - Evening Reminder
                 Section {
                     Toggle(isOn: $eveningReminderEnabled) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Evening Reminder")
                                 .font(.headline)
-                            Text("Follow-up if tasks are still incomplete")
+                            Text("Energy check-in & incomplete tasks")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -106,30 +159,9 @@ struct NotificationsSettingsView: View {
                             }
                     }
                 } header: {
-                    Text("Evening Reminder")
+                    Text("Evening")
                 } footer: {
-                    Text("A gentle follow-up if you haven't completed your tasks yet. Won't notify if everything is done.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Section {
-                    Toggle(isOn: $checkInNudgesEnabled) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Check-In Reminders")
-                                .font(.headline)
-                            Text("Nudges for energy, mood & focus check-ins")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .onChange(of: checkInNudgesEnabled) { _, enabled in
-                        saveAndScheduleCheckInNudges(enabled: enabled)
-                    }
-                } header: {
-                    Text("Check-In Reminders")
-                } footer: {
-                    Text("Gentle reminders throughout the day (morning, midday, evening) for quick energy, mood, and focus check-ins. Separate from sleep log reminders.")
+                    Text("Reminds you to complete your evening energy check-in and any remaining tasks from the day.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -166,16 +198,19 @@ struct NotificationsSettingsView: View {
         let morningMinute = defaults.object(forKey: NotificationManager.dailyReminderMinuteKey) as? Int ?? 0
         morningTime = Calendar.current.date(from: DateComponents(hour: morningHour, minute: morningMinute)) ?? Date()
 
+        // Load afternoon reminder settings (default 1:00 PM)
+        afternoonReminderEnabled = defaults.object(forKey: NotificationManager.afternoonReminderEnabledKey) as? Bool ?? true
+        let afternoonHour = defaults.object(forKey: NotificationManager.afternoonReminderHourKey) as? Int ?? 13
+        let afternoonMinute = defaults.object(forKey: NotificationManager.afternoonReminderMinuteKey) as? Int ?? 0
+        afternoonTime = Calendar.current.date(from: DateComponents(hour: afternoonHour, minute: afternoonMinute)) ?? Date()
+
         // Load evening reminder settings (default 8:00 PM)
         eveningReminderEnabled = defaults.object(forKey: NotificationManager.eveningReminderEnabledKey) as? Bool ?? true
         let eveningHour = defaults.object(forKey: NotificationManager.eveningReminderHourKey) as? Int ?? 20
         let eveningMinute = defaults.object(forKey: NotificationManager.eveningReminderMinuteKey) as? Int ?? 0
         eveningTime = Calendar.current.date(from: DateComponents(hour: eveningHour, minute: eveningMinute)) ?? Date()
 
-        // Load check-in nudges settings (default enabled)
-        checkInNudgesEnabled = defaults.object(forKey: NotificationManager.checkInNudgesEnabledKey) as? Bool ?? true
-
-        print("[Notifications] Loaded settings - Morning: \(morningHour):\(String(format: "%02d", morningMinute)), Evening: \(eveningHour):\(String(format: "%02d", eveningMinute)), Check-in nudges: \(checkInNudgesEnabled)")
+        print("[Notifications] Loaded settings - Morning: \(morningHour):\(String(format: "%02d", morningMinute)), Afternoon: \(afternoonHour):\(String(format: "%02d", afternoonMinute)), Evening: \(eveningHour):\(String(format: "%02d", eveningMinute))")
     }
 
     private func saveAndScheduleMorningReminder() {
@@ -188,6 +223,22 @@ struct NotificationsSettingsView: View {
         Task {
             await NotificationManager.shared.scheduleDailyTaskReminder(
                 enabled: morningReminderEnabled,
+                hour: hour,
+                minute: minute
+            )
+        }
+    }
+
+    private func saveAndScheduleAfternoonReminder() {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: afternoonTime)
+        let hour = components.hour ?? 13
+        let minute = components.minute ?? 0
+
+        print("[Notifications] Saving afternoon reminder - enabled: \(afternoonReminderEnabled), time: \(hour):\(String(format: "%02d", minute))")
+
+        Task {
+            await NotificationManager.shared.scheduleAfternoonReminder(
+                enabled: afternoonReminderEnabled,
                 hour: hour,
                 minute: minute
             )
@@ -210,14 +261,6 @@ struct NotificationsSettingsView: View {
         }
     }
 
-    private func saveAndScheduleCheckInNudges(enabled: Bool) {
-        print("[Notifications] Saving check-in nudges - enabled: \(enabled)")
-
-        Task {
-            await NotificationManager.shared.scheduleCheckInNudges(enabled: enabled)
-        }
-    }
-
     private func checkNotificationStatus() {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             DispatchQueue.main.async {
@@ -236,8 +279,8 @@ struct NotificationsSettingsView: View {
                 if granted {
                     // Schedule all reminders with current settings after permission granted
                     saveAndScheduleMorningReminder()
+                    saveAndScheduleAfternoonReminder()
                     saveAndScheduleEveningReminder()
-                    saveAndScheduleCheckInNudges(enabled: checkInNudgesEnabled)
                 }
             }
         }

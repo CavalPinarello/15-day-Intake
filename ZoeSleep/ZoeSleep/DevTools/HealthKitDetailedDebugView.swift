@@ -232,6 +232,11 @@ struct HealthKitDetailedDebugView: View {
             }
             .padding(.horizontal)
 
+            // Sleep Data Source Selector
+            if !viewModel.availableSleepSources.isEmpty {
+                sleepSourceSelector
+            }
+
             // Sync/Status message
             if let msg = viewModel.syncMessage {
                 Text(msg)
@@ -259,6 +264,103 @@ struct HealthKitDetailedDebugView: View {
         }
         .padding(.vertical, 8)
         .background(Color(UIColor.systemBackground))
+    }
+
+    // MARK: - Sleep Source Selector
+
+    private var sleepSourceSelector: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .foregroundColor(.purple)
+                    .font(.caption)
+                Text("Sleep Data Source")
+                    .font(.caption)
+                    .fontWeight(.medium)
+
+                Spacer()
+
+                if viewModel.isLoadingSources {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                }
+
+                Button {
+                    Task {
+                        await viewModel.discoverSleepSources()
+                    }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+            }
+
+            // Source Picker as horizontal scroll of chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    // "All Sources (Merged)" option
+                    sourceChip(
+                        name: "All (Merged)",
+                        icon: "square.stack.3d.up",
+                        isSelected: viewModel.selectedSleepSource == nil
+                    ) {
+                        viewModel.selectedSleepSource = nil
+                        Task {
+                            await viewModel.refreshSleepDataWithSource(from: startDate, to: endDate)
+                        }
+                    }
+
+                    // Individual sources
+                    ForEach(viewModel.availableSleepSources) { source in
+                        sourceChip(
+                            name: source.displayName,
+                            icon: source.iconName,
+                            isSelected: viewModel.selectedSleepSource?.bundleIdentifier == source.bundleIdentifier
+                        ) {
+                            viewModel.selectedSleepSource = source
+                            Task {
+                                await viewModel.refreshSleepDataWithSource(from: startDate, to: endDate)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Info about current selection
+            if let source = viewModel.selectedSleepSource {
+                Text("Showing data from \(source.displayName) only")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            } else if viewModel.availableSleepSources.count > 1 {
+                Text("\(viewModel.availableSleepSources.count) sources merged using priority rules")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(Color.purple.opacity(0.05))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+
+    private func sourceChip(name: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                Text(name)
+                    .font(.caption)
+                    .fontWeight(isSelected ? .semibold : .regular)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(isSelected ? Color.purple : Color.gray.opacity(0.2))
+            .foregroundColor(isSelected ? .white : .primary)
+            .cornerRadius(16)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Tab Picker
@@ -1034,6 +1136,11 @@ class HealthKitDebugViewModel: ObservableObject {
     @Published var syncMessage: String?
     @Published var isMockData = false
 
+    // Sleep data source selection
+    @Published var availableSleepSources: [SleepDataSource] = []
+    @Published var selectedSleepSource: SleepDataSource? = nil
+    @Published var isLoadingSources = false
+
     @Published var sleepData: [DailySleepSummary] = []
     @Published var heartRateData: [HeartRateSummary] = []
     @Published var hrvData: [HRVSummary] = []
@@ -1188,6 +1295,35 @@ class HealthKitDebugViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Sleep Source Discovery
+
+    /// Discovers all available sleep data sources from HealthKit
+    func discoverSleepSources() async {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+
+        isLoadingSources = true
+        let manager = HealthKitManager()
+        availableSleepSources = await manager.getAvailableSleepSources()
+        isLoadingSources = false
+
+        // Log discovered sources
+        print("[HealthKitDebug] Discovered \(availableSleepSources.count) sleep sources:")
+        for source in availableSleepSources {
+            print("  - \(source.displayName) [\(source.bundleIdentifier)]")
+        }
+    }
+
+    /// Re-fetches sleep data with the currently selected source filter
+    func refreshSleepDataWithSource(from startDate: Date, to endDate: Date) async {
+        guard isAuthorized else { return }
+        isLoading = true
+
+        let newSleepData = await fetchSleepData(from: startDate, to: endDate, filterBySource: selectedSleepSource)
+        sleepData = newSleepData
+
+        isLoading = false
+    }
+
     func fetchAllData(from startDate: Date, to endDate: Date) async {
         guard HKHealthStore.isHealthDataAvailable() else {
             isAuthorized = false
@@ -1195,6 +1331,11 @@ class HealthKitDebugViewModel: ObservableObject {
         }
 
         isLoading = true
+
+        // Also discover available sources
+        Task {
+            await discoverSleepSources()
+        }
 
         // Request authorization for all types
         let typesToRead: Set<HKObjectType> = [
@@ -1252,7 +1393,7 @@ class HealthKitDebugViewModel: ObservableObject {
 
     // MARK: - Sleep Data
 
-    private func fetchSleepData(from startDate: Date, to endDate: Date) async -> [DailySleepSummary] {
+    private func fetchSleepData(from startDate: Date, to endDate: Date, filterBySource: SleepDataSource? = nil) async -> [DailySleepSummary] {
         let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis)!
         let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
 
@@ -1268,23 +1409,34 @@ class HealthKitDebugViewModel: ObservableObject {
                     return
                 }
 
-                let result = self.processSleepSamples(samples)
+                // Filter by source if specified
+                let filteredSamples: [HKCategorySample]
+                if let source = filterBySource {
+                    filteredSamples = samples.filter {
+                        $0.sourceRevision.source.bundleIdentifier == source.bundleIdentifier
+                    }
+                    print("[HealthKitDebug] Filtered to \(filteredSamples.count)/\(samples.count) samples from: \(source.displayName)")
+                } else {
+                    filteredSamples = samples
+                }
+
+                let result = self.processSleepSamples(filteredSamples, skipDeduplication: filterBySource != nil)
                 continuation.resume(returning: result)
             }
             healthStore.execute(query)
         }
     }
 
-    private func processSleepSamples(_ samples: [HKCategorySample]) -> [DailySleepSummary] {
+    private func processSleepSamples(_ samples: [HKCategorySample], skipDeduplication: Bool = false) -> [DailySleepSummary] {
         let calendar = Calendar.current
         let dateFmt = DateFormatter()
         dateFmt.dateFormat = "yyyy-MM-dd"
         let timeFmt = DateFormatter()
         timeFmt.dateFormat = "h:mm a"
 
-        // Step 1: Deduplicate overlapping samples from multiple sources
+        // Step 1: Deduplicate overlapping samples from multiple sources (skip if single source)
         // Priority: Apple Watch > iPhone native > Third-party
-        let deduplicatedSamples = deduplicateOverlappingSamples(samples)
+        let deduplicatedSamples = skipDeduplication ? samples : deduplicateOverlappingSamples(samples)
 
         // Step 2: Group by sleep session (night) - use the END date to group overnight sleep correctly
         // A sleep session starting at 11pm Dec 30 and ending 7am Dec 31 should be attributed to Dec 31

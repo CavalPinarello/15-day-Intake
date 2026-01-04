@@ -26,12 +26,33 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
     @Published var isWatchConnected = false
     @Published var isWatchAppInstalled = false
 
+    // Debug log for connectivity events (max 100 entries, newest first)
+    @Published var connectivityLog: [iOSConnectivityLogEntry] = []
+
     private var session: WCSession?
     private var questionnaireManager: QuestionnaireManager { QuestionnaireManager.shared }
 
     private override init() {
         super.init()
         setupWatchConnectivity()
+        log("iOSWatchConnectivityManager initialized")
+    }
+
+    // MARK: - Debug Logging
+
+    func log(_ message: String, level: iOSConnectivityLogEntry.Level = .info) {
+        let entry = iOSConnectivityLogEntry(message: message, level: level)
+        connectivityLog.insert(entry, at: 0)
+        // Keep only last 100 entries
+        if connectivityLog.count > 100 {
+            connectivityLog.removeLast()
+        }
+        print("[iOSWatchConnectivity] \(level.emoji) \(message)")
+    }
+
+    func clearLog() {
+        connectivityLog.removeAll()
+        log("Log cleared")
     }
 
     // MARK: - Setup
@@ -97,7 +118,10 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
 
     /// Call this after successful login to immediately sync credentials to Watch
     func syncCredentialsToWatch(userId: String, username: String) {
-        guard let session = session else { return }
+        guard let session = session else {
+            log("Cannot sync credentials - no session", level: .error)
+            return
+        }
 
         let message: [String: Any] = [
             "action": "credentialsSync",
@@ -108,17 +132,19 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             "timestamp": Date().timeIntervalSince1970
         ]
 
+        log("Syncing credentials to Watch: userId=\(userId.prefix(8))..., username=\(username)")
+
         if session.isReachable {
-            session.sendMessage(message, replyHandler: { reply in
-                print("[iOS] Watch acknowledged credentials sync")
-            }) { error in
-                print("[iOS] Failed to send credentials to Watch: \(error.localizedDescription)")
+            session.sendMessage(message, replyHandler: { [weak self] reply in
+                self?.log("Watch acknowledged credentials sync", level: .success)
+            }) { [weak self] error in
+                self?.log("sendMessage failed, using transferUserInfo: \(error.localizedDescription)", level: .warning)
                 // Fallback to transferUserInfo
                 session.transferUserInfo(message)
             }
         } else {
             session.transferUserInfo(message)
-            print("[iOS] Queued credentials for Watch via transferUserInfo")
+            log("Queued credentials via transferUserInfo (Watch not reachable)")
         }
     }
 
@@ -190,7 +216,7 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
     /// Notify Watch that user logged out on iPhone - Watch should clear its credentials
     func notifyWatchLogout() {
         guard let session = session else {
-            print("[iOS] Cannot notify Watch of logout - no session")
+            log("Cannot notify Watch of logout - no session", level: .error)
             return
         }
 
@@ -199,24 +225,29 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             "timestamp": Date().timeIntervalSince1970
         ]
 
+        log("Sending logout notification to Watch")
+
         // Use transferUserInfo for guaranteed delivery even if Watch isn't currently reachable
         // This ensures Watch clears credentials even if it was asleep during logout
         session.transferUserInfo(message)
-        print("[iOS] Queued logout notification for Watch via transferUserInfo")
+        log("Queued logout via transferUserInfo (guaranteed delivery)")
 
         // Also try sendMessage for immediate effect if Watch is reachable
         if session.isReachable {
-            session.sendMessage(message, replyHandler: { reply in
-                print("[iOS] Watch acknowledged logout immediately")
-            }) { error in
-                print("[iOS] Watch not reachable for immediate logout (queued via transferUserInfo)")
+            session.sendMessage(message, replyHandler: { [weak self] reply in
+                self?.log("Watch acknowledged logout immediately", level: .success)
+            }) { [weak self] error in
+                self?.log("Watch not reachable for immediate logout", level: .warning)
             }
         }
     }
 
     /// Notify Watch that a check-in was completed on iPhone (for Energy/Mood/Focus sync)
     func notifyWatchCheckInCompleted(timeSlot: CheckInTimeSlot, date: String) {
-        guard let session = session else { return }
+        guard let session = session else {
+            log("Cannot notify Watch of check-in - no session", level: .error)
+            return
+        }
 
         let message: [String: Any] = [
             "action": "checkInCompleted",
@@ -226,14 +257,19 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             "timestamp": Date().timeIntervalSince1970
         ]
 
+        log("Sending check-in completion to Watch: \(timeSlot.rawValue)")
+
         if session.isReachable {
-            session.sendMessage(message, replyHandler: nil) { error in
-                print("[iOS] Failed to notify Watch of check-in completion: \(error.localizedDescription)")
+            session.sendMessage(message, replyHandler: { [weak self] _ in
+                self?.log("Watch acknowledged check-in sync", level: .success)
+            }) { [weak self] error in
+                self?.log("Check-in sendMessage failed, using transferUserInfo", level: .warning)
+                session.transferUserInfo(message)
             }
         } else {
             // Queue for later delivery
             session.transferUserInfo(message)
-            print("[iOS] Queued check-in completion for Watch: \(timeSlot.rawValue)")
+            log("Queued check-in completion via transferUserInfo (Watch not reachable)")
         }
     }
 
@@ -528,19 +564,24 @@ extension iOSWatchConnectivityManager: WCSessionDelegate {
             #endif
 
             if let error = error {
-                print("WatchConnectivity activation failed: \(error.localizedDescription)")
+                self.log("Activation failed: \(error.localizedDescription)", level: .error)
             } else {
-                print("WatchConnectivity activated - isReachable: \(session.isReachable), isWatchAppInstalled: \(session.isWatchAppInstalled)")
+                let stateStr = activationState == .activated ? "activated" : (activationState == .inactive ? "inactive" : "notActivated")
+                self.log("Session \(stateStr), reachable: \(session.isReachable), appInstalled: \(session.isWatchAppInstalled)", level: .success)
             }
         }
     }
 
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
-        print("WatchConnectivity session became inactive")
+        DispatchQueue.main.async {
+            self.log("Session became inactive", level: .warning)
+        }
     }
 
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
-        print("WatchConnectivity session deactivated")
+        DispatchQueue.main.async {
+            self.log("Session deactivated - reactivating...", level: .warning)
+        }
         // Reactivate for switching watches
         DispatchQueue.main.async {
             self.session?.activate()
@@ -549,19 +590,24 @@ extension iOSWatchConnectivityManager: WCSessionDelegate {
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async {
+            let wasConnected = self.isWatchConnected
             self.isWatchConnected = session.isReachable
-            print("Watch reachability changed: \(session.isReachable)")
+            self.log("Reachability changed: \(wasConnected) → \(session.isReachable)", level: session.isReachable ? .success : .warning)
         }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         DispatchQueue.main.async {
+            let action = message["action"] as? String ?? "unknown"
+            self.log("Received from Watch: \(action)")
             self.handleWatchMessage(message, replyHandler: replyHandler)
         }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         DispatchQueue.main.async {
+            let action = message["action"] as? String ?? "unknown"
+            self.log("Received from Watch: \(action) (no reply)")
             self.handleWatchMessage(message, replyHandler: nil)
         }
     }
@@ -570,8 +616,54 @@ extension iOSWatchConnectivityManager: WCSessionDelegate {
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
         DispatchQueue.main.async {
             self.isWatchAppInstalled = session.isWatchAppInstalled
-            print("Watch app installed: \(session.isWatchAppInstalled)")
+            self.log("Watch app installed: \(session.isWatchAppInstalled)", level: session.isWatchAppInstalled ? .success : .warning)
         }
     }
     #endif
+}
+
+// MARK: - iOS Connectivity Log Entry
+
+struct iOSConnectivityLogEntry: Identifiable {
+    let id = UUID()
+    let timestamp: Date
+    let message: String
+    let level: Level
+
+    enum Level: String {
+        case info = "INFO"
+        case success = "SUCCESS"
+        case warning = "WARNING"
+        case error = "ERROR"
+
+        var emoji: String {
+            switch self {
+            case .info: return "ℹ️"
+            case .success: return "✅"
+            case .warning: return "⚠️"
+            case .error: return "❌"
+            }
+        }
+
+        var color: String {
+            switch self {
+            case .info: return "blue"
+            case .success: return "green"
+            case .warning: return "orange"
+            case .error: return "red"
+            }
+        }
+    }
+
+    init(message: String, level: Level = .info) {
+        self.timestamp = Date()
+        self.message = message
+        self.level = level
+    }
+
+    var formattedTime: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: timestamp)
+    }
 }

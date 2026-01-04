@@ -439,7 +439,7 @@
   },
   {
     "id": "3",
-    "text": "GATEWAY: Do you have trouble falling asleep, staying asleep, or waking too early?",
+    "text": "Do you have trouble falling asleep, staying asleep, or waking too early?",
     "pillar": "Sleep Quality",
     "tier": "GATEWAY",
     "trigger": "Always",
@@ -971,7 +971,7 @@
   },
   {
     "id": "15",
-    "text": "GATEWAY: In past 2 weeks, felt down, depressed, or hopeless?",
+    "text": "In past 2 weeks, felt down, depressed, or hopeless?",
     "pillar": "Mental Health",
     "tier": "GATEWAY",
     "trigger": "Always",
@@ -979,7 +979,7 @@
   },
   {
     "id": "16",
-    "text": "GATEWAY: In past 2 weeks, felt nervous, anxious, or on edge?",
+    "text": "In past 2 weeks, felt nervous, anxious, or on edge?",
     "pillar": "Mental Health",
     "tier": "GATEWAY",
     "trigger": "Always",
@@ -1374,7 +1374,7 @@
   },
   {
     "id": "17",
-    "text": "GATEWAY: Do you feel excessively tired or sleepy during the day?",
+    "text": "Do you feel excessively tired or sleepy during the day?",
     "pillar": "Cognitive",
     "tier": "GATEWAY",
     "trigger": "Always",
@@ -1382,7 +1382,7 @@
   },
   {
     "id": "18",
-    "text": "GATEWAY: Memory problems, difficulty concentrating, or mental fog?",
+    "text": "Memory problems, difficulty concentrating, or mental fog?",
     "pillar": "Cognitive",
     "tier": "GATEWAY",
     "trigger": "Always",
@@ -1697,7 +1697,7 @@
   },
   {
     "id": "19",
-    "text": "GATEWAY: Do you snore loudly?",
+    "text": "Do you snore loudly?",
     "pillar": "Physical",
     "tier": "GATEWAY",
     "trigger": "Always",
@@ -1705,7 +1705,7 @@
   },
   {
     "id": "20",
-    "text": "GATEWAY: Has anyone observed you stop breathing during sleep?",
+    "text": "Has anyone observed you stop breathing during sleep?",
     "pillar": "Physical",
     "tier": "GATEWAY",
     "trigger": "Always",
@@ -1713,7 +1713,7 @@
   },
   {
     "id": "22",
-    "text": "GATEWAY: Do you have pain that affects your sleep?",
+    "text": "Do you have pain that affects your sleep?",
     "pillar": "Physical",
     "tier": "GATEWAY",
     "trigger": "Always",
@@ -1729,7 +1729,7 @@
   },
   {
     "id": "24",
-    "text": "GATEWAY: Do you exercise regularly?",
+    "text": "Do you exercise regularly?",
     "pillar": "Physical",
     "tier": "GATEWAY",
     "trigger": "Always",

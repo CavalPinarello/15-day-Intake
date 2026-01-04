@@ -153,8 +153,6 @@ struct SplashScreenView: View {
                     }
                 }
 
-                // Floating accessibility button
-                EnhancedReadabilityButton(lightStyle: true, edgePadding: 24)
             }
         }
         .ignoresSafeArea()

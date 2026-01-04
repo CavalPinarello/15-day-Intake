@@ -80,22 +80,24 @@ enum WearableDevice: String, CaseIterable, Identifiable {
 }
 
 /// Onboarding step enum
-/// FLOW: HealthKit FIRST to get all available data, then only ask what we couldn't get
+/// FLOW: Personal connection first, then HealthKit at the end for sleep history sync
 enum OnboardingStep: Int, CaseIterable {
-    case healthConnect = 0      // FIRST - get height, weight, age, sex from HealthKit
-    case name = 1               // Ask for name (can't get from HealthKit)
-    case heightWeight = 2       // Skipped if HealthKit provided data
-    case genderAge = 3          // Skipped if HealthKit provided data
-    case wearables = 4
-    case ready = 5
+    case name = 0               // First - personal connection
+    case units = 1              // Unit preference (auto-detected, editable)
+    case heightWeight = 2       // Body metrics using selected units
+    case genderAge = 3          // About you
+    case wearables = 4          // Devices
+    case healthConnect = 5      // Sync sleep/activity history (optional)
+    case ready = 6
 
     var title: String {
         switch self {
-        case .healthConnect: return "Health Data"
         case .name: return "Your Name"
+        case .units: return "Preferences"
         case .heightWeight: return "Body Metrics"
         case .genderAge: return "About You"
         case .wearables: return "Devices"
+        case .healthConnect: return "Sleep History"
         case .ready: return "Ready"
         }
     }
@@ -152,7 +154,7 @@ class OnboardingManager: ObservableObject {
 
     // MARK: - Published Properties
 
-    @Published var currentStep: OnboardingStep = .healthConnect
+    @Published var currentStep: OnboardingStep = .name
     @Published var profile: OnboardingProfile = OnboardingProfile()
     @Published var isOnboardingComplete: Bool = false
     @Published var isCheckingServerState: Bool = false
@@ -336,7 +338,7 @@ class OnboardingManager: ObservableObject {
     /// Reset local state for a new user - intro screens show for each new user
     private func resetLocalState() {
         profile = OnboardingProfile()
-        currentStep = .healthConnect  // Start at HealthKit step
+        currentStep = .name  // Start at name step for personal connection
         isOnboardingComplete = false
         hasSeenJourneyIntro = false  // Reset for new user - they need to see intro
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
@@ -348,7 +350,7 @@ class OnboardingManager: ObservableObject {
     /// Clear onboarding state when user signs out
     func clearForSignOut() {
         profile = OnboardingProfile()
-        currentStep = .healthConnect  // Start at HealthKit step
+        currentStep = .name  // Start at name step for personal connection
         isOnboardingComplete = false
         hasSeenJourneyIntro = false  // Reset for new user
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
@@ -359,17 +361,13 @@ class OnboardingManager: ObservableObject {
 
     // MARK: - System Detection
 
-    /// Detect the user's locale measurement system
+    /// Detect the user's actual measurement system preference from iOS settings
+    /// Uses Locale.current.usesMetricSystem which correctly reads Settings > General > Language & Region > Measurement System
     func detectSystemMeasurementSystem() {
-        let locale = Locale.current
-        // US, Liberia, and Myanmar use imperial
-        let imperialRegions = ["US", "LR", "MM"]
-
-        if let regionCode = locale.region?.identifier,
-           imperialRegions.contains(regionCode) {
-            profile.measurementSystem = MeasurementSystem.imperial.rawValue
-        } else {
+        if Locale.current.usesMetricSystem {
             profile.measurementSystem = MeasurementSystem.metric.rawValue
+        } else {
+            profile.measurementSystem = MeasurementSystem.imperial.rawValue
         }
 
         // Initialize imperial temp values from metric
@@ -457,33 +455,12 @@ class OnboardingManager: ObservableObject {
         }
     }
 
-    /// Check if a step should be skipped (has pre-filled data from HealthKit)
+    /// Check if a step should be skipped
+    /// New flow: No steps are auto-skipped - user goes through all steps to establish personal connection
     func shouldSkipStep(_ step: OnboardingStep) -> Bool {
-        switch step {
-        case .healthConnect:
-            // Never skip - always show HealthKit permission request first
-            return false
-        case .name:
-            // Never skip name - we can't get it from HealthKit
-            return false
-        case .heightWeight:
-            // Skip if HealthKit provided valid height and weight data
-            guard let height = profile.heightCm, let weight = profile.weightKg else {
-                return false  // Don't skip if no data available
-            }
-            return profile.hasConnectedHealthKit &&
-                   height > 100 && height < 250 &&
-                   weight > 30 && weight < 300
-        case .genderAge:
-            // Skip if HealthKit provided both gender and age
-            let hasValidGender = profile.gender != Gender.preferNotToSay.rawValue
-            let hasValidAge = profile.birthYear > 1920 && profile.birthYear < Calendar.current.component(.year, from: Date()) - 10
-            return profile.hasConnectedHealthKit && hasValidGender && hasValidAge
-        case .wearables:
-            return false
-        case .ready:
-            return false
-        }
+        // All steps are shown in the new flow
+        // HealthKit is now at the end for syncing sleep history, not for pre-filling data
+        return false
     }
 
     func previousStep() {
@@ -513,10 +490,10 @@ class OnboardingManager: ObservableObject {
 
     var canProceed: Bool {
         switch currentStep {
-        case .healthConnect:
-            return true // Can proceed even without connecting
         case .name:
             return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .units:
+            return true // Always valid - user can keep auto-detected value
         case .heightWeight:
             guard let height = profile.heightCm, let weight = profile.weightKg else {
                 return false
@@ -526,6 +503,8 @@ class OnboardingManager: ObservableObject {
             return profile.birthYear > 1900 && profile.birthYear <= Calendar.current.component(.year, from: Date())
         case .wearables:
             return true // Optional step
+        case .healthConnect:
+            return true // Can proceed even without connecting
         case .ready:
             return true
         }

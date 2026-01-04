@@ -1592,6 +1592,6 @@ extension Color {
 
 #Preview {
     QuestionnaireView()
-        .environmentObject(WatchConnectivityManager())
+        .environmentObject(WatchConnectivityManager.shared)
         .environmentObject(WatchThemeManager.shared)
 }

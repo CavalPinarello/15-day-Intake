@@ -107,28 +107,25 @@ enum SleepStageCategory: String, CaseIterable {
 
 // MARK: - Chronotype
 
-/// The four main chronotypes based on circadian preference
+/// The three main chronotypes based on circadian preference (MEQ standard)
 enum Chronotype: String, CaseIterable, Codable {
     case earlyRiser = "early_riser"   // Early bird - peaks early morning
     case balanced = "balanced"         // Most common - follows solar cycle
     case nightOwl = "night_owl"        // Night owl - peaks late evening
-    case adaptive = "adaptive"         // Light sleeper - irregular patterns
 
     var displayName: String {
         switch self {
-        case .earlyRiser: return "Early Riser"
+        case .earlyRiser: return "Early Bird"
         case .balanced: return "Balanced"
         case .nightOwl: return "Night Owl"
-        case .adaptive: return "Adaptive"
         }
     }
 
     var emoji: String {
         switch self {
-        case .earlyRiser: return "☀️"
-        case .balanced: return "⚖️"
+        case .earlyRiser: return "🌅"
+        case .balanced: return "☀️"
         case .nightOwl: return "🌙"
-        case .adaptive: return "🔄"
         }
     }
 
@@ -137,7 +134,6 @@ enum Chronotype: String, CaseIterable, Codable {
         case .earlyRiser: return "Most productive in the morning, naturally wakes early"
         case .balanced: return "Follows the solar cycle, peaks mid-morning to afternoon"
         case .nightOwl: return "Most creative in the evening, prefers later bedtimes"
-        case .adaptive: return "Variable sleep patterns, sensitive to environment"
         }
     }
 
@@ -147,7 +143,6 @@ enum Chronotype: String, CaseIterable, Codable {
         case .earlyRiser: return 21.0      // 9:00 PM
         case .balanced: return 22.0        // 10:00 PM
         case .nightOwl: return 23.5        // 11:30 PM
-        case .adaptive: return 23.0        // 11:00 PM
         }
     }
 
@@ -157,7 +152,6 @@ enum Chronotype: String, CaseIterable, Codable {
         case .earlyRiser: return 22.0      // 10:00 PM
         case .balanced: return 23.0        // 11:00 PM
         case .nightOwl: return 0.5         // 12:30 AM
-        case .adaptive: return 24.0        // Midnight
         }
     }
 
@@ -167,7 +161,6 @@ enum Chronotype: String, CaseIterable, Codable {
         case .earlyRiser: return 5.5       // 5:30 AM
         case .balanced: return 7.0         // 7:00 AM
         case .nightOwl: return 7.5         // 7:30 AM
-        case .adaptive: return 6.5         // 6:30 AM
         }
     }
 
@@ -177,7 +170,6 @@ enum Chronotype: String, CaseIterable, Codable {
         case .earlyRiser: return 7.5
         case .balanced: return 8.0
         case .nightOwl: return 7.5
-        case .adaptive: return 6.0    // Adaptive types often need less but struggle
         }
     }
 
@@ -187,7 +179,6 @@ enum Chronotype: String, CaseIterable, Codable {
         case .earlyRiser: return 0.15...0.25
         case .balanced: return 0.13...0.23
         case .nightOwl: return 0.12...0.22
-        case .adaptive: return 0.10...0.18
         }
     }
 
@@ -197,7 +188,6 @@ enum Chronotype: String, CaseIterable, Codable {
         case .earlyRiser: return 0.20...0.25
         case .balanced: return 0.20...0.25
         case .nightOwl: return 0.22...0.28
-        case .adaptive: return 0.18...0.24
         }
     }
 
@@ -206,7 +196,6 @@ enum Chronotype: String, CaseIterable, Codable {
         case .earlyRiser: return .orange
         case .balanced: return .green
         case .nightOwl: return .purple
-        case .adaptive: return .cyan
         }
     }
 }
@@ -254,9 +243,11 @@ struct SleepSession: Identifiable, Codable {
     }
 
     var stagePercentages: [SleepStageCategory: Double] {
-        let sleepTime = timeAsleep
-        guard sleepTime > 0 else { return [:] }
-        return stageBreakdown.mapValues { $0 / sleepTime }
+        // Use total duration (time in bed) for ALL stage percentages
+        // This ensures percentages add up to 100%
+        // Previously this used timeAsleep which excluded awake time, causing impossible percentages
+        guard totalDuration > 0 else { return [:] }
+        return stageBreakdown.mapValues { $0 / totalDuration }
     }
 
     /// Number of times woken up during the night

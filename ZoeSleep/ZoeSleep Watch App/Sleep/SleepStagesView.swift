@@ -12,13 +12,17 @@ import Charts
 // MARK: - Main Sleep Stages View
 
 struct SleepStagesView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var analyzer = SleepAnalyzer.shared
     @StateObject private var chronotypeManager = ChronotypeManager.shared
+    @StateObject private var healthKitManager = HealthKitWatchManager.shared
     @State private var analysis: SleepAnalysis?
     @State private var selectedPage = 0
     @State private var showChronotypeSetup = false
+    @State private var isLoading = true
+    @State private var errorMessage: String?
 
-    // Sample session for preview (replace with actual HealthKit data)
+    // Real sleep session from HealthKit
     @State private var currentSession: SleepSession?
 
     private var darkBackground: [Color] {
@@ -31,12 +35,14 @@ struct SleepStagesView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if !chronotypeManager.isAssessed {
+                if isLoading {
+                    loadingState
+                } else if !chronotypeManager.isAssessed {
                     chronotypePrompt
                 } else if let analysis = analysis {
                     sleepAnalysisContent(analysis)
                 } else {
-                    loadingOrEmptyState
+                    noSleepDataState
                 }
             }
             .background(
@@ -45,6 +51,14 @@ struct SleepStagesView: View {
             )
             .navigationTitle("Sleep Stages")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                }
+            }
             .sheet(isPresented: $showChronotypeSetup) {
                 ChronotypeQuizView()
             }
@@ -103,9 +117,27 @@ struct SleepStagesView: View {
         }
     }
 
-    // MARK: - Loading/Empty State
+    // MARK: - Loading State
 
-    private var loadingOrEmptyState: some View {
+    private var loadingState: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: .purple))
+                .scaleEffect(1.5)
+
+            Text("Loading Sleep Data...")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white)
+
+            Text("Fetching from Apple Health")
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.6))
+        }
+    }
+
+    // MARK: - No Sleep Data State
+
+    private var noSleepDataState: some View {
         VStack(spacing: 12) {
             Image(systemName: "moon.zzz.fill")
                 .font(.system(size: 40))
@@ -117,11 +149,37 @@ struct SleepStagesView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.white)
 
-            Text("Wear your watch tonight to track sleep stages")
-                .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.6))
-                .multilineTextAlignment(.center)
+            if let error = errorMessage {
+                Text(error)
+                    .font(.system(size: 10))
+                    .foregroundColor(.orange)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+            } else {
+                Text("Wear your watch tonight to track sleep stages")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+            }
+
+            // Retry button
+            Button(action: { loadSleepData() }) {
+                HStack {
+                    Image(systemName: "arrow.clockwise")
+                    Text("Retry")
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.white)
                 .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.purple.opacity(0.3))
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 8)
         }
     }
 
@@ -151,81 +209,33 @@ struct SleepStagesView: View {
     // MARK: - Data Loading
 
     private func loadSleepData() {
-        // In production, load from HealthKit
-        // For now, create sample data for preview
-        currentSession = createSampleSession()
+        isLoading = true
+        errorMessage = nil
 
-        if let session = currentSession {
-            analysis = analyzer.analyzeSleepSession(session)
+        Task {
+            // First ensure HealthKit permissions
+            healthKitManager.requestPermissions()
+
+            // Load real sleep data from HealthKit
+            let session = await healthKitManager.loadDetailedSleepStages()
+
+            await MainActor.run {
+                if let session = session {
+                    currentSession = session
+                    analysis = analyzer.analyzeSleepSession(session)
+
+                    print("[SleepStagesView] Loaded real HealthKit data:")
+                    print("  Duration: \(String(format: "%.1f", session.totalDurationHours)) hours")
+                    print("  Efficiency: \(Int(session.sleepEfficiency * 100))%")
+                } else {
+                    currentSession = nil
+                    analysis = nil
+                    errorMessage = "No sleep data from last night. Make sure Sleep tracking is enabled in Apple Health."
+                    print("[SleepStagesView] No HealthKit sleep data available")
+                }
+                isLoading = false
+            }
         }
-    }
-
-    private func createSampleSession() -> SleepSession {
-        let calendar = Calendar.current
-        let now = Date()
-        let bedtime = calendar.date(bySettingHour: 22, minute: 30, second: 0, of: calendar.date(byAdding: .day, value: -1, to: now)!)!
-        let wakeTime = calendar.date(bySettingHour: 6, minute: 45, second: 0, of: now)!
-
-        // Create realistic sleep stages
-        var stages: [SleepStageSegment] = []
-        var currentTime = bedtime
-
-        // Typical sleep cycle pattern
-        let cyclePattern: [(SleepStage, Int)] = [
-            // Falling asleep
-            (.awake, 8),
-            (.lightN1, 5),
-            (.lightN2, 20),
-            // First deep cycle
-            (.deepN3, 25),
-            (.deepN4, 15),
-            (.lightN2, 10),
-            (.rem, 15),
-            // Second cycle
-            (.lightN2, 15),
-            (.deepN3, 20),
-            (.lightN2, 10),
-            (.rem, 20),
-            // Third cycle
-            (.lightN2, 15),
-            (.deepN3, 15),
-            (.lightN2, 15),
-            (.rem, 25),
-            // Fourth cycle (more REM, less deep)
-            (.lightN2, 20),
-            (.lightN1, 10),
-            (.rem, 30),
-            // Fifth cycle
-            (.lightN2, 20),
-            (.rem, 35),
-            (.lightN1, 10),
-            (.awake, 5),
-        ]
-
-        for (stage, durationMinutes) in cyclePattern {
-            let endTime = currentTime.addingTimeInterval(Double(durationMinutes) * 60)
-            stages.append(SleepStageSegment(
-                id: UUID(),
-                stage: stage,
-                startTime: currentTime,
-                endTime: endTime
-            ))
-            currentTime = endTime
-        }
-
-        return SleepSession(
-            id: UUID(),
-            date: now,
-            bedtime: bedtime,
-            wakeTime: wakeTime,
-            stages: stages,
-            heartRateData: nil,
-            respiratoryRate: 14.5,
-            hrv: 45,
-            skinTemperature: nil,
-            bloodOxygen: 96,
-            movementScore: 0.25
-        )
     }
 }
 
@@ -844,7 +854,7 @@ struct ChronotypeQuizView: View {
                 let question = questions[currentQuestion]
 
                 Text(question.question)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
@@ -855,12 +865,13 @@ struct ChronotypeQuizView: View {
                         selectOption(index)
                     }) {
                         Text(option.text)
-                            .font(.system(size: 11))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 14)
+                            .minimumScaleFactor(0.8)
                             .background(
-                                RoundedRectangle(cornerRadius: 10)
+                                RoundedRectangle(cornerRadius: 12)
                                     .fill(responses[question.id] == index ? Color.purple : Color.white.opacity(0.1))
                             )
                     }

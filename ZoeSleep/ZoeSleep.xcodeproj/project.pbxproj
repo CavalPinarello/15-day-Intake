@@ -71,6 +71,8 @@
 		4A5E3C7A2C8E123456789M11 /* ExpansionSchedulerTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C7B2C8E123456789M12 /* ExpansionSchedulerTestView.swift */; };
 		4A5E3C7C2C8E123456789M13 /* UnifiedDebugPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */; };
 		4A5E3C7F2C8E123456789M16 /* HealthKitDetailedDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C7E2C8E123456789M15 /* HealthKitDetailedDebugView.swift */; };
+		4A5E3CUT012C8E123456789UT1 /* UnlockTestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3CUT022C8E123456789UT2 /* UnlockTestManager.swift */; };
+		4A5E3DAL012C8E123456789DAL1 /* DayAdvancementLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3DAL022C8E123456789DAL2 /* DayAdvancementLogger.swift */; };
 		4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C812C8E123456789N02 /* ZoeLogo.swift */; };
 		4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */; };
 		4A5E3C8A2C8E123456789M17 /* DebugAutoCompleteButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5E3C8B2C8E123456789M18 /* DebugAutoCompleteButton.swift */; };
@@ -126,6 +128,7 @@
 		EDB3374EBA6CA9B6FB73B63F /* DaySplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BA7441D63A04DD8354B8CED /* DaySplashView.swift */; };
 		F72EBBE4767CCE3A211D7777 /* MyDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2088C6077EF6174DFEF37292 /* MyDataView.swift */; };
 		F879436DEDFFFC4ECA1D9ED5 /* AnalysisPendingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8983F1628C69D67471AC3618 /* AnalysisPendingView.swift */; };
+		FB970CB9CE2F6650CFA25265 /* LightRxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD09323FE0B37F78175B4168 /* LightRxView.swift */; };
 		FCE5FE4CC8056C6D72F48841 /* CheckInManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C97DBCA01C582571D7064E4A /* CheckInManager.swift */; };
 		SCMAP001ED24841599CCADD1 /* ScaleMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCMAP002ED24841599CCADD2 /* ScaleMapper.swift */; };
 		SLEEP001012C8E123456789S01 /* SleepStageModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLEEP002012C8E123456789S02 /* SleepStageModels.swift */; };
@@ -258,6 +261,8 @@
 		4A5E3C7B2C8E123456789M12 /* ExpansionSchedulerTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpansionSchedulerTestView.swift; sourceTree = "<group>"; };
 		4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedDebugPanel.swift; sourceTree = "<group>"; };
 		4A5E3C7E2C8E123456789M15 /* HealthKitDetailedDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitDetailedDebugView.swift; sourceTree = "<group>"; };
+		4A5E3CUT022C8E123456789UT2 /* UnlockTestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockTestManager.swift; sourceTree = "<group>"; };
+		4A5E3DAL022C8E123456789DAL2 /* DayAdvancementLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayAdvancementLogger.swift; sourceTree = "<group>"; };
 		4A5E3C812C8E123456789N02 /* ZoeLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoeLogo.swift; sourceTree = "<group>"; };
 		4A5E3C832C8E123456789N04 /* AuroraBorealisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuroraBorealisView.swift; sourceTree = "<group>"; };
 		4A5E3C8B2C8E123456789M18 /* DebugAutoCompleteButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugAutoCompleteButton.swift; sourceTree = "<group>"; };
@@ -309,6 +314,7 @@
 		C97DBCA01C582571D7064E4A /* CheckInManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CheckInManager.swift; path = Managers/CheckInManager.swift; sourceTree = "<group>"; };
 		CA328882E23ED40DF40AA050 /* DaySplashLibrary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DaySplashLibrary.swift; sourceTree = "<group>"; };
 		CBBE1CCD02DCDC3C1643F536 /* AnswerDerivationSystem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnswerDerivationSystem.swift; path = ../Models/AnswerDerivationSystem.swift; sourceTree = "<group>"; };
+		CD09323FE0B37F78175B4168 /* LightRxView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LightRxView.swift; sourceTree = "<group>"; };
 		CE315240E0D1516EFA89EE5E /* JourneyPhaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyPhaseManager.swift; sourceTree = "<group>"; };
 		DF6080214D734AC815952E0F /* TestUtilities.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TestUtilities.swift; sourceTree = "<group>"; };
 		E65E085DD2B2758E6AF41040 /* FirstTimeGuideManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FirstTimeGuideManager.swift; sourceTree = "<group>"; };
@@ -615,6 +621,8 @@
 				4A5E3C7B2C8E123456789M12 /* ExpansionSchedulerTestView.swift */,
 				4A5E3C7D2C8E123456789M14 /* UnifiedDebugPanel.swift */,
 				4A5E3C7E2C8E123456789M15 /* HealthKitDetailedDebugView.swift */,
+				4A5E3CUT022C8E123456789UT2 /* UnlockTestManager.swift */,
+				4A5E3DAL022C8E123456789DAL2 /* DayAdvancementLogger.swift */,
 				4A5E3C8B2C8E123456789M18 /* DebugAutoCompleteButton.swift */,
 			);
 			path = DevTools;
@@ -653,6 +661,7 @@
 				4A5E3DW0092C8E123456789W009 /* MinimalHomeView.swift */,
 				4A5E3DW0112C8E123456789W011 /* MinimalTasksView.swift */,
 				B6780971900FE9C52E85727D /* WatchDayInvitationCard.swift */,
+				CD09323FE0B37F78175B4168 /* LightRxView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -986,6 +995,8 @@
 				4A5E3C7A2C8E123456789M11 /* ExpansionSchedulerTestView.swift in Sources */,
 				4A5E3C7C2C8E123456789M13 /* UnifiedDebugPanel.swift in Sources */,
 				4A5E3C7F2C8E123456789M16 /* HealthKitDetailedDebugView.swift in Sources */,
+				4A5E3CUT012C8E123456789UT1 /* UnlockTestManager.swift in Sources */,
+				4A5E3DAL012C8E123456789DAL1 /* DayAdvancementLogger.swift in Sources */,
 				4A5E3C8A2C8E123456789M17 /* DebugAutoCompleteButton.swift in Sources */,
 				4A5E3C802C8E123456789N01 /* ZoeLogo.swift in Sources */,
 				4A5E3C822C8E123456789N03 /* AuroraBorealisView.swift in Sources */,
@@ -1062,6 +1073,7 @@
 				SLPMON009012C8E123456789M9 /* FalsePositiveEliminator.swift in Sources */,
 				ACCEL001012C8E123456789AC1 /* ACCELAlgorithm.swift in Sources */,
 				TFMGRW01ED24841599CCADD3 /* TimeFormatManager.swift in Sources */,
+				FB970CB9CE2F6650CFA25265 /* LightRxView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

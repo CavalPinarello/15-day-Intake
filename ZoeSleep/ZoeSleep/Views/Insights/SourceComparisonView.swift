@@ -98,6 +98,9 @@ struct DataQualityBadge: View {
 struct SourceBadge: View {
     let source: String
     let stats: MultiSourceSleepData.SourceStat?
+    @EnvironmentObject var themeManager: ThemeManager
+
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -116,18 +119,18 @@ struct SourceBadge: View {
                 Text(source)
                     .font(.caption)
                     .fontWeight(.medium)
-                    .foregroundColor(.white)
+                    .foregroundColor(theme.primaryText)
 
                 if let stats = stats {
                     HStack(spacing: 4) {
                         Text("\(stats.dataPoints) days")
                             .font(.caption2)
-                            .foregroundColor(.gray)
+                            .foregroundColor(theme.secondaryText)
 
                         if let eff = stats.avgEfficiency {
                             Text("· \(Int(eff))%")
                                 .font(.caption2)
-                                .foregroundColor(.gray)
+                                .foregroundColor(theme.secondaryText)
                         }
                     }
                 }
@@ -139,17 +142,17 @@ struct SourceBadge: View {
                 if stats.hasDeepSleep {
                     Text("Stages")
                         .font(.system(size: 9))
-                        .foregroundColor(.green)
+                        .foregroundColor(theme.success)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.green.opacity(0.2))
+                        .background(theme.success.opacity(0.2))
                         .cornerRadius(4)
                 }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.gray.opacity(0.1))
+        .background(theme.secondaryText.opacity(0.1))
         .cornerRadius(12)
     }
 }
@@ -160,6 +163,9 @@ struct SourceBadge: View {
 struct MultiSourceComparisonChart: View {
     let data: MultiSourceSleepData
     @State private var selectedMetric: MetricType = .efficiency
+    @EnvironmentObject var themeManager: ThemeManager
+
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     enum MetricType: String, CaseIterable {
         case efficiency = "Efficiency"
@@ -205,7 +211,7 @@ struct MultiSourceComparisonChart: View {
                 AxisMarks(values: .automatic) { _ in
                     AxisGridLine()
                     AxisValueLabel()
-                        .foregroundStyle(.gray)
+                        .foregroundStyle(theme.secondaryText)
                 }
             }
             .chartYAxis {
@@ -214,7 +220,7 @@ struct MultiSourceComparisonChart: View {
                     AxisValueLabel {
                         if let val = value.as(Double.self) {
                             Text(formatYValue(val))
-                                .foregroundStyle(.gray)
+                                .foregroundStyle(theme.secondaryText)
                         }
                     }
                 }
@@ -229,7 +235,7 @@ struct MultiSourceComparisonChart: View {
                             .frame(width: 8, height: 8)
                         Text(source)
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(theme.secondaryText)
                     }
                 }
             }
@@ -365,7 +371,7 @@ struct SourceComparisonView: View {
                     // Fallback for older iOS
                     Text("Charts require iOS 16+")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(theme.secondaryText)
                         .padding()
                 }
 

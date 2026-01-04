@@ -45,12 +45,13 @@ struct SleepFingerprintCard: View {
 
     @EnvironmentObject var themeManager: ThemeManager
 
+    private var theme: ColorTheme { themeManager.currentTheme }
     private var isEvening: Bool {
         TimePeriod.current == .evening || TimePeriod.current == .night
     }
 
     private var phenotypeColor: Color {
-        guard let p = phenotype else { return .gray }
+        guard let p = phenotype else { return theme.secondaryText }
         switch p.phenotypeId {
         case "tired_but_wired": return .purple
         case "sleep_state_misperception": return .blue
@@ -135,28 +136,28 @@ struct SleepFingerprintCard: View {
             HStack {
                 Image(systemName: "fingerprint")
                     .font(.system(size: 20))
-                    .foregroundColor(.gray)
+                    .foregroundColor(theme.secondaryText)
 
                 Text("Your Sleep Fingerprint")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundColor(isEvening ? Color(red: 0.996, green: 0.953, blue: 0.780) : .primary)
+                    .foregroundColor(theme.primaryText)
 
                 Spacer()
 
                 Image(systemName: "lock.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(.gray)
+                    .foregroundColor(theme.secondaryText)
             }
 
             // Locked icon and message
             ZStack {
                 Circle()
-                    .fill(Color.gray.opacity(0.1))
+                    .fill(theme.secondaryText.opacity(0.1))
                     .frame(width: 80, height: 80)
 
                 Image(systemName: "fingerprint")
                     .font(.system(size: 36))
-                    .foregroundColor(.gray.opacity(0.5))
+                    .foregroundColor(theme.secondaryText.opacity(0.5))
             }
 
             VStack(spacing: 8) {

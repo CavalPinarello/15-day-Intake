@@ -268,8 +268,14 @@ class FirstTimeGuideManager: ObservableObject {
     func resetAllCoachMarks() {
         // Reset all coach marks from the library
         let allCoachMarks: [CoachMarkContent] = [
+            // Dashboard tour
+            CoachMarkLibrary.journeyDuration,
+            CoachMarkLibrary.todaysFocus,
             CoachMarkLibrary.sleepLogTask,
             CoachMarkLibrary.assessmentTask,
+            CoachMarkLibrary.upcomingAssessments,
+            CoachMarkLibrary.settingsMenu,
+            // Legacy
             CoachMarkLibrary.progressGarden,
             CoachMarkLibrary.streakCounter,
             CoachMarkLibrary.dayProgress,
@@ -286,4 +292,14 @@ class FirstTimeGuideManager: ObservableObject {
             UserDefaults.standard.removeObject(forKey: mark.id)
         }
     }
+
+    /// Dashboard tour sequence (in order)
+    static let dashboardTourSequence: [CoachMarkContent] = [
+        CoachMarkLibrary.journeyDuration,
+        CoachMarkLibrary.todaysFocus,
+        CoachMarkLibrary.sleepLogTask,
+        CoachMarkLibrary.assessmentTask,
+        CoachMarkLibrary.upcomingAssessments,
+        CoachMarkLibrary.settingsMenu
+    ]
 }

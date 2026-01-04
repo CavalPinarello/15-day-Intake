@@ -190,9 +190,6 @@ struct AuthenticationView: View {
                 .padding(.bottom, 20)
                 }
 
-                // Floating accessibility button (bottom-right)
-                // Light style for dark aurora background
-                EnhancedReadabilityButton(lightStyle: true, edgePadding: 24)
             }
             .navigationTitle("")
             .navigationBarHidden(true)

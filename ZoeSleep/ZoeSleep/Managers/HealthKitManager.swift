@@ -29,10 +29,42 @@ struct HealthKitDemographics {
 // MARK: - Sleep Data Source Tracking
 
 /// Tracks the source device/app that contributed sleep data
-struct SleepDataSource: Codable, Equatable {
+struct SleepDataSource: Codable, Equatable, Identifiable, Hashable {
     let name: String           // e.g., "Apple Watch", "Oura", "Fitbit"
     let bundleIdentifier: String
     let priority: Int          // 1 = highest (Oura), 2 = Apple Watch, 3 = wearables, 4 = iPhone, 5 = other
+
+    var id: String { bundleIdentifier }
+
+    /// Check if this is an Apple Watch source
+    var isAppleWatch: Bool {
+        let lowerName = name.lowercased()
+        return lowerName.contains("watch") || lowerName.contains("apple watch")
+    }
+
+    /// Check if this is an Oura Ring source
+    var isOura: Bool {
+        let lowerName = name.lowercased()
+        let lowerBundle = bundleIdentifier.lowercased()
+        return lowerName.contains("oura") || lowerBundle.contains("ouraring")
+    }
+
+    /// User-friendly display name
+    var displayName: String {
+        if isAppleWatch { return "Apple Watch" }
+        if isOura { return "Oura Ring" }
+        return name
+    }
+
+    /// SF Symbol icon name for this source
+    var iconName: String {
+        if isAppleWatch { return "applewatch" }
+        if isOura { return "circle.hexagongrid.circle" }
+        if bundleIdentifier.contains("fitbit") { return "figure.run" }
+        if bundleIdentifier.contains("garmin") { return "figure.outdoor.cycle" }
+        if bundleIdentifier.contains("whoop") { return "waveform.circle" }
+        return "app.connected.to.app.below.fill"
+    }
 
     /// Create a SleepDataSource from an HKSourceRevision
     static func from(sourceRevision: HKSourceRevision) -> SleepDataSource {
@@ -62,6 +94,14 @@ struct SleepDataSource: Codable, Equatable {
     }
 }
 
+/// Source of timezone information for sleep samples
+enum TimezoneSource: String {
+    case healthKitMetadata = "healthkit_metadata"  // HKMetadataKeyTimeZone was present
+    case deviceTimezone = "device"                  // Captured from device at sync time
+    case inferred = "inferred"                      // Inferred from sleep pattern
+    case unknown = "unknown"                        // No timezone info available
+}
+
 /// Enhanced sleep sample with source metadata for deduplication
 struct SourcedSleepSample {
     let sample: HKCategorySample
@@ -70,6 +110,8 @@ struct SourcedSleepSample {
     let durationMins: Int
     let startTime: Date
     let endTime: Date
+    let recordedTimezone: String?      // IANA timezone identifier (e.g., "America/Los_Angeles")
+    let timezoneSource: TimezoneSource // How timezone was determined
 }
 
 /// Sync progress tracking for UI feedback
@@ -457,9 +499,14 @@ class HealthKitManager: ObservableObject {
     /// Fetches the most recent height measurement from HealthKit
     private func fetchMostRecentHeight(completion: @escaping (Double?) -> Void) {
         guard let heightType = HKQuantityType.quantityType(forIdentifier: .height) else {
+            print("[HealthKit] ❌ Height type not available")
             completion(nil)
             return
         }
+
+        // Check authorization status first
+        let authStatus = healthStore.authorizationStatus(for: heightType)
+        print("[HealthKit] Height authorization status: \(authStatus.rawValue) (1=sharingDenied, 2=sharingAuthorized, 0=notDetermined)")
 
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
         let query = HKSampleQuery(
@@ -468,13 +515,26 @@ class HealthKitManager: ObservableObject {
             limit: 1,
             sortDescriptors: [sortDescriptor]
         ) { _, samples, error in
-            guard let sample = samples?.first as? HKQuantitySample, error == nil else {
-                print("[HealthKit] Could not fetch height: \(error?.localizedDescription ?? "Unknown error")")
+            if let error = error {
+                print("[HealthKit] ❌ Height query error: \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+
+            guard let samples = samples, !samples.isEmpty else {
+                print("[HealthKit] ⚠️ Height query returned no samples (data may not exist in Health app)")
+                completion(nil)
+                return
+            }
+
+            guard let sample = samples.first as? HKQuantitySample else {
+                print("[HealthKit] ❌ Could not cast height sample")
                 completion(nil)
                 return
             }
 
             let heightInCm = sample.quantity.doubleValue(for: HKUnit.meterUnit(with: .centi))
+            print("[HealthKit] ✅ Height sample found: \(heightInCm) cm (from \(sample.startDate))")
             completion(heightInCm)
         }
 
@@ -484,9 +544,14 @@ class HealthKitManager: ObservableObject {
     /// Fetches the most recent weight measurement from HealthKit
     private func fetchMostRecentWeight(completion: @escaping (Double?) -> Void) {
         guard let weightType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else {
+            print("[HealthKit] ❌ Weight type not available")
             completion(nil)
             return
         }
+
+        // Check authorization status first
+        let authStatus = healthStore.authorizationStatus(for: weightType)
+        print("[HealthKit] Weight authorization status: \(authStatus.rawValue) (1=sharingDenied, 2=sharingAuthorized, 0=notDetermined)")
 
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
         let query = HKSampleQuery(
@@ -495,13 +560,26 @@ class HealthKitManager: ObservableObject {
             limit: 1,
             sortDescriptors: [sortDescriptor]
         ) { _, samples, error in
-            guard let sample = samples?.first as? HKQuantitySample, error == nil else {
-                print("[HealthKit] Could not fetch weight: \(error?.localizedDescription ?? "Unknown error")")
+            if let error = error {
+                print("[HealthKit] ❌ Weight query error: \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+
+            guard let samples = samples, !samples.isEmpty else {
+                print("[HealthKit] ⚠️ Weight query returned no samples (data may not exist in Health app)")
+                completion(nil)
+                return
+            }
+
+            guard let sample = samples.first as? HKQuantitySample else {
+                print("[HealthKit] ❌ Could not cast weight sample")
                 completion(nil)
                 return
             }
 
             let weightInKg = sample.quantity.doubleValue(for: HKUnit.gramUnit(with: .kilo))
+            print("[HealthKit] ✅ Weight sample found: \(weightInKg) kg (from \(sample.startDate))")
             completion(weightInKg)
         }
 
@@ -552,6 +630,115 @@ class HealthKitManager: ObservableObject {
         default:
             return false
         }
+    }
+
+    // MARK: - Sleep Data Source Discovery
+
+    /// Discovers all available sleep data sources from HealthKit
+    /// Uses HKSourceQuery to find all apps/devices that have written sleep data
+    func getAvailableSleepSources() async -> [SleepDataSource] {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            print("[HealthKit] Sleep analysis type not available")
+            return []
+        }
+
+        return await withCheckedContinuation { continuation in
+            let sourceQuery = HKSourceQuery(sampleType: sleepType, samplePredicate: nil) { query, sourcesOrNil, error in
+                if let error = error {
+                    print("[HealthKit] Source query error: \(error.localizedDescription)")
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                guard let sources = sourcesOrNil else {
+                    print("[HealthKit] No sources found")
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                // Convert HKSource to SleepDataSource
+                var sleepSources: [SleepDataSource] = []
+                for source in sources {
+                    let dataSource = SleepDataSource(
+                        name: source.name,
+                        bundleIdentifier: source.bundleIdentifier,
+                        priority: SleepDataSource.from(sourceRevision: HKSourceRevision(source: source, version: nil)).priority
+                    )
+                    sleepSources.append(dataSource)
+                }
+
+                // Sort by priority (lower = higher priority)
+                sleepSources.sort { $0.priority < $1.priority }
+
+                print("[HealthKit] Found \(sleepSources.count) sleep data sources:")
+                for source in sleepSources {
+                    print("  - \(source.displayName) (\(source.bundleIdentifier)) [priority: \(source.priority)]")
+                }
+
+                continuation.resume(returning: sleepSources)
+            }
+
+            healthStore.execute(sourceQuery)
+        }
+    }
+
+    /// Fetches sleep data filtered by a specific source
+    /// - Parameters:
+    ///   - source: The data source to filter by (nil = use default multi-source merging)
+    ///   - daysBack: Number of days to fetch
+    ///   - completion: Callback with processed sleep data
+    func fetchSleepDataBySource(source: SleepDataSource?, daysBack: Int = 30, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Sleep analysis type not available"])))
+            return
+        }
+
+        let calendar = Calendar.current
+        let endDate = Date()
+        guard let startDate = calendar.date(byAdding: .day, value: -daysBack, to: endDate) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid date calculation"])))
+            return
+        }
+
+        let datePredicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+
+        let query = HKSampleQuery(
+            sampleType: sleepType,
+            predicate: datePredicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+        ) { [weak self] query, samples, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                print("[HealthKit] Source-filtered query error: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let samples = samples as? [HKCategorySample] else {
+                completion(.success([]))
+                return
+            }
+
+            // Filter by source bundle identifier if specified
+            let filteredSamples: [HKCategorySample]
+            if let source = source {
+                filteredSamples = samples.filter {
+                    $0.sourceRevision.source.bundleIdentifier == source.bundleIdentifier
+                }
+                print("[HealthKit] Filtered to \(filteredSamples.count)/\(samples.count) samples from: \(source.displayName)")
+            } else {
+                filteredSamples = samples
+                print("[HealthKit] Using all \(samples.count) samples (no source filter)")
+            }
+
+            // Process samples (no multi-source merging since we're filtering)
+            let processedData = self.processSleepSamples(filteredSamples)
+            completion(.success(processedData))
+        }
+
+        healthStore.execute(query)
     }
 
     // MARK: - Sleep Data
@@ -700,11 +887,45 @@ class HealthKitManager: ObservableObject {
         return mergeMultiSourceSleepSamples(samples)
     }
 
+    // MARK: - Timezone Extraction
+
+    /// Extract timezone from HealthKit sample metadata
+    /// This is critical for users who travel - without timezone info, sleep times get misinterpreted
+    /// when viewed from a different timezone than where sleep was recorded.
+    ///
+    /// Fallback chain:
+    /// 1. HKMetadataKeyTimeZone (if present in sample metadata)
+    /// 2. Device's current timezone (best effort)
+    private nonisolated func extractTimezone(from sample: HKCategorySample) -> (String?, TimezoneSource) {
+        // Strategy 1: Check HKMetadataKeyTimeZone from sample metadata
+        if let metadata = sample.metadata,
+           let tzString = metadata[HKMetadataKeyTimeZone] as? String,
+           TimeZone(identifier: tzString) != nil {
+            return (tzString, .healthKitMetadata)
+        }
+
+        // Strategy 2: Check for timezone in other common metadata keys
+        // Some third-party apps use custom keys
+        if let metadata = sample.metadata {
+            for key in ["timezone", "TimeZone", "time_zone", "tz"] {
+                if let tzString = metadata[key] as? String,
+                   TimeZone(identifier: tzString) != nil {
+                    return (tzString, .healthKitMetadata)
+                }
+            }
+        }
+
+        // Strategy 3: Use device's current timezone as fallback
+        // This is imperfect for historical data but better than nothing
+        let deviceTz = TimeZone.current.identifier
+        return (deviceTz, .deviceTimezone)
+    }
+
     private nonisolated func processSleepSamples(_ samples: [HKCategorySample]) -> [[String: Any]] {
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
-        // Step 1: Convert to SourcedSleepSample with source metadata
+        // Step 1: Convert to SourcedSleepSample with source metadata and timezone
         let sourcedSamples: [SourcedSleepSample] = samples.compactMap { sample in
             let source = SleepDataSource.from(sourceRevision: sample.sourceRevision)
             let stage = mapSleepStage(sample.value)
@@ -713,13 +934,19 @@ class HealthKitManager: ObservableObject {
             // Skip "inBed" samples for sleep stage calculations
             guard stage != "inBed" && stage != "unknown" else { return nil }
 
+            // Extract timezone from sample metadata (HKMetadataKeyTimeZone)
+            // This is critical for users who travel - without it, times get misinterpreted
+            let (recordedTimezone, timezoneSource) = extractTimezone(from: sample)
+
             return SourcedSleepSample(
                 sample: sample,
                 source: source,
                 stage: stage,
                 durationMins: duration,
                 startTime: sample.startDate,
-                endTime: sample.endDate
+                endTime: sample.endDate,
+                recordedTimezone: recordedTimezone,
+                timezoneSource: timezoneSource
             )
         }
 
@@ -727,11 +954,13 @@ class HealthKitManager: ObservableObject {
         // Uses hybrid algorithm: primary source as base, fills gaps from secondary sources
         let mergedSamples = mergeMultiSourceSleepSamples(sourcedSamples)
 
-        // Step 3: Track unique sources per date for metadata
+        // Step 3: Track unique sources and timezones per date for metadata
         // Use END time to determine the "sleep night" - this ensures overnight sleep is attributed
         // to the day you wake up (e.g., sleep 11pm Dec 30 to 7am Dec 31 = Dec 31's sleep)
         var sourcesByDate: [String: Set<String>] = [:]
         var primarySourceByDate: [String: SleepDataSource] = [:]
+        var timezoneByDate: [String: String] = [:]
+        var timezoneSourceByDate: [String: TimezoneSource] = [:]
 
         for sample in mergedSamples {
             let dateKey = String(dateFormatter.string(from: sample.endTime).prefix(10))
@@ -744,6 +973,13 @@ class HealthKitManager: ObservableObject {
                 }
             } else {
                 primarySourceByDate[dateKey] = sample.source
+            }
+
+            // Track timezone - use the first sample's timezone for the night
+            // (all samples in a night should have the same timezone)
+            if timezoneByDate[dateKey] == nil {
+                timezoneByDate[dateKey] = sample.recordedTimezone
+                timezoneSourceByDate[dateKey] = sample.timezoneSource
             }
         }
 
@@ -801,6 +1037,10 @@ class HealthKitManager: ObservableObject {
             let primarySource = primarySourceByDate[date]
             let isMultiSource = allSources.count > 1
 
+            // Get timezone metadata
+            let recordedTimezone = timezoneByDate[date]
+            let timezoneSource = timezoneSourceByDate[date] ?? .unknown
+
             sleepData.append([
                 "date": date,
                 "in_bed_time": inBedTime ?? "",
@@ -818,7 +1058,10 @@ class HealthKitManager: ObservableObject {
                 "primary_source": primarySource?.name ?? "Unknown",
                 "source_bundle_id": primarySource?.bundleIdentifier ?? "",
                 "all_sources": allSources,
-                "is_multi_source": isMultiSource
+                "is_multi_source": isMultiSource,
+                // Timezone tracking fields (critical for travelers)
+                "recorded_timezone": recordedTimezone ?? "",
+                "timezone_source": timezoneSource.rawValue
             ])
         }
 
@@ -1129,18 +1372,25 @@ class HealthKitManager: ObservableObject {
 
     func syncAllHealthData(completion: @escaping (Result<[String: Any], Error>) -> Void) {
         Task { @MainActor in
+            print("[HealthKit Sync] ===== STARTING FULL SYNC =====")
+
             // Reset progress
             syncProgress = HealthKitSyncProgress()
 
             // Use ConvexService for sync (the primary backend)
-            guard ConvexService.shared.isAuthenticated else {
+            let isAuth = ConvexService.shared.isAuthenticated
+            print("[HealthKit Sync] Convex authenticated: \(isAuth)")
+
+            guard isAuth else {
                 syncProgress.update(step: .failed, message: "Not authenticated")
+                print("[HealthKit Sync] ❌ ABORTING - Not authenticated with Convex")
                 completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated. Please sign in first."])))
                 return
             }
 
             // Get device ID for sync
             let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+            print("[HealthKit Sync] Device ID: \(deviceId)")
 
             var sleepData: [[String: Any]] = []
             var heartRateData: [[String: Any]] = []
@@ -1148,6 +1398,7 @@ class HealthKitManager: ObservableObject {
             var activityData: [[String: Any]] = []
 
             // Step 1: Fetch sleep data
+            print("[HealthKit Sync] Step 1: Fetching sleep data...")
             syncProgress.update(step: .fetchingSleep, message: "Fetching sleep data (up to 6 months)...")
             do {
                 sleepData = try await withCheckedThrowingContinuation { continuation in
@@ -1161,13 +1412,14 @@ class HealthKitManager: ObservableObject {
                     }
                 }
                 syncProgress.recordsFetched += sleepData.count
-                print("[HealthKit] Fetched \(sleepData.count) days of sleep data")
+                print("[HealthKit Sync] ✅ Fetched \(sleepData.count) sleep records")
             } catch {
-                print("[HealthKit] Sleep fetch error: \(error.localizedDescription)")
+                print("[HealthKit Sync] ❌ Sleep fetch error: \(error.localizedDescription)")
                 // Continue with empty data - don't fail entire sync
             }
 
             // Step 2: Fetch heart rate data
+            print("[HealthKit Sync] Step 2: Fetching heart rate data...")
             syncProgress.update(step: .fetchingHeartRate, message: "Fetching heart rate data...")
             do {
                 heartRateData = try await withCheckedThrowingContinuation { continuation in
@@ -1260,17 +1512,22 @@ class HealthKitManager: ObservableObject {
                 var totalRecords = 0
 
                 // Step 5: Upload sleep data
+                print("[HealthKit Sync] Step 5: Uploading sleep data (\(sleepData.count) records)...")
                 if !sleepData.isEmpty {
                     syncProgress.update(step: .uploadingSleep, message: "Uploading \(sleepData.count) sleep records...")
                     let transformedSleep = transformSleepDataForConvex(sleepData)
-                    print("[HealthKit] Syncing \(transformedSleep.count) sleep records")
+                    print("[HealthKit Sync] Transformed \(transformedSleep.count) sleep records for Convex")
                     let sleepResult = try await ConvexService.shared.syncSleepData(
                         deviceId: deviceId,
                         sleepData: transformedSleep
                     )
-                    results["sleepData"] = ["synced": sleepResult.recordsSynced ?? sleepData.count]
-                    totalRecords += sleepResult.recordsSynced ?? sleepData.count
-                    syncProgress.recordsUploaded += sleepResult.recordsSynced ?? sleepData.count
+                    let synced = sleepResult.recordsSynced ?? sleepData.count
+                    print("[HealthKit Sync] ✅ Sleep data uploaded: \(synced) records")
+                    results["sleepData"] = ["synced": synced]
+                    totalRecords += synced
+                    syncProgress.recordsUploaded += synced
+                } else {
+                    print("[HealthKit Sync] ⚠️ No sleep data to upload")
                 }
 
                 // Step 6: Upload heart rate data
@@ -1300,11 +1557,14 @@ class HealthKitManager: ObservableObject {
                 }
 
                 results["totalRecordsSynced"] = totalRecords
+                print("[HealthKit Sync] ===== SYNC COMPLETE =====")
+                print("[HealthKit Sync] Total records synced: \(totalRecords)")
                 syncProgress.update(step: .complete, message: "Sync complete! \(totalRecords) records uploaded.")
                 completion(.success(results))
 
             } catch {
-                print("[HealthKit] Convex sync error: \(error)")
+                print("[HealthKit Sync] ===== SYNC FAILED =====")
+                print("[HealthKit Sync] ❌ Error: \(error)")
                 syncProgress.update(step: .failed, message: "Upload failed: \(error.localizedDescription)")
                 completion(.failure(error))
             }

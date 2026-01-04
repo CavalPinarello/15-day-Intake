@@ -270,7 +270,7 @@ This document contains the complete Sleep 360° assessment framework with all qu
 
 #### GATEWAY Questions (1)
 
-**3**: GATEWAY: Do you have trouble falling asleep, staying asleep, or waking too early?
+**3**: Do you have trouble falling asleep, staying asleep, or waking too early?
   - *Trigger*: Always
   - *Scale/Type*: Yes/No
 
@@ -566,11 +566,11 @@ This document contains the complete Sleep 360° assessment framework with all qu
 
 #### GATEWAY Questions (2)
 
-**15**: GATEWAY: In past 2 weeks, felt down, depressed, or hopeless?
+**15**: In past 2 weeks, felt down, depressed, or hopeless?
   - *Trigger*: Always
   - *Scale/Type*: 4-point scale
 
-**16**: GATEWAY: In past 2 weeks, felt nervous, anxious, or on edge?
+**16**: In past 2 weeks, felt nervous, anxious, or on edge?
   - *Trigger*: Always
   - *Scale/Type*: 4-point scale
 
@@ -776,11 +776,11 @@ This document contains the complete Sleep 360° assessment framework with all qu
 
 #### GATEWAY Questions (2)
 
-**17**: GATEWAY: Do you feel excessively tired or sleepy during the day?
+**17**: Do you feel excessively tired or sleepy during the day?
   - *Trigger*: Always
   - *Scale/Type*: 5-point scale
 
-**18**: GATEWAY: Memory problems, difficulty concentrating, or mental fog?
+**18**: Memory problems, difficulty concentrating, or mental fog?
   - *Trigger*: Always
   - *Scale/Type*: Yes/No
 
@@ -948,15 +948,15 @@ This document contains the complete Sleep 360° assessment framework with all qu
 
 #### GATEWAY Questions (6)
 
-**19**: GATEWAY: Do you snore loudly?
+**19**: Do you snore loudly?
   - *Trigger*: Always
   - *Scale/Type*: Yes/No
 
-**20**: GATEWAY: Has anyone observed you stop breathing during sleep?
+**20**: Has anyone observed you stop breathing during sleep?
   - *Trigger*: Always
   - *Scale/Type*: Yes/No
 
-**22**: GATEWAY: Do you have pain that affects your sleep?
+**22**: Do you have pain that affects your sleep?
   - *Trigger*: Always
   - *Scale/Type*: Yes/No
 
@@ -964,7 +964,7 @@ This document contains the complete Sleep 360° assessment framework with all qu
   - *Trigger*: If pain present
   - *Scale/Type*: 0-10 scale
 
-**24**: GATEWAY: Do you exercise regularly?
+**24**: Do you exercise regularly?
   - *Trigger*: Always
   - *Scale/Type*: Yes/No
 
