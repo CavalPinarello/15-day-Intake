@@ -86,16 +86,23 @@ struct MainDashboardView: View {
     // Overdue expansion packs from previous days
     @State private var overdueExpansions: [DailyCompletionStatus.OverdueExpansion] = []
 
-    // Coach marks for first-time users
-    @State private var showSleepLogCoachMark = false
-    @State private var showAssessmentCoachMark = false
-    @State private var showProgressCoachMark = false
+    // Coach marks for first-time users - dashboard tour
+    @State private var currentTourStep: Int = 0  // 0 = not showing, 1-6 = tour steps
+    @State private var showingDashboardTour = false
+    @State private var coachMarkTargetFrames: [CoachMarkTargetID: CGRect] = [:]
     @ObservedObject private var guideManager = FirstTimeGuideManager.shared
 
     // Check-in modal state (for unified Today's Focus)
     @State private var showingCheckIn = false
     @State private var selectedCheckInSlot: CheckInTimeSlot?
     @ObservedObject private var checkInManager = CheckInManager.shared
+
+    // Day advancement error handling
+    @State private var dayAdvancementError: String? = nil
+    @State private var showingAdvancementError = false
+    @State private var isAdvancingDay = false
+    @State private var advancementRetryCount = 0
+    @ObservedObject private var advancementLogger = DayAdvancementLogger.shared
 
     // Poll every 5 seconds when app is active (for cross-device sync)
     private let refreshInterval: TimeInterval = 5.0
@@ -148,7 +155,28 @@ struct MainDashboardView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
+
+            // Day advancement error banner
+            if showingAdvancementError, let error = dayAdvancementError {
+                VStack {
+                    DayAdvancementErrorBanner(
+                        message: error,
+                        onRetry: retryAdvancement,
+                        onDismiss: {
+                            withAnimation {
+                                showingAdvancementError = false
+                            }
+                        }
+                    )
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 60)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(100)
+            }
         }
+        .coordinateSpace(name: coachMarkCoordinateSpace)
         .navigationBarHidden(true)
         .sheet(isPresented: $showingJourneyOverview) {
             JourneyOverviewView(currentDay: $currentDay)
@@ -209,9 +237,43 @@ struct MainDashboardView: View {
                 navigateToSleepLog = true
             case "assessment":
                 navigateToAssessment = true
+            case "checkin_morning":
+                // Open morning check-in
+                selectedCheckInSlot = .morning
+                showingCheckIn = true
+            case "checkin_midday":
+                // Open midday check-in
+                selectedCheckInSlot = .midday
+                showingCheckIn = true
+            case "checkin_evening":
+                // Open evening check-in
+                selectedCheckInSlot = .evening
+                showingCheckIn = true
+            case "home":
+                // Just opening the app - no specific navigation needed
+                print("[ContentView] Deep link to home - app opened")
             default:
                 print("[ContentView] Unknown deep link destination: \(destination)")
             }
+        }
+        // Handle Watch-style check-in notification (for users without Watch)
+        .onReceive(NotificationCenter.default.publisher(for: .showWatchStyleCheckIn)) { notification in
+            guard let userInfo = notification.userInfo,
+                  let checkInType = userInfo["checkInType"] as? String else { return }
+
+            print("[ContentView] Show check-in for: \(checkInType)")
+
+            switch checkInType {
+            case "morning":
+                selectedCheckInSlot = .morning
+            case "midday":
+                selectedCheckInSlot = .midday
+            case "evening":
+                selectedCheckInSlot = .evening
+            default:
+                selectedCheckInSlot = .morning
+            }
+            showingCheckIn = true
         }
         .onAppear {
             loadProgress()
@@ -278,31 +340,52 @@ struct MainDashboardView: View {
                 await refreshFromConvex(silent: false, force: true)
             }
         }
-        // Full-screen coach mark overlay (appears above all content)
+        // Capture target frames for coach mark positioning
+        .onPreferenceChange(CoachMarkTargetPreferenceKey.self) { frames in
+            coachMarkTargetFrames = frames
+            #if DEBUG
+            if !frames.isEmpty {
+                print("[CoachMark] Captured \(frames.count) target frames:")
+                for (id, frame) in frames.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+                    print("  - \(id.rawValue): y=\(Int(frame.minY))-\(Int(frame.maxY)), h=\(Int(frame.height))")
+                }
+            }
+            #endif
+        }
+        // Debug overlay showing captured coach mark target frames (only in debug mode)
         .overlay {
-            if showSleepLogCoachMark {
-                CoachMarkWithBackdrop(
-                    content: CoachMarkLibrary.sleepLogTask,
-                    arrowDirection: .down,
-                    targetOffset: CGSize(width: 0, height: 100),
+            #if DEBUG
+            if themeManager.debugMode && !coachMarkTargetFrames.isEmpty {
+                ForEach(Array(coachMarkTargetFrames.keys), id: \.rawValue) { targetID in
+                    if let frame = coachMarkTargetFrames[targetID] {
+                        Rectangle()
+                            .stroke(Color.red, lineWidth: 2)
+                            .frame(width: frame.width, height: frame.height)
+                            .position(x: frame.midX, y: frame.midY)
+                            .overlay(
+                                Text(targetID.rawValue.replacingOccurrences(of: "coach_target_", with: ""))
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundColor(.red)
+                                    .background(Color.white.opacity(0.8))
+                                    .position(x: frame.midX, y: frame.minY - 8)
+                            )
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+            #endif
+        }
+        // Full-screen coach mark overlay (dashboard tour)
+        .overlay {
+            if showingDashboardTour, currentTourStep > 0, currentTourStep <= FirstTimeGuideManager.dashboardTourSequence.count {
+                DashboardTourOverlay(
+                    currentStep: currentTourStep,
+                    targetFrames: coachMarkTargetFrames,
                     onDismiss: {
-                        showSleepLogCoachMark = false
-                        guideManager.markCoachMarkShown(CoachMarkLibrary.sleepLogTask)
-                        showNextCoachMark(after: CoachMarkLibrary.sleepLogTask)
+                        advanceTour()
                     }
                 )
-                .zIndex(1000)
-            } else if showAssessmentCoachMark {
-                CoachMarkWithBackdrop(
-                    content: CoachMarkLibrary.assessmentTask,
-                    arrowDirection: .down,
-                    targetOffset: CGSize(width: 0, height: 180),
-                    onDismiss: {
-                        showAssessmentCoachMark = false
-                        guideManager.markCoachMarkShown(CoachMarkLibrary.assessmentTask)
-                        showNextCoachMark(after: CoachMarkLibrary.assessmentTask)
-                    }
-                )
+                .environmentObject(themeManager)
                 .zIndex(1000)
             }
         }
@@ -534,6 +617,7 @@ struct MainDashboardView: View {
                     }
                     .padding(.trailing, 4)  // Extra safety margin for profile circle
                 }
+                .coachMarkTarget(.settingsButton)
             }
 
             // Greeting - large, warm, centered
@@ -607,6 +691,7 @@ struct MainDashboardView: View {
             }
 
             // Interactive progress dots - tap completed days to view history
+            // Current day pulses when incomplete - tap to start questionnaires
             // In debug mode: can tap any future day to jump directly to it (reads debugMode from ThemeManager)
             InteractiveProgressDots(
                 current: currentDay,
@@ -615,6 +700,15 @@ struct MainDashboardView: View {
                 onDayTapped: { day in
                     sleepDiarySelectedDay = day
                     navigateToSleepDiary = true
+                },
+                isCurrentDayComplete: isDayComplete,
+                onCurrentDayTapped: {
+                    // Navigate to sleep log first (it's the first task)
+                    if !sleepLogDone {
+                        navigateToSleepLog = true
+                    } else if !assessmentDone && hasAssessmentToday {
+                        navigateToAssessment = true
+                    }
                 },
                 onDebugJumpToDay: { targetDay in
                     jumpToDay(targetDay)
@@ -639,6 +733,11 @@ struct MainDashboardView: View {
                 Text("Debug: Tap any purple dot to jump (↔ forward or back)")
                     .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
                     .foregroundColor(.purple)
+            } else if !isDayComplete {
+                // Current day is pulsing - hint to tap it
+                Text("Tap the pulsing dot to start today's tasks")
+                    .font(.system(size: Typography.caption, design: .rounded))
+                    .foregroundColor(theme.primary)
             } else if currentDay > 1 {
                 Text("Tap a completed day to view details")
                     .font(.system(size: Typography.caption, design: .rounded))
@@ -651,6 +750,7 @@ struct MainDashboardView: View {
             GlassyCardBackground(opacity: 0.6)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
         )
+        .coachMarkTarget(.journeyProgress)
     }
 
     private var progressPercentage: Int {
@@ -759,7 +859,6 @@ struct MainDashboardView: View {
             if isDayComplete && availableExpansionPack == nil && !hadExpansionPackToday {
                 DayCompleteCelebrationView(
                     currentDay: currentDay,
-                    isDebugMode: themeManager.debugMode,
                     onAdvanceDay: advanceToNextDay,
                     dayReadyAt: questionnaireManager.journeyProgress?.dayReadyAt
                 )
@@ -855,7 +954,6 @@ struct MainDashboardView: View {
                     // Day complete celebration button
                     DayCompleteCelebrationView(
                         currentDay: currentDay,
-                        isDebugMode: themeManager.debugMode,
                         onAdvanceDay: advanceToNextDay,
                         dayReadyAt: questionnaireManager.journeyProgress?.dayReadyAt
                     )
@@ -879,52 +977,59 @@ struct MainDashboardView: View {
                         selectedCheckInSlot = slot
                         showingCheckIn = true
                     }
+                    .coachMarkTarget(.checkInRow)
 
-                    // Sleep Log row
-                    if sleepLogDone {
-                        TaskRowView(
-                            icon: "moon.zzz.fill",
-                            title: "Sleep Log",
-                            subtitle: "Quick check-in about last night",
-                            isCompleted: true
-                        )
-                    } else {
-                        NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                    // Sleep Log row - wrapped in VStack for proper frame capture
+                    VStack(spacing: 0) {
+                        if sleepLogDone {
                             TaskRowView(
                                 icon: "moon.zzz.fill",
                                 title: "Sleep Log",
                                 subtitle: "Quick check-in about last night",
-                                duration: "~3 min",
-                                isCompleted: false
+                                isCompleted: true
                             )
-                        }
-                    }
-
-                    // Assessment row
-                    if assessmentDone {
-                        TaskRowView(
-                            icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
-                            title: getAssessmentTitle(),
-                            subtitle: getDayDescription(),
-                            isCompleted: true
-                        )
-                    } else {
-                        let minutes = getAssessmentMinutes()
-                        if minutes > 0 {
-                            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                        } else {
+                            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
                                 TaskRowView(
-                                    icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
-                                    title: getAssessmentTitle(),
-                                    subtitle: getDayDescription(),
-                                    duration: "~\(minutes) min",
+                                    icon: "moon.zzz.fill",
+                                    title: "Sleep Log",
+                                    subtitle: "Quick check-in about last night",
+                                    duration: "~3 min",
                                     isCompleted: false
                                 )
                             }
-                        } else if currentDay > 5 {
-                            // No-gateway expansion day - show friendly message
-                            NoAssessmentTodayView()
                         }
                     }
+                    .coachMarkTarget(.sleepLogRow)
+
+                    // Assessment row - wrapped in VStack for proper frame capture
+                    VStack(spacing: 0) {
+                        if assessmentDone {
+                            TaskRowView(
+                                icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
+                                title: getAssessmentTitle(),
+                                subtitle: getDayDescription(),
+                                isCompleted: true
+                            )
+                        } else {
+                            let minutes = getAssessmentMinutes()
+                            if minutes > 0 {
+                                NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                                    TaskRowView(
+                                        icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
+                                        title: getAssessmentTitle(),
+                                        subtitle: getDayDescription(),
+                                        duration: "~\(minutes) min",
+                                        isCompleted: false
+                                    )
+                                }
+                            } else if currentDay > 5 {
+                                // No-gateway expansion day - show friendly message
+                                NoAssessmentTodayView()
+                            }
+                        }
+                    }
+                    .coachMarkTarget(.assessmentRow)
                 }
             }
         }
@@ -992,22 +1097,48 @@ struct MainDashboardView: View {
 
     private func advanceToNextDay() {
         guard currentDay < Config.totalJourneyDays else { return }
+        guard !isAdvancingDay else { return }  // Prevent double-tap
+
+        isAdvancingDay = true
+        dayAdvancementError = nil
+
+        let bypassTimeCheck = themeManager.unlockTimeOverride
+        let debugMode = themeManager.debugMode
+
+        // Log the attempt
+        advancementLogger.logAttempt(fromDay: currentDay, bypassTimeCheck: bypassTimeCheck, debugMode: debugMode)
+
         Task {
             do {
-                // Pass debugMode or unlockTimeOverride - bypasses time check, NOT completion check
-                let bypassTimeCheck = themeManager.debugMode || themeManager.unlockTimeOverride
-                let response = try await ConvexService.shared.advanceToNextDay(debugMode: bypassTimeCheck)
+                let response = try await ConvexService.shared.advanceToNextDay(bypassTimeCheck: bypassTimeCheck)
 
                 if response.success {
-                    await questionnaireManager.loadJourneyProgress()
+                    // Log success
+                    advancementLogger.logSuccess(
+                        fromDay: currentDay,
+                        toDay: response.newDay ?? currentDay + 1,
+                        sleepLogCompleted: response.sleepLogCompleted ?? true,
+                        assessmentCompleted: response.assessmentCompleted ?? true,
+                        bypassTimeCheck: bypassTimeCheck,
+                        debugMode: debugMode
+                    )
+
+                    // Reload progress with error tracking
+                    do {
+                        await questionnaireManager.loadJourneyProgress()
+                    } catch {
+                        advancementLogger.logProgressReloadFailed(currentDay: response.newDay ?? currentDay + 1, error: error.localizedDescription)
+                    }
 
                     // CRITICAL: Reload data for the NEW day to fix stale cache
                     if let newDay = response.newDay {
-                        // Always reload question count for accurate time estimates
-                        await questionnaireManager.loadAssessmentQuestionCountForDay(newDay)
-                        // Expansion schedule only relevant for days 6+
-                        if newDay >= 6 {
-                            await questionnaireManager.loadExpansionScheduleForDay(newDay)
+                        do {
+                            await questionnaireManager.loadAssessmentQuestionCountForDay(newDay)
+                            if newDay >= 6 {
+                                await questionnaireManager.loadExpansionScheduleForDay(newDay)
+                            }
+                        } catch {
+                            advancementLogger.logQuestionsLoadFailed(day: newDay, error: error.localizedDescription)
                         }
                     }
 
@@ -1017,17 +1148,98 @@ struct MainDashboardView: View {
                                 currentDay = newDay
                             }
                         }
+                        isAdvancingDay = false
+                        advancementRetryCount = 0
                         NotificationCenter.default.post(name: .questionnaireProgressDidChange, object: nil)
                     }
                     print("[iOS] Advanced to Day \(response.newDay ?? currentDay)")
                 } else {
-                    // Server rejected advancement - sections not complete
-                    print("[iOS] Cannot advance: \(response.error ?? "Unknown error")")
-                    print("[iOS] Sleep Log: \(response.sleepLogCompleted ?? false), Assessment: \(response.assessmentCompleted ?? false)")
+                    // This branch is kept for completeness but ConvexService throws on failure
+                    let errorMessage = response.error ?? "Unknown error"
+                    await handleAdvancementFailure(
+                        errorMessage: errorMessage,
+                        sleepLogCompleted: response.sleepLogCompleted,
+                        assessmentCompleted: response.assessmentCompleted,
+                        bypassTimeCheck: bypassTimeCheck,
+                        debugMode: debugMode
+                    )
                 }
             } catch {
-                print("[iOS] Error advancing day: \(error)")
+                // Parse error message for user-friendly display
+                let errorMessage = parseAdvancementError(error)
+                await handleAdvancementFailure(
+                    errorMessage: errorMessage,
+                    sleepLogCompleted: nil,
+                    assessmentCompleted: nil,
+                    bypassTimeCheck: bypassTimeCheck,
+                    debugMode: debugMode
+                )
             }
+        }
+    }
+
+    @MainActor
+    private func handleAdvancementFailure(errorMessage: String, sleepLogCompleted: Bool?, assessmentCompleted: Bool?, bypassTimeCheck: Bool, debugMode: Bool) {
+        // Log the failure
+        advancementLogger.logFailure(
+            fromDay: currentDay,
+            error: errorMessage,
+            sleepLogCompleted: sleepLogCompleted,
+            assessmentCompleted: assessmentCompleted,
+            timeCheckPassed: nil,
+            bypassTimeCheck: bypassTimeCheck,
+            debugMode: debugMode
+        )
+
+        // Update UI state
+        dayAdvancementError = errorMessage
+        showingAdvancementError = true
+        isAdvancingDay = false
+
+        print("[iOS] Cannot advance: \(errorMessage)")
+        print("[iOS] Sleep Log: \(sleepLogCompleted ?? false), Assessment: \(assessmentCompleted ?? false)")
+
+        // Auto-dismiss error after 5 seconds
+        Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            await MainActor.run {
+                if showingAdvancementError {
+                    withAnimation {
+                        showingAdvancementError = false
+                    }
+                }
+            }
+        }
+    }
+
+    private func parseAdvancementError(_ error: Error) -> String {
+        let errorString = error.localizedDescription.lowercased()
+
+        if errorString.contains("sleep log") && errorString.contains("assessment") {
+            return "Please complete both Sleep Log and Assessment first"
+        } else if errorString.contains("sleep log") {
+            return "Please complete the Sleep Log first"
+        } else if errorString.contains("assessment") {
+            return "Please complete the Assessment first"
+        } else if errorString.contains("4:00 am") || errorString.contains("4 am") || errorString.contains("unlock") {
+            return "Next day unlocks at 4:00 AM"
+        } else if errorString.contains("network") || errorString.contains("connection") {
+            return "Network error. Please check your connection and try again."
+        } else {
+            return "Unable to advance day. Please try again."
+        }
+    }
+
+    private func retryAdvancement() {
+        advancementRetryCount += 1
+        advancementLogger.logRetry(fromDay: currentDay, attemptNumber: advancementRetryCount)
+        showingAdvancementError = false
+        dayAdvancementError = nil
+
+        // Small delay before retry
+        Task {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            advanceToNextDay()
         }
     }
 
@@ -1236,6 +1448,7 @@ struct MainDashboardView: View {
             .padding()
             .background(GlassyCardBackground(opacity: 0.35, tint: theme.accent))
             .cornerRadius(12)
+            .coachMarkTarget(.upcomingAssessments)
         }
     }
 
@@ -1394,40 +1607,35 @@ struct MainDashboardView: View {
         }
     }
 
-    // MARK: - Coach Marks
+    // MARK: - Dashboard Tour (Coach Marks)
 
-    /// Trigger coach marks for first-time users in sequence
+    /// Trigger dashboard tour for first-time users
     /// Shows once per user, then never again (restorable from Debug Panel)
     private func triggerCoachMarksIfNeeded() {
-        // Show sleep log coach mark first (with delay) - only if never shown before
-        if guideManager.shouldShowCoachMark(CoachMarkLibrary.sleepLogTask) {
+        // Check if user has seen the first tour step (journey duration)
+        if guideManager.shouldShowCoachMark(CoachMarkLibrary.journeyDuration) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                showSleepLogCoachMark = true
+                currentTourStep = 1
+                showingDashboardTour = true
             }
         }
     }
 
-    /// Show the next coach mark in sequence after dismissing current one
-    private func showNextCoachMark(after current: CoachMarkContent) {
-        // Sequence: Sleep Log -> Assessment -> Progress
-        if current.id == CoachMarkLibrary.sleepLogTask.id {
-            // Show assessment coach mark next
-            if guideManager.shouldShowCoachMark(CoachMarkLibrary.assessmentTask) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        showAssessmentCoachMark = true
-                    }
-                }
-            }
-        } else if current.id == CoachMarkLibrary.assessmentTask.id {
-            // Show progress coach mark last
-            if guideManager.shouldShowCoachMark(CoachMarkLibrary.dayProgress) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        showProgressCoachMark = true
-                    }
-                }
-            }
+    /// Advance to next tour step or end tour
+    private func advanceTour() {
+        // Mark current step as shown
+        if currentTourStep > 0 && currentTourStep <= FirstTimeGuideManager.dashboardTourSequence.count {
+            let content = FirstTimeGuideManager.dashboardTourSequence[currentTourStep - 1]
+            guideManager.markCoachMarkShown(content)
+        }
+
+        // Move to next step
+        if currentTourStep < FirstTimeGuideManager.dashboardTourSequence.count {
+            currentTourStep += 1
+        } else {
+            // End tour
+            showingDashboardTour = false
+            currentTourStep = 0
         }
     }
 
@@ -3278,7 +3486,6 @@ struct SleepDiaryView: View {
 
 struct DayCompleteCelebrationView: View {
     let currentDay: Int
-    let isDebugMode: Bool
     let onAdvanceDay: () -> Void
     /// Timestamp (ms) when the day became ready (both sections complete)
     /// If nil, fall back to legacy behavior (simple hour check)
@@ -3290,6 +3497,8 @@ struct DayCompleteCelebrationView: View {
 
     // Observe ThemeManager for reactive circadian updates
     @ObservedObject private var themeManager = ThemeManager.shared
+    // Observe UnlockTestManager for test countdown
+    @ObservedObject private var unlockTestManager = UnlockTestManager.shared
     private var theme: ColorTheme { themeManager.currentTheme }
 
     var body: some View {
@@ -3322,8 +3531,8 @@ struct DayCompleteCelebrationView: View {
                 Divider()
                     .background(theme.textOnCardMuted.opacity(0.3))  // Circadian-aware divider
 
-                if isDebugMode || themeManager.unlockTimeOverride {
-                    // Debug mode or unlock override: Show advance button immediately (bypasses time check)
+                if themeManager.unlockTimeOverride {
+                    // Unlock override enabled: Show advance button immediately (bypasses time check)
                     Button(action: onAdvanceDay) {
                         HStack {
                             Image(systemName: "forward.fill")
@@ -3339,7 +3548,7 @@ struct DayCompleteCelebrationView: View {
                         .cornerRadius(10)
                     }
 
-                    Text(isDebugMode ? "Debug mode: Time check bypassed" : "Unlock override enabled in Settings")
+                    Text("Bypass 4 AM enabled in Debug Menu")
                         .font(.caption2)
                         .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
                 } else if isUnlocked {
@@ -3358,6 +3567,57 @@ struct DayCompleteCelebrationView: View {
                         .background(theme.primary)
                         .cornerRadius(10)
                     }
+                } else if unlockTestManager.isTestRunning {
+                    // Unlock test in progress - show countdown
+                    VStack(spacing: 12) {
+                        HStack(spacing: 12) {
+                            // Animated unlock icon
+                            ZStack {
+                                Circle()
+                                    .fill(theme.primary.opacity(0.15))
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "lock.open.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(theme.primary)
+                                    .symbolEffect(.pulse)
+                            }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Testing Day Unlock...")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(theme.textOnCard)
+                                Text("Simulating time to 4:00 AM")
+                                    .font(.caption)
+                                    .foregroundColor(theme.textOnCardSecondary)
+                            }
+
+                            Spacer()
+
+                            // Countdown display
+                            Text("\(unlockTestManager.currentTestSecond)/10")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(theme.primary)
+                                .monospacedDigit()
+                        }
+
+                        // Progress bar
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(theme.textOnCardMuted.opacity(0.2))
+                                    .frame(height: 8)
+
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(theme.primary)
+                                    .frame(width: geo.size.width * CGFloat(unlockTestManager.currentTestSecond) / 10.0, height: 8)
+                                    .animation(.linear(duration: 0.5), value: unlockTestManager.currentTestSecond)
+                            }
+                        }
+                        .frame(height: 8)
+                    }
+                    .padding(.vertical, 8)
                 } else {
                     // Locked state - show padlock with "We'll unlock tomorrow"
                     HStack(spacing: 12) {
@@ -3592,6 +3852,76 @@ struct NoAssessmentTodayView: View {
         .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.medium)
                 .stroke(theme.success.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Day Advancement Error Banner
+
+struct DayAdvancementErrorBanner: View {
+    let message: String
+    let onRetry: () -> Void
+    let onDismiss: () -> Void
+
+    @ObservedObject private var themeManager = ThemeManager.shared
+    private var theme: ColorTheme { themeManager.currentTheme }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Error icon
+            ZStack {
+                Circle()
+                    .fill(theme.error.opacity(0.2))
+                    .frame(width: 36, height: 36)
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(theme.error)
+            }
+
+            // Message
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Couldn't advance day")
+                    .font(.system(size: Typography.caption, weight: .semibold, design: .rounded))
+                    .foregroundColor(theme.textOnCard)
+                Text(message)
+                    .font(.system(size: Typography.caption2, design: .rounded))
+                    .foregroundColor(theme.textOnCardSecondary)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            // Action buttons
+            HStack(spacing: 8) {
+                // Retry button
+                Button(action: onRetry) {
+                    Text("Retry")
+                        .font(.system(size: Typography.caption, weight: .medium, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(theme.primary)
+                        .cornerRadius(CornerRadius.small)
+                }
+
+                // Dismiss button
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(theme.textOnCardMuted)
+                        .padding(8)
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .fill(theme.cardBackground)
+                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .stroke(theme.error.opacity(0.3), lineWidth: 1)
         )
     }
 }

@@ -6,8 +6,59 @@
 //  Brief, friendly, contextual guidance for first-time users
 //  CIRCADIAN-AWARE: Uses warm colors at night
 //
+//  POSITIONING SYSTEM:
+//  - Uses anchor preferences to track actual element frames
+//  - Automatically positions bubble to stay within screen bounds
+//  - Arrow points precisely to the target element
+//
 
 import SwiftUI
+
+// MARK: - Coach Mark Target ID
+
+/// Identifiers for elements that can have coach marks
+enum CoachMarkTargetID: String, CaseIterable {
+    case settingsButton = "coach_target_settings"
+    case journeyProgress = "coach_target_journey"
+    case todaysFocusCard = "coach_target_todays_focus"
+    case checkInRow = "coach_target_check_in"
+    case sleepLogRow = "coach_target_sleep_log"
+    case assessmentRow = "coach_target_assessment"
+    case upcomingAssessments = "coach_target_upcoming"
+}
+
+// MARK: - Preference Key for Target Frames
+
+struct CoachMarkTargetPreferenceKey: PreferenceKey {
+    static var defaultValue: [CoachMarkTargetID: CGRect] = [:]
+
+    static func reduce(value: inout [CoachMarkTargetID: CGRect], nextValue: () -> [CoachMarkTargetID: CGRect]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+// MARK: - Named Coordinate Space for Coach Marks
+
+/// The coordinate space name used for coach mark positioning
+/// This must be applied to the root scrollable content
+let coachMarkCoordinateSpace = "coachMarkSpace"
+
+// MARK: - View Extension for Marking Targets
+
+extension View {
+    /// Mark this view as a target for coach marks
+    /// NOTE: The ancestor view must have .coordinateSpace(name: coachMarkCoordinateSpace) applied
+    func coachMarkTarget(_ id: CoachMarkTargetID) -> some View {
+        self.background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: CoachMarkTargetPreferenceKey.self,
+                    value: [id: geo.frame(in: .named(coachMarkCoordinateSpace))]
+                )
+            }
+        )
+    }
+}
 
 // MARK: - Arrow Direction
 
@@ -49,21 +100,57 @@ struct CoachMarkContent {
 
 enum CoachMarkLibrary {
 
-    // MARK: - Dashboard
+    // MARK: - Dashboard Tour (in sequence order)
 
+    /// 1. Journey Duration - at the top
+    static let journeyDuration = CoachMarkContent(
+        id: "coach_journey_duration",
+        icon: "calendar.badge.clock",
+        title: "Your 10-Day Journey",
+        message: "Complete daily tasks for 10 days to build your personalized sleep profile. Each day reveals more insights!"
+    )
+
+    /// 2. Today's Focus - Energy/Mood/Focus check-ins
+    static let todaysFocus = CoachMarkContent(
+        id: "coach_todays_focus",
+        icon: "sun.max.fill",
+        title: "Quick Check-Ins",
+        message: "Rate your Energy, Mood, and Focus throughout the day. Takes just seconds - helps track how sleep affects your day!"
+    )
+
+    /// 3. Sleep Log task
     static let sleepLogTask = CoachMarkContent(
         id: "coach_sleep_log_task",
         icon: "moon.zzz.fill",
         title: "Morning Sleep Log",
-        message: "Tap here each morning to log last night's sleep. Takes about 2 minutes!"
+        message: "Each morning, log how you slept. We'll ask about bed time, wake time, and sleep quality. Takes ~3 minutes."
     )
 
+    /// 4. Assessment task
     static let assessmentTask = CoachMarkContent(
         id: "coach_assessment_task",
         icon: "list.clipboard.fill",
         title: "Daily Assessment",
-        message: "Quick questions about your day. Helps us understand what affects your sleep."
+        message: "Quick questions about lifestyle, stress, and habits. Helps us understand what affects YOUR sleep specifically."
     )
+
+    /// 5. Upcoming Assessments
+    static let upcomingAssessments = CoachMarkContent(
+        id: "coach_upcoming_assessments",
+        icon: "sparkles",
+        title: "Personalized Deep Dives",
+        message: "Based on your answers, we may schedule specialized questionnaires. These unlock after Day 5 if relevant to you."
+    )
+
+    /// 6. Settings menu
+    static let settingsMenu = CoachMarkContent(
+        id: "coach_settings_menu",
+        icon: "gearshape.fill",
+        title: "Your Settings",
+        message: "Customize notifications, appearance, and preferences. You can also turn off Sleep Science Cards here."
+    )
+
+    // MARK: - Legacy (keep for compatibility)
 
     static let progressGarden = CoachMarkContent(
         id: "coach_progress_garden",
@@ -148,6 +235,7 @@ struct CoachMarkView: View {
     let content: CoachMarkContent
     let arrowDirection: CoachMarkArrowDirection
     let onDismiss: () -> Void
+    var hideArrow: Bool = false  // Set to true when arrow is handled externally
 
     @State private var isAppearing: Bool = false
     @Environment(\.accessibilityReduceMotion) var reduceMotion
@@ -185,7 +273,7 @@ struct CoachMarkView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Arrow at top (if pointing up)
-            if arrowDirection == .up {
+            if arrowDirection == .up && !hideArrow {
                 arrowShape
                     .padding(.bottom, -6)
             }
@@ -193,7 +281,7 @@ struct CoachMarkView: View {
             // Main bubble
             HStack(spacing: 0) {
                 // Arrow at left
-                if arrowDirection == .left {
+                if arrowDirection == .left && !hideArrow {
                     arrowShape
                         .padding(.trailing, -6)
                 }
@@ -201,14 +289,14 @@ struct CoachMarkView: View {
                 bubbleContent
 
                 // Arrow at right
-                if arrowDirection == .right {
+                if arrowDirection == .right && !hideArrow {
                     arrowShape
                         .padding(.leading, -6)
                 }
             }
 
             // Arrow at bottom (if pointing down)
-            if arrowDirection == .down {
+            if arrowDirection == .down && !hideArrow {
                 arrowShape
                     .padding(.top, -6)
             }
@@ -292,6 +380,7 @@ struct CoachMarkView: View {
 // MARK: - Coach Mark With Backdrop
 
 /// A coach mark with a dimmed backdrop overlay for better visibility
+/// DEPRECATED: Use AnchoredCoachMark instead for proper positioning
 struct CoachMarkWithBackdrop: View {
     let content: CoachMarkContent
     let arrowDirection: CoachMarkArrowDirection
@@ -331,6 +420,296 @@ struct CoachMarkWithBackdrop: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             onDismiss()
         }
+    }
+}
+
+// MARK: - Anchored Coach Mark (Screen-Aware)
+
+/// Coach mark that positions itself relative to an actual UI element
+/// Automatically stays within screen bounds and points arrow at target
+struct AnchoredCoachMark: View {
+    let content: CoachMarkContent
+    let targetFrame: CGRect
+    let screenSize: CGSize
+    let safeAreaInsets: EdgeInsets
+    let onDismiss: () -> Void
+
+    @State private var isAppearing: Bool = false
+    @EnvironmentObject var themeManager: ThemeManager
+
+    // Bubble constraints
+    private let bubbleMaxWidth: CGFloat = 280
+    private let bubbleEstimatedHeight: CGFloat = 150
+    private let screenPadding: CGFloat = 16
+    private let arrowHeight: CGFloat = 12
+    private let arrowWidth: CGFloat = 20
+    private let verticalGap: CGFloat = 8
+
+    var body: some View {
+        ZStack {
+            // Spotlight backdrop - dark overlay with cutout for target
+            SpotlightBackdrop(
+                targetFrame: spotlightFrame,
+                screenSize: screenSize,
+                opacity: isAppearing ? 0.7 : 0
+            )
+            .ignoresSafeArea()
+            .onTapGesture {
+                dismiss()
+            }
+
+            // Coach mark bubble with arrow
+            bubbleWithArrow
+                .position(bubblePosition)
+                .opacity(isAppearing ? 1 : 0)
+                .scaleEffect(isAppearing ? 1 : 0.8)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                isAppearing = true
+            }
+        }
+    }
+
+    /// Frame for the spotlight cutout (slightly larger than target for padding)
+    private var spotlightFrame: CGRect {
+        let padding: CGFloat = 8
+        return CGRect(
+            x: targetFrame.minX - padding,
+            y: targetFrame.minY - padding,
+            width: targetFrame.width + padding * 2,
+            height: targetFrame.height + padding * 2
+        )
+    }
+
+    // MARK: - Positioning Logic
+
+    /// Determine whether bubble should appear above or below target
+    private var preferBelow: Bool {
+        // Calculate space above and below target
+        // Note: targetFrame is already in coachMarkCoordinateSpace (relative to the ZStack content area)
+        let spaceAbove = targetFrame.minY
+        let spaceBelow = screenSize.height - targetFrame.maxY
+
+        // Prefer below if more space, or if target is in top third of screen
+        if targetFrame.midY < screenSize.height * 0.35 {
+            return true
+        }
+
+        return spaceBelow >= bubbleEstimatedHeight + arrowHeight + verticalGap
+    }
+
+    /// Calculate arrow direction based on positioning
+    private var arrowDirection: CoachMarkArrowDirection {
+        preferBelow ? .up : .down
+    }
+
+    /// Calculate the X position for the bubble (clamped to screen bounds)
+    private var bubbleX: CGFloat {
+        let targetCenterX = targetFrame.midX
+
+        // Calculate bounds for bubble center
+        let minX = screenPadding + bubbleMaxWidth / 2
+        let maxX = screenSize.width - screenPadding - bubbleMaxWidth / 2
+
+        // Clamp to screen bounds
+        return min(max(targetCenterX, minX), maxX)
+    }
+
+    /// Calculate the Y position for the bubble
+    private var bubbleY: CGFloat {
+        if preferBelow {
+            // Position below target
+            return targetFrame.maxY + verticalGap + arrowHeight + bubbleEstimatedHeight / 2
+        } else {
+            // Position above target
+            return targetFrame.minY - verticalGap - arrowHeight - bubbleEstimatedHeight / 2
+        }
+    }
+
+    /// Final bubble position
+    private var bubblePosition: CGPoint {
+        CGPoint(x: bubbleX, y: bubbleY)
+    }
+
+    /// Calculate arrow X offset from bubble center to point at target
+    private var arrowXOffset: CGFloat {
+        let targetCenterX = targetFrame.midX
+        let offset = targetCenterX - bubbleX
+
+        // Clamp arrow offset to stay within bubble bounds
+        let maxOffset = (bubbleMaxWidth / 2) - arrowWidth
+        return min(max(offset, -maxOffset), maxOffset)
+    }
+
+    // MARK: - Views
+
+    private var bubbleWithArrow: some View {
+        VStack(spacing: 0) {
+            if arrowDirection == .up {
+                arrowView
+                    .offset(x: arrowXOffset)
+                    .padding(.bottom, -6)
+            }
+
+            CoachMarkView(
+                content: content,
+                arrowDirection: arrowDirection,
+                onDismiss: dismiss,
+                hideArrow: true  // Arrow is handled separately for precise positioning
+            )
+
+            if arrowDirection == .down {
+                arrowView
+                    .offset(x: arrowXOffset)
+                    .padding(.top, -6)
+            }
+        }
+    }
+
+    private var arrowView: some View {
+        let theme = themeManager.currentTheme
+        let palette = themeManager.circadianPalette
+
+        let bubbleBackground = theme.cardBackground
+        let bubbleBorder = palette.isDark
+            ? theme.accent.opacity(0.4)
+            : theme.secondaryText.opacity(0.2)
+
+        return CoachMarkArrow()
+            .fill(bubbleBackground)
+            .frame(width: arrowWidth, height: arrowHeight)
+            .overlay(
+                CoachMarkArrow()
+                    .stroke(bubbleBorder, lineWidth: 1)
+            )
+            .rotationEffect(arrowDirection == .down ? .degrees(180) : .degrees(0))
+    }
+
+    private func dismiss() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            isAppearing = false
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            UserDefaults.standard.set(true, forKey: content.id)
+            onDismiss()
+        }
+    }
+}
+
+// MARK: - Dashboard Tour Overlay
+
+/// Full-screen overlay for dashboard tour that uses actual element positions
+struct DashboardTourOverlay: View {
+    let currentStep: Int
+    let targetFrames: [CoachMarkTargetID: CGRect]
+    let onDismiss: () -> Void
+
+    @EnvironmentObject var themeManager: ThemeManager
+    @State private var hasCheckedVisibility = false
+
+    /// Map tour steps to their target elements
+    private static let stepTargets: [Int: CoachMarkTargetID] = [
+        1: .journeyProgress,      // Day X of 10
+        2: .checkInRow,           // Check-In (Energy/Mood/Focus)
+        3: .sleepLogRow,          // Sleep Log
+        4: .assessmentRow,        // Assessment
+        5: .upcomingAssessments,  // Upcoming Assessments
+        6: .settingsButton        // Settings
+    ]
+
+    /// Map tour steps to their content
+    private static let stepContent: [Int: CoachMarkContent] = [
+        1: CoachMarkLibrary.journeyDuration,
+        2: CoachMarkLibrary.todaysFocus,
+        3: CoachMarkLibrary.sleepLogTask,
+        4: CoachMarkLibrary.assessmentTask,
+        5: CoachMarkLibrary.upcomingAssessments,
+        6: CoachMarkLibrary.settingsMenu
+    ]
+
+    var body: some View {
+        GeometryReader { geometry in
+            let targetID = Self.stepTargets[currentStep]
+            let targetFrame = targetID.flatMap { targetFrames[$0] }
+            let isVisible = isFrameVisible(targetFrame, in: geometry)
+
+            #if DEBUG
+            let _ = print("[CoachMark Tour] Step \(currentStep): targetID=\(targetID?.rawValue ?? "nil"), frame=\(targetFrame.map { "y:\(Int($0.minY))-\(Int($0.maxY))" } ?? "nil"), visible=\(isVisible)")
+            #endif
+
+            if let content = Self.stepContent[currentStep],
+               let frame = targetFrame,
+               isVisible {
+                // Target exists and is visible - show the coach mark
+                AnchoredCoachMark(
+                    content: content,
+                    targetFrame: frame,
+                    screenSize: geometry.size,
+                    safeAreaInsets: geometry.safeAreaInsets,
+                    onDismiss: onDismiss
+                )
+                .environmentObject(themeManager)
+            } else {
+                // Target doesn't exist or isn't visible - auto-skip to next step
+                Color.clear
+                    .onAppear {
+                        #if DEBUG
+                        print("[CoachMark Tour] Step \(currentStep) skipped - target not available or not visible")
+                        #endif
+                        // Small delay to prevent rapid-fire skipping
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            onDismiss()
+                        }
+                    }
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    /// Check if a frame is valid and visible on screen
+    private func isFrameVisible(_ frame: CGRect?, in geometry: GeometryProxy) -> Bool {
+        guard let frame = frame else { return false }
+
+        // Frame must have valid dimensions
+        guard frame.width > 0, frame.height > 0 else { return false }
+
+        // Since frames are captured relative to the coachMarkCoordinateSpace (the ZStack),
+        // they're already in the content area. Check if frame is within visible bounds.
+        let screenHeight = geometry.size.height
+
+        // Check if frame is at least partially within visible area (at least 20 points visible)
+        let visibleTop = max(frame.minY, 0)
+        let visibleBottom = min(frame.maxY, screenHeight)
+        let visibleHeight = visibleBottom - visibleTop
+
+        return visibleHeight >= 20
+    }
+}
+
+// MARK: - Spotlight Backdrop
+
+/// Dark overlay with a rounded rectangle cutout to highlight the target element
+struct SpotlightBackdrop: View {
+    let targetFrame: CGRect
+    let screenSize: CGSize
+    let opacity: Double
+    let cornerRadius: CGFloat = 12
+
+    var body: some View {
+        Canvas { context, size in
+            // Fill the entire canvas with dark color
+            context.fill(
+                Path(CGRect(origin: .zero, size: size)),
+                with: .color(.black.opacity(opacity))
+            )
+
+            // Cut out the spotlight area (make it transparent)
+            context.blendMode = .destinationOut
+            let spotlightPath = Path(roundedRect: targetFrame, cornerRadius: cornerRadius)
+            context.fill(spotlightPath, with: .color(.white))
+        }
+        .compositingGroup()
     }
 }
 

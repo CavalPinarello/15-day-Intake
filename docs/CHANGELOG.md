@@ -6,6 +6,40 @@
 
 ### Jan 4, 2026
 
+#### Coach Mark System Overhaul
+
+Fixed guide pop-up bubbles that were clipped and pointing to wrong UI elements. Completely rebuilt the positioning system.
+
+**Problems fixed:**
+- Coach mark bubbles were getting clipped on edges of different iPhone screen sizes
+- Arrows were pointing to wrong elements (e.g., "Check-In" tip pointing at Sleep Log)
+- Hard-coded offsets from screen center didn't account for dynamic content heights
+- Users couldn't tell what element the coach mark was referring to
+
+**Solution - Anchor-based positioning:**
+- Created `CoachMarkTargetID` enum to identify target UI elements
+- Added `CoachMarkTargetPreferenceKey` preference key system to capture actual element frames
+- New `.coachMarkTarget()` view modifier marks elements for coach mark targeting
+- Named coordinate space (`coachMarkCoordinateSpace`) ensures consistent coordinate calculations
+- `DashboardTourOverlay` orchestrates the tour using actual frame references
+- Auto-skips steps where target elements don't exist or aren't visible
+
+**Solution - Spotlight effect:**
+- Added `SpotlightBackdrop` that creates dark overlay with cutout
+- Target element is highlighted by being cut out from the dark overlay
+- Uses Canvas with `destinationOut` blend mode for the cutout effect
+- Crystal clear visual indication of what each coach mark refers to
+
+**Debug features:**
+- In debug mode, red rectangles show captured target frames for verification
+- Console logging shows which frames are captured and which steps are displayed
+
+**Files changed:**
+- `ZoeSleep/ZoeSleep/Views/CoachMarkView.swift` - New positioning system, spotlight backdrop
+- `ZoeSleep/ZoeSleep/ContentView.swift` - Added coordinate space, target modifiers, debug overlay
+
+---
+
 #### Fixed "Other" Dose Option Bug in Sleep Log
 
 Fixed a bug where clicking "Other" in the medication dose selector would not properly allow entering custom dose values.
