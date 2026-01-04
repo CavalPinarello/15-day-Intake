@@ -313,8 +313,25 @@ struct ProfileSettingsView: View {
             .disabled(isReconnectingWatch)
             .accessibleTapTarget()
 
-            // Debug log link removed - WatchConnectivityDebugView not in project
-            // TODO: Add WatchConnectivityDebugView.swift to Xcode project to re-enable
+            // Debug log link (only in debug mode)
+            if themeManager.debugMode {
+                NavigationLink {
+                    WatchConnectivityDebugView()
+                        .environmentObject(themeManager)
+                } label: {
+                    HStack {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .frame(width: 28)
+                            .foregroundColor(.orange)
+                        Text("Connectivity Log")
+                        Spacer()
+                        Text("\(watchConnectivity.connectivityLog.count)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .accessibleTapTarget()
+            }
         } header: {
             Text("Apple Watch")
         } footer: {
