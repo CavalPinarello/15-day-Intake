@@ -114,8 +114,8 @@ enum CoachMarkLibrary {
     static let todaysFocus = CoachMarkContent(
         id: "coach_todays_focus",
         icon: "sun.max.fill",
-        title: "Quick Check-Ins",
-        message: "Rate your Energy, Mood, and Focus throughout the day. Takes just seconds - helps track how sleep affects your day!"
+        title: "Energy Check-Ins",
+        message: "Tap the Morning, Midday, or Evening circle to log how you feel. If you have an Apple Watch, you can check in from your wrist! This helps us see how your sleep affects your day."
     )
 
     /// 3. Sleep Log task
@@ -123,7 +123,7 @@ enum CoachMarkLibrary {
         id: "coach_sleep_log_task",
         icon: "moon.zzz.fill",
         title: "Morning Sleep Log",
-        message: "Each morning, log how you slept. We'll ask about bed time, wake time, and sleep quality. Takes ~3 minutes."
+        message: "Tap here each morning to log last night's sleep. We'll ask about bed time, wake time, and how rested you feel. Takes ~3 minutes."
     )
 
     /// 4. Assessment task
@@ -131,7 +131,7 @@ enum CoachMarkLibrary {
         id: "coach_assessment_task",
         icon: "list.clipboard.fill",
         title: "Daily Assessment",
-        message: "Quick questions about lifestyle, stress, and habits. Helps us understand what affects YOUR sleep specifically."
+        message: "Tap here for quick questions about your lifestyle, stress, and habits. This helps us understand what specifically affects YOUR sleep."
     )
 
     /// 5. Upcoming Assessments
@@ -473,12 +473,14 @@ struct AnchoredCoachMark: View {
 
     /// Frame for the spotlight cutout (slightly larger than target for padding)
     private var spotlightFrame: CGRect {
-        let padding: CGFloat = 8
+        let horizontalPadding: CGFloat = 12
+        let topPadding: CGFloat = 4  // Minimal top padding to avoid capturing previous elements
+        let bottomPadding: CGFloat = 50  // Extra padding at bottom to ensure circles/content aren't cut off
         return CGRect(
-            x: targetFrame.minX - padding,
-            y: targetFrame.minY - padding,
-            width: targetFrame.width + padding * 2,
-            height: targetFrame.height + padding * 2
+            x: targetFrame.minX - horizontalPadding,
+            y: targetFrame.minY - topPadding,
+            width: targetFrame.width + (horizontalPadding * 2),
+            height: targetFrame.height + topPadding + bottomPadding
         )
     }
 
@@ -605,6 +607,7 @@ struct DashboardTourOverlay: View {
     let currentStep: Int
     let totalSteps: Int
     let targetFrames: [CoachMarkTargetID: CGRect]
+    let scrollProxy: ScrollViewProxy?
     let onNext: () -> Void
     let onBack: () -> Void
     let onSkip: () -> Void
@@ -623,6 +626,26 @@ struct DashboardTourOverlay: View {
         4: .assessmentRow,        // Assessment
         5: .upcomingAssessments,  // Upcoming Assessments
         6: .settingsButton        // Settings
+    ]
+
+    /// Map tour steps to their scroll IDs (matching the .id() modifiers)
+    static let stepScrollIDs: [Int: String] = [
+        1: "journeyProgress",
+        2: "checkInRow",
+        3: "sleepLogRow",
+        4: "assessmentRow",
+        5: "assessmentRow",      // Scroll to assessment, then show info about future deep dives
+        6: "settingsButton"
+    ]
+
+    /// Map tour steps to their scroll anchors (custom positioning for better UX)
+    static let stepScrollAnchors: [Int: UnitPoint] = [
+        1: .top,              // Journey Progress - align to top
+        2: .top,              // Check-In - align to top so circles are fully visible
+        3: .top,              // Sleep Log - align to top
+        4: .top,              // Assessment - align to top
+        5: .bottom,           // Deep Dives - scroll assessment to bottom to show area below
+        6: .bottom            // Settings - align to bottom (it's at the top of screen)
     ]
 
     /// Map tour steps to their content
@@ -687,14 +710,32 @@ struct DashboardTourOverlay: View {
         .ignoresSafeArea()
         .onAppear {
             displayedStep = currentStep
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                isAppearing = true
+            // Scroll to the target element for the initial step
+            scrollToStep(currentStep)
+            // Delay appearance to allow scroll to complete and frames to update
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                    isAppearing = true
+                }
             }
         }
         .onChange(of: currentStep) { oldValue, newValue in
-            // Animate transition between steps
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            // Hide during transition
+            withAnimation(.easeOut(duration: 0.2)) {
+                isAppearing = false
+            }
+
+            // Scroll to the target element
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                scrollToStep(newValue)
                 displayedStep = newValue
+
+                // Show after scroll completes and frames update
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        isAppearing = true
+                    }
+                }
             }
         }
     }
@@ -836,6 +877,7 @@ struct DashboardTourOverlay: View {
                 HStack(spacing: 4) {
                     Text(currentStep >= totalSteps ? "Done" : "Next")
                         .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .fixedSize()
                     if currentStep < totalSteps {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .semibold))
@@ -898,12 +940,14 @@ struct DashboardTourOverlay: View {
     }
 
     private func spotlightFrame(for targetFrame: CGRect) -> CGRect {
-        let padding: CGFloat = 8
+        let horizontalPadding: CGFloat = 12
+        let topPadding: CGFloat = 4  // Minimal top padding to avoid capturing previous elements
+        let bottomPadding: CGFloat = 50  // Extra padding at bottom to ensure circles/content aren't cut off
         return CGRect(
-            x: targetFrame.minX - padding,
-            y: targetFrame.minY - padding,
-            width: targetFrame.width + padding * 2,
-            height: targetFrame.height + padding * 2
+            x: targetFrame.minX - horizontalPadding,
+            y: targetFrame.minY - topPadding,
+            width: targetFrame.width + (horizontalPadding * 2),
+            height: targetFrame.height + topPadding + bottomPadding
         )
     }
 
@@ -924,6 +968,24 @@ struct DashboardTourOverlay: View {
         let visibleHeight = visibleBottom - visibleTop
 
         return visibleHeight >= 20
+    }
+
+    /// Scroll to the target element for a given step
+    private func scrollToStep(_ step: Int) {
+        guard let scrollProxy = scrollProxy,
+              let scrollID = Self.stepScrollIDs[step] else { return }
+
+        // Get the custom anchor for this step (default to .top if not specified)
+        let anchor = Self.stepScrollAnchors[step] ?? .top
+
+        #if DEBUG
+        print("[CoachMark Tour] Scrolling to step \(step) with ID: \(scrollID), anchor: \(anchor)")
+        #endif
+
+        // Use withAnimation for smooth scrolling
+        withAnimation(.easeInOut(duration: 0.4)) {
+            scrollProxy.scrollTo(scrollID, anchor: anchor)
+        }
     }
 }
 

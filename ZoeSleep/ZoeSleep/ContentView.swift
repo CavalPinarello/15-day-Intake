@@ -90,6 +90,7 @@ struct MainDashboardView: View {
     @State private var currentTourStep: Int = 0  // 0 = not showing, 1-6 = tour steps
     @State private var showingDashboardTour = false
     @State private var coachMarkTargetFrames: [CoachMarkTargetID: CGRect] = [:]
+    @State private var scrollProxy: ScrollViewProxy? = nil
     @ObservedObject private var guideManager = FirstTimeGuideManager.shared
 
     // Check-in modal state (for unified Today's Focus)
@@ -120,18 +121,19 @@ struct MainDashboardView: View {
             // Animated wave background for dashboard
             DashboardWaveBackground()
 
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Time Travel Mode Banner
-                    if timeTravelManager.isTimeTravelActive {
-                        timeTravelBanner
-                    }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Time Travel Mode Banner
+                        if timeTravelManager.isTimeTravelActive {
+                            timeTravelBanner
+                        }
 
-                    // Header
-                    headerView
+                        // Header
+                        headerView
 
-                    // Journey Progress Card (Day X of 10)
-                    journeyProgressCard
+                        // Journey Progress Card (Day X of 10)
+                        journeyProgressCard
 
                     // Catch-up Card (if there are missed days)
                     if !missedDays.isEmpty {
@@ -154,6 +156,10 @@ struct MainDashboardView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
+            }
+            .onAppear {
+                scrollProxy = proxy
+            }
             }
 
             // Day advancement error banner
@@ -382,6 +388,7 @@ struct MainDashboardView: View {
                     currentStep: currentTourStep,
                     totalSteps: FirstTimeGuideManager.dashboardTourSequence.count,
                     targetFrames: coachMarkTargetFrames,
+                    scrollProxy: scrollProxy,
                     onNext: { advanceTour() },
                     onBack: { goBackTour() },
                     onSkip: { skipTour() }
@@ -619,6 +626,7 @@ struct MainDashboardView: View {
                     .padding(.trailing, 4)  // Extra safety margin for profile circle
                 }
                 .coachMarkTarget(.settingsButton)
+                .id("settingsButton")
             }
 
             // Greeting - large, warm, centered
@@ -752,6 +760,7 @@ struct MainDashboardView: View {
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
         )
         .coachMarkTarget(.journeyProgress)
+        .id("journeyProgress")
     }
 
     private var progressPercentage: Int {
@@ -864,12 +873,16 @@ struct MainDashboardView: View {
                         selectedCheckInSlot = slot
                         showingCheckIn = true
                     }
+                    .coachMarkTarget(.checkInRow)
+                    .id("checkInRow")
 
                     DayCompleteCelebrationView(
                         currentDay: currentDay,
                         onAdvanceDay: advanceToNextDay,
                         dayReadyAt: questionnaireManager.journeyProgress?.dayReadyAt
                     )
+                    .coachMarkTarget(.sleepLogRow)  // Point to celebration as placeholder for completed tasks
+                    .id("sleepLogRow")
                 }
                 // Note: Gateway notifications removed - "Upcoming Assessments" section shows this info with accurate day schedules
             } else if let expansionPack = availableExpansionPack {
@@ -893,6 +906,8 @@ struct MainDashboardView: View {
                         subtitle: "Completed",
                         isCompleted: true
                     )
+                    .coachMarkTarget(.sleepLogRow)
+                    .id("sleepLogRow")
 
                     TaskRowView(
                         icon: "list.bullet.clipboard",
@@ -900,6 +915,8 @@ struct MainDashboardView: View {
                         subtitle: "Completed",
                         isCompleted: true
                     )
+                    .coachMarkTarget(.assessmentRow)
+                    .id("assessmentRow")
 
                     // Expansion pack prompt
                     NavigationLink(destination: ExpansionPackQuestionnaireView(
@@ -932,6 +949,8 @@ struct MainDashboardView: View {
                         selectedCheckInSlot = slot
                         showingCheckIn = true
                     }
+                    .coachMarkTarget(.checkInRow)
+                    .id("checkInRow")
 
                     // Header with completion status
                     HStack {
@@ -951,6 +970,8 @@ struct MainDashboardView: View {
                         subtitle: "Completed",
                         isCompleted: true
                     )
+                    .coachMarkTarget(.sleepLogRow)
+                    .id("sleepLogRow")
 
                     TaskRowView(
                         icon: "list.bullet.clipboard",
@@ -958,6 +979,8 @@ struct MainDashboardView: View {
                         subtitle: "Completed",
                         isCompleted: true
                     )
+                    .coachMarkTarget(.assessmentRow)
+                    .id("assessmentRow")
 
                     TaskRowView(
                         icon: "sparkles",
@@ -993,58 +1016,61 @@ struct MainDashboardView: View {
                         showingCheckIn = true
                     }
                     .coachMarkTarget(.checkInRow)
+                    .id("checkInRow")
 
-                    // Sleep Log row - wrapped in VStack for proper frame capture
-                    VStack(spacing: 0) {
-                        if sleepLogDone {
+                    // Sleep Log row
+                    if sleepLogDone {
+                        TaskRowView(
+                            icon: "moon.zzz.fill",
+                            title: "Sleep Log",
+                            subtitle: "Quick check-in about last night",
+                            isCompleted: true
+                        )
+                        .coachMarkTarget(.sleepLogRow)
+                        .id("sleepLogRow")
+                    } else {
+                        NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
                             TaskRowView(
                                 icon: "moon.zzz.fill",
                                 title: "Sleep Log",
                                 subtitle: "Quick check-in about last night",
-                                isCompleted: true
+                                duration: "~3 min",
+                                isCompleted: false
                             )
-                        } else {
-                            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                        }
+                        .coachMarkTarget(.sleepLogRow)
+                        .id("sleepLogRow")
+                    }
+
+                    // Assessment row
+                    if assessmentDone {
+                        TaskRowView(
+                            icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
+                            title: getAssessmentTitle(),
+                            subtitle: getDayDescription(),
+                            isCompleted: true
+                        )
+                        .coachMarkTarget(.assessmentRow)
+                        .id("assessmentRow")
+                    } else {
+                        let minutes = getAssessmentMinutes()
+                        if minutes > 0 {
+                            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
                                 TaskRowView(
-                                    icon: "moon.zzz.fill",
-                                    title: "Sleep Log",
-                                    subtitle: "Quick check-in about last night",
-                                    duration: "~3 min",
+                                    icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
+                                    title: getAssessmentTitle(),
+                                    subtitle: getDayDescription(),
+                                    duration: "~\(minutes) min",
                                     isCompleted: false
                                 )
                             }
+                            .coachMarkTarget(.assessmentRow)
+                            .id("assessmentRow")
+                        } else if currentDay > 5 {
+                            // No-gateway expansion day - show friendly message
+                            NoAssessmentTodayView()
                         }
                     }
-                    .coachMarkTarget(.sleepLogRow)
-
-                    // Assessment row - wrapped in VStack for proper frame capture
-                    VStack(spacing: 0) {
-                        if assessmentDone {
-                            TaskRowView(
-                                icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
-                                title: getAssessmentTitle(),
-                                subtitle: getDayDescription(),
-                                isCompleted: true
-                            )
-                        } else {
-                            let minutes = getAssessmentMinutes()
-                            if minutes > 0 {
-                                NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
-                                    TaskRowView(
-                                        icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
-                                        title: getAssessmentTitle(),
-                                        subtitle: getDayDescription(),
-                                        duration: "~\(minutes) min",
-                                        isCompleted: false
-                                    )
-                                }
-                            } else if currentDay > 5 {
-                                // No-gateway expansion day - show friendly message
-                                NoAssessmentTodayView()
-                            }
-                        }
-                    }
-                    .coachMarkTarget(.assessmentRow)
                 }
             }
         }
@@ -1464,6 +1490,7 @@ struct MainDashboardView: View {
             .background(GlassyCardBackground(opacity: 0.35, tint: theme.accent))
             .cornerRadius(12)
             .coachMarkTarget(.upcomingAssessments)
+            .id("upcomingAssessments")
         }
     }
 
