@@ -640,30 +640,36 @@ struct DashboardTourOverlay: View {
             let targetID = Self.stepTargets[displayedStep]
             let targetFrame = targetID.flatMap { targetFrames[$0] }
             let isVisible = isFrameVisible(targetFrame, in: geometry)
+            let content = Self.stepContent[displayedStep]
 
             #if DEBUG
-            let _ = print("[CoachMark Tour] Step \(displayedStep): targetID=\(targetID?.rawValue ?? "nil"), frame=\(targetFrame.map { "y:\(Int($0.minY))-\(Int($0.maxY))" } ?? "nil"), visible=\(isVisible), isAppearing=\(isAppearing)")
+            let _ = print("[CoachMark Tour] Step \(displayedStep): targetID=\(targetID?.rawValue ?? "nil"), frame=\(targetFrame.map { "(\(Int($0.minX)),\(Int($0.minY))) \(Int($0.width))x\(Int($0.height))" } ?? "nil"), visible=\(isVisible), isAppearing=\(isAppearing), framesAvailable=\(targetFrames.keys.map { $0.rawValue })")
             #endif
 
             ZStack {
-                // Always show the dark backdrop
-                Color.black.opacity(isAppearing ? 0.7 : 0)
-                    .ignoresSafeArea()
-
-                if let content = Self.stepContent[displayedStep],
-                   let frame = targetFrame,
-                   isVisible,
-                   isAppearing {
-                    // Spotlight cutout for target element
+                // Dark backdrop with spotlight cutout (or solid if no frame)
+                if let frame = targetFrame, isVisible, isAppearing {
                     SpotlightBackdrop(
                         targetFrame: spotlightFrame(for: frame),
                         screenSize: geometry.size,
                         opacity: 0.7
                     )
                     .ignoresSafeArea()
+                } else if isAppearing {
+                    // No valid frame - show semi-transparent backdrop without cutout
+                    Color.black.opacity(0.6)
+                        .ignoresSafeArea()
+                }
 
-                    // Coach mark bubble
-                    tourBubble(content: content, targetFrame: frame, geometry: geometry)
+                // Coach mark bubble - show even if frame not found (centered fallback)
+                if let content = content, isAppearing {
+                    if let frame = targetFrame, isVisible {
+                        // Position relative to target
+                        tourBubble(content: content, targetFrame: frame, geometry: geometry)
+                    } else {
+                        // Fallback: center the bubble when target not found
+                        centeredBubble(content: content, geometry: geometry)
+                    }
                 }
 
                 // Navigation controls at bottom (always visible when appearing)
@@ -691,6 +697,21 @@ struct DashboardTourOverlay: View {
                 displayedStep = newValue
             }
         }
+    }
+
+    // MARK: - Centered Bubble (Fallback)
+
+    @ViewBuilder
+    private func centeredBubble(content: CoachMarkContent, geometry: GeometryProxy) -> some View {
+        VStack {
+            Spacer()
+            tourBubbleContent(content: content)
+                .opacity(isAppearing ? 1 : 0)
+                .scaleEffect(isAppearing ? 1 : 0.8)
+            Spacer()
+            Spacer() // Extra spacer to push up from nav bar
+        }
+        .padding(.horizontal, 40)
     }
 
     // MARK: - Tour Bubble

@@ -85,13 +85,22 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
         updateCachedThemeValues()
         guard let session = session else { return }
 
+        // Get current check-in status from CheckInManager
+        let checkInManager = CheckInManager.shared
+
         var message: [String: Any] = [
             "action": "userDataUpdate",
             "isAuthenticated": ConvexService.shared.isAuthenticated,
             "currentDay": questionnaireManager.currentDay,
             "accentColor": cachedAccentColor,
             "appearanceMode": cachedAppearanceMode,
-            "timestamp": Date().timeIntervalSince1970
+            "timestamp": Date().timeIntervalSince1970,
+            // Include check-in status so Watch can update immediately
+            "checkInStatus": [
+                "morningDone": checkInManager.morningCompleted,
+                "middayDone": checkInManager.middayCompleted,
+                "eveningDone": checkInManager.eveningCompleted
+            ] as [String: Any]
         ]
 
         // Send user credentials to Watch for Convex sync (only if authenticated)

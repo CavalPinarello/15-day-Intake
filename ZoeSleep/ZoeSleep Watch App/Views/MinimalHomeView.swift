@@ -142,46 +142,47 @@ struct MinimalHomeView: View {
 
     private var checkInTile: some View {
         let canDoCurrentCheckIn = canDoCheckIn(for: currentCheckInWindow.checkInType ?? .morning)
-        let allDone = (checkInStatus?.morningDone ?? false) &&
-                      (checkInStatus?.middayDone ?? false) &&
-                      (checkInStatus?.eveningDone ?? false)
-        let doneCount = [checkInStatus?.morningDone, checkInStatus?.middayDone, checkInStatus?.eveningDone]
-            .compactMap { $0 }.filter { $0 }.count
+        let morningDone = checkInStatus?.morningDone ?? false
+        let middayDone = checkInStatus?.middayDone ?? false
+        let eveningDone = checkInStatus?.eveningDone ?? false
+        let allDone = morningDone && middayDone && eveningDone
 
         return Button(action: {
             if canDoCurrentCheckIn {
                 showCheckInFlow = true
             }
         }) {
-            VStack(spacing: 6) {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(palette.accent)
+            VStack(spacing: 4) {
+                // Title
+                Text("Check-in")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
 
-                    if allDone {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.green)
-                            .offset(x: 6, y: -4)
-                    } else if doneCount > 0 {
-                        Text("\(doneCount)/3")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Capsule().fill(palette.accent))
-                            .offset(x: 8, y: -4)
-                    }
-                }
+                // Three time slot indicators with checkmarks
+                HStack(spacing: 8) {
+                    // Morning
+                    checkInSlotIndicator(
+                        icon: "sunrise.fill",
+                        label: "AM",
+                        isDone: morningDone,
+                        color: .orange
+                    )
 
-                VStack(spacing: 1) {
-                    Text("Check-in")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                    Text("Energy · Focus")
-                        .font(.system(size: 9))
-                        .foregroundColor(.white.opacity(0.6))
+                    // Midday
+                    checkInSlotIndicator(
+                        icon: "sun.max.fill",
+                        label: "Mid",
+                        isDone: middayDone,
+                        color: .yellow
+                    )
+
+                    // Evening
+                    checkInSlotIndicator(
+                        icon: "sunset.fill",
+                        label: "PM",
+                        isDone: eveningDone,
+                        color: .purple
+                    )
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 70)
@@ -190,6 +191,29 @@ struct MinimalHomeView: View {
         .buttonStyle(.plain)
         .disabled(!canDoCurrentCheckIn && !allDone)
         .opacity(canDoCurrentCheckIn || allDone ? 1 : 0.7)
+    }
+
+    /// Individual check-in time slot indicator with checkmark overlay
+    private func checkInSlotIndicator(icon: String, label: String, isDone: Bool, color: Color) -> some View {
+        VStack(spacing: 2) {
+            ZStack(alignment: .bottomTrailing) {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundColor(isDone ? color : color.opacity(0.4))
+
+                if isDone {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.green)
+                        .background(Circle().fill(Color.black).padding(-1))
+                        .offset(x: 4, y: 2)
+                }
+            }
+
+            Text(label)
+                .font(.system(size: 8, weight: .medium))
+                .foregroundColor(isDone ? .white : .white.opacity(0.5))
+        }
     }
 
     private var lightRxTile: some View {

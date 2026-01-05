@@ -402,8 +402,33 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 print("[Watch] Synced Convex userId from iPhone: \(convexUserId)")
             }
         }
+
+        // Handle check-in status if included (from "Sync Now" button)
+        if let checkInStatus = data["checkInStatus"] as? [String: Any] {
+            let morningDone = checkInStatus["morningDone"] as? Bool ?? false
+            let middayDone = checkInStatus["middayDone"] as? Bool ?? false
+            let eveningDone = checkInStatus["eveningDone"] as? Bool ?? false
+            print("[Watch] Received check-in status: morning=\(morningDone), midday=\(middayDone), evening=\(eveningDone)")
+
+            // Post notification to update UI with check-in status
+            NotificationCenter.default.post(
+                name: .watchCheckInStatusDidChange,
+                object: nil,
+                userInfo: [
+                    "morningDone": morningDone,
+                    "middayDone": middayDone,
+                    "eveningDone": eveningDone,
+                    "source": "iphone_sync"
+                ]
+            )
+
+            // Also refresh from Convex to ensure we have latest data
+            Task {
+                await WatchConvexService.shared.refreshFromConvex()
+            }
+        }
     }
-    
+
     private func parseQuestion(from data: [String: Any]) -> WatchQuestion? {
         guard let id = data["id"] as? String,
               let text = data["text"] as? String,
