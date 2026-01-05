@@ -1451,25 +1451,7 @@ struct UnifiedDebugPanel: View {
 
     private var watchConnectivitySection: some View {
         Section {
-            // Connection Status
-            HStack {
-                Image(systemName: watchManager.isWatchConnected ? "applewatch.radiowaves.left.and.right" : "applewatch.slash")
-                    .foregroundColor(watchManager.isWatchConnected ? .green : .red)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Watch Connection")
-                        .font(.subheadline)
-                    Text(watchManager.isWatchConnected ? "Connected & Reachable" : "Not Reachable")
-                        .font(.caption2)
-                        .foregroundColor(watchManager.isWatchConnected ? .green : .red)
-                }
-                Spacer()
-                Circle()
-                    .fill(watchManager.isWatchConnected ? Color.green : Color.red)
-                    .frame(width: 10, height: 10)
-            }
-
-            // App Installed Status
+            // App Installed Status (most important - shows if sync will work)
             HStack {
                 Image(systemName: "applewatch")
                     .foregroundColor(watchManager.isWatchAppInstalled ? .blue : .gray)
@@ -1488,6 +1470,25 @@ struct UnifiedDebugPanel: View {
                 }
             }
 
+            // Real-time Connection Status (only matters for immediate delivery)
+            HStack {
+                Image(systemName: watchManager.isWatchConnected ? "antenna.radiowaves.left.and.right" : "antenna.radiowaves.left.and.right.slash")
+                    .foregroundColor(watchManager.isWatchConnected ? .green : .secondary)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Real-time Link")
+                        .font(.subheadline)
+                    // Friendlier status - not reachable is normal, not an error
+                    Text(watchManager.isWatchConnected ? "Active (both apps open)" : "Standby")
+                        .font(.caption2)
+                        .foregroundColor(watchManager.isWatchConnected ? .green : .secondary)
+                }
+                Spacer()
+                Circle()
+                    .fill(watchManager.isWatchConnected ? Color.green : Color.gray.opacity(0.5))
+                    .frame(width: 10, height: 10)
+            }
+
             // Sync Actions
             Button {
                 watchManager.sendUserDataToWatch()
@@ -1497,7 +1498,7 @@ struct UnifiedDebugPanel: View {
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .foregroundColor(.blue)
                         .frame(width: 24)
-                    Text("Force Sync User Data")
+                    Text("Sync User Data")
                         .font(.subheadline)
                 }
             }
@@ -2022,18 +2023,18 @@ struct WatchConnectivityLogView: View {
             // Status Summary
             Section {
                 HStack {
-                    Image(systemName: "applewatch")
-                    Text("Watch")
-                    Spacer()
-                    Text(watchManager.isWatchConnected ? "Connected" : "Not Reachable")
-                        .foregroundColor(watchManager.isWatchConnected ? .green : .red)
-                }
-                HStack {
                     Image(systemName: "app.badge")
                     Text("App Installed")
                     Spacer()
                     Text(watchManager.isWatchAppInstalled ? "Yes" : "No")
                         .foregroundColor(watchManager.isWatchAppInstalled ? .green : .orange)
+                }
+                HStack {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                    Text("Real-time Link")
+                    Spacer()
+                    Text(watchManager.isWatchConnected ? "Active" : "Standby")
+                        .foregroundColor(watchManager.isWatchConnected ? .green : .secondary)
                 }
             } header: {
                 Text("Status")

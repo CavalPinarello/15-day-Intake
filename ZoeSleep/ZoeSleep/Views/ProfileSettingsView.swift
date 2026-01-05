@@ -22,8 +22,6 @@ struct ProfileSettingsView: View {
     @State private var showingBodyMetricsEditor = false
     @State private var isSyncingToWatch = false
     @State private var watchSyncSuccess = false
-    @State private var isReconnectingWatch = false
-    @State private var watchReconnectSuccess = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -236,16 +234,18 @@ struct ProfileSettingsView: View {
             // Connection status
             HStack {
                 Image(systemName: "applewatch")
-                    .foregroundColor(watchConnectivity.isWatchConnected ? .blue : .secondary)
+                    .foregroundColor(watchConnectivity.isWatchAppInstalled ? .blue : .secondary)
                     .frame(width: 28)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Apple Watch")
                         .font(.body)
                     if watchConnectivity.isWatchAppInstalled {
-                        Text(watchConnectivity.isWatchConnected ? "Connected" : "Not reachable")
+                        // Show "Active" only when reachable (both apps in foreground)
+                        // Otherwise show "Ready" - sync will be delivered when Watch opens
+                        Text(watchConnectivity.isWatchConnected ? "Active" : "Ready")
                             .font(.caption)
-                            .foregroundColor(watchConnectivity.isWatchConnected ? .green : .orange)
+                            .foregroundColor(watchConnectivity.isWatchConnected ? .green : .secondary)
                     } else {
                         Text("App not installed")
                             .font(.caption)
@@ -255,15 +255,15 @@ struct ProfileSettingsView: View {
 
                 Spacer()
 
-                // Only show checkmark when app is installed AND connected
-                if watchConnectivity.isWatchAppInstalled && watchConnectivity.isWatchConnected {
+                // Show checkmark when app is installed (sync works via queue)
+                if watchConnectivity.isWatchAppInstalled {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
                 }
             }
             .accessibleTapTarget()
 
-            // Sync button
+            // Single sync button (uses transferUserInfo for guaranteed delivery)
             if watchConnectivity.isWatchAppInstalled {
                 Button {
                     syncToWatch()
@@ -272,7 +272,7 @@ struct ProfileSettingsView: View {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .frame(width: 28)
 
-                        Text("Sync to Watch")
+                        Text("Sync Now")
 
                         Spacer()
 
@@ -288,30 +288,6 @@ struct ProfileSettingsView: View {
                 .disabled(isSyncingToWatch)
                 .accessibleTapTarget()
             }
-
-            // Force Reconnect button (always visible)
-            Button {
-                forceReconnectWatch()
-            } label: {
-                HStack {
-                    Image(systemName: "antenna.radiowaves.left.and.right")
-                        .frame(width: 28)
-
-                    Text("Force Reconnect")
-
-                    Spacer()
-
-                    if isReconnectingWatch {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else if watchReconnectSuccess {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                    }
-                }
-            }
-            .disabled(isReconnectingWatch)
-            .accessibleTapTarget()
 
             // Debug log link (only in debug mode)
             if themeManager.debugMode {
@@ -336,7 +312,7 @@ struct ProfileSettingsView: View {
             Text("Apple Watch")
         } footer: {
             if watchConnectivity.isWatchAppInstalled {
-                Text("Sync your account and progress to your Apple Watch. Your Watch can show light exposure, check-ins, and your garden progress.")
+                Text("Your Watch syncs automatically. Tap 'Sync Now' to send the latest data immediately (delivered when Watch app opens).")
             } else {
                 Text("Install the Zoe Sleep app on your Apple Watch to track sleep directly from your wrist.")
             }
@@ -366,38 +342,6 @@ struct ProfileSettingsView: View {
             // Reset success indicator after 2 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 watchSyncSuccess = false
-            }
-        }
-    }
-
-    private func forceReconnectWatch() {
-        isReconnectingWatch = true
-        watchReconnectSuccess = false
-
-        // Log the attempt
-        watchConnectivity.log("Force reconnect initiated by user")
-
-        // Re-activate the WCSession
-        WCSession.default.activate()
-
-        // If we have credentials, try to sync them
-        if let userId = ConvexService.shared.userId,
-           let username = KeychainHelper.load(forKey: "convex_username") {
-            watchConnectivity.syncCredentialsToWatch(userId: userId, username: username)
-            watchConnectivity.sendUserDataToWatch()
-        }
-
-        // Give time for the reconnection attempt
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            isReconnectingWatch = false
-            // Show success if now connected, otherwise still show checkmark to indicate we tried
-            watchReconnectSuccess = true
-            watchConnectivity.log("Force reconnect completed - isReachable: \(WCSession.default.isReachable)",
-                                  level: WCSession.default.isReachable ? .success : .warning)
-
-            // Reset success indicator after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                watchReconnectSuccess = false
             }
         }
     }

@@ -17,12 +17,16 @@ struct WatchConnectivityDebugView: View {
         List {
             // Status Section
             Section {
-                statusRow("Session Active", value: WCSession.default.activationState == .activated)
-                statusRow("Watch Paired", value: WCSession.default.isPaired)
-                statusRow("Watch App Installed", value: watchConnectivity.isWatchAppInstalled)
-                statusRow("Watch Reachable", value: watchConnectivity.isWatchConnected)
+                statusRow("Session Active", value: WCSession.default.activationState == .activated, required: true)
+                statusRow("Watch Paired", value: WCSession.default.isPaired, required: true)
+                statusRow("Watch App Installed", value: watchConnectivity.isWatchAppInstalled, required: true)
+                // Real-time link is optional - sync works via queue even when standby
+                statusRow("Real-time Link", value: watchConnectivity.isWatchConnected, required: false)
             } header: {
                 Text("Connection Status")
+            } footer: {
+                Text("Real-time link is only active when both apps are in foreground. Sync works via queue when standby.")
+                    .font(.caption2)
             }
 
             // Actions Section
@@ -93,15 +97,31 @@ struct WatchConnectivityDebugView: View {
         }
     }
 
-    private func statusRow(_ label: String, value: Bool) -> some View {
+    private func statusRow(_ label: String, value: Bool, required: Bool = true) -> some View {
         HStack {
             Text(label)
             Spacer()
-            Image(systemName: value ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .foregroundColor(value ? .green : .red)
-            Text(value ? "Yes" : "No")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            if value {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                Text("Yes")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else if required {
+                // Required but missing - show as error
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.red)
+                Text("No")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                // Optional and off - show as neutral (standby)
+                Image(systemName: "minus.circle.fill")
+                    .foregroundColor(.secondary)
+                Text("Standby")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 

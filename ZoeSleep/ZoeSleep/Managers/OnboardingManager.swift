@@ -152,7 +152,20 @@ class OnboardingManager: ObservableObject {
 
     // MARK: - Published Properties
 
-    @Published var currentStep: OnboardingStep = .name
+    @Published var currentStep: OnboardingStep = .name {
+        didSet {
+            if oldValue != currentStep {
+                print("[Onboarding] ⚠️ currentStep CHANGED from \(oldValue.title) to \(currentStep.title)")
+                // Print stack trace to see what's causing the change
+                Thread.callStackSymbols.prefix(10).forEach { print("  \($0)") }
+
+                // Auto-save whenever step changes to ensure we never lose progress
+                UserDefaults.standard.set(currentStep.rawValue, forKey: currentStepKey)
+                UserDefaults.standard.synchronize() // Force immediate write
+                print("[Onboarding] ✅ Auto-saved step: \(currentStep.title) (raw: \(currentStep.rawValue))")
+            }
+        }
+    }
     @Published var profile: OnboardingProfile = OnboardingProfile()
     @Published var isOnboardingComplete: Bool = false
     @Published var isCheckingServerState: Bool = false
@@ -176,9 +189,11 @@ class OnboardingManager: ObservableObject {
     // MARK: - Initialization
 
     private init() {
+        print("[Onboarding] 🟡 OnboardingManager.init() - SINGLETON INITIALIZATION")
         loadLocalProfile()
         detectSystemMeasurementSystem()
         hasSeenJourneyIntro = UserDefaults.standard.bool(forKey: journeyIntroSeenKey)
+        print("[Onboarding] 🟡 Init complete - currentStep: \(currentStep.title), name: '\(profile.name)'")
     }
 
     // MARK: - User-Aware Onboarding State
@@ -199,11 +214,14 @@ class OnboardingManager: ObservableObject {
         serverOnboardingCompleted: Bool?,
         serverProfile: (fullName: String?, measurementSystem: String?, heightCm: Double?, weightKg: Double?, gender: String?, birthYear: Int?)?
     ) async {
-        print("[Onboarding] Checking state for user: \(userId)")
+        print("[Onboarding] 🔵 checkUserOnboardingState CALLED")
+        print("[Onboarding] - userId: \(userId)")
+        print("[Onboarding] - serverOnboardingCompleted: \(String(describing: serverOnboardingCompleted))")
+        print("[Onboarding] - currentStep BEFORE check: \(currentStep.title)")
 
         let lastUserId = UserDefaults.standard.string(forKey: lastUserIdKey)
-        print("[Onboarding] Last user ID from storage: \(lastUserId ?? "nil")")
-        print("[Onboarding] Current profile name before check: '\(profile.name)'")
+        print("[Onboarding] - lastUserId from storage: \(lastUserId ?? "nil")")
+        print("[Onboarding] - Current profile name: '\(profile.name)'")
 
         // If this is a different user than before, reset local state
         if lastUserId != userId {
@@ -336,6 +354,10 @@ class OnboardingManager: ObservableObject {
 
     /// Reset local state for a new user - intro screens show for each new user
     private func resetLocalState() {
+        print("[Onboarding] 🔴 resetLocalState() CALLED - resetting to name step")
+        print("[Onboarding] Stack trace:")
+        Thread.callStackSymbols.prefix(15).forEach { print("  \($0)") }
+
         profile = OnboardingProfile()
         currentStep = .name  // Start at name step for personal connection
         isOnboardingComplete = false
@@ -550,21 +572,33 @@ class OnboardingManager: ObservableObject {
     }
 
     private func loadLocalProfile() {
+        print("[Onboarding] 🟢 loadLocalProfile() called")
+
         if let data = UserDefaults.standard.data(forKey: userDefaultsKey),
            let decoded = try? JSONDecoder().decode(OnboardingProfile.self, from: data) {
             self.profile = decoded
             self.isOnboardingComplete = decoded.onboardingCompleted
             updateImperialFromMetric()
+            print("[Onboarding] - Loaded profile: name='\(decoded.name)', onboardingCompleted=\(decoded.onboardingCompleted)")
+        } else {
+            print("[Onboarding] - No saved profile found")
         }
 
         // Restore current step from persistence
-        let savedStep = UserDefaults.standard.integer(forKey: currentStepKey)
-        if let step = OnboardingStep(rawValue: savedStep) {
+        let savedStepRaw = UserDefaults.standard.integer(forKey: currentStepKey)
+        print("[Onboarding] - Saved step raw value: \(savedStepRaw)")
+
+        if let step = OnboardingStep(rawValue: savedStepRaw) {
+            print("[Onboarding] - Parsed step: \(step.title)")
             // Only restore step if not completed - otherwise start fresh
             if !isOnboardingComplete {
                 self.currentStep = step
-                print("[Onboarding] Restored step: \(step.title)")
+                print("[Onboarding] ✅ Restored step to: \(step.title)")
+            } else {
+                print("[Onboarding] - Onboarding complete, not restoring step")
             }
+        } else {
+            print("[Onboarding] - Invalid step raw value, keeping default")
         }
 
         // Check legacy key as well

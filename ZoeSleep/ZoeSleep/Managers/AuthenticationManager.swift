@@ -62,6 +62,9 @@ class AuthenticationManager: ObservableObject {
                 self.isAuthenticated = true
                 print("✅ Session restored for user: \(user.username)")
 
+                // Reset guides/tour if different user (ensures fresh experience per user)
+                FirstTimeGuideManager.shared.handleUserSignIn(userId: userId)
+
                 // Sync credentials to Watch for same-user authentication
                 iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
                     userId: userId,
@@ -129,6 +132,9 @@ class AuthenticationManager: ObservableObject {
 
             self.isAuthenticated = true
             print("✅ Sign in successful for user: \(response.user.username)")
+
+            // Reset guides/tour if different user (ensures fresh experience per user)
+            FirstTimeGuideManager.shared.handleUserSignIn(userId: response.userId)
 
             // Sync credentials to Watch for same-user authentication
             iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
@@ -204,6 +210,9 @@ class AuthenticationManager: ObservableObject {
 
             self.isAuthenticated = true
             print("✅ Registration successful for user: \(response.user.email ?? "unknown")")
+
+            // Reset guides/tour for new user (ensures fresh experience)
+            FirstTimeGuideManager.shared.handleUserSignIn(userId: response.userId)
 
             // Sync credentials to Watch for same-user authentication
             iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
@@ -335,6 +344,9 @@ class AuthenticationManager: ObservableObject {
                     } else {
                         print("✅ Existing user signed in via Apple: \(response.user.username)")
                     }
+
+                    // Reset guides/tour if different user (ensures fresh experience per user)
+                    FirstTimeGuideManager.shared.handleUserSignIn(userId: response.userId)
 
                     // Sync credentials to Watch for same-user authentication
                     iOSWatchConnectivityManager.shared.syncCredentialsToWatch(

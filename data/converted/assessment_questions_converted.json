@@ -189,7 +189,7 @@
       "show_if": {
         "question_id": "53A",
         "operator": "in",
-        "value": ["fulltime", "parttime", "shift_work"]
+        "value": ["Full-time", "Part-time", "Shift work"]
       }
     },
     "help_text": "Understanding your profession helps us identify occupation-related sleep patterns.",
@@ -223,7 +223,7 @@
       "show_if": {
         "question_id": "53A",
         "operator": "in",
-        "value": ["fulltime", "parttime", "student"]
+        "value": ["Full-time", "Part-time", "Student"]
       }
     },
     "trigger": "shift_work",
@@ -466,7 +466,7 @@
       "show_if": {
         "question_id": "53G",
         "operator": "in",
-        "value": ["1", "2", "3"]
+        "value": ["Rarely (1-2x/year)", "Sometimes (monthly)", "Often (weekly)"]
       }
     },
     "estimated_time_seconds": 15,
@@ -494,7 +494,7 @@
       "show_if": {
         "question_id": "53G",
         "operator": "in",
-        "value": ["1", "2", "3"]
+        "value": ["Rarely (1-2x/year)", "Sometimes (monthly)", "Often (weekly)"]
       }
     },
     "help_text": "Eastward travel shortens your day and is typically harder to adjust to than westward travel.",
@@ -1301,7 +1301,7 @@
       "show_if": {
         "question_id": "44K",
         "operator": "in",
-        "value": ["1", "2", "3", "4"]
+        "value": ["Rarely (a few times/year)", "Monthly", "Weekly", "Daily or almost daily"]
       }
     },
     "help_text": "Consumption method affects absorption rate and sleep impact timing.",
@@ -1330,7 +1330,7 @@
       "show_if": {
         "question_id": "44K",
         "operator": "in",
-        "value": ["1", "2", "3", "4"]
+        "value": ["Rarely (a few times/year)", "Monthly", "Weekly", "Daily or almost daily"]
       }
     },
     "help_text": "Cannabis can help with sleep onset but may affect sleep architecture and REM sleep.",
@@ -1645,8 +1645,8 @@
     },
     "conditional_logic": {
       "all": [
-        { "question_id": "47", "operator": "in", "value": ["2", "3"] },
-        { "question_id": "D4", "operator": "equals", "value": "male" },
+        { "question_id": "47", "operator": "in", "value": ["Once or twice a week", "Three or more times a week"] },
+        { "question_id": "D4", "operator": "equals", "value": "Male" },
         { "ageAtLeast": 45 }
       ]
     },
@@ -1674,8 +1674,8 @@
     },
     "conditional_logic": {
       "all": [
-        { "question_id": "47", "operator": "in", "value": ["2", "3"] },
-        { "question_id": "D4", "operator": "equals", "value": "male" },
+        { "question_id": "47", "operator": "in", "value": ["Once or twice a week", "Three or more times a week"] },
+        { "question_id": "D4", "operator": "equals", "value": "Male" },
         { "ageAtLeast": 45 }
       ]
     },

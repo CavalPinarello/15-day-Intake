@@ -188,7 +188,37 @@ class FirstTimeGuideManager: ObservableObject {
     /// Whether a guide is being shown
     @Published var isShowingGuide: Bool = false
 
+    /// UserDefaults key for tracking the last user who saw guides
+    private let lastUserIdKey = "firstTimeGuide_lastUserId"
+
     private init() {}
+
+    // MARK: - Per-User Reset
+
+    /// Called when a user signs in - resets guides if it's a different user
+    /// This ensures each user gets their own fresh tour experience
+    func handleUserSignIn(userId: String) {
+        let lastUserId = UserDefaults.standard.string(forKey: lastUserIdKey)
+
+        if lastUserId != userId {
+            // Different user - reset all guides and coach marks for fresh experience
+            print("[FirstTimeGuide] New user detected (was: \(lastUserId ?? "none"), now: \(userId)) - resetting all guides")
+            resetAllGuides()
+            resetAllCoachMarks()
+
+            // Store new user ID
+            UserDefaults.standard.set(userId, forKey: lastUserIdKey)
+        } else {
+            print("[FirstTimeGuide] Same user (\(userId)) - keeping existing guide state")
+        }
+    }
+
+    /// Clear the stored user ID (call on sign out)
+    func handleUserSignOut() {
+        // Don't clear the lastUserId - we want to remember who last used the device
+        // so if the same user signs back in, they don't see the tour again
+        print("[FirstTimeGuide] User signed out")
+    }
 
     // MARK: - Public Methods
 

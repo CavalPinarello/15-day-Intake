@@ -31,7 +31,14 @@ struct OnboardingView: View {
                     }
 
                     // FLOW: Personal connection first, HealthKit at the end for sleep history
-                    TabView(selection: $onboardingManager.currentStep) {
+                    // Use a read-only selection to prevent TabView from changing the step
+                    TabView(selection: Binding(
+                        get: { onboardingManager.currentStep },
+                        set: { newValue in
+                            print("[OnboardingView] ⚠️ TabView tried to set step to: \(newValue.title) (current: \(onboardingManager.currentStep.title))")
+                            // Don't allow TabView to change step directly - only through nextStep/previousStep
+                        }
+                    )) {
                         // Step 0: Name - personal connection first
                         NameStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.name)
@@ -63,6 +70,9 @@ struct OnboardingView: View {
             }
         }
         .ignoresSafeArea(.keyboard)
+        .onAppear {
+            print("[OnboardingView] View appeared - currentStep: \(onboardingManager.currentStep.title)")
+        }
     }
 }
 
@@ -895,6 +905,9 @@ struct HealthConnectStepView: View {
     // MARK: - Actions
 
     private func connectHealthKit() {
+        print("[Onboarding] 🔘 'Sync Sleep History' button TAPPED")
+        print("[Onboarding] - Current step: \(onboardingManager.currentStep.title) (raw: \(onboardingManager.currentStep.rawValue))")
+        print("[Onboarding] - Profile name: '\(onboardingManager.profile.name)'")
         print("[Onboarding] Starting HealthKit connection flow...")
         connectionStatus = .connecting
 
@@ -902,6 +915,7 @@ struct HealthConnectStepView: View {
             // Ensure UI updates happen on main thread
             DispatchQueue.main.async {
                 print("[Onboarding] HealthKit authorization callback - success: \(success), error: \(error?.localizedDescription ?? "none")")
+                print("[Onboarding] - Current step NOW: \(self.onboardingManager.currentStep.title) (raw: \(self.onboardingManager.currentStep.rawValue))")
 
                 if success {
                     connectionStatus = .connected

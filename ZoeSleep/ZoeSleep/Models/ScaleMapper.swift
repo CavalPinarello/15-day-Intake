@@ -69,6 +69,7 @@ struct ScaleMapper {
         let positiveQuestionIds = [
             "1", "55",              // Sleep quality rating
             "SL_QUALITY",           // Sleep log quality rating
+            "SD_SLEEP_QUALITY",     // Sleep diary quality rating
             "CSD_QUALITY",          // CSD sleep quality
             "CSD_REFRESHED",        // CSD refreshed rating
             "CSD_ALERT",            // How refreshed upon waking
@@ -447,8 +448,8 @@ struct ScaleMapper {
 
         // ========== CORE QUESTION SPECIFIC LABELS ==========
 
-        // Sleep quality questions (1, 55, SL_QUALITY)
-        if id == "1" || id == "55" || id == "SL_QUALITY" {
+        // Sleep quality questions (1, 55, SL_QUALITY, SD_SLEEP_QUALITY)
+        if id == "1" || id == "55" || id == "SL_QUALITY" || id == "SD_SLEEP_QUALITY" {
             return sleepQualityLabels[displayValue] ?? ""
         }
 
@@ -602,18 +603,18 @@ struct ScaleMapper {
 
     // ========== POSITIVE SCALE LABELS (Higher = Better) ==========
 
-    /// Sleep quality: Very poor → Excellent
+    /// Sleep quality: Terrible → Perfect
     static let sleepQualityLabels: [Int: String] = [
-        1: "Very poor",
-        2: "Poor",
+        1: "Terrible",
+        2: "Very poor",
         3: "Poor",
-        4: "Fair",
-        5: "Fair",
-        6: "Good",
+        4: "Below average",
+        5: "Average",
+        6: "Above average",
         7: "Good",
         8: "Very good",
-        9: "Excellent",
-        10: "Excellent"
+        9: "Great",
+        10: "Perfect"
     ]
 
     /// CSD Sleep Quality: Very poor → Very good

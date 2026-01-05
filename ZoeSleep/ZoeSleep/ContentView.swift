@@ -375,15 +375,16 @@ struct MainDashboardView: View {
             }
             #endif
         }
-        // Full-screen coach mark overlay (dashboard tour)
+        // Full-screen coach mark overlay (dashboard tour with navigation)
         .overlay {
             if showingDashboardTour, currentTourStep > 0, currentTourStep <= FirstTimeGuideManager.dashboardTourSequence.count {
                 DashboardTourOverlay(
                     currentStep: currentTourStep,
+                    totalSteps: FirstTimeGuideManager.dashboardTourSequence.count,
                     targetFrames: coachMarkTargetFrames,
-                    onDismiss: {
-                        advanceTour()
-                    }
+                    onNext: { advanceTour() },
+                    onBack: { goBackTour() },
+                    onSkip: { skipTour() }
                 )
                 .environmentObject(themeManager)
                 .zIndex(1000)
@@ -857,11 +858,19 @@ struct MainDashboardView: View {
         VStack(spacing: Spacing.lg) {
             // Day Complete Celebration (only if no expansion pack available AND no expansion was done)
             if isDayComplete && availableExpansionPack == nil && !hadExpansionPackToday {
-                DayCompleteCelebrationView(
-                    currentDay: currentDay,
-                    onAdvanceDay: advanceToNextDay,
-                    dayReadyAt: questionnaireManager.journeyProgress?.dayReadyAt
-                )
+                VStack(spacing: Spacing.md) {
+                    // Check-ins are optional but still accessible after day completion
+                    CheckInTaskRow { slot in
+                        selectedCheckInSlot = slot
+                        showingCheckIn = true
+                    }
+
+                    DayCompleteCelebrationView(
+                        currentDay: currentDay,
+                        onAdvanceDay: advanceToNextDay,
+                        dayReadyAt: questionnaireManager.journeyProgress?.dayReadyAt
+                    )
+                }
                 // Note: Gateway notifications removed - "Upcoming Assessments" section shows this info with accurate day schedules
             } else if let expansionPack = availableExpansionPack {
                 // Show expansion pack card when gateways triggered and assessment done
@@ -918,6 +927,12 @@ struct MainDashboardView: View {
             } else if isDayComplete && hadExpansionPackToday && expansionPackCompletedToday {
                 // Show all 3 tasks completed (including Deeper Dive)
                 VStack(spacing: Spacing.md) {
+                    // Check-ins are optional but still accessible after day completion
+                    CheckInTaskRow { slot in
+                        selectedCheckInSlot = slot
+                        showingCheckIn = true
+                    }
+
                     // Header with completion status
                     HStack {
                         Text("Today's focus")
@@ -1637,6 +1652,25 @@ struct MainDashboardView: View {
             showingDashboardTour = false
             currentTourStep = 0
         }
+    }
+
+    /// Go back to previous tour step
+    private func goBackTour() {
+        if currentTourStep > 1 {
+            currentTourStep -= 1
+        }
+    }
+
+    /// Skip the entire tour and mark all steps as shown
+    private func skipTour() {
+        // Mark all tour steps as shown so tour doesn't reappear
+        for content in FirstTimeGuideManager.dashboardTourSequence {
+            guideManager.markCoachMarkShown(content)
+        }
+
+        // End tour
+        showingDashboardTour = false
+        currentTourStep = 0
     }
 
     // MARK: - Catch-up Card

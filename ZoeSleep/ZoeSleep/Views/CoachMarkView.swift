@@ -600,16 +600,23 @@ struct AnchoredCoachMark: View {
 // MARK: - Dashboard Tour Overlay
 
 /// Full-screen overlay for dashboard tour that uses actual element positions
+/// Enhanced with navigation controls: back/next arrows, step indicator, and skip option
 struct DashboardTourOverlay: View {
     let currentStep: Int
+    let totalSteps: Int
     let targetFrames: [CoachMarkTargetID: CGRect]
-    let onDismiss: () -> Void
+    let onNext: () -> Void
+    let onBack: () -> Void
+    let onSkip: () -> Void
 
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var hasCheckedVisibility = false
+    @State private var isAppearing = false
+    @State private var displayedStep: Int = 0
+
+    private var theme: ColorTheme { themeManager.currentTheme }
 
     /// Map tour steps to their target elements
-    private static let stepTargets: [Int: CoachMarkTargetID] = [
+    static let stepTargets: [Int: CoachMarkTargetID] = [
         1: .journeyProgress,      // Day X of 10
         2: .checkInRow,           // Check-In (Energy/Mood/Focus)
         3: .sleepLogRow,          // Sleep Log
@@ -619,7 +626,7 @@ struct DashboardTourOverlay: View {
     ]
 
     /// Map tour steps to their content
-    private static let stepContent: [Int: CoachMarkContent] = [
+    static let stepContent: [Int: CoachMarkContent] = [
         1: CoachMarkLibrary.journeyDuration,
         2: CoachMarkLibrary.todaysFocus,
         3: CoachMarkLibrary.sleepLogTask,
@@ -630,41 +637,253 @@ struct DashboardTourOverlay: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let targetID = Self.stepTargets[currentStep]
+            let targetID = Self.stepTargets[displayedStep]
             let targetFrame = targetID.flatMap { targetFrames[$0] }
             let isVisible = isFrameVisible(targetFrame, in: geometry)
 
             #if DEBUG
-            let _ = print("[CoachMark Tour] Step \(currentStep): targetID=\(targetID?.rawValue ?? "nil"), frame=\(targetFrame.map { "y:\(Int($0.minY))-\(Int($0.maxY))" } ?? "nil"), visible=\(isVisible)")
+            let _ = print("[CoachMark Tour] Step \(displayedStep): targetID=\(targetID?.rawValue ?? "nil"), frame=\(targetFrame.map { "y:\(Int($0.minY))-\(Int($0.maxY))" } ?? "nil"), visible=\(isVisible), isAppearing=\(isAppearing)")
             #endif
 
-            if let content = Self.stepContent[currentStep],
-               let frame = targetFrame,
-               isVisible {
-                // Target exists and is visible - show the coach mark
-                AnchoredCoachMark(
-                    content: content,
-                    targetFrame: frame,
-                    screenSize: geometry.size,
-                    safeAreaInsets: geometry.safeAreaInsets,
-                    onDismiss: onDismiss
-                )
-                .environmentObject(themeManager)
-            } else {
-                // Target doesn't exist or isn't visible - auto-skip to next step
-                Color.clear
-                    .onAppear {
-                        #if DEBUG
-                        print("[CoachMark Tour] Step \(currentStep) skipped - target not available or not visible")
-                        #endif
-                        // Small delay to prevent rapid-fire skipping
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            onDismiss()
-                        }
+            ZStack {
+                // Always show the dark backdrop
+                Color.black.opacity(isAppearing ? 0.7 : 0)
+                    .ignoresSafeArea()
+
+                if let content = Self.stepContent[displayedStep],
+                   let frame = targetFrame,
+                   isVisible,
+                   isAppearing {
+                    // Spotlight cutout for target element
+                    SpotlightBackdrop(
+                        targetFrame: spotlightFrame(for: frame),
+                        screenSize: geometry.size,
+                        opacity: 0.7
+                    )
+                    .ignoresSafeArea()
+
+                    // Coach mark bubble
+                    tourBubble(content: content, targetFrame: frame, geometry: geometry)
+                }
+
+                // Navigation controls at bottom (always visible when appearing)
+                if isAppearing {
+                    VStack {
+                        Spacer()
+                        tourNavigationBar
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, geometry.safeAreaInsets.bottom + 20)
                     }
+                }
             }
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: displayedStep)
         }
         .ignoresSafeArea()
+        .onAppear {
+            displayedStep = currentStep
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                isAppearing = true
+            }
+        }
+        .onChange(of: currentStep) { oldValue, newValue in
+            // Animate transition between steps
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                displayedStep = newValue
+            }
+        }
+    }
+
+    // MARK: - Tour Bubble
+
+    @ViewBuilder
+    private func tourBubble(content: CoachMarkContent, targetFrame: CGRect, geometry: GeometryProxy) -> some View {
+        let position = calculateBubblePosition(targetFrame: targetFrame, geometry: geometry)
+        let arrowDirection: CoachMarkArrowDirection = position.preferBelow ? .up : .down
+        let arrowXOffset = calculateArrowXOffset(targetFrame: targetFrame, bubbleX: position.x)
+
+        VStack(spacing: 0) {
+            if arrowDirection == .up {
+                arrowView(direction: .up)
+                    .offset(x: arrowXOffset)
+                    .padding(.bottom, -6)
+            }
+
+            tourBubbleContent(content: content)
+
+            if arrowDirection == .down {
+                arrowView(direction: .down)
+                    .offset(x: arrowXOffset)
+                    .padding(.top, -6)
+            }
+        }
+        .position(x: position.x, y: position.y)
+        .opacity(isAppearing ? 1 : 0)
+        .scaleEffect(isAppearing ? 1 : 0.8)
+    }
+
+    private func tourBubbleContent(content: CoachMarkContent) -> some View {
+        let palette = themeManager.circadianPalette
+        let bubbleBackground = theme.cardBackground
+        let bubbleBorder = palette.isDark
+            ? theme.accent.opacity(0.4)
+            : theme.secondaryText.opacity(0.2)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            // Header with icon and title
+            HStack(spacing: 10) {
+                Image(systemName: content.icon)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(theme.accent)
+
+                Text(content.title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+            }
+
+            // Message
+            Text(content.message)
+                .font(.system(size: 14, weight: .regular, design: .rounded))
+                .foregroundColor(theme.secondaryText.opacity(0.9))
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: 280)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(bubbleBackground)
+                .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 8)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(bubbleBorder, lineWidth: 1)
+        )
+    }
+
+    private func arrowView(direction: CoachMarkArrowDirection) -> some View {
+        let palette = themeManager.circadianPalette
+        let bubbleBackground = theme.cardBackground
+        let bubbleBorder = palette.isDark
+            ? theme.accent.opacity(0.4)
+            : theme.secondaryText.opacity(0.2)
+
+        return CoachMarkArrow()
+            .fill(bubbleBackground)
+            .frame(width: 20, height: 12)
+            .overlay(
+                CoachMarkArrow()
+                    .stroke(bubbleBorder, lineWidth: 1)
+            )
+            .rotationEffect(direction == .down ? .degrees(180) : .degrees(0))
+    }
+
+    // MARK: - Navigation Bar
+
+    private var tourNavigationBar: some View {
+        HStack(spacing: 16) {
+            // Skip button (left side)
+            Button(action: onSkip) {
+                Text("Skip Tour")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(theme.secondaryText)
+            }
+
+            Spacer()
+
+            // Back button
+            Button(action: onBack) {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Back")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                }
+                .foregroundColor(currentStep > 1 ? theme.accent : theme.secondaryText.opacity(0.4))
+            }
+            .disabled(currentStep <= 1)
+
+            // Step indicator
+            Text("\(currentStep) of \(totalSteps)")
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(theme.secondaryText)
+                .frame(minWidth: 50)
+
+            // Next/Done button
+            Button(action: onNext) {
+                HStack(spacing: 4) {
+                    Text(currentStep >= totalSteps ? "Done" : "Next")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                    if currentStep < totalSteps {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                }
+                .foregroundColor(theme.textOnPrimary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(theme.accent)
+                .cornerRadius(8)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(theme.cardBackground.opacity(0.95))
+                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: -4)
+        )
+    }
+
+    // MARK: - Positioning Helpers
+
+    private struct BubblePosition {
+        let x: CGFloat
+        let y: CGFloat
+        let preferBelow: Bool
+    }
+
+    private func calculateBubblePosition(targetFrame: CGRect, geometry: GeometryProxy) -> BubblePosition {
+        let bubbleMaxWidth: CGFloat = 280
+        let bubbleEstimatedHeight: CGFloat = 120
+        let screenPadding: CGFloat = 16
+        let arrowHeight: CGFloat = 12
+        let verticalGap: CGFloat = 8
+
+        // Determine if bubble should be above or below
+        let preferBelow = targetFrame.midY < geometry.size.height * 0.4
+
+        // Calculate X position (clamped to screen)
+        let minX = screenPadding + bubbleMaxWidth / 2
+        let maxX = geometry.size.width - screenPadding - bubbleMaxWidth / 2
+        let x = min(max(targetFrame.midX, minX), maxX)
+
+        // Calculate Y position
+        let y: CGFloat
+        if preferBelow {
+            y = targetFrame.maxY + verticalGap + arrowHeight + bubbleEstimatedHeight / 2
+        } else {
+            y = targetFrame.minY - verticalGap - arrowHeight - bubbleEstimatedHeight / 2
+        }
+
+        return BubblePosition(x: x, y: y, preferBelow: preferBelow)
+    }
+
+    private func calculateArrowXOffset(targetFrame: CGRect, bubbleX: CGFloat) -> CGFloat {
+        let offset = targetFrame.midX - bubbleX
+        let maxOffset: CGFloat = (280.0 / 2.0) - 20.0
+        return min(max(offset, -maxOffset), maxOffset)
+    }
+
+    private func spotlightFrame(for targetFrame: CGRect) -> CGRect {
+        let padding: CGFloat = 8
+        return CGRect(
+            x: targetFrame.minX - padding,
+            y: targetFrame.minY - padding,
+            width: targetFrame.width + padding * 2,
+            height: targetFrame.height + padding * 2
+        )
     }
 
     /// Check if a frame is valid and visible on screen
