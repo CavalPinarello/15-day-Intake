@@ -5255,3 +5255,118 @@ export const getPatientActivityAndCircadian = query({
   },
 });
 
+// ============================================
+// HealthKit Data Viewer for Physician Dashboard
+// ============================================
+
+export const getHealthKitDataForPhysician = query({
+  args: {
+    userId: v.id("users"),
+    startDate: v.string(), // YYYY-MM-DD
+    endDate: v.string(),   // YYYY-MM-DD
+    sourceFilter: v.optional(v.string()), // Bundle ID or null for all sources
+  },
+  handler: async (ctx, { userId, startDate, endDate, sourceFilter }) => {
+    // Note: This query is protected by Clerk middleware in the web app
+    // No session token validation needed for web dashboard access
+
+    // Query all 4 HealthKit tables in parallel
+    const [sleepData, heartRateData, circadianData, activityData] = await Promise.all([
+      ctx.db
+        .query("user_sleep_data")
+        .withIndex("by_user_date", (q) =>
+          q.eq("user_id", userId).gte("date", startDate).lte("date", endDate)
+        )
+        .collect(),
+      ctx.db
+        .query("user_heart_rate")
+        .withIndex("by_user_date", (q) =>
+          q.eq("user_id", userId).gte("date", startDate).lte("date", endDate)
+        )
+        .collect(),
+      ctx.db
+        .query("user_circadian_data")
+        .withIndex("by_user_date", (q) =>
+          q.eq("user_id", userId).gte("date", startDate).lte("date", endDate)
+        )
+        .collect(),
+      ctx.db
+        .query("user_activity")
+        .withIndex("by_user_date", (q) =>
+          q.eq("user_id", userId).gte("date", startDate).lte("date", endDate)
+        )
+        .collect(),
+    ]);
+
+    // Filter by source if specified
+    const filteredSleep = sourceFilter
+      ? sleepData.filter((s) => s.source_bundle_id === sourceFilter)
+      : sleepData;
+
+    // Extract available sources from sleep data
+    const sourcesSet = new Set<string>();
+    sleepData.forEach((s) => {
+      if (s.all_sources_json) {
+        try {
+          const sources = JSON.parse(s.all_sources_json);
+          sources.forEach((src: string) => sourcesSet.add(src));
+        } catch {
+          // Ignore parse errors
+        }
+      }
+      if (s.primary_source) sourcesSet.add(s.primary_source);
+    });
+
+    const availableSources = Array.from(sourcesSet).map((name) => ({
+      name,
+      bundleIdentifier:
+        sleepData.find((s) => s.primary_source === name)?.source_bundle_id || "",
+      displayName: name,
+      dataPoints: sleepData.filter((s) => s.primary_source === name).length,
+    }));
+
+    // Data quality flags
+    const hasSleepStages = filteredSleep.some((s) => s.deep_sleep_mins != null);
+    const hasHeartRate = heartRateData.some((h) => h.resting_hr != null);
+    const hasHRV = heartRateData.some((h) => h.hrv_morning != null);
+    const hasLightExposure = circadianData.some((c) => c.time_in_daylight_mins != null);
+
+    return {
+      sleepData: filteredSleep.map((s) => ({
+        date: s.date,
+        totalSleepMins: s.total_sleep_mins,
+        efficiency: s.sleep_efficiency,
+        deepSleepMins: s.deep_sleep_mins,
+        remSleepMins: s.rem_sleep_mins,
+        lightSleepMins: s.light_sleep_mins,
+        primarySource: s.primary_source,
+      })),
+      heartRateData: heartRateData.map((h) => ({
+        date: h.date,
+        restingHr: h.resting_hr,
+        avgHr: h.avg_hr,
+        hrvMorning: h.hrv_morning,
+        hrvAvg: h.hrv_avg,
+      })),
+      circadianData: circadianData.map((c) => ({
+        date: c.date,
+        daylightMins: c.time_in_daylight_mins,
+        morningLightMins: c.morning_light_mins,
+        afternoonLightMins: c.afternoon_light_mins,
+      })),
+      activityData: activityData.map((a) => ({
+        date: a.date,
+        steps: a.steps,
+        activeMins: a.active_mins,
+      })),
+      availableSources,
+      dataQuality: {
+        hasSleepStages,
+        hasHeartRate,
+        hasHRV,
+        hasLightExposure,
+      },
+    };
+  },
+});
+
