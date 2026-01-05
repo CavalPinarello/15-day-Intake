@@ -5264,7 +5264,7 @@ export const getHealthKitDataForPhysician = query({
     userId: v.id("users"),
     startDate: v.string(), // YYYY-MM-DD
     endDate: v.string(),   // YYYY-MM-DD
-    sourceFilter: v.optional(v.string()), // Bundle ID or null for all sources
+    sourceFilter: v.union(v.string(), v.null()), // Bundle ID or null for all sources
   },
   handler: async (ctx, { userId, startDate, endDate, sourceFilter }) => {
     // Note: This query is protected by Clerk middleware in the web app
