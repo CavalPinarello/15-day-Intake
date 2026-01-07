@@ -268,6 +268,7 @@ export function MainDashboardTab({ userId, patientId, patient }: MainDashboardTa
             totalDays={multiSourceData.totalDays}
             metric="efficiency"
             height={220}
+            wellnessData={checkInHistory || []}
           />
         ) : (
           <div className="h-[220px] flex items-center justify-center text-gray-500">

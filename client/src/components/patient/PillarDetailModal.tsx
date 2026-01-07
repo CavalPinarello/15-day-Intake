@@ -4,9 +4,48 @@ import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { X, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { X, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Clock, Loader2, FileText } from "lucide-react";
 import { PILLARS, PillarKey, type PillarStatus } from "./PillarSummaryCard";
 import { type PillarSeverity, getSeverityDotColor, severityColors } from "@/utils/pillarSeverity";
+
+// Questionnaire mapping for each pillar
+const PILLAR_QUESTIONNAIRES: Record<PillarKey, { name: string; description: string }[]> = {
+  sleepQuality: [
+    { name: "PSQI", description: "Pittsburgh Sleep Quality Index" }
+  ],
+  mentalHealth: [
+    { name: "PHQ-9", description: "Patient Health Questionnaire" },
+    { name: "GAD-7", description: "Generalized Anxiety Disorder Scale" }
+  ],
+  sleepTiming: [
+    { name: "MEQ", description: "Morningness-Eveningness Questionnaire" }
+  ],
+  cognitive: [
+    { name: "DBAS-16", description: "Dysfunctional Beliefs About Sleep" }
+  ],
+  physical: [
+    { name: "BPI", description: "Brief Pain Inventory" }
+  ],
+  nutritional: [
+    { name: "MEDAS", description: "Mediterranean Diet Adherence Screener" }
+  ],
+  sleepLog: [
+    { name: "ISI", description: "Insomnia Severity Index" },
+    { name: "ESS", description: "Epworth Sleepiness Scale" }
+  ],
+  social: [
+    { name: "Derived", description: "Calculated from multiple assessments" }
+  ],
+  metabolic: [
+    { name: "Derived", description: "Calculated from BMI and demographics" }
+  ],
+  sleepQuantity: [
+    { name: "HealthKit", description: "Sleep duration from wearable devices" }
+  ],
+  sleepRegularity: [
+    { name: "HealthKit", description: "Bedtime variance from wearable devices" }
+  ],
+};
 
 interface PillarDetailModalProps {
   isOpen: boolean;
@@ -217,6 +256,34 @@ export function PillarDetailModal({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Data Sources Section */}
+          {PILLAR_QUESTIONNAIRES[pillar] && PILLAR_QUESTIONNAIRES[pillar].length > 0 && (
+            <div className="mt-4 pt-3 border-t border-gray-700">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <FileText className="w-3 h-3" />
+                Data Sources
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {PILLAR_QUESTIONNAIRES[pillar].map((questionnaire, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800/50 border border-gray-700"
+                  >
+                    <span className="text-sm font-medium text-teal-400">
+                      {questionnaire.name}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {questionnaire.description}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                This pillar is calculated from responses to the above {PILLAR_QUESTIONNAIRES[pillar].length === 1 ? "questionnaire" : "questionnaires"}.
+              </p>
             </div>
           )}
         </div>
