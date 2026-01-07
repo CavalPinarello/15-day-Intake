@@ -4,6 +4,130 @@
 
 ## January 2026
 
+### Jan 7, 2026
+
+#### Physician Dashboard Enhancements - Wellness Overlay & Pillar Data Sources
+
+Added two major enhancements to the physician dashboard Main Dashboard tab as part of the ongoing dashboard redesign from 21+ cards to 7 focused tabs.
+
+**1. Wellness Metrics Overlay on Sleep Chart**
+
+Enhanced `MultiSourceSleepChart.tsx` to show energy, mood, and focus levels overlaid on sleep quality trends:
+- Added wellness data integration from check-in history
+- Three new toggleable metrics: Energy (1-6), Mood (1-6), Focus (1-6)
+- Separate Y-axis for wellness metrics (right side)
+- Dashed line styles for visual distinction from sleep data
+- Toggle buttons to show/hide each wellness metric independently
+- Automatic axis management (wellness axis only shows when at least one wellness metric is active)
+
+**2. Pillar Data Sources in Detail Modal**
+
+Enhanced `PillarDetailModal.tsx` to show which clinical questionnaires feed each health pillar:
+- Added `PILLAR_QUESTIONNAIRES` mapping showing data sources for all 11 pillars
+- New "Data Sources" section with questionnaire badges
+- Visual display of questionnaire name and full description
+- Examples:
+  - Sleep Quality → PSQI (Pittsburgh Sleep Quality Index)
+  - Mental Health → PHQ-9 (Patient Health Questionnaire) + GAD-7 (Generalized Anxiety Disorder Scale)
+  - Sleep Log → ISI (Insomnia Severity Index) + ESS (Epworth Sleepiness Scale)
+- Explanatory text showing how pillar is calculated from questionnaire responses
+
+**Files Modified:**
+- `client/src/components/charts/MultiSourceSleepChart.tsx` - Wellness overlay
+- `client/src/components/patient/PillarDetailModal.tsx` - Questionnaire mapping
+- `client/src/components/patient/tabs/MainDashboardTab.tsx` - API fix and wellness data integration
+
+**Critical Bug Fix:**
+Fixed incorrect API path causing dashboard crashes:
+- Changed: `api.physician.getCheckInHistory` (doesn't exist)
+- To: `api.checkIn.getCheckInHistory` (correct location)
+- Location: `MainDashboardTab.tsx` line 84
+
+---
+
+#### Comprehensive Deployment Documentation
+
+Created extensive documentation to prevent repeated deployment issues, specifically addressing the confusion between two Convex instances.
+
+**Problem:**
+Multiple deployment failures due to:
+1. Two Convex instances with confusing names ("dev" has prod data, "prod" is empty)
+2. Wrong API import paths causing function-not-found errors
+3. Vercel build cache serving stale code
+4. Session token invalidation when switching Convex instances
+
+**Documentation Created:**
+
+1. **`DEPLOY.md`** (Massively Expanded)
+   - ⚠️ Critical warning about two Convex instances
+   - Complete explanation of dev vs prod instances
+   - 6 common issues with step-by-step solutions:
+     - Issue 1: "Zero patients" (wrong Convex URL)
+     - Issue 2: "Could not find public function" (wrong API path)
+     - Issue 3: "Invalid session token" (stale localStorage)
+     - Issue 4: Cached builds (need --force flag)
+     - Issue 5: TypeScript build errors
+     - Issue 6: Clerk authentication issues
+   - Deployment verification checklist (7 steps)
+   - Emergency rollback procedures
+   - API naming convention reference
+   - Environment variable management
+
+2. **`TROUBLESHOOTING.md`** (New Quick Reference)
+   - Emergency checklists for common issues
+   - Quick verification commands
+   - Critical URLs table
+   - Common error messages with fixes
+   - Session management guide
+   - Deployment flow steps
+   - Key configuration files reference
+
+3. **`CLAUDE.md`** (Updated)
+   - Added "⚠️ CRITICAL: Convex Configuration" section
+   - Table showing dev vs prod instances
+   - Quick check commands
+   - Reference to full DEPLOY.md guide
+
+4. **`docs/INCIDENT-2026-01-07-CONVEX-CONFUSION.md`** (New Incident Report)
+   - Complete timeline of deployment incident
+   - Root cause analysis (4 causes identified)
+   - Lessons learned
+   - Prevention measures
+   - Code changes made
+   - Future improvements planned
+
+**Key Configuration Rules:**
+
+| What | Correct Value |
+|------|---------------|
+| Vercel `NEXT_PUBLIC_CONVEX_URL` | `https://enchanted-terrier-633.convex.cloud` |
+| Local `.env.local` | `CONVEX_DEPLOYMENT=dev:enchanted-terrier-633` |
+| iOS `ConvexManager.swift` | `deploymentUrl` = `enchanted-terrier-633` |
+
+**API Path Conventions:**
+- Check-ins: `api.checkIn.*` (NOT `api.physician.*`)
+- Sleep data: `api.healthkit.*`
+- Pillar stats: `api.physician.*`
+- Circadian: `api.circadian.*`
+
+**Deployment Commands:**
+```bash
+# Force rebuild (skip cache)
+cd client
+npx vercel --prod --force
+
+# Clear stale session (user must do)
+localStorage.removeItem("physician_session")
+```
+
+**Impact:**
+- Future deployment issues can be resolved in <5 minutes (previously 60+ minutes)
+- Clear troubleshooting steps prevent repeated mistakes
+- Comprehensive incident report preserves institutional knowledge
+- Quick reference guides enable self-service debugging
+
+---
+
 ### Jan 4, 2026
 
 #### Sleep Data Source Selector for iOS Debug Panel

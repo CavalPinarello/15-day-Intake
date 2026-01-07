@@ -53,6 +53,22 @@ iPhone ←→ Convex ←→ Dashboard
 - **Web:** Debug/testing only
 - **Watch:** PAUSED - branch `feature/watch-app-complete`
 
+### ⚠️ CRITICAL: Convex Configuration
+
+**Two Convex instances exist - ALWAYS use the DEV instance:**
+
+| Instance | URL | Status |
+|----------|-----|--------|
+| **Dev (USE THIS)** | `https://enchanted-terrier-633.convex.cloud` | ✅ Contains all patient data |
+| **Prod (DON'T USE)** | `https://necessary-gnat-882.convex.cloud` | ⚠️ Empty database |
+
+**Quick Checks:**
+- Vercel: `npx vercel env ls production | grep CONVEX` → Must show `enchanted-terrier-633`
+- Local: `.env.local` → Must have `CONVEX_DEPLOYMENT=dev:enchanted-terrier-633`
+- iOS: `ConvexManager.swift` → Must use `enchanted-terrier-633`
+
+**See [`DEPLOY.md`](./DEPLOY.md) for complete deployment and troubleshooting guide.**
+
 ## Key Locations
 
 | Platform | Path |
