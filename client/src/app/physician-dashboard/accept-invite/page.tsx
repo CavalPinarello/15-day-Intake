@@ -7,6 +7,7 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { SignIn } from "@clerk/nextjs";
 import { ZoeLogo } from "@/components/ZoeLogo";
+import ZoeLogoFull from "@/components/ZoeLogoFull";
 
 function AcceptInviteContent() {
   const searchParams = useSearchParams();
@@ -73,8 +74,8 @@ function AcceptInviteContent() {
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
         <div className="max-w-md w-full">
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-4">
-              <ZoeLogo size={64} />
+            <div className="inline-flex items-center justify-center px-6 py-3 bg-white rounded-xl shadow-sm mb-4">
+              <ZoeLogoFull height={40} />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Accept Physician Invitation

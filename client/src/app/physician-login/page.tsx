@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Lock, Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
+import ZoeLogoFull from "@/components/ZoeLogoFull";
 
 // SHA256 hash function for browser
 async function sha256(message: string): Promise<string> {
@@ -128,11 +129,10 @@ export default function PhysicianLoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-900/50 to-slate-800/50 backdrop-blur mb-4">
-            <ZoeLogo size={56} />
+          <div className="inline-flex items-center justify-center px-6 py-4 rounded-2xl bg-white/95 backdrop-blur mb-4">
+            <ZoeLogoFull height={48} />
           </div>
-          <h1 className="text-3xl font-bold text-white">Zoé Sleep</h1>
-          <p className="text-slate-400 mt-1">Physician Dashboard</p>
+          <p className="text-slate-300 mt-3 text-sm">Physician Dashboard</p>
         </div>
 
         {/* Login Card */}

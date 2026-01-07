@@ -27,6 +27,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
+import ZoeLogoFull from "@/components/ZoeLogoFull";
 
 interface PatientData {
   _id: string;
@@ -139,10 +140,9 @@ export default function PhysicianDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <ZoeLogo size={40} />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Zoé Sleep</h1>
-                <p className="text-xs text-gray-500">Physician Dashboard</p>
+              <ZoeLogoFull height={32} />
+              <div className="border-l border-gray-300 pl-3 ml-1">
+                <p className="text-sm font-medium text-gray-600">Physician Dashboard</p>
               </div>
             </div>
 
