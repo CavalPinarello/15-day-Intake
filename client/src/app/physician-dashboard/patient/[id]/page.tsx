@@ -9,6 +9,10 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
 import { Patient360Tab } from "@/components/patient";
+import { MainDashboardTab } from "@/components/patient/tabs/MainDashboardTab";
+import { AIInsightsTab } from "@/components/patient/tabs/AIInsightsTab";
+import { ComplianceTab } from "@/components/patient/tabs/ComplianceTab";
+import { ProtocolAssignment } from "@/components/physician/ProtocolAssignment";
 import { ScoreDetailModal } from "@/components/physician";
 import {
   ArrowLeft,
@@ -34,7 +38,7 @@ import {
 } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
 
-type TabType = "overview" | "responses" | "scores" | "interventions" | "notes";
+type TabType = "overview" | "responses" | "questionnaires" | "ai-insights" | "compliance" | "interventions" | "notes";
 
 const statusConfig: Record<
   string,
@@ -196,13 +200,15 @@ export default function PatientDetailPage() {
   const status = statusConfig[patient.reviewStatus?.status || "intake_in_progress"];
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
-    { id: "overview", label: "360° View", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: "overview", label: "Main Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
     {
       id: "responses",
       label: "Responses",
       icon: <FileText className="w-4 h-4" />,
     },
-    { id: "scores", label: "Scores", icon: <Activity className="w-4 h-4" /> },
+    { id: "questionnaires", label: "Questionnaires", icon: <Activity className="w-4 h-4" /> },
+    { id: "ai-insights", label: "AI Insights", icon: <Sparkles className="w-4 h-4" /> },
+    { id: "compliance", label: "Compliance", icon: <CheckCircle className="w-4 h-4" /> },
     {
       id: "interventions",
       label: "Interventions",
@@ -463,9 +469,9 @@ export default function PatientDetailPage() {
 
         {/* Tab Content */}
         <div className={`rounded-2xl border ${activeTab === "overview" ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"} p-6`}>
-          {/* Overview Tab - Patient 360° View */}
+          {/* Overview Tab - Main Dashboard */}
           {activeTab === "overview" && (
-            <Patient360Tab userId={userId} patientId={id} patient={patient} />
+            <MainDashboardTab userId={userId} patientId={id} patient={patient} />
           )}
 
           {/* Responses Tab */}
@@ -595,8 +601,8 @@ export default function PatientDetailPage() {
             </div>
           )}
 
-          {/* Scores Tab */}
-          {activeTab === "scores" && (
+          {/* Questionnaires Tab (renamed from Scores) */}
+          {activeTab === "questionnaires" && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">
@@ -836,6 +842,16 @@ export default function PatientDetailPage() {
             </div>
           )}
 
+          {/* AI Insights Tab */}
+          {activeTab === "ai-insights" && (
+            <AIInsightsTab userId={userId} patientId={id} />
+          )}
+
+          {/* Compliance Tab */}
+          {activeTab === "compliance" && (
+            <ComplianceTab userId={userId} />
+          )}
+
           {/* Interventions Tab */}
           {activeTab === "interventions" && (
             <div className="space-y-6">
@@ -989,6 +1005,11 @@ export default function PatientDetailPage() {
                   </div>
                 </div>
               )}
+
+              {/* Protocol Assignment */}
+              <div className="mt-6">
+                <ProtocolAssignment userId={userId} physicianId={id} />
+              </div>
             </div>
           )}
 

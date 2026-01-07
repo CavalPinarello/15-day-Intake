@@ -5,15 +5,10 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
-  Flame,
-  Trophy,
-  Star,
-  Zap,
-  Calendar,
-  TrendingUp,
-  AlertTriangle,
   CheckCircle,
-  Sparkles,
+  AlertTriangle,
+  TrendingUp,
+  Calendar,
 } from "lucide-react";
 
 interface PatientEngagementCardProps {
@@ -21,9 +16,9 @@ interface PatientEngagementCardProps {
 }
 
 export function PatientEngagementCard({ userId }: PatientEngagementCardProps) {
-  const engagement = useQuery(api.gamification.getPatientEngagement, { userId });
+  const modularCompliance = useQuery(api.physician.getModularComplianceData, { userId });
 
-  if (!engagement) {
+  if (!modularCompliance) {
     return (
       <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 animate-pulse">
         <div className="h-4 bg-gray-700 rounded w-1/3 mb-4"></div>
@@ -35,202 +30,104 @@ export function PatientEngagementCard({ userId }: PatientEngagementCardProps) {
     );
   }
 
-  const {
-    currentStreak,
-    longestStreak,
-    totalDaysCompleted,
-    level,
-    levelName,
-    totalXP,
-    badgesEarned,
-    badges,
-    completionRate,
-    engagementScore,
-    lastActive,
-    insights,
-  } = engagement;
+  const overallRate = modularCompliance.overall.rate;
+  const sleepLogRate = modularCompliance.sleepLog.rate;
+  const assessmentRate = modularCompliance.coreAssessment.rate;
 
-  type BadgeType = NonNullable<typeof engagement>["badges"][number];
+  // Determine status based on overall completion
+  const status = overallRate >= 75 ? "excellent" :
+                 overallRate >= 50 ? "good" :
+                 overallRate >= 25 ? "fair" : "needs-attention";
 
-  const lastActiveDate = lastActive ? new Date(lastActive) : null;
-  const lastActiveText = lastActiveDate
-    ? formatLastActive(lastActiveDate)
-    : "Unknown";
+  const statusConfig = {
+    excellent: { color: "text-green-400", bg: "bg-green-500/20", label: "Excellent" },
+    good: { color: "text-blue-400", bg: "bg-blue-500/20", label: "Good" },
+    fair: { color: "text-amber-400", bg: "bg-amber-500/20", label: "Fair" },
+    "needs-attention": { color: "text-red-400", bg: "bg-red-500/20", label: "Needs Attention" },
+  };
+
+  const statusStyle = statusConfig[status];
 
   return (
     <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/20 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-orange-400" />
+          <div className={`w-8 h-8 rounded-lg ${statusStyle.bg} flex items-center justify-center`}>
+            <TrendingUp className={`w-4 h-4 ${statusStyle.color}`} />
           </div>
           <div>
             <h3 className="text-sm font-medium text-white">Patient Engagement</h3>
-            <p className="text-xs text-gray-500">Activity & motivation</p>
+            <p className="text-xs text-gray-500">Completion tracking</p>
           </div>
         </div>
-        {/* Engagement Score */}
+        {/* Overall Status */}
         <div className="flex items-center gap-1.5">
-          <div
-            className={`text-lg font-bold ${
-              engagementScore >= 75
-                ? "text-green-400"
-                : engagementScore >= 50
-                ? "text-amber-400"
-                : "text-red-400"
-            }`}
-          >
-            {engagementScore}
-          </div>
-          <div className="text-xs text-gray-500">/100</div>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.color}`}>
+            {statusStyle.label}
+          </span>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        {/* Streak */}
-        <div className="bg-gray-700/30 rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <Flame
-              className={`w-4 h-4 ${
-                currentStreak > 0 ? "text-orange-400" : "text-gray-500"
-              }`}
-            />
-            <span className="text-xs text-gray-400">Current Streak</span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-white">{currentStreak}</span>
-            <span className="text-xs text-gray-500">
-              {currentStreak === 1 ? "day" : "days"}
-            </span>
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            Best: {longestStreak} days
-          </div>
-        </div>
-
-        {/* Level */}
-        <div className="bg-gray-700/30 rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <Star className={`w-4 h-4 ${getLevelColor(level)}`} />
-            <span className="text-xs text-gray-400">Level</span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-white">{level}</span>
-            <span className="text-xs text-gray-500">{levelName}</span>
-          </div>
-          <div className="text-xs text-gray-500 mt-1">{totalXP} XP</div>
-        </div>
-
-        {/* Completion Rate */}
+        {/* Overall Completion */}
         <div className="bg-gray-700/30 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-1">
             <CheckCircle className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-gray-400">Completion</span>
+            <span className="text-xs text-gray-400">Overall</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-white">{completionRate}%</span>
+            <span className="text-xl font-bold text-white">{overallRate}%</span>
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            {totalDaysCompleted} days done
+            {modularCompliance.overall.totalQuestionsAnswered} Q answered
           </div>
         </div>
 
-        {/* Badges */}
+        {/* Sleep Log Completion */}
         <div className="bg-gray-700/30 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-1">
-            <Trophy className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs text-gray-400">Badges</span>
+            <Calendar className="w-4 h-4 text-blue-400" />
+            <span className="text-xs text-gray-400">Sleep Log</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-white">{badgesEarned}</span>
-            <span className="text-xs text-gray-500">earned</span>
+            <span className="text-xl font-bold text-white">{sleepLogRate}%</span>
           </div>
-          {badges.length > 0 && (
-            <div className="flex gap-1 mt-1 flex-wrap">
-              {badges.slice(0, 4).map((badge: BadgeType) => (
-                <span key={badge.id} title={badge.name} className="text-sm">
-                  {badge.icon}
-                </span>
-              ))}
-              {badges.length > 4 && (
-                <span className="text-xs text-gray-500">+{badges.length - 4}</span>
-              )}
-            </div>
-          )}
+          <div className="text-xs text-gray-500 mt-1">
+            {modularCompliance.sleepLog.daysCompleted}/10 days
+          </div>
+        </div>
+
+        {/* Assessment Completion */}
+        <div className="bg-gray-700/30 rounded-lg p-3 col-span-2">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle className="w-4 h-4 text-purple-400" />
+            <span className="text-xs text-gray-400">Assessment Progress</span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-xl font-bold text-white">{assessmentRate}%</span>
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {modularCompliance.coreAssessment.questionsAnswered} of {modularCompliance.coreAssessment.questionsRequired} questions
+          </div>
         </div>
       </div>
 
-      {/* Last Active */}
-      <div className="flex items-center justify-between text-xs mb-3 px-1">
-        <span className="text-gray-500">Last active</span>
-        <span className="text-gray-400">{lastActiveText}</span>
-      </div>
+      {/* Status Insights */}
+      {overallRate < 50 && (
+        <div className="flex items-start gap-2 text-xs p-2 rounded-lg bg-amber-500/10 text-amber-400">
+          <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+          <span>Patient may need additional engagement or support</span>
+        </div>
+      )}
 
-      {/* Clinician Insights */}
-      {insights.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-            <Sparkles className="w-3 h-3" />
-            <span>Engagement Insights</span>
-          </div>
-          {insights.map((insight: NonNullable<typeof engagement>["insights"][number], idx: number) => (
-            <div
-              key={idx}
-              className={`flex items-start gap-2 text-xs p-2 rounded-lg ${
-                insight.includes("high engagement") || insight.includes("thorough")
-                  ? "bg-green-500/10 text-green-400"
-                  : insight.includes("broken") || insight.includes("Low")
-                  ? "bg-amber-500/10 text-amber-400"
-                  : "bg-gray-700/30 text-gray-400"
-              }`}
-            >
-              {insight.includes("high engagement") || insight.includes("thorough") ? (
-                <CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-              ) : insight.includes("broken") || insight.includes("Low") ? (
-                <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-              ) : (
-                <TrendingUp className="w-3 h-3 mt-0.5 flex-shrink-0" />
-              )}
-              <span>{insight}</span>
-            </div>
-          ))}
+      {overallRate >= 75 && (
+        <div className="flex items-start gap-2 text-xs p-2 rounded-lg bg-green-500/10 text-green-400">
+          <CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+          <span>Excellent engagement - patient is actively participating</span>
         </div>
       )}
     </div>
   );
-}
-
-// Helper functions
-function getLevelColor(level: number): string {
-  switch (level) {
-    case 1:
-      return "text-gray-400";
-    case 2:
-      return "text-green-400";
-    case 3:
-      return "text-blue-400";
-    case 4:
-      return "text-purple-400";
-    case 5:
-      return "text-yellow-400";
-    default:
-      return "text-gray-400";
-  }
-}
-
-function formatLastActive(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 5) return "Just now";
-  if (diffMins < 60) return `${diffMins} min ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return date.toLocaleDateString();
 }
