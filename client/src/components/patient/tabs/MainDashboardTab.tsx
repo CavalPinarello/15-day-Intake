@@ -81,7 +81,7 @@ export function MainDashboardTab({ userId, patientId, patient }: MainDashboardTa
   const healthSummary = useQuery(api.healthkit.getPatientHealthSummary, { userId });
   const multiSourceData = useQuery(api.healthkit.getMultiSourceSleepData, { userId, days: 10 });
   const subjectiveSleepData = useQuery(api.physician.getSubjectiveSleepQuality, { userId, days: 10 });
-  const checkInHistory = useQuery(api.physician.getCheckInHistory, { userId, days: 10 });
+  const checkInHistory = useQuery(api.checkIn.getCheckInHistory, { userId, days: 10 });
   const pillarStats = useQuery(api.physician.getPillarStats, { userId });
   const scores = useQuery(api.physician.getQuestionnaireScores, { userId });
   const modularComplianceData = useQuery(api.physician.getModularComplianceData, { userId });
