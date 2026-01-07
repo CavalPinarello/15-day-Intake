@@ -77,7 +77,7 @@ export function MainDashboardTab({ userId, patientId, patient }: MainDashboardTa
   const [healthKitModalOpen, setHealthKitModalOpen] = useState(false);
   const [selectedPillar, setSelectedPillar] = useState<PillarKey | null>(null);
 
-  // Fetch data
+  // Fetch data (force rebuild timestamp: 2026-01-07T20:05)
   const healthSummary = useQuery(api.healthkit.getPatientHealthSummary, { userId });
   const multiSourceData = useQuery(api.healthkit.getMultiSourceSleepData, { userId, days: 10 });
   const subjectiveSleepData = useQuery(api.physician.getSubjectiveSleepQuality, { userId, days: 10 });
