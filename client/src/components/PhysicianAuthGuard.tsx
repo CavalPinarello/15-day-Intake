@@ -3,7 +3,8 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
+import { useUser } from "@clerk/nextjs";
 import { LogOut } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
 
@@ -13,15 +14,58 @@ interface PhysicianAuthGuardProps {
 
 export default function PhysicianAuthGuard({ children }: PhysicianAuthGuardProps) {
   const router = useRouter();
+  const { user, isSignedIn } = useUser();
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [sessionType, setSessionType] = useState<"master" | "clerk" | null>(null);
   const [isClient, setIsClient] = useState(false);
 
-  // Only run on client side
+  const createClerkSession = useMutation(api.physicianAuth.createClerkPhysicianSession);
+
+  // Client-side only initialization
   useEffect(() => {
     setIsClient(true);
-    const token = localStorage.getItem("physician_session");
-    setSessionToken(token);
   }, []);
+
+  // Check for existing session or create Clerk session
+  useEffect(() => {
+    if (!isClient) return;
+
+    // 1. Check for master password session
+    const masterToken = localStorage.getItem("physician_session");
+    if (masterToken) {
+      setSessionToken(masterToken);
+      setSessionType("master");
+      return;
+    }
+
+    // 2. Check Clerk session
+    if (isSignedIn && user) {
+      handleClerkSession();
+    } else if (isSignedIn === false) {
+      // User is not signed in with Clerk and no master password
+      router.push("/physician-login");
+    }
+  }, [isClient, isSignedIn, user]);
+
+  const handleClerkSession = async () => {
+    if (!user) return;
+
+    try {
+      // Create or get existing Clerk physician session
+      const session = await createClerkSession({
+        clerkUserId: user.id,
+        clerkSessionId: user.id,
+      });
+
+      localStorage.setItem("physician_session", session.sessionToken);
+      setSessionToken(session.sessionToken);
+      setSessionType("clerk");
+    } catch (error) {
+      console.error("Failed to create Clerk session:", error);
+      // User might not have accepted invitation yet
+      router.push("/physician-login");
+    }
+  };
 
   // Validate session with Convex
   const validateResult = useQuery(
@@ -31,22 +75,15 @@ export default function PhysicianAuthGuard({ children }: PhysicianAuthGuardProps
 
   const logout = useMutation(api.physicianAuth.logout);
 
-  // Redirect to login if no session or invalid session
+  // Handle validation result
   useEffect(() => {
-    if (!isClient) return;
+    if (!isClient || !sessionToken) return;
 
-    // No token - redirect to login
-    if (!sessionToken) {
-      router.push("/physician-login");
-      return;
-    }
-
-    // Session validation returned invalid
     if (validateResult && !validateResult.valid) {
       localStorage.removeItem("physician_session");
       router.push("/physician-login");
     }
-  }, [isClient, sessionToken, validateResult, router]);
+  }, [validateResult, sessionToken, isClient, router]);
 
   const handleLogout = async () => {
     if (sessionToken) {
@@ -56,7 +93,7 @@ export default function PhysicianAuthGuard({ children }: PhysicianAuthGuardProps
     }
   };
 
-  // Show loading while checking auth
+  // Loading state
   if (!isClient || !sessionToken || validateResult === undefined) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -71,7 +108,7 @@ export default function PhysicianAuthGuard({ children }: PhysicianAuthGuardProps
     );
   }
 
-  // Invalid session - will redirect
+  // Invalid session
   if (!validateResult.valid) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -82,35 +119,44 @@ export default function PhysicianAuthGuard({ children }: PhysicianAuthGuardProps
     );
   }
 
-  // Valid session - render children with logout option available via context or prop
+  // Valid session - render with context
   return (
-    <>
-      {/* Inject logout button into physician dashboard header */}
-      <PhysicianLogoutContext.Provider value={{ handleLogout }}>
-        {children}
-      </PhysicianLogoutContext.Provider>
-    </>
+    <PhysicianAuthContext.Provider value={{
+      handleLogout,
+      sessionType,
+      isMasterSession: sessionType === "master",
+    }}>
+      {children}
+    </PhysicianAuthContext.Provider>
   );
 }
 
-// Context for logout function
-import { createContext, useContext } from "react";
-
-interface PhysicianLogoutContextType {
+// Context
+interface PhysicianAuthContextType {
   handleLogout: () => void;
+  sessionType: "master" | "clerk" | null;
+  isMasterSession: boolean;
 }
 
-const PhysicianLogoutContext = createContext<PhysicianLogoutContextType>({
+const PhysicianAuthContext = createContext<PhysicianAuthContextType>({
   handleLogout: () => {},
+  sessionType: null,
+  isMasterSession: false,
 });
 
+export function usePhysicianAuth() {
+  return useContext(PhysicianAuthContext);
+}
+
+// Legacy export for backward compatibility
 export function usePhysicianLogout() {
-  return useContext(PhysicianLogoutContext);
+  const { handleLogout } = usePhysicianAuth();
+  return { handleLogout };
 }
 
 // Standalone logout button component
 export function PhysicianLogoutButton() {
-  const { handleLogout } = usePhysicianLogout();
+  const { handleLogout } = usePhysicianAuth();
 
   return (
     <button

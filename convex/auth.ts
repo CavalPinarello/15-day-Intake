@@ -390,3 +390,226 @@ export const clearPasswordResetToken = mutation({
   },
 });
 
+// ============================================
+// Physician Permission System
+// ============================================
+
+/**
+ * Permission check result
+ */
+export interface PermissionCheckResult {
+  authorized: boolean;
+  session?: {
+    type: "master" | "physician";
+    session_token: string;
+    physician?: any;
+    physician_id?: Id<"physicians">;
+    permission_level?: string;
+    ip_address?: string;
+    user_agent?: string;
+  };
+  error?: string;
+}
+
+/**
+ * Permission levels and their capabilities:
+ * - viewer: Can only view patient data (read-only)
+ * - clinician: Can view + write notes + assign interventions
+ * - admin: Can view + write + delete patients + invite physicians
+ * - master: All permissions including changing permissions (master password only)
+ */
+export async function requirePermission(
+  ctx: QueryCtx | MutationCtx,
+  sessionToken: string,
+  requiredPermission: "view" | "write" | "delete" | "admin"
+): Promise<PermissionCheckResult> {
+  if (!sessionToken) {
+    return { authorized: false, error: "No session token provided" };
+  }
+
+  // 1. Check master password session (has full access to everything)
+  const masterSession = await ctx.db
+    .query("physician_sessions")
+    .withIndex("by_session_token", (q) => q.eq("session_token", sessionToken))
+    .filter((q) => q.eq(q.field("session_type"), "master_password"))
+    .first();
+
+  if (masterSession && masterSession.is_active && masterSession.expires_at > Date.now()) {
+    // Master password has all permissions
+    return {
+      authorized: true,
+      session: {
+        type: "master",
+        session_token: sessionToken,
+        ip_address: masterSession.ip_address,
+        user_agent: masterSession.user_agent,
+      },
+    };
+  }
+
+  // 2. Check Clerk physician session
+  const clerkSession = await ctx.db
+    .query("physician_sessions")
+    .withIndex("by_session_token", (q) => q.eq("session_token", sessionToken))
+    .filter((q) => q.eq(q.field("session_type"), "clerk_physician"))
+    .first();
+
+  if (!clerkSession) {
+    return { authorized: false, error: "Invalid session token" };
+  }
+
+  if (!clerkSession.is_active) {
+    return { authorized: false, error: "Session inactive" };
+  }
+
+  if (clerkSession.expires_at < Date.now()) {
+    return { authorized: false, error: "Session expired" };
+  }
+
+  if (!clerkSession.physician_id) {
+    return { authorized: false, error: "Session not linked to physician account" };
+  }
+
+  const physician = await ctx.db.get(clerkSession.physician_id);
+  if (!physician) {
+    return { authorized: false, error: "Physician account not found" };
+  }
+
+  if (physician.status !== "active") {
+    return { authorized: false, error: `Physician account is ${physician.status}` };
+  }
+
+  // 3. Check permission level against requirement
+  const permissionMatrix: Record<string, string[]> = {
+    view: ["viewer", "clinician", "admin"],
+    write: ["clinician", "admin"],
+    delete: ["admin"],
+    admin: ["admin"],
+  };
+
+  const allowedLevels = permissionMatrix[requiredPermission];
+  if (!allowedLevels || !allowedLevels.includes(physician.permission_level)) {
+    return {
+      authorized: false,
+      error: `${requiredPermission} permission required (you have: ${physician.permission_level})`,
+    };
+  }
+
+  // Permission granted
+  return {
+    authorized: true,
+    session: {
+      type: "physician",
+      session_token: sessionToken,
+      physician,
+      physician_id: physician._id,
+      permission_level: physician.permission_level,
+      ip_address: clerkSession.ip_address,
+      user_agent: clerkSession.user_agent,
+    },
+  };
+}
+
+/**
+ * Audit log patient data access for HIPAA compliance
+ * This should be called for all patient data access operations
+ */
+export async function auditPatientAccess(
+  ctx: MutationCtx,
+  session: PermissionCheckResult["session"],
+  patientId: Id<"users">,
+  actionType: string,
+  details?: any
+): Promise<void> {
+  if (!session) {
+    return; // No session to audit
+  }
+
+  await ctx.db.insert("physician_audit_logs", {
+    actor_type: session.type === "master" ? "master_password" : "physician",
+    physician_id: session.physician_id,
+    session_token: session.session_token,
+
+    action_type: actionType,
+    action_category: "patient_access",
+
+    resource_type: "patient",
+    resource_id: patientId,
+    patient_id: patientId,
+
+    action_details: JSON.stringify(details || {}),
+    ip_address: session.ip_address,
+    user_agent: session.user_agent,
+
+    success: true,
+    timestamp: Date.now(),
+  });
+}
+
+/**
+ * Audit log administrative actions (invitations, permission changes, etc.)
+ */
+export async function auditAdminAction(
+  ctx: MutationCtx,
+  session: PermissionCheckResult["session"],
+  actionType: string,
+  details?: any
+): Promise<void> {
+  if (!session) {
+    return;
+  }
+
+  await ctx.db.insert("physician_audit_logs", {
+    actor_type: session.type === "master" ? "master_password" : "physician",
+    physician_id: session.physician_id,
+    session_token: session.session_token,
+
+    action_type: actionType,
+    action_category: "administration",
+
+    action_details: JSON.stringify(details || {}),
+    ip_address: session.ip_address,
+    user_agent: session.user_agent,
+
+    success: true,
+    timestamp: Date.now(),
+  });
+}
+
+/**
+ * Audit log data modifications (notes, interventions, etc.)
+ */
+export async function auditDataModification(
+  ctx: MutationCtx,
+  session: PermissionCheckResult["session"],
+  actionType: string,
+  resourceType: string,
+  resourceId: string,
+  patientId?: Id<"users">,
+  details?: any
+): Promise<void> {
+  if (!session) {
+    return;
+  }
+
+  await ctx.db.insert("physician_audit_logs", {
+    actor_type: session.type === "master" ? "master_password" : "physician",
+    physician_id: session.physician_id,
+    session_token: session.session_token,
+
+    action_type: actionType,
+    action_category: "data_modification",
+
+    resource_type: resourceType,
+    resource_id: resourceId,
+    patient_id: patientId,
+
+    action_details: JSON.stringify(details || {}),
+    ip_address: session.ip_address,
+    user_agent: session.user_agent,
+
+    success: true,
+    timestamp: Date.now(),
+  });
+}
+

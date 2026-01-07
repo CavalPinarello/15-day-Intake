@@ -4,8 +4,9 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
-import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
+import { PhysicianLogoutButton, usePhysicianAuth } from "@/components/PhysicianAuthGuard";
 import { DashboardOverview } from "@/components/physician/DashboardOverview";
+import CollaboratorsPanel from "@/components/physician-dashboard/CollaboratorsPanel";
 import {
   Users,
   Search,
@@ -88,6 +89,7 @@ const statusConfig: Record<
 type ViewMode = "overview" | "list";
 
 export default function PhysicianDashboard() {
+  const { isMasterSession } = usePhysicianAuth();
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
   const [statusFilter, setStatusFilter] = useState<ReviewStatus>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -180,6 +182,9 @@ export default function PhysicianDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Collaborators Panel - Only visible to master password users */}
+        {isMasterSession && <CollaboratorsPanel />}
+
         {/* View Toggle */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-xl">

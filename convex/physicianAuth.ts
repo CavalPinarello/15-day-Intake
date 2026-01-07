@@ -80,9 +80,11 @@ export const verifyMasterPassword = mutation({
 
     await ctx.db.insert("physician_sessions", {
       session_token: sessionToken,
+      session_type: "master_password",
       created_at: now,
       expires_at: expiresAt,
       is_active: true,
+      last_activity_at: now,
       user_agent: args.userAgent,
     });
 
@@ -243,6 +245,73 @@ export const resetMasterPassword = mutation({
     return {
       success: true,
       message: "Master password reset. Visit /physician-login to set a new one."
+    };
+  },
+});
+
+// ============================================
+// Clerk Physician Session Management
+// ============================================
+
+/**
+ * Create a Clerk-based physician session
+ * Called after a physician accepts an invitation and completes Clerk OAuth
+ */
+export const createClerkPhysicianSession = mutation({
+  args: {
+    clerkUserId: v.string(),
+    clerkSessionId: v.string(),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+  },
+  returns: v.object({
+    sessionToken: v.string(),
+    physician: v.any(), // Full physician object
+    permissionLevel: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Find physician by Clerk ID
+    const physician = await ctx.db
+      .query("physicians")
+      .withIndex("by_clerk_id", (q) => q.eq("clerk_user_id", args.clerkUserId))
+      .first();
+
+    if (!physician) {
+      throw new Error("Physician account not found. Please accept your invitation first.");
+    }
+
+    if (physician.status !== "active") {
+      throw new Error(`Physician account is ${physician.status}. Please contact an administrator.`);
+    }
+
+    // Create session
+    const sessionToken = generateSessionToken();
+    const now = Date.now();
+    const expiresAt = now + (24 * 60 * 60 * 1000); // 24 hours
+
+    await ctx.db.insert("physician_sessions", {
+      session_token: sessionToken,
+      session_type: "clerk_physician",
+      physician_id: physician._id,
+      clerk_session_id: args.clerkSessionId,
+      created_at: now,
+      expires_at: expiresAt,
+      is_active: true,
+      last_activity_at: now,
+      ip_address: args.ipAddress,
+      user_agent: args.userAgent,
+    });
+
+    // Update last login
+    await ctx.db.patch(physician._id, {
+      last_login_at: now,
+      updated_at: now,
+    });
+
+    return {
+      sessionToken,
+      physician,
+      permissionLevel: physician.permission_level,
     };
   },
 });

@@ -343,6 +343,10 @@ export default defineSchema({
     source_bundle_id: v.optional(v.string()), // Bundle ID of the primary source app
     all_sources_json: v.optional(v.string()), // JSON array of all contributing sources
     is_multi_source: v.optional(v.boolean()), // True if data came from multiple sources
+    // Wearable consolidation (for multi-device tracking)
+    wearable_type: v.optional(v.string()), // Consolidated wearable type: "Apple Watch", "Garmin", "Oura Ring", etc.
+    device_model: v.optional(v.string()), // Specific device model: "Series 8", "Ultra", "Fenix 7", etc.
+    all_bundle_ids_json: v.optional(v.string()), // JSON array of all bundle IDs from contributing sources
     // Mock data tracking (for simulation/testing)
     is_mock: v.optional(v.boolean()), // True if this is simulated data
     mock_batch_id: v.optional(v.string()), // Batch ID for grouped mock data
@@ -351,7 +355,8 @@ export default defineSchema({
     .index("by_user_date", ["user_id", "date"])
     .index("by_date", ["date"])
     .index("by_user_day_type", ["user_id", "day_type"])
-    .index("by_mock", ["is_mock"]),
+    .index("by_mock", ["is_mock"])
+    .index("by_user_wearable", ["user_id", "wearable_type", "date"]),
 
   user_sleep_stages: defineTable({
     user_id: v.id("users"),
@@ -1274,14 +1279,170 @@ export default defineSchema({
   // Tracks active physician sessions (browser-based)
   physician_sessions: defineTable({
     session_token: v.string(), // Random UUID
+
+    // Session type: master password or Clerk-based physician (optional for backward compatibility)
+    session_type: v.optional(v.union(
+      v.literal("master_password"),
+      v.literal("clerk_physician")
+    )),
+    physician_id: v.optional(v.id("physicians")), // Link to physician record for Clerk sessions
+    clerk_session_id: v.optional(v.string()), // Clerk session ID
+
     created_at: v.number(),
     expires_at: v.number(), // 24 hours from creation
     is_active: v.boolean(),
+    last_activity_at: v.optional(v.number()), // Optional for backward compatibility
     ip_address: v.optional(v.string()),
     user_agent: v.optional(v.string()),
   })
     .index("by_session_token", ["session_token"])
-    .index("by_active", ["is_active"]),
+    .index("by_active", ["is_active"])
+    .index("by_physician", ["physician_id"]),
+
+  // Individual physician accounts (invited via Clerk OAuth)
+  physicians: defineTable({
+    clerk_user_id: v.string(),
+    email: v.string(),
+    full_name: v.string(),
+    avatar_url: v.optional(v.string()),
+
+    permission_level: v.union(
+      v.literal("viewer"),      // Read-only access
+      v.literal("clinician"),   // Read + Write (notes, interventions)
+      v.literal("admin")        // Full access (can invite, delete)
+    ),
+
+    status: v.union(
+      v.literal("invited"),
+      v.literal("active"),
+      v.literal("suspended"),
+      v.literal("deactivated")
+    ),
+
+    invited_by: v.optional(v.string()), // "master" or physician ID
+    invited_at: v.number(),
+    activated_at: v.optional(v.number()),
+    last_login_at: v.optional(v.number()),
+    created_at: v.number(),
+    updated_at: v.number(),
+
+    // Optional professional info
+    title: v.optional(v.string()), // "Dr.", "MD", "PhD", etc.
+    specialization: v.optional(v.string()),
+    license_number: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    notes: v.optional(v.string()),
+  })
+    .index("by_clerk_id", ["clerk_user_id"])
+    .index("by_email", ["email"])
+    .index("by_status", ["status"])
+    .index("by_permission", ["permission_level"]),
+
+  // Physician invitation system
+  physician_invitations: defineTable({
+    email: v.string(),
+    invitation_token: v.string(), // Cryptographically secure random token
+    permission_level: v.union(
+      v.literal("viewer"),
+      v.literal("clinician"),
+      v.literal("admin")
+    ),
+
+    invited_by_type: v.union(
+      v.literal("master"),
+      v.literal("admin_physician")
+    ),
+    invited_by_physician_id: v.optional(v.id("physicians")),
+
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("expired"),
+      v.literal("revoked")
+    ),
+
+    expires_at: v.number(), // 7 days from creation
+    created_at: v.number(),
+    accepted_at: v.optional(v.number()),
+    revoked_at: v.optional(v.number()),
+    revoked_by: v.optional(v.string()),
+    physician_id: v.optional(v.id("physicians")), // Set when accepted
+    personal_message: v.optional(v.string()),
+    resend_count: v.number(),
+    last_resent_at: v.optional(v.number()),
+  })
+    .index("by_token", ["invitation_token"])
+    .index("by_email", ["email"])
+    .index("by_status", ["status"])
+    .index("by_expires", ["expires_at"])
+    .index("by_invited_by", ["invited_by_physician_id"]),
+
+  // Patient-physician assignment tracking
+  physician_patient_assignments: defineTable({
+    patient_id: v.id("users"),
+    physician_id: v.id("physicians"),
+
+    assigned_at: v.number(),
+    assigned_by_type: v.union(
+      v.literal("master"),
+      v.literal("admin_physician"),
+      v.literal("system")
+    ),
+    assigned_by_physician_id: v.optional(v.id("physicians")),
+
+    status: v.union(
+      v.literal("active"),
+      v.literal("transferred"),
+      v.literal("completed")
+    ),
+
+    ended_at: v.optional(v.number()),
+    transfer_reason: v.optional(v.string()),
+    assignment_notes: v.optional(v.string()),
+  })
+    .index("by_patient", ["patient_id"])
+    .index("by_physician", ["physician_id"])
+    .index("by_physician_status", ["physician_id", "status"])
+    .index("by_patient_status", ["patient_id", "status"]),
+
+  // HIPAA-compliant audit logging
+  physician_audit_logs: defineTable({
+    actor_type: v.union(
+      v.literal("master_password"),
+      v.literal("physician"),
+      v.literal("system")
+    ),
+    physician_id: v.optional(v.id("physicians")),
+    session_token: v.string(),
+
+    action_type: v.string(), // "view_patient_details", "save_note", "delete_patient", etc.
+    action_category: v.union(
+      v.literal("patient_access"),
+      v.literal("data_modification"),
+      v.literal("administration"),
+      v.literal("system_config")
+    ),
+
+    resource_type: v.optional(v.string()), // "patient", "note", "intervention", etc.
+    resource_id: v.optional(v.string()),
+    patient_id: v.optional(v.id("users")), // For patient-related actions
+
+    action_details: v.string(), // JSON stringified details
+    ip_address: v.optional(v.string()),
+    user_agent: v.optional(v.string()),
+
+    success: v.boolean(),
+    error_message: v.optional(v.string()),
+    timestamp: v.number(),
+    duration_ms: v.optional(v.number()), // Action duration
+  })
+    .index("by_physician", ["physician_id"])
+    .index("by_patient", ["patient_id"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_action_type", ["action_type"])
+    .index("by_patient_timestamp", ["patient_id", "timestamp"])
+    .index("by_physician_timestamp", ["physician_id", "timestamp"])
+    .index("by_action_category", ["action_category"]),
 
   // ============================================
   // Cross-Device Question Progress Tracking
