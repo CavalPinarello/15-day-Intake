@@ -701,7 +701,8 @@ struct MainDashboardView: View {
 
                     // Journey start date
                     if let startTimestamp = questionnaireManager.journeyProgress?.startedAt {
-                        let startDate = Date(timeIntervalSince1970: Double(startTimestamp))
+                        let interval: TimeInterval = TimeInterval(startTimestamp)
+                        let startDate = Date(timeIntervalSince1970: interval)
                         let dateFormatter = DateFormatter()
                         dateFormatter.dateFormat = "MMM d"
                         Text("Started \(dateFormatter.string(from: startDate))")
