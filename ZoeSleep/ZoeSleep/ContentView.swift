@@ -699,13 +699,9 @@ struct MainDashboardView: View {
                             .foregroundColor(theme.textOnCardSecondary)
                     }
 
-                    // Journey start date
-                    if let startTimestamp = questionnaireManager.journeyProgress?.startedAt {
-                        let interval: TimeInterval = TimeInterval(startTimestamp)
-                        let startDate = Date(timeIntervalSince1970: interval)
-                        let dateFormatter = DateFormatter()
-                        dateFormatter.dateFormat = "MMM d"
-                        Text("Started \(dateFormatter.string(from: startDate))")
+                    // Journey start date - show formatted start date if available
+                    if let timestamp = questionnaireManager.journeyProgress?.startedAt {
+                        Text("Started \(Self.formatStartDate(timestamp))")
                             .font(.system(size: Typography.caption, design: .rounded))
                             .foregroundColor(theme.textOnCardMuted)
                     }
@@ -1858,6 +1854,15 @@ struct MainDashboardView: View {
                 }
             }
         )
+    }
+
+    // MARK: - Helper Functions
+
+    private static func formatStartDate(_ timestamp: Int) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: date)
     }
 }
 
