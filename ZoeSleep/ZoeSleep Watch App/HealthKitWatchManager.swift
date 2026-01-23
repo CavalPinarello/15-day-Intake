@@ -523,7 +523,7 @@ class HealthKitWatchManager: ObservableObject {
 
     /// Merge overlapping sleep segments to prevent double-counting time
     /// When segments overlap, prioritize the most specific sleep stage
-    private func mergeOverlappingSegments(_ segments: [SleepStageSegment]) -> [SleepStageSegment] {
+    nonisolated private func mergeOverlappingSegments(_ segments: [SleepStageSegment]) -> [SleepStageSegment] {
         guard !segments.isEmpty else { return [] }
 
         // Priority: higher value = more important to keep when merging

@@ -41,118 +41,118 @@ enum NotificationType: String {
 
 // MARK: - Varied Notification Messages
 
-/// 100 varied morning notification messages to prevent desensitization
+/// 100 varied morning notification messages for sleep log and assessment only
 struct NotificationMessages {
     static let morningMessages: [(title: String, body: String)] = [
         // Friendly greetings (1-20)
-        ("Good morning!", "Time to log how you slept last night."),
-        ("Rise and shine!", "Let's capture your sleep while it's fresh."),
-        ("Morning!", "Quick sleep log to start your day right."),
-        ("Hello there!", "Your sleep data is waiting to be recorded."),
-        ("Hey!", "Don't forget to log last night's sleep."),
-        ("Good morning!", "A minute now saves insights later."),
-        ("Wakey wakey!", "Time for your daily sleep check-in."),
-        ("Top of the morning!", "Let's see how you slept."),
-        ("Morning sunshine!", "Your sleep log awaits."),
-        ("Hello!", "Start your day by logging your sleep."),
-        ("Good day!", "Quick check-in about last night?"),
-        ("Greetings!", "Your sleep tracker is ready for you."),
-        ("Hey there!", "Log your sleep while you remember it."),
-        ("Morning!", "Better sleep starts with tracking."),
-        ("Hi!", "Ready to log your sleep?"),
-        ("Good morning!", "Your daily sleep log is due."),
-        ("Hello!", "Take a moment to track your rest."),
-        ("Hey!", "How did you sleep? Let's find out."),
-        ("Morning!", "Time to record your sleep patterns."),
-        ("Rise and log!", "Capture last night's sleep data."),
+        ("Good morning!", "Time to log your sleep and answer today's questions."),
+        ("Rise and shine!", "Sleep log and assessment ready for you."),
+        ("Morning!", "Quick sleep log and daily questions."),
+        ("Hello there!", "Log your sleep and complete today's assessment."),
+        ("Hey!", "Sleep log and daily questions await."),
+        ("Good morning!", "Two quick tasks: sleep log and assessment."),
+        ("Wakey wakey!", "Log last night and answer a few questions."),
+        ("Top of the morning!", "Sleep log and assessment time."),
+        ("Morning sunshine!", "Ready to log your sleep and assessment?"),
+        ("Hello!", "Start with your sleep log and daily questions."),
+        ("Good day!", "Sleep log and assessment for today."),
+        ("Greetings!", "Log your sleep and complete the assessment."),
+        ("Hey there!", "Sleep log and questions while it's fresh."),
+        ("Morning!", "Two tasks: sleep log and assessment."),
+        ("Hi!", "Ready to log sleep and answer questions?"),
+        ("Good morning!", "Sleep log and daily assessment due."),
+        ("Hello!", "Log your rest and complete the assessment."),
+        ("Hey!", "Sleep log and daily questions ready."),
+        ("Morning!", "Track your sleep and answer today's questions."),
+        ("Rise and log!", "Sleep data and assessment await."),
 
         // Motivational (21-40)
-        ("You've got this!", "A quick sleep log helps build better habits."),
-        ("One step at a time", "Log your sleep to stay on track."),
-        ("Small steps matter", "Your sleep log takes just a minute."),
-        ("Keep the streak!", "Don't break your logging momentum."),
-        ("Progress awaits", "Track your sleep to see improvements."),
-        ("Stay consistent", "Daily logging leads to better insights."),
-        ("You're doing great!", "Keep up with your sleep tracking."),
-        ("Every day counts", "Log today for a healthier tomorrow."),
-        ("Build the habit", "Just 60 seconds to log your sleep."),
-        ("Stay on track", "Your sleep journey continues today."),
-        ("Keep it up!", "Another day, another sleep log."),
-        ("Consistency wins", "Log now while it's fresh in mind."),
-        ("Make it count", "Your sleep data matters."),
-        ("One more day", "Add today's sleep to your record."),
-        ("Stay strong", "Sleep tracking builds awareness."),
-        ("Daily wins", "Logging sleep is a form of self-care."),
-        ("Keep going!", "Your future self will thank you."),
-        ("Almost there", "Complete your morning check-in."),
-        ("You can do it!", "Quick sleep log for the day."),
-        ("Stay committed", "Track sleep, transform your nights."),
+        ("You've got this!", "Sleep log and assessment ready."),
+        ("One step at a time", "Log your sleep and answer questions."),
+        ("Small steps matter", "Two quick tasks this morning."),
+        ("Keep the streak!", "Sleep log and assessment time."),
+        ("Progress awaits", "Log sleep and complete the assessment."),
+        ("Stay consistent", "Daily tasks lead to better insights."),
+        ("You're doing great!", "Keep up with sleep log and questions."),
+        ("Every day counts", "Log and assess for better health."),
+        ("Build the habit", "Sleep log and assessment ready."),
+        ("Stay on track", "Two morning tasks await you."),
+        ("Keep it up!", "Sleep log and daily questions."),
+        ("Consistency wins", "Log sleep and answer questions now."),
+        ("Make it count", "Your sleep data and insights matter."),
+        ("One more day", "Sleep log and assessment time."),
+        ("Stay strong", "Log your sleep and complete questions."),
+        ("Daily wins", "Sleep log and assessment for today."),
+        ("Keep going!", "Two quick tasks for better insights."),
+        ("Almost there", "Complete sleep log and assessment."),
+        ("You can do it!", "Sleep log and questions ready."),
+        ("Stay committed", "Track and assess for better nights."),
 
         // Curious/Question-based (41-60)
-        ("How'd you sleep?", "Let's find out and track it."),
-        ("Sleep well?", "Log it now while you remember."),
-        ("Rest easy?", "Your sleep log is waiting."),
-        ("Good rest?", "Share how last night went."),
-        ("Dreams or nightmares?", "Record your sleep experience."),
-        ("Feeling rested?", "Log your sleep quality today."),
-        ("Slept enough?", "Track it to know for sure."),
-        ("Quality rest?", "Your sleep data tells the story."),
-        ("How was last night?", "Time to log your sleep."),
-        ("Well rested?", "Record your sleep now."),
-        ("Sleep soundly?", "Let's capture that data."),
-        ("Good night's sleep?", "Log it before you forget."),
-        ("Feel refreshed?", "Track your rest for insights."),
-        ("Sleep through?", "Your log helps spot patterns."),
-        ("Wake up rested?", "Share your sleep quality."),
-        ("Peaceful night?", "Log how you slept."),
-        ("Restful sleep?", "Time for your check-in."),
-        ("Sleep deeply?", "Record your rest now."),
-        ("How many hours?", "Log your sleep duration."),
-        ("Sleep score?", "Let's see how you did."),
+        ("How'd you sleep?", "Log it and answer today's questions."),
+        ("Sleep well?", "Log and complete the assessment."),
+        ("Rest easy?", "Sleep log and questions await."),
+        ("Good rest?", "Share how you slept and answer questions."),
+        ("Dreams or nightmares?", "Log sleep and complete assessment."),
+        ("Feeling rested?", "Log sleep quality and answer questions."),
+        ("Slept enough?", "Track it and complete the assessment."),
+        ("Quality rest?", "Log your sleep and answer questions."),
+        ("How was last night?", "Time to log and assess."),
+        ("Well rested?", "Record sleep and answer questions."),
+        ("Sleep soundly?", "Log data and complete assessment."),
+        ("Good night's sleep?", "Log and answer before you forget."),
+        ("Feel refreshed?", "Track sleep and complete questions."),
+        ("Sleep through?", "Log helps patterns, questions help care."),
+        ("Wake up rested?", "Share sleep quality and assessment."),
+        ("Peaceful night?", "Log sleep and answer questions."),
+        ("Restful sleep?", "Time for sleep log and assessment."),
+        ("Sleep deeply?", "Record sleep and complete questions."),
+        ("How many hours?", "Log duration and answer questions."),
+        ("Sleep score?", "Log it and complete assessment."),
 
         // Health-focused (61-80)
-        ("Sleep matters", "Track it to improve it."),
-        ("Better sleep awaits", "Start by logging today."),
-        ("Health check", "Your sleep affects everything."),
-        ("Wellness moment", "Log your sleep for better health."),
-        ("Self-care time", "Track your rest patterns."),
-        ("For your health", "A minute to log your sleep."),
-        ("Sleep health", "Tracking is the first step."),
-        ("Feel better", "Know your sleep, improve your days."),
-        ("Energy check", "How you slept affects your day."),
-        ("Vitality boost", "Good sleep tracking leads to good sleep."),
-        ("Rest recovery", "Log your sleep to optimize rest."),
-        ("Body check-in", "Your sleep data tells a story."),
-        ("Mind & body", "Track sleep for overall wellness."),
-        ("Recharge status", "How did your body rest?"),
-        ("Recovery time", "Log your sleep quality."),
-        ("Wellness log", "Track your nightly recovery."),
-        ("Health journal", "Add your sleep entry."),
-        ("Body awareness", "Know your sleep patterns."),
-        ("Rest report", "Submit your sleep log."),
-        ("Sleep science", "Data drives improvement."),
+        ("Sleep matters", "Log it and complete the assessment."),
+        ("Better sleep awaits", "Start with log and questions."),
+        ("Health check", "Sleep log and assessment ready."),
+        ("Wellness moment", "Log sleep and answer questions."),
+        ("Self-care time", "Track sleep and complete assessment."),
+        ("For your health", "Two tasks: log and assess."),
+        ("Sleep health", "Log and assessment are first steps."),
+        ("Feel better", "Log sleep and answer questions."),
+        ("Energy check", "Sleep log and assessment for you."),
+        ("Vitality boost", "Log and assess for better sleep."),
+        ("Rest recovery", "Log sleep and complete questions."),
+        ("Body check-in", "Sleep data and assessment tell the story."),
+        ("Mind & body", "Log sleep and answer questions."),
+        ("Recharge status", "Log rest and complete assessment."),
+        ("Recovery time", "Log sleep and answer questions."),
+        ("Wellness log", "Track sleep and complete assessment."),
+        ("Health journal", "Add sleep entry and assessment."),
+        ("Body awareness", "Log sleep and answer questions."),
+        ("Rest report", "Submit log and complete assessment."),
+        ("Sleep science", "Data and questions drive improvement."),
 
         // Short and punchy (81-100)
-        ("Log time!", "Your sleep data awaits."),
-        ("Sleep check!", "Quick log for the morning."),
-        ("Track it!", "Log your sleep now."),
-        ("Don't forget!", "Your sleep log is due."),
-        ("Quick check!", "Sleep log in under a minute."),
-        ("Reminder!", "Time to track your sleep."),
-        ("Daily log!", "Record last night's sleep."),
-        ("Check in!", "Your sleep tracker needs you."),
-        ("Log now!", "While it's fresh in your mind."),
-        ("Sleep time!", "Well, logging time actually."),
-        ("Rise & log!", "Morning sleep check-in."),
-        ("Wake & track!", "Log your sleep data."),
-        ("New day!", "Start with your sleep log."),
-        ("Fresh start!", "Log yesterday's sleep."),
-        ("Day one!", "Well, another one. Log it!"),
-        ("Track now!", "Your sleep insights await."),
-        ("Quick task!", "Log your sleep quality."),
-        ("Easy win!", "Complete your sleep log."),
-        ("2 minutes!", "That's all for your log."),
-        ("Tap here!", "To log last night's sleep."),
+        ("Log time!", "Sleep and assessment await."),
+        ("Sleep check!", "Log and questions ready."),
+        ("Track it!", "Log sleep and complete assessment."),
+        ("Don't forget!", "Sleep log and questions due."),
+        ("Quick check!", "Two morning tasks ready."),
+        ("Reminder!", "Time to log and assess."),
+        ("Daily log!", "Sleep and assessment time."),
+        ("Check in!", "Log and questions need you."),
+        ("Log now!", "Sleep and assessment fresh."),
+        ("Morning tasks!", "Log sleep and answer questions."),
+        ("Rise & log!", "Sleep log and assessment."),
+        ("Wake & track!", "Log and assess your sleep."),
+        ("New day!", "Start with log and assessment."),
+        ("Fresh start!", "Log and answer questions."),
+        ("Day one!", "Well, another one. Log and assess!"),
+        ("Track now!", "Sleep log and assessment await."),
+        ("Quick task!", "Log sleep and complete questions."),
+        ("Easy win!", "Complete log and assessment."),
+        ("2 minutes!", "That's all for both tasks."),
+        ("Tap here!", "Log sleep and answer questions."),
     ]
 
     static let eveningMessages: [(title: String, body: String)] = [
@@ -583,9 +583,115 @@ class NotificationManager: NSObject, ObservableObject {
     override init() {
         super.init()
         notificationCenter.delegate = self
+        migrateNotificationSettings()
         Task {
             await checkAuthorizationStatus()
         }
+    }
+
+    // MARK: - Migration
+
+    /// Migrate notification settings from v1 to v2 (granular controls)
+    private func migrateNotificationSettings() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: "notificationSettingsMigrated_v2") else {
+            print("[Notifications] Migration already complete")
+            return
+        }
+
+        print("[Notifications] Starting migration to granular notification controls...")
+
+        // Migrate morning reminder → sleep log + assessment (bundled)
+        if let morningEnabled = defaults.object(forKey: Self.dailyReminderEnabledKey) as? Bool {
+            defaults.set(morningEnabled, forKey: Self.sleepLogReminderEnabledKey)
+            defaults.set(morningEnabled, forKey: Self.assessmentReminderEnabledKey)
+            defaults.set(true, forKey: Self.assessmentSameAsSleepLogKey) // Bundle by default
+        } else {
+            // Fresh install - set defaults
+            defaults.set(true, forKey: Self.sleepLogReminderEnabledKey)
+            defaults.set(true, forKey: Self.assessmentReminderEnabledKey)
+            defaults.set(true, forKey: Self.assessmentSameAsSleepLogKey)
+        }
+
+        if let hour = defaults.object(forKey: Self.dailyReminderHourKey) as? Int {
+            defaults.set(hour, forKey: Self.sleepLogReminderHourKey)
+            defaults.set(hour, forKey: Self.assessmentReminderHourKey)
+        } else {
+            defaults.set(9, forKey: Self.sleepLogReminderHourKey)
+            defaults.set(9, forKey: Self.assessmentReminderHourKey)
+        }
+
+        if let minute = defaults.object(forKey: Self.dailyReminderMinuteKey) as? Int {
+            defaults.set(minute, forKey: Self.sleepLogReminderMinuteKey)
+            defaults.set(minute, forKey: Self.assessmentReminderMinuteKey)
+        } else {
+            defaults.set(0, forKey: Self.sleepLogReminderMinuteKey)
+            defaults.set(0, forKey: Self.assessmentReminderMinuteKey)
+        }
+
+        // Migrate afternoon reminder → midday check-in
+        if let afternoonEnabled = defaults.object(forKey: Self.afternoonReminderEnabledKey) as? Bool {
+            defaults.set(afternoonEnabled, forKey: Self.middayCheckInReminderEnabledKey)
+        } else {
+            defaults.set(true, forKey: Self.middayCheckInReminderEnabledKey)
+        }
+
+        if let hour = defaults.object(forKey: Self.afternoonReminderHourKey) as? Int {
+            defaults.set(hour, forKey: Self.middayCheckInReminderHourKey)
+        } else {
+            defaults.set(13, forKey: Self.middayCheckInReminderHourKey)
+        }
+
+        if let minute = defaults.object(forKey: Self.afternoonReminderMinuteKey) as? Int {
+            defaults.set(minute, forKey: Self.middayCheckInReminderMinuteKey)
+        } else {
+            defaults.set(0, forKey: Self.middayCheckInReminderMinuteKey)
+        }
+
+        // Migrate evening reminder → evening check-in
+        if let eveningEnabled = defaults.object(forKey: Self.eveningReminderEnabledKey) as? Bool {
+            defaults.set(eveningEnabled, forKey: Self.eveningCheckInReminderEnabledKey)
+        } else {
+            defaults.set(true, forKey: Self.eveningCheckInReminderEnabledKey)
+        }
+
+        if let hour = defaults.object(forKey: Self.eveningReminderHourKey) as? Int {
+            defaults.set(hour, forKey: Self.eveningCheckInReminderHourKey)
+        } else {
+            defaults.set(18, forKey: Self.eveningCheckInReminderHourKey)
+        }
+
+        if let minute = defaults.object(forKey: Self.eveningReminderMinuteKey) as? Int {
+            defaults.set(minute, forKey: Self.eveningCheckInReminderMinuteKey)
+        } else {
+            defaults.set(0, forKey: Self.eveningCheckInReminderMinuteKey)
+        }
+
+        // NEW FEATURE: Enable overdue reminder by default (6 PM reminder, check at 5 PM)
+        defaults.set(true, forKey: Self.overdueReminderEnabledKey)
+        defaults.set(18, forKey: Self.overdueReminderHourKey) // 6 PM
+        defaults.set(0, forKey: Self.overdueReminderMinuteKey)
+        defaults.set(17, forKey: Self.overdueCheckTimeHourKey) // Check at 5 PM
+        defaults.set(0, forKey: Self.overdueCheckTimeMinuteKey)
+
+        // NEW FEATURE: Enable morning check-in by default (7 AM)
+        defaults.set(true, forKey: Self.morningCheckInReminderEnabledKey)
+        defaults.set(7, forKey: Self.morningCheckInReminderHourKey)
+        defaults.set(0, forKey: Self.morningCheckInReminderMinuteKey)
+
+        // Enable auto-skip iPhone if Watch by default
+        defaults.set(true, forKey: Self.autoSkipIPhoneIfWatchEnabledKey)
+
+        // Mark migration complete
+        defaults.set(true, forKey: "notificationSettingsMigrated_v2")
+
+        print("[Notifications] Migration complete - all notification settings configured")
+        print("[Notifications] Sleep Log: \(defaults.bool(forKey: Self.sleepLogReminderEnabledKey)) at \(defaults.integer(forKey: Self.sleepLogReminderHourKey)):\(String(format: "%02d", defaults.integer(forKey: Self.sleepLogReminderMinuteKey)))")
+        print("[Notifications] Assessment: \(defaults.bool(forKey: Self.assessmentReminderEnabledKey)) (same as sleep log: \(defaults.bool(forKey: Self.assessmentSameAsSleepLogKey)))")
+        print("[Notifications] Overdue: \(defaults.bool(forKey: Self.overdueReminderEnabledKey)) at \(defaults.integer(forKey: Self.overdueReminderHourKey)):\(String(format: "%02d", defaults.integer(forKey: Self.overdueReminderMinuteKey)))")
+        print("[Notifications] Morning Check-In: \(defaults.bool(forKey: Self.morningCheckInReminderEnabledKey)) at \(defaults.integer(forKey: Self.morningCheckInReminderHourKey)):\(String(format: "%02d", defaults.integer(forKey: Self.morningCheckInReminderMinuteKey)))")
+        print("[Notifications] Midday Check-In: \(defaults.bool(forKey: Self.middayCheckInReminderEnabledKey)) at \(defaults.integer(forKey: Self.middayCheckInReminderHourKey)):\(String(format: "%02d", defaults.integer(forKey: Self.middayCheckInReminderMinuteKey)))")
+        print("[Notifications] Evening Check-In: \(defaults.bool(forKey: Self.eveningCheckInReminderEnabledKey)) at \(defaults.integer(forKey: Self.eveningCheckInReminderHourKey)):\(String(format: "%02d", defaults.integer(forKey: Self.eveningCheckInReminderMinuteKey)))")
     }
 
     // MARK: - Authorization
@@ -856,13 +962,55 @@ class NotificationManager: NSObject, ObservableObject {
     private static let morningReminderID = "morning_task_reminder"
     private static let eveningReminderID = "evening_task_reminder"
 
-    /// UserDefaults keys for notification settings
+    // New granular notification identifiers
+    private static let sleepLogReminderID = "sleep_log_reminder"
+    private static let assessmentReminderID = "assessment_reminder"
+    private static let overdueReminderID = "overdue_task_reminder"
+    private static let morningCheckInReminderID = "morning_checkin_reminder"
+    private static let middayCheckInReminderID = "midday_checkin_reminder"
+    private static let eveningCheckInReminderID = "evening_checkin_reminder"
+
+    /// UserDefaults keys for notification settings (legacy - kept for migration)
     static let dailyReminderEnabledKey = "dailyReminderEnabled"
     static let dailyReminderHourKey = "dailyReminderHour"
     static let dailyReminderMinuteKey = "dailyReminderMinute"
     static let eveningReminderEnabledKey = "eveningReminderEnabled"
     static let eveningReminderHourKey = "eveningReminderHour"
     static let eveningReminderMinuteKey = "eveningReminderMinute"
+
+    // Sleep Log notification settings
+    static let sleepLogReminderEnabledKey = "sleepLogReminderEnabled"
+    static let sleepLogReminderHourKey = "sleepLogReminderHour"
+    static let sleepLogReminderMinuteKey = "sleepLogReminderMinute"
+
+    // Assessment notification settings (bundled with sleep log by default)
+    static let assessmentReminderEnabledKey = "assessmentReminderEnabled"
+    static let assessmentSameAsSleepLogKey = "assessmentSameAsSleepLog"
+    static let assessmentReminderHourKey = "assessmentReminderHour"
+    static let assessmentReminderMinuteKey = "assessmentReminderMinute"
+
+    // Overdue catch-up reminder settings (user-configurable check and reminder times)
+    static let overdueReminderEnabledKey = "overdueReminderEnabled"
+    static let overdueReminderHourKey = "overdueReminderHour"
+    static let overdueReminderMinuteKey = "overdueReminderMinute"
+    static let overdueCheckTimeHourKey = "overdueCheckTimeHour"
+    static let overdueCheckTimeMinuteKey = "overdueCheckTimeMinute"
+
+    // Check-In notification settings (iPhone)
+    static let morningCheckInReminderEnabledKey = "morningCheckInReminderEnabled"
+    static let morningCheckInReminderHourKey = "morningCheckInReminderHour"
+    static let morningCheckInReminderMinuteKey = "morningCheckInReminderMinute"
+
+    static let middayCheckInReminderEnabledKey = "middayCheckInReminderEnabled"
+    static let middayCheckInReminderHourKey = "middayCheckInReminderHour"
+    static let middayCheckInReminderMinuteKey = "middayCheckInReminderMinute"
+
+    static let eveningCheckInReminderEnabledKey = "eveningCheckInReminderEnabled"
+    static let eveningCheckInReminderHourKey = "eveningCheckInReminderHour"
+    static let eveningCheckInReminderMinuteKey = "eveningCheckInReminderMinute"
+
+    // Watch coordination settings
+    static let autoSkipIPhoneIfWatchEnabledKey = "autoSkipIPhoneIfWatchEnabled"
 
     /// Schedule an intelligent morning task reminder
     /// The notification content is customized based on which tasks are still incomplete
@@ -977,6 +1125,279 @@ class NotificationManager: NSObject, ObservableObject {
         await updatePendingCount()
     }
 
+    // MARK: - Granular Notification Scheduling Methods
+
+    /// Schedule sleep log reminder
+    func scheduleSleepLogReminder(enabled: Bool, hour: Int, minute: Int) async {
+        guard isAuthorized else { return }
+
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.sleepLogReminderID])
+
+        guard enabled else {
+            print("[Notifications] Sleep log reminder disabled")
+            return
+        }
+
+        let message = SleepTaskMessages.randomSleepLogPrompt()
+
+        let content = UNMutableNotificationContent()
+        content.title = message.title
+        content.body = message.body
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.sleepLogReminder.rawValue
+        content.userInfo = ["destination": "sleeplog"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: Self.sleepLogReminderID, content: content, trigger: trigger)
+
+        do {
+            try await notificationCenter.add(request)
+            print("[Notifications] Scheduled sleep log at \(hour):\(String(format: "%02d", minute))")
+        } catch {
+            print("[Notifications] Error scheduling sleep log: \(error)")
+        }
+    }
+
+    /// Schedule assessment reminder
+    func scheduleAssessmentReminder(enabled: Bool, hour: Int, minute: Int) async {
+        guard isAuthorized else { return }
+
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.assessmentReminderID])
+
+        guard enabled else {
+            print("[Notifications] Assessment reminder disabled")
+            return
+        }
+
+        let message = SleepTaskMessages.randomAssessmentPrompt()
+
+        let content = UNMutableNotificationContent()
+        content.title = message.title
+        content.body = message.body
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.assessmentReminder.rawValue
+        content.userInfo = ["destination": "assessment"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: Self.assessmentReminderID, content: content, trigger: trigger)
+
+        do {
+            try await notificationCenter.add(request)
+            print("[Notifications] Scheduled assessment at \(hour):\(String(format: "%02d", minute))")
+        } catch {
+            print("[Notifications] Error scheduling assessment: \(error)")
+        }
+    }
+
+    /// Schedule overdue catch-up reminder
+    func scheduleOverdueReminder(enabled: Bool, hour: Int, minute: Int, checkTimeHour: Int, checkTimeMinute: Int) async {
+        guard isAuthorized else { return }
+
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.overdueReminderID])
+
+        guard enabled else {
+            print("[Notifications] Overdue reminder disabled")
+            return
+        }
+
+        // Schedule notification at the reminder time, but we'll check completion status before sending
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+
+        // Use placeholder content - actual content will be set when we check overdue status
+        let content = UNMutableNotificationContent()
+        content.title = "Catch-Up Reminder"
+        content.body = "Time to check if you've completed today's tasks"
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.overdueTask.rawValue
+        content.userInfo = ["destination": "sleeplog", "isOverdue": true, "checkTimeHour": checkTimeHour, "checkTimeMinute": checkTimeMinute]
+
+        let request = UNNotificationRequest(identifier: Self.overdueReminderID, content: content, trigger: trigger)
+
+        do {
+            try await notificationCenter.add(request)
+            print("[Notifications] Scheduled overdue check at \(hour):\(String(format: "%02d", minute)) (check time: \(checkTimeHour):\(String(format: "%02d", checkTimeMinute)))")
+        } catch {
+            print("[Notifications] Error scheduling overdue reminder: \(error)")
+        }
+    }
+
+    /// Schedule morning check-in reminder (energy/mood/focus)
+    func scheduleMorningCheckInReminder(enabled: Bool, hour: Int, minute: Int) async {
+        guard isAuthorized else { return }
+
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.morningCheckInReminderID])
+
+        guard enabled else {
+            print("[Notifications] Morning check-in reminder disabled")
+            return
+        }
+
+        let message = CheckInNudgeMessages.randomMorningPrompt()
+
+        let content = UNMutableNotificationContent()
+        content.title = message.title
+        content.body = message.body
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.morningCheckInNudge.rawValue
+        content.userInfo = ["destination": "checkin_morning"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: Self.morningCheckInReminderID, content: content, trigger: trigger)
+
+        do {
+            try await notificationCenter.add(request)
+            print("[Notifications] Scheduled morning check-in at \(hour):\(String(format: "%02d", minute))")
+        } catch {
+            print("[Notifications] Error scheduling morning check-in: \(error)")
+        }
+    }
+
+    /// Schedule midday check-in reminder (energy/mood/focus)
+    func scheduleMiddayCheckInReminder(enabled: Bool, hour: Int, minute: Int) async {
+        guard isAuthorized else { return }
+
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.middayCheckInReminderID])
+
+        guard enabled else {
+            print("[Notifications] Midday check-in reminder disabled")
+            return
+        }
+
+        let message = CheckInNudgeMessages.randomMiddayPrompt()
+
+        let content = UNMutableNotificationContent()
+        content.title = message.title
+        content.body = message.body
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.middayCheckInNudge.rawValue
+        content.userInfo = ["destination": "checkin_midday"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: Self.middayCheckInReminderID, content: content, trigger: trigger)
+
+        do {
+            try await notificationCenter.add(request)
+            print("[Notifications] Scheduled midday check-in at \(hour):\(String(format: "%02d", minute))")
+        } catch {
+            print("[Notifications] Error scheduling midday check-in: \(error)")
+        }
+    }
+
+    /// Schedule evening check-in reminder (energy/mood/focus)
+    func scheduleEveningCheckInReminder(enabled: Bool, hour: Int, minute: Int) async {
+        guard isAuthorized else { return }
+
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.eveningCheckInReminderID])
+
+        guard enabled else {
+            print("[Notifications] Evening check-in reminder disabled")
+            return
+        }
+
+        let message = CheckInNudgeMessages.randomEveningPrompt()
+
+        let content = UNMutableNotificationContent()
+        content.title = message.title
+        content.body = message.body
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.eveningCheckInNudge.rawValue
+        content.userInfo = ["destination": "checkin_evening"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: Self.eveningCheckInReminderID, content: content, trigger: trigger)
+
+        do {
+            try await notificationCenter.add(request)
+            print("[Notifications] Scheduled evening check-in at \(hour):\(String(format: "%02d", minute))")
+        } catch {
+            print("[Notifications] Error scheduling evening check-in: \(error)")
+        }
+    }
+
+    /// Check and send overdue reminder if tasks are incomplete
+    /// This should be called when the app comes to foreground or at the scheduled check time
+    func checkAndSendOverdueReminder() async {
+        let defaults = UserDefaults.standard
+        let enabled = defaults.bool(forKey: Self.overdueReminderEnabledKey)
+        guard enabled else { return }
+
+        // Check current time against configured check time
+        let checkHour = defaults.integer(forKey: Self.overdueCheckTimeHourKey)
+        let checkMinute = defaults.integer(forKey: Self.overdueCheckTimeMinuteKey)
+        let currentHour = Calendar.current.component(.hour, from: Date())
+        let currentMinute = Calendar.current.component(.minute, from: Date())
+
+        // Convert to minutes for comparison
+        let currentTimeMinutes = currentHour * 60 + currentMinute
+        let checkTimeMinutes = checkHour * 60 + checkMinute
+        guard currentTimeMinutes >= checkTimeMinutes else {
+            print("[Notifications] Not yet time to check overdue (current: \(currentHour):\(String(format: "%02d", currentMinute)), check: \(checkHour):\(String(format: "%02d", checkMinute)))")
+            return
+        }
+
+        // Fetch completion status from Convex
+        do {
+            let journeyProgress = try await ConvexService.shared.getJourneyProgress()
+            let sleepLogDone = journeyProgress.sleepLogCompleted ?? false
+            let assessmentDone = journeyProgress.assessmentCompleted ?? false
+
+            guard !sleepLogDone || !assessmentDone else {
+                print("[Notifications] All tasks completed - no overdue reminder needed")
+                return
+            }
+
+            // Build task list
+            var tasks: [String] = []
+            if !sleepLogDone { tasks.append("sleep log") }
+            if !assessmentDone { tasks.append("assessment") }
+
+            // Send notification immediately
+            let message = NotificationMessages.randomEveningMessage()
+            let content = UNMutableNotificationContent()
+            content.title = "Catch-Up Reminder"
+            content.body = "You still need to complete: \(tasks.joined(separator: ", "))"
+            content.sound = .default
+            content.categoryIdentifier = NotificationType.overdueTask.rawValue
+            content.userInfo = ["destination": "sleeplog", "isOverdue": true]
+
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: "overdue_\(Date().timeIntervalSince1970)",
+                content: content,
+                trigger: trigger
+            )
+
+            try await notificationCenter.add(request)
+            print("[Notifications] Sent overdue reminder for: \(tasks)")
+        } catch {
+            print("[Notifications] Failed to check overdue: \(error)")
+        }
+    }
+
     /// Schedule all reminders using saved settings from UserDefaults
     /// Call this on app launch to restore notification schedule
     /// Only 3 reminders per day: Morning (9 AM), Afternoon (1 PM), Evening (8 PM)
@@ -1006,6 +1427,74 @@ class NotificationManager: NSObject, ObservableObject {
 
         print("[Notifications] Scheduling from saved settings - evening: \(eveningEnabled) at \(eveningHour):\(String(format: "%02d", eveningMinute))")
         await scheduleEveningReminder(enabled: eveningEnabled, hour: eveningHour, minute: eveningMinute)
+    }
+
+    /// Master scheduling method - schedules all notifications using granular controls
+    /// This is the new comprehensive method that replaces scheduleFromSavedSettings for new installations
+    func scheduleAllNotificationsFromSettings() async {
+        guard isAuthorized else {
+            print("[Notifications] Not authorized - skipping all scheduling")
+            return
+        }
+
+        let defaults = UserDefaults.standard
+
+        // 1. Sleep Log
+        let sleepLogEnabled = defaults.bool(forKey: Self.sleepLogReminderEnabledKey)
+        let sleepLogHour = defaults.integer(forKey: Self.sleepLogReminderHourKey)
+        let sleepLogMinute = defaults.integer(forKey: Self.sleepLogReminderMinuteKey)
+        await scheduleSleepLogReminder(enabled: sleepLogEnabled, hour: sleepLogHour, minute: sleepLogMinute)
+
+        // 2. Assessment (same time as sleep log by default)
+        let assessmentEnabled = defaults.bool(forKey: Self.assessmentReminderEnabledKey)
+        let assessmentSameAsSleepLog = defaults.bool(forKey: Self.assessmentSameAsSleepLogKey)
+        if assessmentSameAsSleepLog {
+            await scheduleAssessmentReminder(enabled: assessmentEnabled, hour: sleepLogHour, minute: sleepLogMinute)
+        } else {
+            let assessmentHour = defaults.integer(forKey: Self.assessmentReminderHourKey)
+            let assessmentMinute = defaults.integer(forKey: Self.assessmentReminderMinuteKey)
+            await scheduleAssessmentReminder(enabled: assessmentEnabled, hour: assessmentHour, minute: assessmentMinute)
+        }
+
+        // 3. Overdue catch-up
+        let overdueEnabled = defaults.bool(forKey: Self.overdueReminderEnabledKey)
+        let overdueHour = defaults.integer(forKey: Self.overdueReminderHourKey)
+        let overdueMinute = defaults.integer(forKey: Self.overdueReminderMinuteKey)
+        let overdueCheckHour = defaults.integer(forKey: Self.overdueCheckTimeHourKey)
+        let overdueCheckMinute = defaults.integer(forKey: Self.overdueCheckTimeMinuteKey)
+        await scheduleOverdueReminder(enabled: overdueEnabled, hour: overdueHour, minute: overdueMinute, checkTimeHour: overdueCheckHour, checkTimeMinute: overdueCheckMinute)
+
+        // 4. Check-Ins (auto-skip iPhone if Watch handles them)
+        let autoSkipIfWatch = defaults.bool(forKey: Self.autoSkipIPhoneIfWatchEnabledKey)
+        let hasWatch = iOSWatchConnectivityManager.shared.isWatchAppInstalled
+
+        // Morning Check-In (iPhone)
+        let morningCheckInEnabled = defaults.bool(forKey: Self.morningCheckInReminderEnabledKey)
+        let morningCheckInHour = defaults.integer(forKey: Self.morningCheckInReminderHourKey)
+        let morningCheckInMinute = defaults.integer(forKey: Self.morningCheckInReminderMinuteKey)
+        await scheduleMorningCheckInReminder(enabled: morningCheckInEnabled, hour: morningCheckInHour, minute: morningCheckInMinute)
+
+        // Midday Check-In (skip iPhone if Watch handles it)
+        if !autoSkipIfWatch || !hasWatch {
+            let middayEnabled = defaults.bool(forKey: Self.middayCheckInReminderEnabledKey)
+            let middayHour = defaults.integer(forKey: Self.middayCheckInReminderHourKey)
+            let middayMinute = defaults.integer(forKey: Self.middayCheckInReminderMinuteKey)
+            await scheduleMiddayCheckInReminder(enabled: middayEnabled, hour: middayHour, minute: middayMinute)
+        } else {
+            print("[Notifications] Skipping iPhone midday check-in - Watch handles it")
+        }
+
+        // Evening Check-In (skip iPhone if Watch handles it)
+        if !autoSkipIfWatch || !hasWatch {
+            let eveningEnabled = defaults.bool(forKey: Self.eveningCheckInReminderEnabledKey)
+            let eveningHour = defaults.integer(forKey: Self.eveningCheckInReminderHourKey)
+            let eveningMinute = defaults.integer(forKey: Self.eveningCheckInReminderMinuteKey)
+            await scheduleEveningCheckInReminder(enabled: eveningEnabled, hour: eveningHour, minute: eveningMinute)
+        } else {
+            print("[Notifications] Skipping iPhone evening check-in - Watch handles it")
+        }
+
+        print("[Notifications] Scheduled all notifications from granular settings")
     }
 
     /// Cancel all daily task reminders (morning, afternoon, and evening)
@@ -1110,6 +1599,12 @@ class NotificationManager: NSObject, ObservableObject {
     func cancelAllCheckInNudges() {
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.afternoonReminderID])
         print("[Notifications] Cancelled afternoon energy reminder")
+    }
+
+    /// Cancel ALL pending notifications (used when user disables notifications entirely)
+    func cancelAllNotifications() {
+        notificationCenter.removeAllPendingNotificationRequests()
+        print("[Notifications] Cancelled ALL pending notifications")
     }
 
     /// Reset check-in reminders for a new day with fresh random messages

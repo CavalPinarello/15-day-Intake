@@ -488,9 +488,8 @@ struct AnchoredCoachMark: View {
 
     /// Determine whether bubble should appear above or below target
     private var preferBelow: Bool {
-        // Calculate space above and below target
+        // Calculate space below target
         // Note: targetFrame is already in coachMarkCoordinateSpace (relative to the ZStack content area)
-        let spaceAbove = targetFrame.minY
         let spaceBelow = screenSize.height - targetFrame.maxY
 
         // Prefer below if more space, or if target is in top third of screen

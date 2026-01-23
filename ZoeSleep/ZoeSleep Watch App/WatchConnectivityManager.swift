@@ -6,7 +6,7 @@
 //  for questionnaire sync and data exchange
 //
 
-import WatchConnectivity
+@preconcurrency import WatchConnectivity
 import WatchKit
 import Foundation
 import Combine
@@ -605,6 +605,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
             handleCheckInCompleted(message)
             replyHandler?(["received": true])
 
+        case "notificationTimesUpdate":
+            // iPhone synced notification time preferences - update Watch's scheduled notifications
+            handleNotificationTimesUpdate(message)
+            replyHandler?(["received": true])
+
         default:
             log("Unknown action received: \(action)", level: .warning)
             replyHandler?(["error": "Unknown action: \(action)"])
@@ -675,6 +680,33 @@ extension WatchConnectivityManager: WCSessionDelegate {
         Task {
             await WatchConvexService.shared.refreshFromConvex()
             log("Refreshed state after check-in sync")
+        }
+    }
+
+    // MARK: - Notification Times Sync Handler
+
+    private func handleNotificationTimesUpdate(_ message: [String: Any]) {
+        guard let middayHour = message["middayHour"] as? Int,
+              let middayMinute = message["middayMinute"] as? Int,
+              let eveningHour = message["eveningHour"] as? Int,
+              let eveningMinute = message["eveningMinute"] as? Int else {
+            log("Notification times sync missing required fields", level: .error)
+            return
+        }
+
+        log("Received notification times from iPhone: midday=\(middayHour):\(String(format: "%02d", middayMinute)), evening=\(eveningHour):\(String(format: "%02d", eveningMinute))", level: .success)
+
+        // Save to UserDefaults
+        let defaults = UserDefaults.standard
+        defaults.set(middayHour, forKey: "middayHour")
+        defaults.set(middayMinute, forKey: "middayMinute")
+        defaults.set(eveningHour, forKey: "eveningHour")
+        defaults.set(eveningMinute, forKey: "eveningMinute")
+
+        // Update scheduled notifications with new times
+        Task { @MainActor in
+            WatchNotificationManager.shared.updateNotificationTimesFromSettings()
+            self.log("Rescheduled notifications with new times")
         }
     }
 

@@ -313,9 +313,13 @@ struct HealthKitDetailedDebugView: View {
 
                     // Individual sources
                     ForEach(viewModel.availableSleepSources) { source in
+                        let hasMultipleDevices = source.deviceModel?.contains(",") ?? false
+                        let deviceCount = hasMultipleDevices ? (source.deviceModel?.split(separator: ",").count ?? 1) : 0
+
                         sourceChip(
                             name: source.displayName,
-                            icon: source.iconName,
+                            icon: source.wearableType.iconName,
+                            badge: hasMultipleDevices ? "\(deviceCount)" : nil,
                             isSelected: viewModel.selectedSleepSource?.bundleIdentifier == source.bundleIdentifier
                         ) {
                             viewModel.selectedSleepSource = source
@@ -329,11 +333,19 @@ struct HealthKitDetailedDebugView: View {
 
             // Info about current selection
             if let source = viewModel.selectedSleepSource {
-                Text("Showing data from \(source.displayName) only")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                VStack(spacing: 2) {
+                    Text("Showing data from \(source.displayName) only")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    if let deviceModel = source.deviceModel, !deviceModel.isEmpty {
+                        Text("Models: \(deviceModel)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .opacity(0.8)
+                    }
+                }
             } else if viewModel.availableSleepSources.count > 1 {
-                Text("\(viewModel.availableSleepSources.count) sources merged using priority rules")
+                Text("\(viewModel.availableSleepSources.count) wearable types merged using priority rules")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -345,7 +357,7 @@ struct HealthKitDetailedDebugView: View {
         .padding(.horizontal)
     }
 
-    private func sourceChip(name: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+    private func sourceChip(name: String, icon: String, badge: String? = nil, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
@@ -353,6 +365,16 @@ struct HealthKitDetailedDebugView: View {
                 Text(name)
                     .font(.caption)
                     .fontWeight(isSelected ? .semibold : .regular)
+                if let badge = badge {
+                    Text(badge)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(isSelected ? Color.purple : .white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(isSelected ? .white : Color.purple)
+                        .clipShape(Circle())
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -1298,18 +1320,42 @@ class HealthKitDebugViewModel: ObservableObject {
     // MARK: - Sleep Source Discovery
 
     /// Discovers all available sleep data sources from HealthKit
+    /// Consolidates sources by wearable type (e.g., all Apple Watches → "Apple Watch")
     func discoverSleepSources() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }
 
         isLoadingSources = true
         let manager = HealthKitManager()
-        availableSleepSources = await manager.getAvailableSleepSources()
+        let allSources = await manager.getAvailableSleepSources()
+
+        // Group sources by wearable type
+        let groupedByType = Dictionary(grouping: allSources) { $0.wearableType }
+
+        // Create consolidated sources (one per wearable type)
+        availableSleepSources = groupedByType.map { (wearableType, sources) in
+            // Use the first source as template, but aggregate device models
+            let template = sources[0]
+            let deviceModels = sources.compactMap { $0.deviceModel }
+            let uniqueModels = Array(Set(deviceModels))
+
+            // Create a consolidated source
+            return SleepDataSource(
+                name: wearableType.displayName,
+                bundleIdentifier: sources.map { $0.bundleIdentifier }.joined(separator: ","), // Store all bundle IDs
+                priority: template.priority,
+                wearableType: wearableType,
+                deviceModel: uniqueModels.isEmpty ? nil : uniqueModels.joined(separator: ", ")
+            )
+        }
+        .sorted { $0.priority < $1.priority } // Sort by priority
+
         isLoadingSources = false
 
         // Log discovered sources
-        print("[HealthKitDebug] Discovered \(availableSleepSources.count) sleep sources:")
+        print("[HealthKitDebug] Discovered \(availableSleepSources.count) consolidated wearable types:")
         for source in availableSleepSources {
-            print("  - \(source.displayName) [\(source.bundleIdentifier)]")
+            let modelInfo = source.deviceModel != nil ? " (\(source.deviceModel!))" : ""
+            print("  - \(source.displayName)\(modelInfo) [Priority: \(source.priority)]")
         }
     }
 
@@ -1427,8 +1473,7 @@ class HealthKitDebugViewModel: ObservableObject {
         }
     }
 
-    private func processSleepSamples(_ samples: [HKCategorySample], skipDeduplication: Bool = false) -> [DailySleepSummary] {
-        let calendar = Calendar.current
+    nonisolated private func processSleepSamples(_ samples: [HKCategorySample], skipDeduplication: Bool = false) -> [DailySleepSummary] {
         let dateFmt = DateFormatter()
         dateFmt.dateFormat = "yyyy-MM-dd"
         let timeFmt = DateFormatter()
@@ -1512,7 +1557,7 @@ class HealthKitDebugViewModel: ObservableObject {
 
     /// Deduplicates overlapping sleep samples from multiple sources
     /// Prioritizes: Apple Watch > iPhone native > Third-party apps
-    private func deduplicateOverlappingSamples(_ samples: [HKCategorySample]) -> [HKCategorySample] {
+    nonisolated private func deduplicateOverlappingSamples(_ samples: [HKCategorySample]) -> [HKCategorySample] {
         // Skip "inBed" samples for sleep calculations - only count actual sleep stages
         let sleepSamples = samples.filter { sample in
             let value = sample.value
@@ -1574,7 +1619,6 @@ class HealthKitDebugViewModel: ObservableObject {
     // MARK: - Heart Rate Data
 
     private func fetchHeartRateData(from startDate: Date, to endDate: Date) async -> [HeartRateSummary] {
-        let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
         let restingHRType = HKQuantityType.quantityType(forIdentifier: .restingHeartRate)!
 
         // Fetch resting HR
@@ -1783,7 +1827,7 @@ class HealthKitDebugViewModel: ObservableObject {
         }
     }
 
-    private func defaultUnit(for type: HKQuantityType) -> HKUnit {
+    nonisolated private func defaultUnit(for type: HKQuantityType) -> HKUnit {
         switch type.identifier {
         case HKQuantityTypeIdentifier.heartRate.rawValue,
              HKQuantityTypeIdentifier.restingHeartRate.rawValue:

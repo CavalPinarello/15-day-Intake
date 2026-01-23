@@ -28,13 +28,71 @@ struct HealthKitDemographics {
 
 // MARK: - Sleep Data Source Tracking
 
+/// Consolidated wearable type for grouping device-specific sources
+enum WearableType: String, Codable, CaseIterable {
+    case appleWatch = "Apple Watch"
+    case ouraRing = "Oura Ring"
+    case garmin = "Garmin"
+    case fitbit = "Fitbit"
+    case whoop = "WHOOP"
+    case unknown = "Other Device"
+
+    /// Detect wearable type from bundle ID and source name
+    static func detect(bundleId: String, sourceName: String) -> WearableType {
+        let combined = (bundleId + " " + sourceName).lowercased()
+
+        if combined.contains("watch") || combined.contains("com.apple.health.") {
+            return .appleWatch
+        } else if combined.contains("oura") || combined.contains("ouraring") {
+            return .ouraRing
+        } else if combined.contains("garmin") {
+            return .garmin
+        } else if combined.contains("fitbit") {
+            return .fitbit
+        } else if combined.contains("whoop") {
+            return .whoop
+        }
+        return .unknown
+    }
+
+    /// User-friendly display name
+    var displayName: String {
+        return rawValue
+    }
+
+    /// SF Symbol icon name for this wearable type
+    var iconName: String {
+        switch self {
+        case .appleWatch:
+            return "applewatch"
+        case .ouraRing:
+            return "circle.hexagongrid.circle"
+        case .garmin:
+            return "figure.outdoor.cycle"
+        case .fitbit:
+            return "figure.run"
+        case .whoop:
+            return "waveform.circle"
+        case .unknown:
+            return "app.connected.to.app.below.fill"
+        }
+    }
+}
+
 /// Tracks the source device/app that contributed sleep data
 struct SleepDataSource: Codable, Equatable, Identifiable, Hashable {
-    let name: String           // e.g., "Apple Watch", "Oura", "Fitbit"
+    let name: String           // e.g., "Apple Watch Series 8", "Oura Ring Gen 3"
     let bundleIdentifier: String
     let priority: Int          // 1 = highest (Oura), 2 = Apple Watch, 3 = wearables, 4 = iPhone, 5 = other
+    let wearableType: WearableType  // Consolidated type (e.g., "Apple Watch")
+    let deviceModel: String?   // Specific model (e.g., "Series 8", "Ultra")
 
     var id: String { bundleIdentifier }
+
+    /// Consolidated name for grouping (all Apple Watches → "Apple Watch")
+    var consolidatedName: String {
+        return wearableType.rawValue
+    }
 
     /// Check if this is an Apple Watch source
     var isAppleWatch: Bool {
@@ -66,12 +124,39 @@ struct SleepDataSource: Codable, Equatable, Identifiable, Hashable {
         return "app.connected.to.app.below.fill"
     }
 
+    /// Extract device model from source name
+    /// Examples: "Apple Watch Series 8" → "Series 8", "Garmin Fenix 7" → "Fenix 7"
+    static func extractDeviceModel(from sourceName: String) -> String? {
+        let patterns = [
+            ("Apple Watch", #"Apple Watch (.+)"#),
+            ("Garmin", #"Garmin (.+)"#),
+            ("Fitbit", #"Fitbit (.+)"#),
+            ("WHOOP", #"WHOOP (.+)"#),
+            ("Oura", #"Oura Ring (.+)"#)
+        ]
+
+        for (_, pattern) in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: sourceName, range: NSRange(sourceName.startIndex..., in: sourceName)),
+               let range = Range(match.range(at: 1), in: sourceName) {
+                return String(sourceName[range]).trimmingCharacters(in: .whitespaces)
+            }
+        }
+        return nil
+    }
+
     /// Create a SleepDataSource from an HKSourceRevision
     static func from(sourceRevision: HKSourceRevision) -> SleepDataSource {
         let name = sourceRevision.source.name
         let bundleId = sourceRevision.source.bundleIdentifier
         let lowerName = name.lowercased()
         let lowerBundleId = bundleId.lowercased()
+
+        // Detect consolidated wearable type
+        let wearableType = WearableType.detect(bundleId: bundleId, sourceName: name)
+
+        // Extract device model
+        let deviceModel = extractDeviceModel(from: name)
 
         // Priority assignment: Oura > Apple Watch > Garmin/Fitbit/WHOOP > iPhone native > other
         // Oura Ring typically provides more accurate sleep stage data than Apple Watch
@@ -90,7 +175,13 @@ struct SleepDataSource: Codable, Equatable, Identifiable, Hashable {
             priority = 5  // Other third-party apps
         }
 
-        return SleepDataSource(name: name, bundleIdentifier: bundleId, priority: priority)
+        return SleepDataSource(
+            name: name,
+            bundleIdentifier: bundleId,
+            priority: priority,
+            wearableType: wearableType,
+            deviceModel: deviceModel
+        )
     }
 }
 
@@ -334,12 +425,7 @@ class HealthKitManager: ObservableObject {
             return
         }
 
-        let status = healthStore.authorizationStatus(for: sleepType)
-
-        // For read-only types, .sharingAuthorized means we have read access
-        // .notDetermined means user hasn't been asked yet
-        // .sharingDenied means user denied (but note: Apple returns this even when denied for privacy)
-
+        // Note: authorizationStatus is unreliable for read-only types due to privacy
         // The most reliable check is to actually attempt to read data
         // If we get any data back (even empty results), we have access
         let predicate = HKQuery.predicateForSamples(
@@ -662,7 +748,9 @@ class HealthKitManager: ObservableObject {
                     let dataSource = SleepDataSource(
                         name: source.name,
                         bundleIdentifier: source.bundleIdentifier,
-                        priority: SleepDataSource.from(sourceRevision: HKSourceRevision(source: source, version: nil)).priority
+                        priority: SleepDataSource.from(sourceRevision: HKSourceRevision(source: source, version: nil)).priority,
+                        wearableType: WearableType.detect(bundleId: source.bundleIdentifier, sourceName: source.name),
+                        deviceModel: SleepDataSource.extractDeviceModel(from: source.name)
                     )
                     sleepSources.append(dataSource)
                 }
@@ -958,6 +1046,7 @@ class HealthKitManager: ObservableObject {
         // Use END time to determine the "sleep night" - this ensures overnight sleep is attributed
         // to the day you wake up (e.g., sleep 11pm Dec 30 to 7am Dec 31 = Dec 31's sleep)
         var sourcesByDate: [String: Set<String>] = [:]
+        var bundleIdsByDate: [String: Set<String>] = [:]  // Track all bundle IDs for consolidation
         var primarySourceByDate: [String: SleepDataSource] = [:]
         var timezoneByDate: [String: String] = [:]
         var timezoneSourceByDate: [String: TimezoneSource] = [:]
@@ -965,6 +1054,7 @@ class HealthKitManager: ObservableObject {
         for sample in mergedSamples {
             let dateKey = String(dateFormatter.string(from: sample.endTime).prefix(10))
             sourcesByDate[dateKey, default: Set()].insert(sample.source.name)
+            bundleIdsByDate[dateKey, default: Set()].insert(sample.source.bundleIdentifier)
 
             // Track the highest priority source as primary
             if let existing = primarySourceByDate[dateKey] {
@@ -1034,6 +1124,7 @@ class HealthKitManager: ObservableObject {
 
             // Get source metadata
             let allSources = Array(sourcesByDate[date] ?? Set())
+            let allBundleIds = Array(bundleIdsByDate[date] ?? Set())
             let primarySource = primarySourceByDate[date]
             let isMultiSource = allSources.count > 1
 
@@ -1059,6 +1150,10 @@ class HealthKitManager: ObservableObject {
                 "source_bundle_id": primarySource?.bundleIdentifier ?? "",
                 "all_sources": allSources,
                 "is_multi_source": isMultiSource,
+                // Wearable consolidation fields (for multi-device tracking)
+                "wearable_type": primarySource?.wearableType.rawValue ?? "Other Device",
+                "device_model": primarySource?.deviceModel ?? "",
+                "all_bundle_ids": allBundleIds,
                 // Timezone tracking fields (critical for travelers)
                 "recorded_timezone": recordedTimezone ?? "",
                 "timezone_source": timezoneSource.rawValue
@@ -1615,6 +1710,13 @@ class HealthKitManager: ObservableObject {
                 transformed["allSourcesJson"] = String(data: jsonData, encoding: .utf8)
             }
             transformed["isMultiSource"] = entry["is_multi_source"]
+            // Wearable consolidation fields
+            transformed["wearableType"] = entry["wearable_type"]
+            transformed["deviceModel"] = entry["device_model"]
+            if let allBundleIds = entry["all_bundle_ids"] as? [String],
+               let jsonData = try? JSONSerialization.data(withJSONObject: allBundleIds) {
+                transformed["allBundleIdsJson"] = String(data: jsonData, encoding: .utf8)
+            }
             return transformed
         }
     }
