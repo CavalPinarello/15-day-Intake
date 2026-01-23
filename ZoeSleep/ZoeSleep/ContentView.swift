@@ -702,7 +702,9 @@ struct MainDashboardView: View {
                     // Journey start date
                     if let startTimestamp = questionnaireManager.journeyProgress?.startedAt {
                         let startDate = Date(timeIntervalSince1970: Double(startTimestamp))
-                        Text("Started \(formatJourneyStartDate(startDate))")
+                        let dateFormatter = DateFormatter()
+                        dateFormatter.dateFormat = "MMM d"
+                        Text("Started \(dateFormatter.string(from: startDate))")
                             .font(.system(size: Typography.caption, design: .rounded))
                             .foregroundColor(theme.textOnCardMuted)
                     }
