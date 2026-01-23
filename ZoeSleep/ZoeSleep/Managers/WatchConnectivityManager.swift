@@ -6,11 +6,9 @@
 //  Responds to Watch requests and syncs data bidirectionally
 //
 
-import WatchConnectivity
+@preconcurrency import WatchConnectivity
 import Foundation
 import Combine
-
-@preconcurrency import WatchConnectivity
 
 @MainActor
 class iOSWatchConnectivityManager: NSObject, ObservableObject {
@@ -280,6 +278,27 @@ class iOSWatchConnectivityManager: NSObject, ObservableObject {
             session.transferUserInfo(message)
             log("Queued check-in completion via transferUserInfo (Watch not reachable)")
         }
+    }
+
+    /// Sync notification time preferences to Watch (for midday and evening check-ins)
+    func syncNotificationTimesToWatch() {
+        guard let session = session, session.isWatchAppInstalled else {
+            log("Cannot sync - Watch not installed", level: .warning)
+            return
+        }
+
+        let defaults = UserDefaults.standard
+        let message: [String: Any] = [
+            "action": "notificationTimesUpdate",
+            "middayHour": defaults.integer(forKey: NotificationManager.middayCheckInReminderHourKey),
+            "middayMinute": defaults.integer(forKey: NotificationManager.middayCheckInReminderMinuteKey),
+            "eveningHour": defaults.integer(forKey: NotificationManager.eveningCheckInReminderHourKey),
+            "eveningMinute": defaults.integer(forKey: NotificationManager.eveningCheckInReminderMinuteKey),
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        session.transferUserInfo(message)
+        log("Synced notification times to Watch (midday: \(defaults.integer(forKey: NotificationManager.middayCheckInReminderHourKey)):\(String(format: "%02d", defaults.integer(forKey: NotificationManager.middayCheckInReminderMinuteKey))), evening: \(defaults.integer(forKey: NotificationManager.eveningCheckInReminderHourKey)):\(String(format: "%02d", defaults.integer(forKey: NotificationManager.eveningCheckInReminderMinuteKey))))")
     }
 
     // MARK: - Handle Watch Requests

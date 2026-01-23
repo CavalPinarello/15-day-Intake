@@ -686,15 +686,26 @@ struct MainDashboardView: View {
                     .foregroundColor(theme.primary)
             }
 
-            // Day indicator
+            // Day indicator with journey start date
             HStack(spacing: Spacing.xs) {
-                Text("Day \(currentDay)")
-                    .font(.system(size: Typography.title2, weight: .bold, design: .rounded))
-                    .foregroundColor(theme.textOnCard)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Spacing.xs) {
+                        Text("Day \(currentDay)")
+                            .font(.system(size: Typography.title2, weight: .bold, design: .rounded))
+                            .foregroundColor(theme.textOnCard)
 
-                Text("of 10")
-                    .font(.system(size: Typography.title3, weight: .regular, design: .rounded))
-                    .foregroundColor(theme.textOnCardSecondary)
+                        Text("of 10")
+                            .font(.system(size: Typography.title3, weight: .regular, design: .rounded))
+                            .foregroundColor(theme.textOnCardSecondary)
+                    }
+
+                    // Journey start date
+                    if let startTimestamp = questionnaireManager.journeyProgress?.startedAt {
+                        Text("Started \(formatJourneyStartDate(Date(timeIntervalSince1970: TimeInterval(startTimestamp))))")
+                            .font(.system(size: Typography.caption, design: .rounded))
+                            .foregroundColor(theme.textOnCardMuted)
+                    }
+                }
 
                 Spacer()
             }
@@ -879,7 +890,7 @@ struct MainDashboardView: View {
                     DayCompleteCelebrationView(
                         currentDay: currentDay,
                         onAdvanceDay: advanceToNextDay,
-                        dayReadyAt: questionnaireManager.journeyProgress?.dayReadyAt
+                        calendarLockMessage: questionnaireManager.journeyProgress?.calendarLockMessage
                     )
                     .coachMarkTarget(.sleepLogRow)  // Point to celebration as placeholder for completed tasks
                     .id("sleepLogRow")
@@ -993,7 +1004,7 @@ struct MainDashboardView: View {
                     DayCompleteCelebrationView(
                         currentDay: currentDay,
                         onAdvanceDay: advanceToNextDay,
-                        dayReadyAt: questionnaireManager.journeyProgress?.dayReadyAt
+                        calendarLockMessage: questionnaireManager.journeyProgress?.calendarLockMessage
                     )
                 }
             } else {
@@ -1143,15 +1154,15 @@ struct MainDashboardView: View {
         isAdvancingDay = true
         dayAdvancementError = nil
 
-        let bypassTimeCheck = themeManager.unlockTimeOverride
+        // Calendar-gated: no time bypass needed, backend validates completion + calendar date
         let debugMode = themeManager.debugMode
 
         // Log the attempt
-        advancementLogger.logAttempt(fromDay: currentDay, bypassTimeCheck: bypassTimeCheck, debugMode: debugMode)
+        advancementLogger.logAttempt(fromDay: currentDay, bypassTimeCheck: false, debugMode: debugMode)
 
         Task {
             do {
-                let response = try await ConvexService.shared.advanceToNextDay(bypassTimeCheck: bypassTimeCheck)
+                let response = try await ConvexService.shared.advanceToNextDay()
 
                 if response.success {
                     // Log success
@@ -1160,7 +1171,7 @@ struct MainDashboardView: View {
                         toDay: response.newDay ?? currentDay + 1,
                         sleepLogCompleted: response.sleepLogCompleted ?? true,
                         assessmentCompleted: response.assessmentCompleted ?? true,
-                        bypassTimeCheck: bypassTimeCheck,
+                        bypassTimeCheck: false,
                         debugMode: debugMode
                     )
 
@@ -1201,7 +1212,7 @@ struct MainDashboardView: View {
                         errorMessage: errorMessage,
                         sleepLogCompleted: response.sleepLogCompleted,
                         assessmentCompleted: response.assessmentCompleted,
-                        bypassTimeCheck: bypassTimeCheck,
+                        bypassTimeCheck: false,
                         debugMode: debugMode
                     )
                 }
@@ -1212,7 +1223,7 @@ struct MainDashboardView: View {
                     errorMessage: errorMessage,
                     sleepLogCompleted: nil,
                     assessmentCompleted: nil,
-                    bypassTimeCheck: bypassTimeCheck,
+                    bypassTimeCheck: false,
                     debugMode: debugMode
                 )
             }
@@ -3115,6 +3126,12 @@ struct SleepDiaryHistoryView: View {
         }
     }
 
+    private func formatJourneyStartDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d" // e.g., "Jan 7"
+        return formatter.string(from: date)
+    }
+
     // MARK: - Data Loading
 
     private func loadSleepHistory() {
@@ -3548,19 +3565,15 @@ struct SleepDiaryView: View {
 struct DayCompleteCelebrationView: View {
     let currentDay: Int
     let onAdvanceDay: () -> Void
-    /// Timestamp (ms) when the day became ready (both sections complete)
-    /// If nil, fall back to legacy behavior (simple hour check)
-    var dayReadyAt: Double? = nil
-
-    @State private var timeUntilUnlock: String = ""
-    @State private var isUnlocked: Bool = false
-    @State private var timer: Timer?
+    /// Optional message when next day is calendar-locked (e.g., "Day 2 unlocks on Wed, Jan 8")
+    var calendarLockMessage: String? = nil
 
     // Observe ThemeManager for reactive circadian updates
     @ObservedObject private var themeManager = ThemeManager.shared
-    // Observe UnlockTestManager for test countdown
-    @ObservedObject private var unlockTestManager = UnlockTestManager.shared
     private var theme: ColorTheme { themeManager.currentTheme }
+
+    /// True if next day is calendar-available (not locked by calendar date)
+    private var isCalendarUnlocked: Bool { calendarLockMessage == nil }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -3592,28 +3605,8 @@ struct DayCompleteCelebrationView: View {
                 Divider()
                     .background(theme.textOnCardMuted.opacity(0.3))  // Circadian-aware divider
 
-                if themeManager.unlockTimeOverride {
-                    // Unlock override enabled: Show advance button immediately (bypasses time check)
-                    Button(action: onAdvanceDay) {
-                        HStack {
-                            Image(systemName: "forward.fill")
-                                .font(.subheadline)
-                            Text("Advance to Day \(currentDay + 1)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .foregroundColor(theme.textOnPrimary)  // Circadian-aware
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(theme.primary)
-                        .cornerRadius(10)
-                    }
-
-                    Text("Bypass 4 AM enabled in Debug Menu")
-                        .font(.caption2)
-                        .foregroundColor(theme.textOnCardSecondary)  // HIGH CONTRAST - circadian-aware
-                } else if isUnlocked {
-                    // Day unlocked (past 4 AM) - show advance button
+                if isCalendarUnlocked {
+                    // Day complete + calendar unlocked - show advance button
                     Button(action: onAdvanceDay) {
                         HStack {
                             Image(systemName: "arrow.right.circle.fill")
@@ -3622,72 +3615,21 @@ struct DayCompleteCelebrationView: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }
-                        .foregroundColor(theme.textOnPrimary)  // Circadian-aware
+                        .foregroundColor(theme.textOnPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(theme.primary)
                         .cornerRadius(10)
                     }
-                } else if unlockTestManager.isTestRunning {
-                    // Unlock test in progress - show countdown
-                    VStack(spacing: 12) {
-                        HStack(spacing: 12) {
-                            // Animated unlock icon
-                            ZStack {
-                                Circle()
-                                    .fill(theme.primary.opacity(0.15))
-                                    .frame(width: 44, height: 44)
-                                Image(systemName: "lock.open.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundColor(theme.primary)
-                                    .symbolEffect(.pulse)
-                            }
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Testing Day Unlock...")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(theme.textOnCard)
-                                Text("Simulating time to 4:00 AM")
-                                    .font(.caption)
-                                    .foregroundColor(theme.textOnCardSecondary)
-                            }
-
-                            Spacer()
-
-                            // Countdown display
-                            Text("\(unlockTestManager.currentTestSecond)/10")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(theme.primary)
-                                .monospacedDigit()
-                        }
-
-                        // Progress bar
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(theme.textOnCardMuted.opacity(0.2))
-                                    .frame(height: 8)
-
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(theme.primary)
-                                    .frame(width: geo.size.width * CGFloat(unlockTestManager.currentTestSecond) / 10.0, height: 8)
-                                    .animation(.linear(duration: 0.5), value: unlockTestManager.currentTestSecond)
-                            }
-                        }
-                        .frame(height: 8)
-                    }
-                    .padding(.vertical, 8)
                 } else {
-                    // Locked state - show padlock with "We'll unlock tomorrow"
+                    // Calendar-locked: next day not yet available by calendar date
                     HStack(spacing: 12) {
-                        // Semi-transparent padlock icon
+                        // Calendar icon
                         ZStack {
                             Circle()
                                 .fill(theme.textOnCardMuted.opacity(0.15))
                                 .frame(width: 44, height: 44)
-                            Image(systemName: "lock.fill")
+                            Image(systemName: "calendar")
                                 .font(.system(size: 18))
                                 .foregroundColor(theme.textOnCardSecondary.opacity(0.7))
                         }
@@ -3697,13 +3639,11 @@ struct DayCompleteCelebrationView: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(theme.textOnCard)
-                            Text("We'll unlock tomorrow at 4:00 AM")
-                                .font(.caption)
-                                .foregroundColor(theme.textOnCardSecondary)
-                            Text(timeUntilUnlock)
-                                .font(.caption2)
-                                .foregroundColor(theme.textOnCardMuted)
-                                .monospacedDigit()
+                            if let lockMessage = calendarLockMessage {
+                                Text(lockMessage)
+                                    .font(.caption)
+                                    .foregroundColor(theme.textOnCardSecondary)
+                            }
                         }
 
                         Spacer()
@@ -3781,95 +3721,6 @@ struct DayCompleteCelebrationView: View {
             GlassyCardBackground(opacity: 0.5)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         )
-        .onAppear {
-            updateCountdown()
-            startTimer()
-        }
-        .onDisappear {
-            stopTimer()
-        }
-    }
-
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            updateCountdown()
-        }
-    }
-
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-    }
-
-    private func updateCountdown() {
-        let now = Date()
-        let calendar = Calendar.current
-
-        // Day unlock logic:
-        // The next day unlocks at 4 AM of the calendar day AFTER the day was completed.
-        // Example: Complete Day 2 at 5 PM Monday → Day 3 unlocks at 4 AM Tuesday
-        //
-        // If dayReadyAt is available, use it to calculate the exact unlock time.
-        // If not available (legacy data), fall back to simple hour check.
-
-        var nextUnlock: Date
-
-        if let readyAtMs = dayReadyAt {
-            // We have the exact completion timestamp - calculate proper unlock time
-            let readyDate = Date(timeIntervalSince1970: readyAtMs / 1000.0)
-
-            // Calculate 4 AM of the calendar day after completion
-            // First, get the start of the day when ready (midnight)
-            let startOfReadyDay = calendar.startOfDay(for: readyDate)
-
-            // Next unlock is 4 AM of the next calendar day
-            // But if the day was completed before 4 AM, unlock same day at 4 AM
-            let readyDayAt4AM = calendar.date(bySettingHour: 4, minute: 0, second: 0, of: startOfReadyDay)!
-
-            if readyDate < readyDayAt4AM {
-                // Completed before 4 AM - unlock at 4 AM same day
-                nextUnlock = readyDayAt4AM
-            } else {
-                // Completed after 4 AM - unlock at 4 AM next day
-                nextUnlock = calendar.date(byAdding: .day, value: 1, to: readyDayAt4AM)!
-            }
-        } else {
-            // No completion timestamp available (legacy or first completion)
-            // Fall back to simple logic: if past 4 AM, assume unlocked
-            // This handles the transition period for existing users
-            let currentHour = calendar.component(.hour, from: now)
-            if currentHour >= 4 {
-                isUnlocked = true
-                timeUntilUnlock = "Ready now!"
-                return
-            }
-            // Before 4 AM - wait until 4 AM today
-            nextUnlock = calendar.date(bySettingHour: 4, minute: 0, second: 0, of: now)!
-        }
-
-        // Check if we've passed the unlock time
-        if now >= nextUnlock {
-            isUnlocked = true
-            timeUntilUnlock = "Ready now!"
-            return
-        }
-
-        // Not yet unlocked - show countdown
-        isUnlocked = false
-
-        // Calculate time remaining
-        let components = calendar.dateComponents([.hour, .minute, .second], from: now, to: nextUnlock)
-        let hours = components.hour ?? 0
-        let minutes = components.minute ?? 0
-        let seconds = components.second ?? 0
-
-        if hours > 0 {
-            timeUntilUnlock = "\(hours)h \(minutes)m \(seconds)s remaining"
-        } else if minutes > 0 {
-            timeUntilUnlock = "\(minutes)m \(seconds)s remaining"
-        } else {
-            timeUntilUnlock = "\(seconds)s remaining"
-        }
     }
 }
 
