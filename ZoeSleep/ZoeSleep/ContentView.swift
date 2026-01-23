@@ -1858,8 +1858,7 @@ struct MainDashboardView: View {
 
     // MARK: - Helper Functions
 
-    private static func formatStartDate(_ timestamp: Int) -> String {
-        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+    private static func formatStartDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d"
         return formatter.string(from: date)
