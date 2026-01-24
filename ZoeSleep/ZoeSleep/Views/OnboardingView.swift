@@ -774,7 +774,39 @@ struct HealthConnectStepView: View {
     @State private var errorMessage = ""
     @State private var showMissingDataMessage = false
     @State private var missingDataItems: [String] = []
+    @State private var currentFunFactIndex = 0
+    @State private var funFactTimer: Timer?
+    @State private var syncProgress: Double = 0
     let screenHeight: CGFloat
+
+    // Fun sleep facts that rotate during loading
+    private static let funSleepFacts: [String] = [
+        "Summoning sleep data from the dream realm...",
+        "Consulting with the Sandman...",
+        "Checking if any werewolves kept you up...",
+        "Counting sheep (so you don't have to)...",
+        "Decoding your pillow's secrets...",
+        "Interviewing your REM cycles...",
+        "Asking the moon about your sleep...",
+        "Searching for sleep fairies...",
+        "Analyzing your blanket cocoon technique...",
+        "Translating your snore patterns...",
+        "Checking with the Sleep Witches Council...",
+        "Measuring dream quality in unicorn units...",
+        "Calculating your sleep superpowers...",
+        "Consulting ancient sleep scrolls...",
+        "Downloading your midnight adventures...",
+        "Reviewing your battle with the alarm clock...",
+        "Measuring your bed's gravitational pull...",
+        "Analyzing your pillow fort architecture...",
+        "Checking for monsters under the bed (none found)...",
+        "Interviewing your circadian rhythm...",
+        "Decrypting your dream journal...",
+        "Calibrating the sleep-o-meter...",
+        "Negotiating with your snooze button...",
+        "Scanning for vampire bites (all clear)...",
+        "Loading 6 months of zzz's...",
+    ]
 
     private var isCompact: Bool { screenHeight < 700 }
     private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
@@ -1004,42 +1036,110 @@ struct HealthConnectStepView: View {
     }
 
     private func syncingDataIndicator(progress: String) -> some View {
-        VStack(spacing: 16) {
-            // Progress bar
-            VStack(spacing: 8) {
-                ProgressView()
-                    .tint(palette.accent)
-                    .scaleEffect(1.2)
+        VStack(spacing: 20) {
+            // Animated moon/stars icon
+            ZStack {
+                // Pulsing glow
+                Circle()
+                    .fill(palette.accent.opacity(0.2))
+                    .frame(width: 80, height: 80)
+                    .scaleEffect(syncProgress > 0 ? 1.2 : 1.0)
+                    .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: syncProgress)
 
-                Text(progress)
-                    .foregroundColor(palette.textSecondary)
-                    .font(.subheadline.weight(.medium))
-                    .multilineTextAlignment(.center)
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [palette.accent, palette.accent.opacity(0.7)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .rotationEffect(.degrees(syncProgress > 0 ? 10 : -10))
+                    .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: syncProgress)
             }
+
+            // Fun fact text with fade animation
+            Text(Self.funSleepFacts[currentFunFactIndex])
+                .foregroundColor(palette.textPrimary)
+                .font(.headline.weight(.medium))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .id(currentFunFactIndex) // Force view refresh for animation
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                .animation(.easeInOut(duration: 0.3), value: currentFunFactIndex)
 
             // Progress bar visual
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(palette.textSecondary.opacity(0.2))
-                        .frame(height: 6)
+            VStack(spacing: 8) {
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(palette.textSecondary.opacity(0.2))
+                            .frame(height: 8)
 
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(
-                            LinearGradient(
-                                colors: [palette.accent, palette.accent.opacity(0.7)],
-                                startPoint: .leading,
-                                endPoint: .trailing
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "#667eea") ?? palette.accent,
+                                        Color(hex: "#764ba2") ?? palette.accent.opacity(0.8),
+                                        palette.accent
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
                             )
-                        )
-                        .frame(width: geometry.size.width * 0.6, height: 6)
-                        .animation(.easeInOut(duration: 0.5), value: progress)
+                            .frame(width: geometry.size.width * syncProgress, height: 8)
+                            .animation(.easeInOut(duration: 0.5), value: syncProgress)
+                    }
                 }
+                .frame(height: 8)
+
+                // Status text
+                Text(progress == "Sync complete!" ? "All done!" : "Loading 6 months of sleep data")
+                    .font(.caption)
+                    .foregroundColor(palette.textSecondary)
             }
-            .frame(height: 6)
             .padding(.horizontal, 40)
         }
         .padding(.vertical, 20)
+        .onAppear {
+            startFunFactRotation()
+        }
+        .onDisappear {
+            stopFunFactRotation()
+        }
+    }
+
+    /// Start rotating through fun facts
+    private func startFunFactRotation() {
+        // Randomize starting point
+        currentFunFactIndex = Int.random(in: 0..<Self.funSleepFacts.count)
+        syncProgress = 0.1
+
+        // Rotate facts every 2.5 seconds
+        funFactTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { _ in
+            withAnimation {
+                currentFunFactIndex = (currentFunFactIndex + 1) % Self.funSleepFacts.count
+                // Gradually increase progress (capped at 0.9 until complete)
+                if syncProgress < 0.85 {
+                    syncProgress += 0.08
+                }
+            }
+        }
+    }
+
+    /// Stop the fun fact rotation timer
+    private func stopFunFactRotation() {
+        funFactTimer?.invalidate()
+        funFactTimer = nil
+    }
+
+    /// Complete the progress bar animation
+    private func completeProgress() {
+        withAnimation(.easeInOut(duration: 0.5)) {
+            syncProgress = 1.0
+        }
     }
 
     private var connectedStatus: some View {
@@ -1182,8 +1282,10 @@ struct HealthConnectStepView: View {
                         print("  - \(key): \(value)")
                     }
                     // Show brief success before transitioning
+                    self.completeProgress()
                     self.connectionStatus = .syncingData(progress: "Sync complete!")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self.stopFunFactRotation()
                         self.connectionStatus = .connected
                         print("[Onboarding] HealthKit connection flow completed successfully")
                     }
