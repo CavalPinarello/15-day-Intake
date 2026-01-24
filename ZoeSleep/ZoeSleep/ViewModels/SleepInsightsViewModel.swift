@@ -187,23 +187,17 @@ class SleepInsightsViewModel: ObservableObject {
 
         defer { isLoading = false }
 
-        do {
-            // Load dashboard summary and source data
-            await loadDashboardSummary()
-            await loadMultiSourceData()
+        // Load dashboard summary and source data
+        await loadDashboardSummary()
+        await loadMultiSourceData()
 
-            if hasEnoughForInsights {
-                await loadPerceptionVsReality()
-            }
+        if hasEnoughForInsights {
+            await loadPerceptionVsReality()
+        }
 
-            if hasEnoughForPatterns {
-                await loadPatterns()
-                await loadGeneratedInsights()
-            }
-
-        } catch {
-            self.error = error
-            print("[SleepInsights] Error loading insights: \(error)")
+        if hasEnoughForPatterns {
+            await loadPatterns()
+            await loadGeneratedInsights()
         }
     }
 

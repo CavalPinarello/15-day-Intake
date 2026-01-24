@@ -617,52 +617,106 @@ struct DashboardTourOverlay: View {
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
-    /// Map tour steps to their target elements
-    static let stepTargets: [Int: CoachMarkTargetID] = [
-        1: .journeyProgress,      // Day X of 10
-        2: .checkInRow,           // Check-In (Energy/Mood/Focus)
-        3: .sleepLogRow,          // Sleep Log
-        4: .assessmentRow,        // Assessment
-        5: .upcomingAssessments,  // Upcoming Assessments
-        6: .settingsButton        // Settings
-    ]
+    /// Whether check-ins are shown (affects tour steps)
+    private var showCheckIns: Bool { themeManager.showWatchStyleCheckIns }
+
+    // MARK: - Dynamic Step Mappings (based on check-in visibility)
+
+    /// Map tour steps to their target elements (dynamic based on check-in visibility)
+    private var stepTargets: [Int: CoachMarkTargetID] {
+        if showCheckIns {
+            return [
+                1: .journeyProgress,      // Day X of 10
+                2: .checkInRow,           // Check-In (Energy/Mood/Focus)
+                3: .sleepLogRow,          // Sleep Log
+                4: .assessmentRow,        // Assessment
+                5: .upcomingAssessments,  // Upcoming Assessments
+                6: .settingsButton        // Settings
+            ]
+        } else {
+            // Skip check-in row when disabled
+            return [
+                1: .journeyProgress,      // Day X of 10
+                2: .sleepLogRow,          // Sleep Log
+                3: .assessmentRow,        // Assessment
+                4: .upcomingAssessments,  // Upcoming Assessments
+                5: .settingsButton        // Settings
+            ]
+        }
+    }
 
     /// Map tour steps to their scroll IDs (matching the .id() modifiers)
-    static let stepScrollIDs: [Int: String] = [
-        1: "journeyProgress",
-        2: "checkInRow",
-        3: "sleepLogRow",
-        4: "assessmentRow",
-        5: "assessmentRow",      // Scroll to assessment, then show info about future deep dives
-        6: "settingsButton"
-    ]
+    private var stepScrollIDs: [Int: String] {
+        if showCheckIns {
+            return [
+                1: "journeyProgress",
+                2: "checkInRow",
+                3: "sleepLogRow",
+                4: "assessmentRow",
+                5: "assessmentRow",      // Scroll to assessment, then show info about future deep dives
+                6: "settingsButton"
+            ]
+        } else {
+            return [
+                1: "journeyProgress",
+                2: "sleepLogRow",
+                3: "assessmentRow",
+                4: "assessmentRow",      // Scroll to assessment, then show info about future deep dives
+                5: "settingsButton"
+            ]
+        }
+    }
 
     /// Map tour steps to their scroll anchors (custom positioning for better UX)
-    static let stepScrollAnchors: [Int: UnitPoint] = [
-        1: .top,              // Journey Progress - align to top
-        2: .top,              // Check-In - align to top so circles are fully visible
-        3: .top,              // Sleep Log - align to top
-        4: .top,              // Assessment - align to top
-        5: .bottom,           // Deep Dives - scroll assessment to bottom to show area below
-        6: .bottom            // Settings - align to bottom (it's at the top of screen)
-    ]
+    private var stepScrollAnchors: [Int: UnitPoint] {
+        if showCheckIns {
+            return [
+                1: .top,              // Journey Progress - align to top
+                2: .top,              // Check-In - align to top so circles are fully visible
+                3: .top,              // Sleep Log - align to top
+                4: .top,              // Assessment - align to top
+                5: .bottom,           // Deep Dives - scroll assessment to bottom to show area below
+                6: .bottom            // Settings - align to bottom (it's at the top of screen)
+            ]
+        } else {
+            return [
+                1: .top,              // Journey Progress - align to top
+                2: .top,              // Sleep Log - align to top
+                3: .top,              // Assessment - align to top
+                4: .bottom,           // Deep Dives - scroll assessment to bottom to show area below
+                5: .bottom            // Settings - align to bottom (it's at the top of screen)
+            ]
+        }
+    }
 
     /// Map tour steps to their content
-    static let stepContent: [Int: CoachMarkContent] = [
-        1: CoachMarkLibrary.journeyDuration,
-        2: CoachMarkLibrary.todaysFocus,
-        3: CoachMarkLibrary.sleepLogTask,
-        4: CoachMarkLibrary.assessmentTask,
-        5: CoachMarkLibrary.upcomingAssessments,
-        6: CoachMarkLibrary.settingsMenu
-    ]
+    private var stepContent: [Int: CoachMarkContent] {
+        if showCheckIns {
+            return [
+                1: CoachMarkLibrary.journeyDuration,
+                2: CoachMarkLibrary.todaysFocus,
+                3: CoachMarkLibrary.sleepLogTask,
+                4: CoachMarkLibrary.assessmentTask,
+                5: CoachMarkLibrary.upcomingAssessments,
+                6: CoachMarkLibrary.settingsMenu
+            ]
+        } else {
+            return [
+                1: CoachMarkLibrary.journeyDuration,
+                2: CoachMarkLibrary.sleepLogTask,
+                3: CoachMarkLibrary.assessmentTask,
+                4: CoachMarkLibrary.upcomingAssessments,
+                5: CoachMarkLibrary.settingsMenu
+            ]
+        }
+    }
 
     var body: some View {
         GeometryReader { geometry in
-            let targetID = Self.stepTargets[displayedStep]
+            let targetID = stepTargets[displayedStep]
             let targetFrame = targetID.flatMap { targetFrames[$0] }
             let isVisible = isFrameVisible(targetFrame, in: geometry)
-            let content = Self.stepContent[displayedStep]
+            let content = stepContent[displayedStep]
 
             #if DEBUG
             let _ = print("[CoachMark Tour] Step \(displayedStep): targetID=\(targetID?.rawValue ?? "nil"), frame=\(targetFrame.map { "(\(Int($0.minX)),\(Int($0.minY))) \(Int($0.width))x\(Int($0.height))" } ?? "nil"), visible=\(isVisible), isAppearing=\(isAppearing), framesAvailable=\(targetFrames.keys.map { $0.rawValue })")
@@ -972,10 +1026,10 @@ struct DashboardTourOverlay: View {
     /// Scroll to the target element for a given step
     private func scrollToStep(_ step: Int) {
         guard let scrollProxy = scrollProxy,
-              let scrollID = Self.stepScrollIDs[step] else { return }
+              let scrollID = stepScrollIDs[step] else { return }
 
         // Get the custom anchor for this step (default to .top if not specified)
-        let anchor = Self.stepScrollAnchors[step] ?? .top
+        let anchor = stepScrollAnchors[step] ?? .top
 
         #if DEBUG
         print("[CoachMark Tour] Scrolling to step \(step) with ID: \(scrollID), anchor: \(anchor)")

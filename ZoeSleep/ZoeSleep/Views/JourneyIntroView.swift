@@ -49,13 +49,13 @@ struct JourneyIntroView: View {
 
                     // Content pages - 4 screens
                     TabView(selection: $currentScreen) {
-                        JourneyIntroScreen1(screenHeight: geometry.size.height)
+                        JourneyIntroScreen1(screenHeight: geometry.size.height, onNext: { goToNext() })
                             .tag(0)
 
-                        JourneyIntroScreen2(screenHeight: geometry.size.height)
+                        JourneyIntroScreen2(screenHeight: geometry.size.height, onNext: { goToNext() })
                             .tag(1)
 
-                        JourneyIntroScreen3(screenHeight: geometry.size.height)
+                        JourneyIntroScreen3(screenHeight: geometry.size.height, onNext: { goToNext() })
                             .tag(2)
 
                         JourneyIntroScreen4(screenHeight: geometry.size.height, onComplete: dismiss)
@@ -76,6 +76,14 @@ struct JourneyIntroView: View {
             }
         }
         .ignoresSafeArea()
+    }
+
+    private func goToNext() {
+        if currentScreen < totalScreens - 1 {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                currentScreen += 1
+            }
+        }
     }
 
     private func dismiss() {

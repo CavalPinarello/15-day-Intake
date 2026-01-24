@@ -12,12 +12,18 @@ import SwiftUI
 
 struct JourneyIntroScreen1: View {
     let screenHeight: CGFloat
+    var onNext: (() -> Void)? = nil
 
     @State private var iconScale: CGFloat = 0.5
     @State private var iconOpacity: Double = 0
     @State private var textOpacity: Double = 0
+    @State private var buttonOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
+
+    // Aurora accent colors
+    private let auroraAccent = Color(red: 0.1, green: 0.9, blue: 0.8)
+    private let auroraSecondary = Color(red: 0.0, green: 0.8, blue: 0.9)
 
     var body: some View {
         VStack(spacing: isCompact ? 24 : 32) {
@@ -47,7 +53,33 @@ struct JourneyIntroScreen1: View {
                 .opacity(textOpacity)
 
             Spacer()
-            Spacer()
+
+            // Next button
+            if let onNext = onNext {
+                Button(action: onNext) {
+                    Text("Next")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, isCompact ? 16 : 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [auroraAccent, auroraSecondary],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                        .shadow(color: auroraAccent.opacity(0.5), radius: 15, y: 5)
+                }
+                .padding(.horizontal, 32)
+                .padding(.bottom, isCompact ? 20 : 30)
+                .opacity(buttonOpacity)
+            } else {
+                Spacer()
+            }
         }
         .onAppear(perform: animateIn)
     }
@@ -60,6 +92,9 @@ struct JourneyIntroScreen1: View {
         withAnimation(.easeOut(duration: 0.4).delay(0.3)) {
             textOpacity = 1.0
         }
+        withAnimation(.easeOut(duration: 0.4).delay(0.5)) {
+            buttonOpacity = 1.0
+        }
     }
 }
 
@@ -67,12 +102,18 @@ struct JourneyIntroScreen1: View {
 
 struct JourneyIntroScreen2: View {
     let screenHeight: CGFloat
+    var onNext: (() -> Void)? = nil
 
     @State private var iconScale: CGFloat = 0.5
     @State private var iconOpacity: Double = 0
     @State private var textOpacity: Double = 0
+    @State private var buttonOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
+
+    // Aurora accent colors
+    private let auroraAccent = Color(red: 0.1, green: 0.9, blue: 0.8)
+    private let auroraSecondary = Color(red: 0.0, green: 0.8, blue: 0.9)
 
     var body: some View {
         VStack(spacing: isCompact ? 24 : 32) {
@@ -110,7 +151,33 @@ struct JourneyIntroScreen2: View {
             .opacity(textOpacity)
 
             Spacer()
-            Spacer()
+
+            // Next button
+            if let onNext = onNext {
+                Button(action: onNext) {
+                    Text("Next")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, isCompact ? 16 : 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [auroraAccent, auroraSecondary],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                        .shadow(color: auroraAccent.opacity(0.5), radius: 15, y: 5)
+                }
+                .padding(.horizontal, 32)
+                .padding(.bottom, isCompact ? 20 : 30)
+                .opacity(buttonOpacity)
+            } else {
+                Spacer()
+            }
         }
         .onAppear(perform: animateIn)
     }
@@ -123,6 +190,9 @@ struct JourneyIntroScreen2: View {
         withAnimation(.easeOut(duration: 0.4).delay(0.3)) {
             textOpacity = 1.0
         }
+        withAnimation(.easeOut(duration: 0.4).delay(0.5)) {
+            buttonOpacity = 1.0
+        }
     }
 }
 
@@ -130,12 +200,18 @@ struct JourneyIntroScreen2: View {
 
 struct JourneyIntroScreen3: View {
     let screenHeight: CGFloat
+    var onNext: (() -> Void)? = nil
 
     @State private var iconScale: CGFloat = 0.5
     @State private var iconOpacity: Double = 0
     @State private var textOpacity: Double = 0
+    @State private var buttonOpacity: Double = 0
 
     private var isCompact: Bool { screenHeight < 700 }
+
+    // Aurora accent colors
+    private let auroraAccent = Color(red: 0.1, green: 0.9, blue: 0.8)
+    private let auroraSecondary = Color(red: 0.0, green: 0.8, blue: 0.9)
 
     var body: some View {
         VStack(spacing: isCompact ? 24 : 32) {
@@ -173,7 +249,33 @@ struct JourneyIntroScreen3: View {
             .opacity(textOpacity)
 
             Spacer()
-            Spacer()
+
+            // Next button
+            if let onNext = onNext {
+                Button(action: onNext) {
+                    Text("Next")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, isCompact ? 16 : 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [auroraAccent, auroraSecondary],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                        .shadow(color: auroraAccent.opacity(0.5), radius: 15, y: 5)
+                }
+                .padding(.horizontal, 32)
+                .padding(.bottom, isCompact ? 20 : 30)
+                .opacity(buttonOpacity)
+            } else {
+                Spacer()
+            }
         }
         .onAppear(perform: animateIn)
     }
@@ -185,6 +287,9 @@ struct JourneyIntroScreen3: View {
         }
         withAnimation(.easeOut(duration: 0.4).delay(0.3)) {
             textOpacity = 1.0
+        }
+        withAnimation(.easeOut(duration: 0.4).delay(0.5)) {
+            buttonOpacity = 1.0
         }
     }
 }
@@ -287,9 +392,10 @@ struct JourneyIntroScreen4: View {
 
 struct JourneyIntroScreen5: View {
     let screenHeight: CGFloat
+    var onNext: (() -> Void)? = nil
 
     var body: some View {
-        JourneyIntroScreen3(screenHeight: screenHeight)
+        JourneyIntroScreen3(screenHeight: screenHeight, onNext: onNext)
     }
 }
 

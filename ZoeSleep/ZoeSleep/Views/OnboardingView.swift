@@ -30,7 +30,7 @@ struct OnboardingView: View {
                         .padding(.horizontal, 20)
                     }
 
-                    // FLOW: Personal connection first, HealthKit at the end for sleep history
+                    // FLOW: Disclaimer first, then personal connection, HealthKit at the end for sleep history
                     // Use a read-only selection to prevent TabView from changing the step
                     TabView(selection: Binding(
                         get: { onboardingManager.currentStep },
@@ -39,21 +39,21 @@ struct OnboardingView: View {
                             // Don't allow TabView to change step directly - only through nextStep/previousStep
                         }
                     )) {
-                        // Step 0: Name - personal connection first
+                        // Step 0: Disclaimer - legal/wellness disclaimer
+                        DisclaimerStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
+                            .tag(OnboardingStep.disclaimer)
+
+                        // Step 1: Name - personal connection
                         NameStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.name)
 
-                        // Step 1: Units + Height/Weight combined
+                        // Step 2: Units + Height/Weight combined
                         HeightWeightStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.heightWeight)
 
-                        // Step 2: Gender/Age
+                        // Step 3: Gender/Age
                         GenderAgeStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
                             .tag(OnboardingStep.genderAge)
-
-                        // Step 3: Wearables
-                        WearablesStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
-                            .tag(OnboardingStep.wearables)
 
                         // Step 4: HealthKit - sync sleep/activity history (optional)
                         HealthConnectStepView(onboardingManager: onboardingManager, screenHeight: geometry.size.height)
@@ -152,6 +152,141 @@ struct OnboardingProgressBar: View {
             }
         }
         .frame(height: 3)
+    }
+}
+
+// MARK: - Disclaimer Step
+
+struct DisclaimerStepView: View {
+    @ObservedObject var onboardingManager: OnboardingManager
+    let screenHeight: CGFloat
+
+    private var isCompact: Bool { screenHeight < 700 }
+    private var palette: WaveCircadianPalette { WaveCircadianPalette.current }
+
+    var body: some View {
+        VStack(spacing: isCompact ? 16 : 20) {
+            Spacer(minLength: isCompact ? 20 : 40)
+
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(palette.accent.opacity(0.15))
+                    .frame(width: isCompact ? 70 : 90, height: isCompact ? 70 : 90)
+
+                Image(systemName: "doc.text.fill")
+                    .font(.system(size: isCompact ? 32 : 40))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [palette.accent, palette.wave],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+
+            // Title
+            Text("Important Information")
+                .font(isCompact ? .title3.bold() : .title2.bold())
+                .foregroundColor(palette.textPrimary)
+
+            // Disclaimer content
+            ScrollView {
+                VStack(alignment: .leading, spacing: isCompact ? 14 : 18) {
+                    // Wellness disclaimer
+                    DisclaimerSection(
+                        icon: "heart.text.square",
+                        title: "Wellness Purpose Only",
+                        content: "Zoe Sleep is designed for general wellness and educational purposes. It is not intended to diagnose, treat, cure, or prevent any disease or medical condition. The information provided should not replace professional medical advice.",
+                        isCompact: isCompact,
+                        palette: palette
+                    )
+
+                    // Not medical advice
+                    DisclaimerSection(
+                        icon: "stethoscope",
+                        title: "Not Medical Advice",
+                        content: "Always consult with a qualified healthcare provider before making any changes to your sleep habits, especially if you have a sleep disorder or other medical condition.",
+                        isCompact: isCompact,
+                        palette: palette
+                    )
+
+                    // Data storage
+                    DisclaimerSection(
+                        icon: "lock.shield",
+                        title: "Your Data",
+                        content: "By continuing, you acknowledge that your personal information (including health data from Apple Health, if connected) will be securely stored and processed to provide personalized sleep insights. You may request deletion of your data at any time through the app settings.",
+                        isCompact: isCompact,
+                        palette: palette
+                    )
+                }
+                .padding(.horizontal, 20)
+            }
+            .frame(maxHeight: isCompact ? 280 : 340)
+
+            Spacer()
+
+            // Agreement button
+            VStack(spacing: 8) {
+                Button(action: { onboardingManager.nextStep() }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("I Understand & Agree")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(palette.isDark ? Color(red: 0.15, green: 0.10, blue: 0.08) : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        LinearGradient(
+                            colors: [palette.accent, palette.wave],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(14)
+                }
+                .padding(.horizontal, 20)
+
+                Text("By tapping above, you agree to these terms")
+                    .font(.caption2)
+                    .foregroundColor(palette.textSecondary)
+            }
+            .padding(.bottom, isCompact ? 24 : 32)
+        }
+    }
+}
+
+// MARK: - Disclaimer Section Component
+
+struct DisclaimerSection: View {
+    let icon: String
+    let title: String
+    let content: String
+    let isCompact: Bool
+    let palette: WaveCircadianPalette
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: isCompact ? 18 : 22))
+                .foregroundColor(palette.accent)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(isCompact ? .subheadline.weight(.semibold) : .headline)
+                    .foregroundColor(palette.textPrimary)
+
+                Text(content)
+                    .font(isCompact ? .caption : .subheadline)
+                    .foregroundColor(palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(isCompact ? 12 : 14)
+        .background(palette.isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+        .cornerRadius(12)
     }
 }
 
@@ -622,9 +757,10 @@ struct WearableCard: View {
 // MARK: - Health Connect Step (Compact)
 
 /// Connection status for HealthKit
-enum HealthKitConnectionStatus {
+enum HealthKitConnectionStatus: Equatable {
     case notConnected
     case connecting
+    case syncingData(progress: String)  // Shows progress message during sync
     case connected
     case denied  // User denied permission
     case unavailable  // HealthKit not available on device
@@ -685,6 +821,9 @@ struct HealthConnectStepView: View {
 
             case .connecting:
                 connectingIndicator
+
+            case .syncingData(let progress):
+                syncingDataIndicator(progress: progress)
 
             case .connected:
                 VStack(spacing: 16) {
@@ -806,6 +945,7 @@ struct HealthConnectStepView: View {
     private var iconName: String {
         switch connectionStatus {
         case .notConnected, .connecting: return "heart.fill"
+        case .syncingData: return "arrow.triangle.2.circlepath"
         case .connected: return "checkmark.circle.fill"
         case .denied: return "exclamationmark.triangle.fill"
         case .unavailable: return "xmark.circle.fill"
@@ -815,6 +955,7 @@ struct HealthConnectStepView: View {
     private var iconColor: Color {
         switch connectionStatus {
         case .notConnected, .connecting: return .red
+        case .syncingData: return palette.accent
         case .connected: return .green
         case .denied: return .orange
         case .unavailable: return .gray
@@ -824,6 +965,7 @@ struct HealthConnectStepView: View {
     private var iconBackgroundColor: Color {
         switch connectionStatus {
         case .notConnected, .connecting: return .red
+        case .syncingData: return palette.accent
         case .connected: return .green
         case .denied: return .orange
         case .unavailable: return .gray
@@ -851,14 +993,53 @@ struct HealthConnectStepView: View {
     }
 
     private var connectingIndicator: some View {
-        HStack(spacing: 6) {
+        VStack(spacing: 12) {
             ProgressView()
                 .tint(palette.accent)
-                .scaleEffect(0.9)
-            Text("Connecting...")
+                .scaleEffect(1.2)
+            Text("Requesting access...")
                 .foregroundColor(palette.textSecondary)
                 .font(.subheadline.weight(.medium))
         }
+    }
+
+    private func syncingDataIndicator(progress: String) -> some View {
+        VStack(spacing: 16) {
+            // Progress bar
+            VStack(spacing: 8) {
+                ProgressView()
+                    .tint(palette.accent)
+                    .scaleEffect(1.2)
+
+                Text(progress)
+                    .foregroundColor(palette.textSecondary)
+                    .font(.subheadline.weight(.medium))
+                    .multilineTextAlignment(.center)
+            }
+
+            // Progress bar visual
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(palette.textSecondary.opacity(0.2))
+                        .frame(height: 6)
+
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(
+                            LinearGradient(
+                                colors: [palette.accent, palette.accent.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geometry.size.width * 0.6, height: 6)
+                        .animation(.easeInOut(duration: 0.5), value: progress)
+                }
+            }
+            .frame(height: 6)
+            .padding(.horizontal, 40)
+        }
+        .padding(.vertical, 20)
     }
 
     private var connectedStatus: some View {
@@ -918,7 +1099,8 @@ struct HealthConnectStepView: View {
                 print("[Onboarding] - Current step NOW: \(self.onboardingManager.currentStep.title) (raw: \(self.onboardingManager.currentStep.rawValue))")
 
                 if success {
-                    connectionStatus = .connected
+                    // Show syncing progress
+                    connectionStatus = .syncingData(progress: "Reading your profile...")
                     print("[Onboarding] HealthKit authorized, fetching demographics...")
 
                     // Wait for demographics to be fully fetched (height/weight are async)
@@ -927,6 +1109,9 @@ struct HealthConnectStepView: View {
                             print("[Onboarding] Demographics callback received")
                             onboardingManager.populateFromHealthKit(demographics: demographics)
                             print("[Onboarding] HealthKit demographics populated - Height: \(demographics.heightCm ?? 0), Weight: \(demographics.weightKg ?? 0), Age: \(demographics.age ?? 0)")
+
+                            // Update progress
+                            connectionStatus = .syncingData(progress: "Loading sleep history...")
 
                             // Only mark as connected AFTER we have the data
                             onboardingManager.markHealthKitConnected()
@@ -953,9 +1138,8 @@ struct HealthConnectStepView: View {
                                 print("[Onboarding] ✅ All required data retrieved from HealthKit")
                             }
 
-                            // Sync sleep data to Convex in background (no analysis)
+                            // Sync sleep data to Convex with progress updates
                             syncSleepDataToConvex()
-                            print("[Onboarding] HealthKit connection flow completed successfully")
                         }
                     }
                 } else {
@@ -974,15 +1158,20 @@ struct HealthConnectStepView: View {
         }
     }
 
-    /// Sync all health data to Convex in background (doesn't block UI)
+    /// Sync all health data to Convex with progress updates
     private func syncSleepDataToConvex() {
-        print("[Onboarding] Starting background sync of health data to Convex...")
+        print("[Onboarding] Starting sync of health data to Convex...")
         print("[Onboarding] ConvexService authenticated: \(ConvexService.shared.isAuthenticated)")
 
         guard ConvexService.shared.isAuthenticated else {
             print("[Onboarding] ⚠️ Cannot sync - not authenticated with Convex yet")
+            // Still mark as connected even if we can't sync yet
+            connectionStatus = .connected
+            print("[Onboarding] HealthKit connection flow completed (sync skipped)")
             return
         }
+
+        connectionStatus = .syncingData(progress: "Syncing sleep data...")
 
         healthKitManager.syncAllHealthData { result in
             DispatchQueue.main.async {
@@ -992,8 +1181,17 @@ struct HealthConnectStepView: View {
                     for (key, value) in summary {
                         print("  - \(key): \(value)")
                     }
+                    // Show brief success before transitioning
+                    self.connectionStatus = .syncingData(progress: "Sync complete!")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.connectionStatus = .connected
+                        print("[Onboarding] HealthKit connection flow completed successfully")
+                    }
                 case .failure(let error):
                     print("[Onboarding] ❌ Health data sync failed: \(error.localizedDescription)")
+                    // Still mark as connected - we got permission, sync can retry later
+                    self.connectionStatus = .connected
+                    print("[Onboarding] HealthKit connection flow completed (sync failed but will retry)")
                 }
             }
         }
@@ -1043,49 +1241,17 @@ struct ReadyStepView: View {
                     )
             }
 
-            // Title
-            VStack(spacing: 6) {
-                Text("You're All Set!")
-                    .font(isCompact ? .title3.bold() : .title2.bold())
-                    .foregroundColor(palette.textPrimary)
-
-                if !onboardingManager.profile.name.isEmpty {
-                    Text("Welcome, \(onboardingManager.profile.name)!")
-                        .font(.subheadline)
-                        .foregroundColor(palette.accent)
-                }
-
-                Text("Your 10-day sleep journey begins now")
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            // Philosophy message (compact)
-            HStack(spacing: 10) {
-                Image(systemName: "brain.head.profile")
-                    .font(.body)
-                    .foregroundColor(palette.accent)
-
-                Text("We bridge how you feel and what your data shows")
-                    .font(.caption)
-                    .foregroundColor(palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(10)
-            .background(palette.accent.opacity(0.08))
-            .cornerRadius(8)
-            .padding(.horizontal, 20)
+            // Title - personalized and simple
+            Text(onboardingManager.profile.name.isEmpty
+                 ? "You're all set!"
+                 : "You're all set, \(onboardingManager.profile.name)!")
+                .font(isCompact ? .title3.bold() : .title2.bold())
+                .foregroundColor(palette.textPrimary)
 
             // Summary (compact)
             VStack(spacing: 8) {
                 SummaryRow(label: "Units", value: onboardingManager.profile.measurementSystem, isCompact: isCompact)
                 SummaryRow(label: "Age", value: "\(onboardingManager.profile.age) years", isCompact: isCompact)
-
-                if let device = onboardingManager.profile.wearables.first {
-                    let count = onboardingManager.profile.wearables.count
-                    SummaryRow(label: "Device", value: count > 1 ? "\(device) +\(count - 1)" : device, isCompact: isCompact)
-                }
 
                 SummaryRow(
                     label: "Apple Health",

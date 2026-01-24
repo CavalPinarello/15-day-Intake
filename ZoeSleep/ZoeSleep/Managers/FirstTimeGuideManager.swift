@@ -323,8 +323,8 @@ class FirstTimeGuideManager: ObservableObject {
         }
     }
 
-    /// Dashboard tour sequence (in order)
-    static let dashboardTourSequence: [CoachMarkContent] = [
+    /// Dashboard tour sequence (in order) - full sequence
+    static let dashboardTourSequenceFull: [CoachMarkContent] = [
         CoachMarkLibrary.journeyDuration,
         CoachMarkLibrary.todaysFocus,
         CoachMarkLibrary.sleepLogTask,
@@ -332,4 +332,23 @@ class FirstTimeGuideManager: ObservableObject {
         CoachMarkLibrary.upcomingAssessments,
         CoachMarkLibrary.settingsMenu
     ]
+
+    /// Dashboard tour sequence without check-in step (when energy check-ins are disabled)
+    static let dashboardTourSequenceWithoutCheckIn: [CoachMarkContent] = [
+        CoachMarkLibrary.journeyDuration,
+        CoachMarkLibrary.sleepLogTask,
+        CoachMarkLibrary.assessmentTask,
+        CoachMarkLibrary.upcomingAssessments,
+        CoachMarkLibrary.settingsMenu
+    ]
+
+    /// Get the appropriate dashboard tour sequence based on check-in visibility
+    static func dashboardTourSequence(showCheckIns: Bool) -> [CoachMarkContent] {
+        showCheckIns ? dashboardTourSequenceFull : dashboardTourSequenceWithoutCheckIn
+    }
+
+    /// Legacy static property for compatibility - defaults to full sequence
+    static var dashboardTourSequence: [CoachMarkContent] {
+        dashboardTourSequenceFull
+    }
 }

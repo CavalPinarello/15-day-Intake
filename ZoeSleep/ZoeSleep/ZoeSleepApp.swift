@@ -42,9 +42,9 @@ struct ZoeSleepApp: App {
                             }
                         }
 
-                        // Schedule notifications from saved settings
+                        // Schedule notifications from saved settings (using comprehensive system)
                         Task {
-                            await NotificationManager.shared.scheduleFromSavedSettings()
+                            await NotificationManager.shared.scheduleAllNotificationsFromSettings()
                         }
                     }
 
@@ -52,6 +52,10 @@ struct ZoeSleepApp: App {
                     if authManager.isAuthenticated {
                         watchConnectivity.sendUserDataToWatch()
                         watchConnectivity.sendThemeSettingsToWatch()
+                        // Sync notification times to Watch
+                        if iOSWatchConnectivityManager.shared.isWatchAppInstalled {
+                            watchConnectivity.syncNotificationTimesToWatch()
+                        }
                     }
                 }
                 .onChange(of: scenePhase) { _, newPhase in
@@ -63,7 +67,16 @@ struct ZoeSleepApp: App {
                         // This ensures notifications are scheduled even after being cancelled
                         if authManager.isAuthenticated {
                             Task {
-                                await NotificationManager.shared.scheduleFromSavedSettings()
+                                await NotificationManager.shared.scheduleAllNotificationsFromSettings()
+                            }
+                            // Sync notification times to Watch on app activation
+                            if iOSWatchConnectivityManager.shared.isWatchAppInstalled {
+                                watchConnectivity.syncNotificationTimesToWatch()
+                            }
+
+                            // Smart sync: sync HealthKit data on app launch if >30 mins since last sync
+                            if onboardingManager.hasCompletedOnboarding && healthKitManager.isAuthorized {
+                                performSmartHealthKitSync()
                             }
                         }
                     }
@@ -133,6 +146,18 @@ struct ZoeSleepApp: App {
 
             // Check if we need to refresh notifications for a new day
             await checkAndRefreshNotificationsForNewDay()
+        }
+    }
+
+    /// Perform smart HealthKit sync if enough time has passed since last sync
+    /// Syncs sleep and HRV data on app launch to keep data fresh
+    /// Smart sync: sync HealthKit data on app launch if >30 mins since last sync
+    /// Fetches last 7 days of sleep data and syncs to Convex
+    private func performSmartHealthKitSync() {
+        healthKitManager.smartSync { didSync in
+            if didSync {
+                print("[iOS] ✅ Smart sync completed on app launch")
+            }
         }
     }
 

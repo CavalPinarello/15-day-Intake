@@ -80,21 +80,22 @@ enum WearableDevice: String, CaseIterable, Identifiable {
 }
 
 /// Onboarding step enum
-/// FLOW: Personal connection first, then HealthKit at the end for sleep history sync
+/// FLOW: Disclaimer first, then personal connection, then HealthKit at the end for sleep history sync
+/// Note: Wearables step removed - HealthKit provides actual device data
 enum OnboardingStep: Int, CaseIterable {
-    case name = 0               // First - personal connection
-    case heightWeight = 1       // Units + body metrics combined
-    case genderAge = 2          // About you
-    case wearables = 3          // Devices
+    case disclaimer = 0         // Legal disclaimer - wellness only, data storage consent
+    case name = 1               // Personal connection
+    case heightWeight = 2       // Units + body metrics combined
+    case genderAge = 3          // About you
     case healthConnect = 4      // Sync sleep/activity history (optional)
     case ready = 5
 
     var title: String {
         switch self {
+        case .disclaimer: return "Important Information"
         case .name: return "Your Name"
         case .heightWeight: return "Body Metrics"
         case .genderAge: return "About You"
-        case .wearables: return "Devices"
         case .healthConnect: return "Sleep History"
         case .ready: return "Ready"
         }
@@ -519,6 +520,8 @@ class OnboardingManager: ObservableObject {
 
     var canProceed: Bool {
         switch currentStep {
+        case .disclaimer:
+            return true // User must explicitly tap "I Understand" button
         case .name:
             return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .heightWeight:
@@ -528,8 +531,6 @@ class OnboardingManager: ObservableObject {
             return height > 0 && weight > 0
         case .genderAge:
             return profile.birthYear > 1900 && profile.birthYear <= Calendar.current.component(.year, from: Date())
-        case .wearables:
-            return true // Optional step
         case .healthConnect:
             return true // Can proceed even without connecting
         case .ready:

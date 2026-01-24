@@ -383,10 +383,11 @@ struct MainDashboardView: View {
         }
         // Full-screen coach mark overlay (dashboard tour with navigation)
         .overlay {
-            if showingDashboardTour, currentTourStep > 0, currentTourStep <= FirstTimeGuideManager.dashboardTourSequence.count {
+            let tourStepCount = FirstTimeGuideManager.dashboardTourSequence(showCheckIns: themeManager.showWatchStyleCheckIns).count
+            if showingDashboardTour, currentTourStep > 0, currentTourStep <= tourStepCount {
                 DashboardTourOverlay(
                     currentStep: currentTourStep,
-                    totalSteps: FirstTimeGuideManager.dashboardTourSequence.count,
+                    totalSteps: tourStepCount,
                     targetFrames: coachMarkTargetFrames,
                     scrollProxy: scrollProxy,
                     onNext: { advanceTour() },
@@ -879,13 +880,15 @@ struct MainDashboardView: View {
             // Day Complete Celebration (only if no expansion pack available AND no expansion was done)
             if isDayComplete && availableExpansionPack == nil && !hadExpansionPackToday {
                 VStack(spacing: Spacing.md) {
-                    // Check-ins are optional but still accessible after day completion
-                    CheckInTaskRow { slot in
-                        selectedCheckInSlot = slot
-                        showingCheckIn = true
+                    // Check-ins are optional but still accessible after day completion (hidden by default)
+                    if themeManager.showWatchStyleCheckIns {
+                        CheckInTaskRow { slot in
+                            selectedCheckInSlot = slot
+                            showingCheckIn = true
+                        }
+                        .coachMarkTarget(.checkInRow)
+                        .id("checkInRow")
                     }
-                    .coachMarkTarget(.checkInRow)
-                    .id("checkInRow")
 
                     DayCompleteCelebrationView(
                         currentDay: currentDay,
@@ -955,13 +958,15 @@ struct MainDashboardView: View {
             } else if isDayComplete && hadExpansionPackToday && expansionPackCompletedToday {
                 // Show all 3 tasks completed (including Deeper Dive)
                 VStack(spacing: Spacing.md) {
-                    // Check-ins are optional but still accessible after day completion
-                    CheckInTaskRow { slot in
-                        selectedCheckInSlot = slot
-                        showingCheckIn = true
+                    // Check-ins are optional but still accessible after day completion (hidden by default)
+                    if themeManager.showWatchStyleCheckIns {
+                        CheckInTaskRow { slot in
+                            selectedCheckInSlot = slot
+                            showingCheckIn = true
+                        }
+                        .coachMarkTarget(.checkInRow)
+                        .id("checkInRow")
                     }
-                    .coachMarkTarget(.checkInRow)
-                    .id("checkInRow")
 
                     // Header with completion status
                     HStack {
@@ -1021,13 +1026,15 @@ struct MainDashboardView: View {
                             .foregroundColor(theme.textOnCardMuted)
                     }
 
-                    // Check-In row (Energy, Mood, Focus)
-                    CheckInTaskRow { slot in
-                        selectedCheckInSlot = slot
-                        showingCheckIn = true
+                    // Check-In row (Energy, Mood, Focus) - hidden by default, enable in Debug
+                    if themeManager.showWatchStyleCheckIns {
+                        CheckInTaskRow { slot in
+                            selectedCheckInSlot = slot
+                            showingCheckIn = true
+                        }
+                        .coachMarkTarget(.checkInRow)
+                        .id("checkInRow")
                     }
-                    .coachMarkTarget(.checkInRow)
-                    .id("checkInRow")
 
                     // Sleep Log row
                     if sleepLogDone {
@@ -1119,7 +1126,8 @@ struct MainDashboardView: View {
 
     private var completedTaskCount: Int {
         var count = 0
-        if checkInAllDone { count += 1 }
+        // Only count check-in if feature is enabled
+        if themeManager.showWatchStyleCheckIns && checkInAllDone { count += 1 }
         if sleepLogDone { count += 1 }
         if hasAssessmentToday && assessmentDone { count += 1 }
         // Include expansion pack if triggered and completed (same-day deep dive on Days 1-5)
@@ -1128,7 +1136,9 @@ struct MainDashboardView: View {
     }
 
     private var totalTaskCount: Int {
-        var count = 2 // Always have check-in and sleep log
+        var count = 1 // Always have sleep log
+        // Only count check-in if feature is enabled
+        if themeManager.showWatchStyleCheckIns { count += 1 }
         if hasAssessmentToday { count += 1 }
         // Include expansion pack in total (same-day deep dive on Days 1-5)
         if hadExpansionPackToday { count += 1 }
@@ -1674,16 +1684,23 @@ struct MainDashboardView: View {
         }
     }
 
+    /// Current tour sequence (adjusts based on check-in visibility)
+    private var currentTourSequence: [CoachMarkContent] {
+        FirstTimeGuideManager.dashboardTourSequence(showCheckIns: themeManager.showWatchStyleCheckIns)
+    }
+
     /// Advance to next tour step or end tour
     private func advanceTour() {
+        let sequence = currentTourSequence
+
         // Mark current step as shown
-        if currentTourStep > 0 && currentTourStep <= FirstTimeGuideManager.dashboardTourSequence.count {
-            let content = FirstTimeGuideManager.dashboardTourSequence[currentTourStep - 1]
+        if currentTourStep > 0 && currentTourStep <= sequence.count {
+            let content = sequence[currentTourStep - 1]
             guideManager.markCoachMarkShown(content)
         }
 
         // Move to next step
-        if currentTourStep < FirstTimeGuideManager.dashboardTourSequence.count {
+        if currentTourStep < sequence.count {
             currentTourStep += 1
         } else {
             // End tour
@@ -1702,7 +1719,7 @@ struct MainDashboardView: View {
     /// Skip the entire tour and mark all steps as shown
     private func skipTour() {
         // Mark all tour steps as shown so tour doesn't reappear
-        for content in FirstTimeGuideManager.dashboardTourSequence {
+        for content in currentTourSequence {
             guideManager.markCoachMarkShown(content)
         }
 

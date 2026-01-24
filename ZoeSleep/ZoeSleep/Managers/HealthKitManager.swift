@@ -253,6 +253,9 @@ struct HealthKitSyncProgress {
 
 @MainActor
 class HealthKitManager: ObservableObject {
+    /// Shared singleton for use outside SwiftUI environment (ViewModels, etc.)
+    static let shared = HealthKitManager()
+
     let healthStore = HKHealthStore()
     @Published var isAuthorized = false {
         didSet {
@@ -264,8 +267,21 @@ class HealthKitManager: ObservableObject {
     @Published var demographics: HealthKitDemographics = HealthKitDemographics()
     @Published var syncProgress = HealthKitSyncProgress()
 
-    // Persistence key for authorization state
+    // Last sync timestamp for smart sync (only sync if >30 min since last)
+    @Published var lastSyncTimestamp: Date? {
+        didSet {
+            if let timestamp = lastSyncTimestamp {
+                UserDefaults.standard.set(timestamp, forKey: Self.lastSyncTimestampKey)
+            }
+        }
+    }
+
+    // Persistence keys
     private static let healthKitAuthorizedKey = "healthKitAuthorized"
+    private static let lastSyncTimestampKey = "healthKitLastSyncTimestamp"
+
+    // Smart sync interval (30 minutes)
+    private static let smartSyncIntervalMinutes: Double = 30
 
     // API Configuration
     private let apiService = APIService.shared
@@ -279,6 +295,92 @@ class HealthKitManager: ObservableObject {
         if cachedAuth {
             self.isAuthorized = cachedAuth
             print("[HealthKit] Loaded cached authorization state: \(cachedAuth)")
+        }
+
+        // Load last sync timestamp
+        if let savedTimestamp = UserDefaults.standard.object(forKey: Self.lastSyncTimestampKey) as? Date {
+            self.lastSyncTimestamp = savedTimestamp
+            print("[HealthKit] Loaded last sync timestamp: \(savedTimestamp)")
+        }
+    }
+
+    // MARK: - Smart Sync (App Launch)
+
+    /// Performs a smart sync - only syncs if more than 30 minutes since last sync
+    /// Call this on app launch/foreground
+    func smartSync(completion: ((Bool) -> Void)? = nil) {
+        // Check if we should sync
+        guard isAuthorized else {
+            print("[HealthKit Smart Sync] Not authorized - skipping")
+            completion?(false)
+            return
+        }
+
+        // Check time since last sync
+        if let lastSync = lastSyncTimestamp {
+            let minutesSinceLastSync = Date().timeIntervalSince(lastSync) / 60
+            if minutesSinceLastSync < Self.smartSyncIntervalMinutes {
+                print("[HealthKit Smart Sync] Skipping - only \(Int(minutesSinceLastSync)) minutes since last sync (threshold: \(Int(Self.smartSyncIntervalMinutes)) min)")
+                completion?(false)
+                return
+            }
+        }
+
+        print("[HealthKit Smart Sync] Starting sync (last sync: \(lastSyncTimestamp?.description ?? "never"))")
+
+        // Perform a lightweight sync - just recent data (7 days) for daily refresh
+        syncRecentData { [weak self] result in
+            switch result {
+            case .success:
+                self?.lastSyncTimestamp = Date()
+                print("[HealthKit Smart Sync] ✅ Completed successfully")
+                completion?(true)
+            case .failure(let error):
+                print("[HealthKit Smart Sync] ❌ Failed: \(error.localizedDescription)")
+                completion?(false)
+            }
+        }
+    }
+
+    /// Sync only recent data (last 7 days) for daily refresh
+    /// Lighter than full 6-month sync
+    func syncRecentData(completion: @escaping (Result<Void, Error>) -> Void) {
+        Task { @MainActor in
+            print("[HealthKit] Syncing recent data (7 days)...")
+
+            guard ConvexService.shared.isAuthenticated else {
+                print("[HealthKit] Not authenticated with Convex - skipping sync")
+                completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])))
+                return
+            }
+
+            let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+
+            // Fetch recent sleep data (7 days)
+            fetchSleepData(daysBack: 7) { result in
+                switch result {
+                case .success(let sleepData):
+                    print("[HealthKit] Fetched \(sleepData.count) recent sleep records")
+
+                    // Sync to Convex
+                    Task {
+                        do {
+                            if !sleepData.isEmpty {
+                                _ = try await ConvexService.shared.syncSleepData(deviceId: deviceId, sleepData: sleepData)
+                                print("[HealthKit] ✅ Recent sleep data synced to Convex")
+                            }
+                            completion(.success(()))
+                        } catch {
+                            print("[HealthKit] ❌ Sync error: \(error.localizedDescription)")
+                            completion(.failure(error))
+                        }
+                    }
+
+                case .failure(let error):
+                    print("[HealthKit] ❌ Fetch error: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
         }
     }
     
@@ -831,7 +933,7 @@ class HealthKitManager: ObservableObject {
 
     // MARK: - Sleep Data
 
-    func fetchSleepData(daysBack: Int = 90, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
+    func fetchSleepData(daysBack: Int = 180, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
             completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Sleep analysis type not available"])))
             return
@@ -1655,6 +1757,10 @@ class HealthKitManager: ObservableObject {
                 print("[HealthKit Sync] ===== SYNC COMPLETE =====")
                 print("[HealthKit Sync] Total records synced: \(totalRecords)")
                 syncProgress.update(step: .complete, message: "Sync complete! \(totalRecords) records uploaded.")
+
+                // Update last sync timestamp
+                self.lastSyncTimestamp = Date()
+
                 completion(.success(results))
 
             } catch {
@@ -2294,6 +2400,532 @@ class HealthKitManager: ObservableObject {
                 print("[HealthKit] Failed to fetch sleep data for chronotype: \(error)")
                 completion([])
             }
+        }
+    }
+
+    // MARK: - Intra-Night HRV Data (New)
+
+    /// Detects the HRV capability of a wearable type
+    func detectHRVCapability(for wearableType: WearableType) -> DeviceHRVCapability {
+        switch wearableType {
+        case .ouraRing:
+            return .fullIntraNight    // Oura provides 5-min intervals
+        case .whoop:
+            return .fullIntraNight    // WHOOP provides frequent samples
+        case .appleWatch:
+            return .periodicSleep     // Apple Watch provides periodic samples during sleep
+        case .garmin, .fitbit:
+            return .morningOnly       // Single morning reading
+        case .unknown:
+            return .none
+        }
+    }
+
+    /// Fetch evening HRV baseline (2-3 hours before typical bedtime)
+    /// - Parameters:
+    ///   - date: The date to fetch evening HRV for
+    ///   - typicalBedtime: Optional typical bedtime; defaults to 10 PM
+    ///   - completion: Returns array of HRV samples
+    func fetchEveningHRV(
+        for date: Date,
+        typicalBedtime: Date? = nil,
+        completion: @escaping (Result<[HRVSample], Error>) -> Void
+    ) {
+        guard let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "HRV type not available"])))
+            return
+        }
+
+        // Calculate evening window (2-3 hours before bed, or 7-10 PM default)
+        let calendar = Calendar.current
+        let bedtime = typicalBedtime ?? calendar.date(bySettingHour: 22, minute: 0, second: 0, of: date)!
+        let windowStart = calendar.date(byAdding: .hour, value: -3, to: bedtime)!
+        let windowEnd = calendar.date(byAdding: .hour, value: -1, to: bedtime)!
+
+        print("[HealthKit] Fetching evening HRV from \(windowStart) to \(windowEnd)")
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: windowStart,
+            end: windowEnd,
+            options: .strictStartDate
+        )
+
+        let query = HKSampleQuery(
+            sampleType: hrvType,
+            predicate: predicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+        ) { _, samples, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let samples = samples as? [HKQuantitySample] else {
+                completion(.success([]))
+                return
+            }
+
+            let hrvSamples = samples.map { sample in
+                let source = SleepDataSource.from(sourceRevision: sample.sourceRevision)
+                return HRVSample(
+                    timestamp: sample.startDate,
+                    value: sample.quantity.doubleValue(for: HKUnit.secondUnit(with: .milli)),
+                    sampleType: .evening,
+                    sourceBundleId: source.bundleIdentifier,
+                    wearableType: source.wearableType.rawValue,
+                    isDuringSleep: false
+                )
+            }
+
+            print("[HealthKit] Found \(hrvSamples.count) evening HRV samples")
+            completion(.success(hrvSamples))
+        }
+
+        healthStore.execute(query)
+    }
+
+    /// Fetch intra-night HRV samples during a sleep session
+    /// - Parameters:
+    ///   - sleepStart: When user fell asleep
+    ///   - sleepEnd: When user woke up
+    ///   - completion: Returns array of HRV samples during sleep
+    func fetchIntraNightHRV(
+        sleepStart: Date,
+        sleepEnd: Date,
+        completion: @escaping (Result<[HRVSample], Error>) -> Void
+    ) {
+        guard let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "HRV type not available"])))
+            return
+        }
+
+        print("[HealthKit] Fetching intra-night HRV from \(sleepStart) to \(sleepEnd)")
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: sleepStart,
+            end: sleepEnd,
+            options: .strictStartDate
+        )
+
+        let query = HKSampleQuery(
+            sampleType: hrvType,
+            predicate: predicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+        ) { _, samples, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let samples = samples as? [HKQuantitySample] else {
+                completion(.success([]))
+                return
+            }
+
+            let hrvSamples = samples.map { sample in
+                let source = SleepDataSource.from(sourceRevision: sample.sourceRevision)
+                return HRVSample(
+                    timestamp: sample.startDate,
+                    value: sample.quantity.doubleValue(for: HKUnit.secondUnit(with: .milli)),
+                    sampleType: .intraNight,
+                    sourceBundleId: source.bundleIdentifier,
+                    wearableType: source.wearableType.rawValue,
+                    isDuringSleep: true
+                )
+            }
+
+            // Log sample frequency for different devices
+            if hrvSamples.count >= 2 {
+                let intervals = zip(hrvSamples.dropFirst(), hrvSamples).map {
+                    $0.timestamp.timeIntervalSince($1.timestamp) / 60
+                }
+                let avgInterval = intervals.reduce(0, +) / Double(intervals.count)
+                print("[HealthKit] Found \(hrvSamples.count) intra-night HRV samples, avg interval: \(String(format: "%.1f", avgInterval)) mins")
+            } else {
+                print("[HealthKit] Found \(hrvSamples.count) intra-night HRV samples")
+            }
+
+            completion(.success(hrvSamples))
+        }
+
+        healthStore.execute(query)
+    }
+
+    /// Fetch morning HRV samples (within 30 minutes of wake time)
+    /// - Parameters:
+    ///   - wakeTime: When user woke up
+    ///   - completion: Returns array of HRV samples
+    func fetchMorningHRV(
+        wakeTime: Date,
+        completion: @escaping (Result<[HRVSample], Error>) -> Void
+    ) {
+        guard let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
+            completion(.failure(NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "HRV type not available"])))
+            return
+        }
+
+        let calendar = Calendar.current
+        let windowEnd = calendar.date(byAdding: .minute, value: 30, to: wakeTime)!
+
+        print("[HealthKit] Fetching morning HRV from \(wakeTime) to \(windowEnd)")
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: wakeTime,
+            end: windowEnd,
+            options: .strictStartDate
+        )
+
+        let query = HKSampleQuery(
+            sampleType: hrvType,
+            predicate: predicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+        ) { _, samples, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let samples = samples as? [HKQuantitySample] else {
+                completion(.success([]))
+                return
+            }
+
+            let hrvSamples = samples.map { sample in
+                let source = SleepDataSource.from(sourceRevision: sample.sourceRevision)
+                return HRVSample(
+                    timestamp: sample.startDate,
+                    value: sample.quantity.doubleValue(for: HKUnit.secondUnit(with: .milli)),
+                    sampleType: .morning,
+                    sourceBundleId: source.bundleIdentifier,
+                    wearableType: source.wearableType.rawValue,
+                    isDuringSleep: false
+                )
+            }
+
+            print("[HealthKit] Found \(hrvSamples.count) morning HRV samples")
+            completion(.success(hrvSamples))
+        }
+
+        healthStore.execute(query)
+    }
+
+    /// Represents a sleep session with timing info for HRV profile fetching
+    struct SleepSession {
+        let inBedTime: Date
+        let asleepTime: Date
+        let wakeTime: Date
+        let outOfBedTime: Date?
+        let primarySource: WearableType
+
+        /// Duration of sleep in minutes
+        var sleepDurationMins: Int {
+            Int(wakeTime.timeIntervalSince(asleepTime) / 60)
+        }
+    }
+
+    /// Fetch complete HRV profile for a night (evening + intra-night + morning)
+    /// - Parameters:
+    ///   - date: The date (wake date) to fetch HRV profile for
+    ///   - sleepSession: Sleep session with timing information
+    ///   - completion: Returns HRV nightly summary
+    func fetchNightHRVProfile(
+        for date: Date,
+        sleepSession: SleepSession,
+        completion: @escaping (Result<HRVNightlySummary, Error>) -> Void
+    ) {
+        let group = DispatchGroup()
+        var eveningSamples: [HRVSample] = []
+        var nightSamples: [HRVSample] = []
+        var morningSamples: [HRVSample] = []
+        var fetchError: Error?
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+
+        // 1. Fetch evening baseline (before bed)
+        group.enter()
+        fetchEveningHRV(for: sleepSession.inBedTime, typicalBedtime: sleepSession.inBedTime) { result in
+            switch result {
+            case .success(let samples):
+                eveningSamples = samples
+            case .failure(let error):
+                fetchError = fetchError ?? error
+            }
+            group.leave()
+        }
+
+        // 2. Fetch intra-night samples (during sleep)
+        group.enter()
+        fetchIntraNightHRV(sleepStart: sleepSession.asleepTime, sleepEnd: sleepSession.wakeTime) { result in
+            switch result {
+            case .success(let samples):
+                nightSamples = samples
+            case .failure(let error):
+                fetchError = fetchError ?? error
+            }
+            group.leave()
+        }
+
+        // 3. Fetch morning samples (after wake)
+        group.enter()
+        fetchMorningHRV(wakeTime: sleepSession.wakeTime) { result in
+            switch result {
+            case .success(let samples):
+                morningSamples = samples
+            case .failure(let error):
+                fetchError = fetchError ?? error
+            }
+            group.leave()
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+
+            if let error = fetchError, eveningSamples.isEmpty && nightSamples.isEmpty && morningSamples.isEmpty {
+                completion(.failure(error))
+                return
+            }
+
+            // Calculate evening metrics
+            let eveningValues = eveningSamples.map { $0.value }
+            let eveningAvg = eveningValues.isEmpty ? nil : eveningValues.reduce(0, +) / Double(eveningValues.count)
+            let eveningMin = eveningValues.min()
+            let eveningMax = eveningValues.max()
+
+            // Calculate intra-night metrics
+            let nightValues = nightSamples.map { $0.value }
+            let intraNightAvg = nightValues.isEmpty ? nil : nightValues.reduce(0, +) / Double(nightValues.count)
+            let peakHRV = nightValues.max()
+            let peakSample = nightSamples.max(by: { $0.value < $1.value })
+
+            // Calculate time to peak
+            var timeToPeakMins: Int? = nil
+            if let peakSample = peakSample {
+                timeToPeakMins = Int(peakSample.timestamp.timeIntervalSince(sleepSession.asleepTime) / 60)
+            }
+
+            // Calculate sample interval
+            var sampleIntervalMins: Int? = nil
+            if nightSamples.count >= 2 {
+                let intervals = zip(nightSamples.dropFirst(), nightSamples).map {
+                    $0.timestamp.timeIntervalSince($1.timestamp) / 60
+                }
+                sampleIntervalMins = Int(intervals.reduce(0, +) / Double(intervals.count))
+            }
+
+            // Calculate morning metrics
+            let morningValues = morningSamples.map { $0.value }
+            let morningAvg = morningValues.isEmpty ? nil : morningValues.reduce(0, +) / Double(morningValues.count)
+
+            // Calculate recovery ratio
+            var recoveryRatio: Double? = nil
+            if let peak = peakHRV, let evening = eveningAvg, evening > 0 {
+                recoveryRatio = peak / evening
+            }
+
+            // Determine primary source and capability
+            let allSamples = eveningSamples + nightSamples + morningSamples
+            let primarySourceType: WearableType
+            if let firstSample = allSamples.first, let type = WearableType(rawValue: firstSample.wearableType) {
+                primarySourceType = type
+            } else {
+                primarySourceType = sleepSession.primarySource
+            }
+            let capability = self.detectHRVCapability(for: primarySourceType)
+
+            let summary = HRVNightlySummary(
+                date: dateString,
+                eveningAvg: eveningAvg.map { round($0 * 10) / 10 },
+                eveningMin: eveningMin.map { round($0 * 10) / 10 },
+                eveningMax: eveningMax.map { round($0 * 10) / 10 },
+                eveningSampleCount: eveningSamples.count,
+                intraNightAvg: intraNightAvg.map { round($0 * 10) / 10 },
+                intraNightPeak: peakHRV.map { round($0 * 10) / 10 },
+                peakTime: peakSample?.timestamp,
+                intraNightSampleCount: nightSamples.count,
+                sampleIntervalMins: sampleIntervalMins,
+                morningAvg: morningAvg.map { round($0 * 10) / 10 },
+                morningSampleCount: morningSamples.count,
+                recoveryRatio: recoveryRatio.map { round($0 * 100) / 100 },
+                timeToPeakMins: timeToPeakMins,
+                primarySource: primarySourceType.rawValue,
+                hrvCapability: capability
+            )
+
+            print("[HealthKit] HRV Profile for \(dateString):")
+            print("  Evening: \(eveningSamples.count) samples, avg: \(eveningAvg?.description ?? "N/A") ms")
+            print("  Night: \(nightSamples.count) samples, peak: \(peakHRV?.description ?? "N/A") ms")
+            print("  Morning: \(morningSamples.count) samples, avg: \(morningAvg?.description ?? "N/A") ms")
+            print("  Recovery ratio: \(recoveryRatio?.description ?? "N/A")")
+
+            completion(.success(summary))
+        }
+    }
+
+    /// Fetch HRV profiles for the last N days
+    /// - Parameters:
+    ///   - daysBack: Number of days to fetch
+    ///   - completion: Returns array of HRV nightly summaries
+    func fetchHRVProfiles(
+        daysBack: Int = 7,
+        completion: @escaping (Result<[HRVNightlySummary], Error>) -> Void
+    ) {
+        print("[HealthKit] Fetching HRV profiles for last \(daysBack) days...")
+
+        // First, fetch sleep data to get sleep sessions
+        fetchSleepData(daysBack: daysBack) { [weak self] result in
+            guard let self = self else { return }
+
+            switch result {
+            case .success(let sleepData):
+                let group = DispatchGroup()
+                var summaries: [HRVNightlySummary] = []
+                var errors: [Error] = []
+
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                let isoFormatter = ISO8601DateFormatter()
+                isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+                for night in sleepData {
+                    guard let dateStr = night["date"] as? String,
+                          let inBedStr = night["in_bed_time"] as? String,
+                          let asleepStr = night["asleep_time"] as? String,
+                          let wakeStr = night["wake_time"] as? String else {
+                        continue
+                    }
+
+                    // Parse times - handle both ISO and simple formats
+                    guard let inBedTime = self.parseTimeString(inBedStr),
+                          let asleepTime = self.parseTimeString(asleepStr),
+                          let wakeTime = self.parseTimeString(wakeStr),
+                          let date = dateFormatter.date(from: dateStr) else {
+                        continue
+                    }
+
+                    // Determine primary source
+                    let sourceStr = night["primary_source"] as? String ?? "Apple Watch"
+                    let wearableType = WearableType(rawValue: sourceStr) ?? .appleWatch
+
+                    let session = SleepSession(
+                        inBedTime: inBedTime,
+                        asleepTime: asleepTime,
+                        wakeTime: wakeTime,
+                        outOfBedTime: nil,
+                        primarySource: wearableType
+                    )
+
+                    group.enter()
+                    self.fetchNightHRVProfile(for: date, sleepSession: session) { profileResult in
+                        switch profileResult {
+                        case .success(let summary):
+                            summaries.append(summary)
+                        case .failure(let error):
+                            errors.append(error)
+                        }
+                        group.leave()
+                    }
+                }
+
+                group.notify(queue: .main) {
+                    // Sort by date descending
+                    summaries.sort { $0.date > $1.date }
+                    print("[HealthKit] Fetched \(summaries.count) HRV profiles")
+                    completion(.success(summaries))
+                }
+
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    /// Helper to parse time strings from sleep data
+    private func parseTimeString(_ timeString: String) -> Date? {
+        // Try ISO format first
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = isoFormatter.date(from: timeString) {
+            return date
+        }
+
+        // Try standard ISO without fractional seconds
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: timeString) {
+            return date
+        }
+
+        // Try simple date-time format
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        if let date = dateFormatter.date(from: timeString) {
+            return date
+        }
+
+        return nil
+    }
+
+    /// Get raw HRV samples for a specific night (for charting)
+    /// - Parameters:
+    ///   - sleepSession: The sleep session to get samples for
+    ///   - completion: Returns all HRV samples with timestamps for charting
+    func fetchHRVSamplesForChart(
+        sleepSession: SleepSession,
+        completion: @escaping (Result<[HRVSample], Error>) -> Void
+    ) {
+        let group = DispatchGroup()
+        var allSamples: [HRVSample] = []
+        var fetchError: Error?
+
+        // Fetch evening samples
+        group.enter()
+        fetchEveningHRV(for: sleepSession.inBedTime, typicalBedtime: sleepSession.inBedTime) { result in
+            switch result {
+            case .success(let samples):
+                allSamples.append(contentsOf: samples)
+            case .failure(let error):
+                fetchError = fetchError ?? error
+            }
+            group.leave()
+        }
+
+        // Fetch night samples
+        group.enter()
+        fetchIntraNightHRV(sleepStart: sleepSession.asleepTime, sleepEnd: sleepSession.wakeTime) { result in
+            switch result {
+            case .success(let samples):
+                allSamples.append(contentsOf: samples)
+            case .failure(let error):
+                fetchError = fetchError ?? error
+            }
+            group.leave()
+        }
+
+        // Fetch morning samples
+        group.enter()
+        fetchMorningHRV(wakeTime: sleepSession.wakeTime) { result in
+            switch result {
+            case .success(let samples):
+                allSamples.append(contentsOf: samples)
+            case .failure(let error):
+                fetchError = fetchError ?? error
+            }
+            group.leave()
+        }
+
+        group.notify(queue: .main) {
+            if let error = fetchError, allSamples.isEmpty {
+                completion(.failure(error))
+                return
+            }
+
+            // Sort by timestamp
+            allSamples.sort { $0.timestamp < $1.timestamp }
+            completion(.success(allSamples))
         }
     }
 }
