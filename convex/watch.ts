@@ -1362,11 +1362,45 @@ function generateWatchSessionToken(): string {
 export const getJourneyState = query({
   args: {
     userId: v.id("users"),
+    localDate: v.optional(v.string()), // User's device date as "YYYY-MM-DD" for timezone handling
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("User not found");
+    }
+
+    // CALENDAR-DATE GATING
+    // Calculate which day should be available based on calendar date
+    const journeyStartDate = new Date(user.started_at);
+    journeyStartDate.setHours(0, 0, 0, 0);
+
+    const today = args.localDate
+      ? new Date(args.localDate + "T12:00:00")
+      : new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const daysSinceStart = Math.floor((today.getTime() - journeyStartDate.getTime()) / (1000 * 60 * 60 * 24));
+    const maxDayAllowed = Math.min(Math.max(daysSinceStart + 1, 1), 10);
+
+    // Calculate when next day unlocks
+    const nextDay = user.current_day + 1;
+    const nextDayDate = new Date(journeyStartDate);
+    nextDayDate.setDate(nextDayDate.getDate() + (nextDay - 1));
+    const nextDayUnlocksOn = nextDayDate.toISOString().split('T')[0];
+
+    // Is next day calendar-available?
+    const calendarUnlocked = nextDay <= maxDayAllowed;
+
+    // User-friendly lock message
+    let calendarLockMessage: string | null = null;
+    if (!calendarUnlocked && nextDay <= 10) {
+      const unlockDateFormatted = nextDayDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
+      calendarLockMessage = `Day ${nextDay} unlocks on ${unlockDateFormatted}`;
     }
 
     // Get all user progress entries
@@ -1461,12 +1495,17 @@ export const getJourneyState = query({
       completedDays: completedDays.sort((a, b) => a - b),
       journeyComplete: user.onboarding_completed ?? false,
       totalDays: 10,
+      startedAt: user.started_at, // Journey start timestamp for calendar display
       // Section-level completion for current day
       sleepLogCompleted: currentDaySections.sleepLogCompleted,
       assessmentCompleted: currentDaySections.assessmentCompleted,
-      // Day ready timestamp - when both required sections were completed
-      // Used by iOS to calculate when next day unlocks (4 AM of next calendar day)
+      // Legacy: Day ready timestamp (kept for analytics, no longer used for unlock)
       dayReadyAt: currentDaySections.dayReadyAt,
+      // Calendar gating (replaces 4 AM time-based unlock)
+      calendarUnlocked, // True if next day is calendar-available
+      calendarLockMessage, // User-friendly message when locked (e.g., "Day 2 unlocks on Wed, Jan 8")
+      maxDayAllowed, // Highest day allowed by calendar date (1-10)
+      nextDayUnlocksOn, // ISO date when next day unlocks ("YYYY-MM-DD")
       // Expansion pack status for current day (scheduled Days 6-10 OR same-day triggered Days 1-5)
       hasExpansionPackToday,
       expansionPackCompleted,
@@ -1934,17 +1973,18 @@ export const completeDay = mutation({
 
 /**
  * Check if user can advance to the next day
- * Requirements:
- * - Both sleepLog AND assessment must be completed for current day
- * - In normal mode: Must also be past 4 AM the next day
- * - In debug mode: Can advance immediately once both sections complete
+ * CALENDAR-GATED: Each day corresponds to a calendar date
+ * - Day 1 = journey start date
+ * - Day N = journey start date + (N-1) days
+ * User can catch up on missed days but cannot do future days
  */
 export const canAdvanceDay = query({
   args: {
     userId: v.id("users"),
-    debugMode: v.optional(v.boolean()), // Enables debug features (does NOT bypass time check)
-    bypassTimeCheck: v.optional(v.boolean()), // Explicitly bypass 4 AM time check
-    testTimestamp: v.optional(v.number()), // Simulated time for testing 4 AM unlock
+    localDate: v.optional(v.string()), // User's device date as "YYYY-MM-DD" for timezone handling
+    debugMode: v.optional(v.boolean()), // Kept for backwards compatibility (no longer used)
+    bypassTimeCheck: v.optional(v.boolean()), // Kept for backwards compatibility (no longer used)
+    testTimestamp: v.optional(v.number()), // Kept for backwards compatibility (no longer used)
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -1968,9 +2008,32 @@ export const canAdvanceDay = query({
         sleepLogCompleted: true,
         assessmentCompleted: true,
         timeUnlocked: true,
-        currentDay: 14,
+        currentDay: 10,
       };
     }
+
+    // CALENDAR-DATE GATING
+    // Calculate which day should be available based on calendar date
+    const journeyStartDate = new Date(user.started_at);
+    journeyStartDate.setHours(0, 0, 0, 0); // Normalize to start of day
+
+    // Use device's local date if provided, otherwise server date
+    const today = args.localDate
+      ? new Date(args.localDate + "T12:00:00") // Parse as noon to avoid timezone edge cases
+      : new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const daysSinceStart = Math.floor((today.getTime() - journeyStartDate.getTime()) / (1000 * 60 * 60 * 24));
+    const maxDayAllowed = Math.min(Math.max(daysSinceStart + 1, 1), 10); // Days 1-10 only
+
+    // Calculate the date when next day unlocks (for UI messaging)
+    const nextDay = currentDay + 1;
+    const nextDayDate = new Date(journeyStartDate);
+    nextDayDate.setDate(nextDayDate.getDate() + (nextDay - 1));
+    const nextDayDateStr = nextDayDate.toISOString().split('T')[0]; // "YYYY-MM-DD"
+
+    // Check if next day is calendar-available
+    const calendarUnlocked = nextDay <= maxDayAllowed;
 
     // Get the day entry
     const day = await ctx.db
@@ -2020,58 +2083,26 @@ export const canAdvanceDay = query({
     const assessmentOk = !hasAssessmentToday || assessmentCompleted;
     const bothSectionsComplete = sleepLogCompleted && assessmentOk;
 
-    // Check time restriction (4 AM unlock)
-    // The next day unlocks at 4 AM of the calendar day AFTER the day was completed
-    // bypassTimeCheck: explicitly skip time check (separate from debugMode)
-    // testTimestamp: use simulated time to test the unlock logic
-    let timeUnlocked = args.bypassTimeCheck === true;
-
-    // Calculate unlock time for response (useful for UI)
-    let unlockTime: number | undefined;
-
-    if (!timeUnlocked) {
-      // Use testTimestamp if provided (for testing), otherwise real time
-      const now = args.testTimestamp ? new Date(args.testTimestamp) : new Date();
-
-      if (dayReadyAt) {
-        // We have the exact completion timestamp - calculate proper unlock time
-        const readyDate = new Date(dayReadyAt);
-
-        // Get 4 AM of the day the user completed
-        const readyDayStart = new Date(readyDate);
-        readyDayStart.setHours(4, 0, 0, 0);
-
-        if (readyDate < readyDayStart) {
-          // Completed before 4 AM - unlock at 4 AM same day
-          unlockTime = readyDayStart.getTime();
-          timeUnlocked = now >= readyDayStart;
-        } else {
-          // Completed after 4 AM - unlock at 4 AM next day
-          const nextDayAt4AM = new Date(readyDayStart);
-          nextDayAt4AM.setDate(nextDayAt4AM.getDate() + 1);
-          unlockTime = nextDayAt4AM.getTime();
-          timeUnlocked = now >= nextDayAt4AM;
-        }
-      } else {
-        // No completion timestamp (legacy data) - fall back to simple hour check
-        const hour = now.getHours();
-        timeUnlocked = hour >= 4;
-      }
-    }
-
-    const canAdvance = bothSectionsComplete && timeUnlocked;
+    // CALENDAR-GATED: Must complete sections AND next day must be calendar-available
+    const canAdvance = bothSectionsComplete && calendarUnlocked;
 
     let reason = "";
     if (!sleepLogCompleted && !assessmentOk) {
       reason = hasAssessmentToday
-        ? "Complete both Sleep Log and Assessment to unlock the next day"
-        : "Complete the Sleep Log to unlock the next day";
+        ? "Complete both Sleep Log and Assessment to continue"
+        : "Complete the Sleep Log to continue";
     } else if (!sleepLogCompleted) {
-      reason = "Complete the Sleep Log to unlock the next day";
+      reason = "Complete the Sleep Log to continue";
     } else if (!assessmentOk) {
-      reason = "Complete the Assessment to unlock the next day";
-    } else if (!timeUnlocked) {
-      reason = "Next day unlocks at 4:00 AM";
+      reason = "Complete the Assessment to continue";
+    } else if (!calendarUnlocked) {
+      // Format date nicely for display
+      const unlockDateFormatted = nextDayDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
+      reason = `Day ${nextDay} unlocks on ${unlockDateFormatted}`;
     } else {
       reason = "Ready to advance";
     }
@@ -2082,29 +2113,37 @@ export const canAdvanceDay = query({
       sleepLogCompleted,
       assessmentCompleted,
       hasAssessmentToday,
-      timeUnlocked,
+      calendarUnlocked, // Renamed from timeUnlocked for clarity
       currentDay,
-      nextDay: currentDay + 1,
-      // Additional fields for unlock testing UI
+      nextDay,
+      // Calendar alignment info
+      journeyStartDate: user.started_at,
+      maxDayAllowed,
+      nextDayUnlocksOn: nextDayDateStr,
+      // Legacy fields for backwards compatibility
+      timeUnlocked: calendarUnlocked, // Map to old field name
       dayReadyAt,
-      unlockTime,
+      unlockTime: nextDayDate.getTime(), // When next day unlocks (calendar date)
     };
   },
 });
 
 /**
  * Advance to next day
- * STRICT VALIDATION: Both sections must be completed before advancing
- * - debugMode: Bypasses time check (4 AM) but NOT completion check
+ * COMPLETION-GATED + CALENDAR-GATED:
+ * - Both sections must be completed before advancing
+ * - Next day must be calendar-available (Day N unlocks on journey_start + N-1 days)
+ * - Users can catch up on missed days but cannot do future days
  *
  * SECURITY: Requires sessionToken to validate user ownership
  */
 export const advanceDay = mutation({
   args: {
     userId: v.id("users"),
-    debugMode: v.optional(v.boolean()), // Enables debug features (does NOT bypass time check)
-    bypassTimeCheck: v.optional(v.boolean()), // Explicitly bypass 4 AM time check
-    testTimestamp: v.optional(v.number()), // Simulated time for testing 4 AM unlock
+    localDate: v.optional(v.string()), // User's device date as "YYYY-MM-DD" for timezone handling
+    debugMode: v.optional(v.boolean()), // Kept for backwards compatibility (no longer used)
+    bypassTimeCheck: v.optional(v.boolean()), // Kept for backwards compatibility (no longer used)
+    testTimestamp: v.optional(v.number()), // Kept for backwards compatibility (no longer used)
     sessionToken: v.optional(v.string()), // Session token for authorization
   },
   handler: async (ctx, args) => {
@@ -2131,7 +2170,43 @@ export const advanceDay = mutation({
       return {
         success: false,
         error: "Journey already complete",
-        currentDay: 14,
+        currentDay: 10,
+      };
+    }
+
+    // CALENDAR-DATE GATING
+    // Calculate which day should be available based on calendar date
+    const journeyStartDate = new Date(user.started_at);
+    journeyStartDate.setHours(0, 0, 0, 0); // Normalize to start of day
+
+    // Use device's local date if provided, otherwise server date
+    const today = args.localDate
+      ? new Date(args.localDate + "T12:00:00") // Parse as noon to avoid timezone edge cases
+      : new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const daysSinceStart = Math.floor((today.getTime() - journeyStartDate.getTime()) / (1000 * 60 * 60 * 24));
+    const maxDayAllowed = Math.min(Math.max(daysSinceStart + 1, 1), 10); // Days 1-10 only
+
+    const nextDay = currentDay + 1;
+
+    // Check calendar availability BEFORE doing any work
+    if (nextDay > maxDayAllowed) {
+      // Calculate when next day unlocks for UI messaging
+      const nextDayDate = new Date(journeyStartDate);
+      nextDayDate.setDate(nextDayDate.getDate() + (nextDay - 1));
+      const unlockDateFormatted = nextDayDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
+
+      return {
+        success: false,
+        error: `Day ${nextDay} unlocks on ${unlockDateFormatted}`,
+        currentDay,
+        maxDayAllowed,
+        nextDayUnlocksOn: nextDayDate.toISOString().split('T')[0],
       };
     }
 
@@ -2207,52 +2282,12 @@ export const advanceDay = mutation({
       };
     }
 
-    // Time check (only when not explicitly bypassed)
-    // The next day unlocks at 4 AM of the calendar day AFTER the day was completed
-    // bypassTimeCheck: explicitly skip time check (separate from debugMode)
-    // testTimestamp: use simulated time to test the unlock logic
-    const skipTimeCheck = args.bypassTimeCheck === true;
-    if (!skipTimeCheck) {
-      // Use testTimestamp if provided (for testing), otherwise real time
-      const now = args.testTimestamp ? new Date(args.testTimestamp) : new Date();
-      let timeUnlocked = false;
+    // Time check REMOVED - calendar-gated + completion-gated only
+    // Users can advance immediately after completing both sections
+    // Calendar gating checked above ensures they can't do future days
+    // Note: bypassTimeCheck and testTimestamp params kept for backwards compatibility but ignored
 
-      if (dayReadyAt) {
-        // We have the exact completion timestamp - calculate proper unlock time
-        const readyDate = new Date(dayReadyAt);
-
-        // Get 4 AM of the day the user completed
-        const readyDayStart = new Date(readyDate);
-        readyDayStart.setHours(4, 0, 0, 0);
-
-        if (readyDate < readyDayStart) {
-          // Completed before 4 AM - unlock at 4 AM same day
-          timeUnlocked = now >= readyDayStart;
-        } else {
-          // Completed after 4 AM - unlock at 4 AM next day
-          const nextDayAt4AM = new Date(readyDayStart);
-          nextDayAt4AM.setDate(nextDayAt4AM.getDate() + 1);
-          timeUnlocked = now >= nextDayAt4AM;
-        }
-      } else {
-        // No completion timestamp (legacy data) - fall back to simple hour check
-        const hour = now.getHours();
-        timeUnlocked = hour >= 4;
-      }
-
-      if (!timeUnlocked) {
-        return {
-          success: false,
-          error: "Next day unlocks at 4:00 AM",
-          sleepLogCompleted,
-          assessmentCompleted,
-          currentDay,
-          timeUnlocked: false,
-        };
-      }
-    }
-
-    const newDay = currentDay + 1;
+    // nextDay already calculated in calendar gating section above
 
     // Mark current day as fully completed (ensure both flags set)
     const now = Date.now();
@@ -2277,14 +2312,14 @@ export const advanceDay = mutation({
 
     // Update user's current day
     await ctx.db.patch(args.userId, {
-      current_day: newDay,
+      current_day: nextDay,
       last_accessed: now,
     });
 
     return {
       success: true,
       previousDay: currentDay,
-      newDay: newDay,
+      newDay: nextDay,
       sleepLogCompleted: true,
       assessmentCompleted: true,
     };

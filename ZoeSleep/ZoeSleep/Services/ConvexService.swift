@@ -122,6 +122,14 @@ struct SignInWithAppleResponse: Codable {
     let user: ConvexUser
 }
 
+struct SignInWithClerkResponse: Codable {
+    let userId: String
+    let sessionToken: String
+    let expiresAt: Double
+    let isNewUser: Bool
+    let user: ConvexUser
+}
+
 struct RegisterResponse: Codable {
     let userId: String
     let sessionToken: String
@@ -164,13 +172,17 @@ struct JourneyProgress: Codable {
     let completedDays: [Int]
     let totalDays: Int
     let journeyComplete: Bool?
-    let startedAt: Int?  // Optional - watch:getJourneyState doesn't return this
+    let startedAt: Int?  // Journey start timestamp
     // Section completion status for current day
     let sleepLogCompleted: Bool?
     let assessmentCompleted: Bool?
-    // Day ready timestamp - when both required sections were completed
-    // Used to calculate when next day unlocks (4 AM of next calendar day after this timestamp)
+    // Legacy: Day ready timestamp (kept for analytics, no longer used for unlock)
     let dayReadyAt: Double?
+    // Calendar gating (replaces 4 AM time-based unlock)
+    let calendarUnlocked: Bool?      // True if next day is calendar-available
+    let calendarLockMessage: String? // User-friendly message when locked
+    let maxDayAllowed: Int?          // Highest day allowed by calendar date (1-10)
+    let nextDayUnlocksOn: String?    // ISO date when next day unlocks
     // Expansion pack completion for current day (same-day deep dives on Days 1-5)
     let hasExpansionPackToday: Bool?
     let expansionPackCompleted: Bool?
@@ -259,6 +271,22 @@ struct SyncResponse: Codable {
     let recordsSynced: Int?
 }
 
+struct UploadUrlResponse: Codable {
+    let url: String
+
+    // Handle Convex returning the URL directly as a string
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        self.url = try container.decode(String.self)
+    }
+}
+
+struct ProfilePictureResponse: Codable {
+    let success: Bool
+    let url: String?
+    let storageId: String?
+}
+
 // MARK: - Convex HTTP Client
 
 /// HTTP client for making requests to Convex backend
@@ -288,6 +316,10 @@ private class ConvexHTTPClient {
 
     func mutation<T: Decodable>(_ functionName: String, args: [String: Any] = [:]) async throws -> T {
         return try await request(path: "/api/mutation", functionName: functionName, args: args)
+    }
+
+    func action<T: Decodable>(_ functionName: String, args: [String: Any] = [:]) async throws -> T {
+        return try await request(path: "/api/action", functionName: functionName, args: args)
     }
 
     private func request<T: Decodable>(path: String, functionName: String, args: [String: Any]) async throws -> T {
@@ -535,6 +567,37 @@ class ConvexService {
         return response
     }
 
+    func signInWithClerk(
+        clerkUserId: String,
+        email: String,
+        fullName: String?,
+        deviceId: String,
+        deviceInfo: DeviceInfo? = nil
+    ) async throws -> SignInWithClerkResponse {
+        var args: [String: Any] = [
+            "clerkUserId": clerkUserId,
+            "email": email,
+            "deviceId": deviceId
+        ]
+
+        if let fullName = fullName {
+            args["fullName"] = fullName
+        }
+        if let info = deviceInfo {
+            // Only include non-nil values - Convex rejects null for optional fields
+            var deviceInfoDict: [String: Any] = [:]
+            if let deviceName = info.deviceName { deviceInfoDict["deviceName"] = deviceName }
+            if let deviceModel = info.deviceModel { deviceInfoDict["deviceModel"] = deviceModel }
+            if let osVersion = info.osVersion { deviceInfoDict["osVersion"] = osVersion }
+            if let appVersion = info.appVersion { deviceInfoDict["appVersion"] = appVersion }
+            args["deviceInfo"] = deviceInfoDict
+        }
+
+        let response: SignInWithClerkResponse = try await client.mutation("ios:signInWithClerk", args: args)
+        setSession(token: response.sessionToken, userId: response.userId)
+        return response
+    }
+
     func register(
         email: String,
         passwordHash: String,
@@ -633,6 +696,50 @@ class ConvexService {
             "userId": userId,
             "preferences": preferences
         ])
+    }
+
+    // MARK: - Profile Picture Upload
+
+    /// Generate a short-lived upload URL for file storage
+    func generateUploadUrl() async throws -> String {
+        let response: UploadUrlResponse = try await client.mutation("files:generateUploadUrl", args: [:])
+        return response.url
+    }
+
+    /// Save a profile picture after uploading to storage
+    /// - Parameter storageId: The storage ID returned from the upload
+    /// - Returns: The public URL of the uploaded image
+    func saveProfilePicture(storageId: String) async throws -> String {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let response: ProfilePictureResponse = try await client.mutation("files:saveUserProfilePicture", args: [
+            "userId": userId,
+            "storageId": storageId
+        ])
+
+        guard response.success, let url = response.url else {
+            throw ConvexError.serverError("Failed to save profile picture")
+        }
+
+        return url
+    }
+
+    // MARK: - Physician Assignment
+
+    /// Get the assigned physician for the current patient
+    /// - Returns: The assigned physician, or nil if none assigned
+    func getAssignedPhysician() async throws -> AssignedPhysician? {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let response: AssignedPhysician? = try await client.query("ios:getAssignedPhysician", args: [
+            "userId": userId
+        ])
+
+        return response
     }
 
     // MARK: - HealthKit Sync
@@ -794,8 +901,11 @@ class ConvexService {
             throw ConvexError.notAuthenticated
         }
 
-        // Use watch:getJourneyState which includes section completion status
-        return try await client.query("watch:getJourneyState", args: ["userId": userId])
+        // Use watch:getJourneyState which includes section completion status and calendar gating
+        return try await client.query("watch:getJourneyState", args: [
+            "userId": userId,
+            "localDate": getCurrentLocalDate() // Pass device's local date for timezone handling
+        ])
     }
 
     /// Get detailed daily completion status for all days (catch-up feature)
@@ -920,8 +1030,11 @@ class ConvexService {
         let error: String?
         let sleepLogCompleted: Bool?
         let assessmentCompleted: Bool?
-        let timeUnlocked: Bool?
+        let timeUnlocked: Bool? // Legacy - now maps to calendarUnlocked
         let currentDay: Int?
+        // Calendar gating fields
+        let maxDayAllowed: Int?
+        let nextDayUnlocksOn: String? // "YYYY-MM-DD" when next day becomes available
     }
 
     struct CanAdvanceDayResponse: Codable {
@@ -929,12 +1042,25 @@ class ConvexService {
         let reason: String
         let sleepLogCompleted: Bool
         let assessmentCompleted: Bool
-        let timeUnlocked: Bool
+        let timeUnlocked: Bool // Legacy - now maps to calendarUnlocked
         let currentDay: Int?
         let nextDay: Int?
-        // Additional fields for unlock testing
+        // Calendar gating fields
+        let calendarUnlocked: Bool?
+        let journeyStartDate: Double? // Unix timestamp when journey started
+        let maxDayAllowed: Int?
+        let nextDayUnlocksOn: String? // "YYYY-MM-DD" when next day becomes available
+        // Legacy fields (kept for compatibility)
         let dayReadyAt: Double?
         let unlockTime: Double?
+    }
+
+    /// Get current device local date as "YYYY-MM-DD" string
+    private func getCurrentLocalDate() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        return formatter.string(from: Date())
     }
 
     struct ResetProgressResponse: Codable {
@@ -951,9 +1077,9 @@ class ConvexService {
     }
 
     /// Check if user can advance to the next day
-    /// Requirements: Both Sleep Log AND Assessment must be completed
-    /// - bypassTimeCheck: Explicitly bypass 4 AM time check
-    /// - testTimestamp: Uses simulated time to test unlock logic
+    /// COMPLETION-GATED + CALENDAR-GATED: User can advance after completing both sections
+    /// AND when the next day is calendar-available (Day N unlocks on journey_start + N-1 days)
+    /// Legacy params (bypassTimeCheck, testTimestamp) kept for backwards compat but ignored
     func canAdvanceDay(debugMode: Bool = false, bypassTimeCheck: Bool = false, testTimestamp: Double? = nil) async throws -> CanAdvanceDayResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
@@ -961,6 +1087,7 @@ class ConvexService {
 
         var args: [String: Any] = [
             "userId": userId,
+            "localDate": getCurrentLocalDate(), // Pass device's local date for timezone handling
             "debugMode": debugMode,
             "bypassTimeCheck": bypassTimeCheck
         ]
@@ -972,9 +1099,9 @@ class ConvexService {
     }
 
     /// Advance user to the next day
-    /// STRICT: Both sections must be completed first
-    /// - bypassTimeCheck: Explicitly bypass 4 AM time check
-    /// - testTimestamp: Uses simulated time to test unlock logic
+    /// COMPLETION-GATED + CALENDAR-GATED: Both sections must be completed first
+    /// AND next day must be calendar-available (Day N unlocks on journey_start + N-1 days)
+    /// Legacy params (bypassTimeCheck, testTimestamp) kept for backwards compat but ignored
     func advanceToNextDay(debugMode: Bool = false, bypassTimeCheck: Bool = false, testTimestamp: Double? = nil) async throws -> AdvanceDayResponse {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
@@ -982,6 +1109,7 @@ class ConvexService {
 
         var args: [String: Any] = [
             "userId": userId,
+            "localDate": getCurrentLocalDate(), // Pass device's local date for timezone handling
             "debugMode": debugMode,
             "bypassTimeCheck": bypassTimeCheck
         ]
@@ -993,15 +1121,16 @@ class ConvexService {
     }
 
     /// Advance user to a specific day number (convenience method)
-    /// Uses advanceToNextDay internally - validates completion first
+    /// Uses advanceToNextDay internally - validates completion + calendar gating
     func advanceDay(to dayNumber: Int, debugMode: Bool = false) async throws {
         guard let userId = currentUserId else {
             throw ConvexError.notAuthenticated
         }
 
-        // Use watch:advanceDay which validates completion
+        // Use watch:advanceDay which validates completion + calendar availability
         let response: AdvanceDayResponse = try await client.mutation("watch:advanceDay", args: [
             "userId": userId,
+            "localDate": getCurrentLocalDate(),
             "debugMode": debugMode
         ])
 
@@ -1430,6 +1559,136 @@ struct ConvexQuestion: Codable {
     let moduleName: String?
     let formatConfig: [String: AnyCodable]?
     let conditionalLogic: ConvexConditionalLogic?
+
+    /// Map server question type (camelCase) to iOS QuestionType enum
+    /// Server returns: "yesNo", "scale", "singleSelect", etc.
+    /// iOS expects: "Yes/No", "Scale", "SingleSelect", etc.
+    private func mapServerTypeToQuestionType(_ serverType: String) -> QuestionType {
+        let mapping: [String: QuestionType] = [
+            // Yes/No types
+            "yesNo": .yesNo,
+            "yes_no": .yesNo,
+            "yesNoDontKnow": .yesNoDontKnow,
+            "yes_no_dont_know": .yesNoDontKnow,
+
+            // Scale/slider types
+            "scale": .scale,
+            "slider": .scale,
+
+            // Selection types
+            "singleSelect": .singleSelect,
+            "single_select": .singleSelect,
+            "multiSelect": .multiSelect,
+            "multi_select": .multiSelect,
+
+            // Number types
+            "number": .number,
+            "numberScroll": .numberScroll,
+            "number_scroll": .numberScroll,
+            "minutesScroll": .minutesScroll,
+            "minutes_scroll": .minutesScroll,
+            "hoursMinutesScroll": .hoursMinutesScroll,
+            "hours_minutes_scroll": .hoursMinutesScroll,
+
+            // Time/Date types
+            "time": .time,
+            "time_picker": .time,
+            "date": .date,
+            "date_picker": .date,
+
+            // Text types
+            "text": .text,
+            "text_short": .text,
+            "text_long": .text,
+            "email": .email,
+
+            // Special types
+            "info": .info,
+            "napDetails": .napDetails,
+            "nap_details": .napDetails,
+            "medicationSelect": .medicationSelect,
+            "medication_select": .medicationSelect,
+            "caffeineSelect": .caffeineSelect,
+            "caffeine_select": .caffeineSelect,
+            "prescriptionMedSelect": .prescriptionMedSelect,
+            "prescription_med_select": .prescriptionMedSelect,
+            "supplementSelect": .supplementSelect,
+            "supplement_select": .supplementSelect,
+            "surgeryDetails": .surgeryDetails,
+            "surgery_details": .surgeryDetails,
+            "repeatingGroup": .repeatingGroup,
+            "repeating_group": .repeatingGroup,
+        ]
+
+        // First try direct lookup
+        if let mappedType = mapping[serverType] {
+            return mappedType
+        }
+
+        // Then try matching by raw value (for types that already match iOS format)
+        if let directType = QuestionType(rawValue: serverType) {
+            return directType
+        }
+
+        print("ConvexQuestion: Unknown type '\(serverType)', defaulting to .text")
+        return .text
+    }
+
+    /// Convert to the app's Question type for use in Easy Mode questionnaire
+    func toQuestion() -> Question {
+        // Parse formatConfig for scale/number configuration
+        var scaleMin: Int?
+        var scaleMax: Int?
+        var scaleMinLabel: String?
+        var scaleMaxLabel: String?
+        var minValue: Int?
+        var maxValue: Int?
+        var step: Double?
+        var unit: String?
+        var defaultValue: Int?
+
+        if let config = formatConfig {
+            scaleMin = config["scaleMin"]?.value as? Int
+            scaleMax = config["scaleMax"]?.value as? Int
+            scaleMinLabel = config["scaleMinLabel"]?.value as? String
+            scaleMaxLabel = config["scaleMaxLabel"]?.value as? String
+            minValue = config["minValue"]?.value as? Int
+            maxValue = config["maxValue"]?.value as? Int
+            step = config["step"]?.value as? Double
+            unit = config["unit"]?.value as? String
+            defaultValue = config["defaultValue"]?.value as? Int
+        }
+
+        return Question(
+            id: id,
+            text: text,
+            pillar: .sleepQuality, // Default pillar
+            tier: .core, // Default tier
+            questionType: mapServerTypeToQuestionType(type),
+            estimatedMinutes: 0.5,
+            required: required,
+            options: options,
+            scaleMin: scaleMin,
+            scaleMax: scaleMax,
+            scaleMinLabel: scaleMinLabel,
+            scaleMaxLabel: scaleMaxLabel,
+            minValue: minValue,
+            maxValue: maxValue,
+            step: step,
+            unit: unit,
+            defaultValue: defaultValue,
+            unitImperial: nil,
+            defaultImperial: nil,
+            helpText: helpText,
+            helpTextImperial: helpTextImperial,
+            isGateway: false,
+            gatewayType: nil,
+            gatewayThreshold: nil,
+            conditionalLogic: nil,
+            group: nil,
+            repeatingFields: nil
+        )
+    }
 }
 
 /// Conditional logic for showing/hiding questions based on other answers
@@ -1665,7 +1924,7 @@ struct ConvexGatewayState: Codable {
 }
 
 /// Helper to decode Any values from JSON
-struct AnyCodable: Codable {
+struct AnyCodable: Codable, Hashable {
     let value: Any
 
     init(_ value: Any) {
@@ -1674,14 +1933,14 @@ struct AnyCodable: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        if let intValue = try? container.decode(Int.self) {
+        if let boolValue = try? container.decode(Bool.self) {
+            value = boolValue
+        } else if let intValue = try? container.decode(Int.self) {
             value = intValue
         } else if let doubleValue = try? container.decode(Double.self) {
             value = doubleValue
         } else if let stringValue = try? container.decode(String.self) {
             value = stringValue
-        } else if let boolValue = try? container.decode(Bool.self) {
-            value = boolValue
         } else if let arrayValue = try? container.decode([AnyCodable].self) {
             value = arrayValue.map { $0.value }
         } else if let dictValue = try? container.decode([String: AnyCodable].self) {
@@ -1693,17 +1952,32 @@ struct AnyCodable: Codable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        if let intValue = value as? Int {
+        if let boolValue = value as? Bool {
+            try container.encode(boolValue)
+        } else if let intValue = value as? Int {
             try container.encode(intValue)
         } else if let doubleValue = value as? Double {
             try container.encode(doubleValue)
         } else if let stringValue = value as? String {
             try container.encode(stringValue)
-        } else if let boolValue = value as? Bool {
-            try container.encode(boolValue)
+        } else if let arrayValue = value as? [Any] {
+            let codableArray = arrayValue.map { AnyCodable($0) }
+            try container.encode(codableArray)
+        } else if let dictValue = value as? [String: Any] {
+            let codableDict = dictValue.mapValues { AnyCodable($0) }
+            try container.encode(codableDict)
         } else {
             try container.encodeNil()
         }
+    }
+
+    // Hashable conformance (simplified - uses description)
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(String(describing: value))
+    }
+
+    static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+        String(describing: lhs.value) == String(describing: rhs.value)
     }
 }
 
@@ -2707,6 +2981,408 @@ extension ConvexService {
 
         return try await client.query("checkIn:getTodayCheckInStatus", args: [
             "userId": userId
+        ])
+    }
+
+    // MARK: - Easy Mode Voice Services
+
+    /// Transcribe audio using OpenAI Whisper (via Convex proxy)
+    /// - Parameter audioBase64: Base64-encoded audio data (m4a format)
+    /// - Returns: Transcribed text
+    /// - Throws: ConvexError.serverError if transcription fails or returns empty
+    func callVoiceTranscribe(audioBase64: String) async throws -> String {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let response: VoiceTranscribeResponse = try await client.action("voice:transcribe", args: [
+            "userId": userId,
+            "audioBase64": audioBase64
+        ])
+
+        guard let transcript = response.transcript, !transcript.isEmpty else {
+            throw ConvexError.serverError("Transcription returned empty result")
+        }
+
+        return transcript
+    }
+
+    /// Synthesize speech using ElevenLabs TTS (via Convex proxy)
+    /// - Parameters:
+    ///   - text: Text to synthesize
+    ///   - voiceId: ElevenLabs voice ID
+    ///   - speed: Playback speed (0.5-2.0)
+    /// - Returns: Audio data (mp3)
+    func callVoiceSynthesize(text: String, voiceId: String, speed: Double) async throws -> Data {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let response: VoiceSynthesizeResponse = try await client.action("voice:synthesize", args: [
+            "userId": userId,
+            "text": text,
+            "voiceId": voiceId,
+            "speed": speed
+        ])
+
+        guard let audioData = Data(base64Encoded: response.audioBase64) else {
+            throw ConvexError.serverError("Invalid audio data from TTS")
+        }
+
+        return audioData
+    }
+
+    /// Parse voice transcript using LLM (via Convex proxy)
+    /// - Parameters:
+    ///   - transcript: The transcribed text
+    ///   - context: Question context for parsing
+    /// - Returns: Parsed response with structured value
+    func callVoiceParseResponse(transcript: String, context: VoiceParsingContext) async throws -> ParsedResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let contextDict: [String: Any] = [
+            "questionId": context.questionId,
+            "questionText": context.questionText,
+            "questionType": context.questionType,
+            "options": context.options as Any,
+            "minValue": context.minValue as Any,
+            "maxValue": context.maxValue as Any
+        ]
+
+        let response: VoiceParseResponse = try await client.action("voice:parseResponse", args: [
+            "userId": userId,
+            "transcript": transcript,
+            "context": contextDict
+        ])
+
+        return response.toParsedResponse(transcript: transcript)
+    }
+
+    // MARK: - ElevenLabs Conversational AI
+
+    /// Get a signed URL for ElevenLabs conversation
+    func getConversationSignedUrl(agentId: String) async throws -> ConversationSignedUrlResponse {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        return try await client.action("voice:getConversationSignedUrl", args: [
+            "userId": userId,
+            "agentId": agentId
+        ])
+    }
+
+    // MARK: - Conversational Assessment
+
+    /// Parse a conversational response for assessment
+    func parseConversationalResponse(
+        transcript: String,
+        questionIds: [String],
+        expectedType: String,
+        context: [String: Any]
+    ) async throws -> ConversationalParseResult {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let response: ConversationalParseResponse = try await client.action("voice:parseConversationalResponse", args: [
+            "userId": userId,
+            "transcript": transcript,
+            "questionIds": questionIds,
+            "expectedType": expectedType,
+            "context": context
+        ])
+
+        return ConversationalParseResult(
+            values: response.values ?? [:],
+            confidence: response.confidence,
+            clarificationNeeded: response.clarificationNeeded,
+            triggersGateway: response.triggersGateway ?? false,
+            gatewayType: response.gatewayType
+        )
+    }
+}
+
+/// Response from conversational parsing action
+struct ConversationalParseResponse: Decodable {
+    let values: [String: AnyCodable]?
+    let confidence: Double
+    let clarificationNeeded: String?
+    let triggersGateway: Bool?
+    let gatewayType: String?
+}
+
+/// Result struct for conversational parsing
+struct ConversationalParseResult {
+    let values: [String: Any]
+    let confidence: Double
+    let clarificationNeeded: String?
+    let triggersGateway: Bool
+    let gatewayType: String?
+}
+
+// Note: AnyCodable is defined earlier in this file
+
+/// Response from getConversationSignedUrl
+struct ConversationSignedUrlResponse: Decodable {
+    let signedUrl: String
+}
+
+// MARK: - Voice Response Models
+
+struct VoiceTranscribeResponse: Codable {
+    let transcript: String?
+    let language: String?
+    let duration: Double?
+}
+
+struct VoiceSynthesizeResponse: Codable {
+    let audioBase64: String
+}
+
+struct VoiceParseResponse: Codable {
+    let valueType: String  // "string", "number", "boolean", "time", "duration", "array", etc.
+    let stringValue: String?
+    let numberValue: Double?
+    let booleanValue: Bool?
+    let arrayValue: [String]?
+    let confidence: Double
+    let alternatives: [String]?
+
+    func toParsedResponse(transcript: String) -> ParsedResponse {
+        let value: ParsedValue
+
+        switch valueType {
+        case "string":
+            value = .string(stringValue ?? "")
+        case "number":
+            value = .number(numberValue ?? 0)
+        case "boolean":
+            value = .boolean(booleanValue ?? false)
+        case "time":
+            // Parse time string to Date
+            if let timeStr = stringValue {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                if let date = formatter.date(from: timeStr) {
+                    value = .time(date)
+                } else {
+                    value = .string(timeStr)
+                }
+            } else {
+                value = .unknown
+            }
+        case "duration":
+            value = .duration(minutes: Int(numberValue ?? 0))
+        case "array":
+            value = .array(arrayValue ?? [])
+        default:
+            value = .unknown
+        }
+
+        return ParsedResponse(
+            transcript: transcript,
+            value: value,
+            confidence: confidence,
+            alternativeInterpretations: alternatives
+        )
+    }
+}
+
+// MARK: - Hume AI Emotional Analysis
+
+extension ConvexService {
+
+    /// Analyze audio emotions via Hume AI (proxied through Convex)
+    func analyzeEmotion(
+        audioBase64: String,
+        sessionId: String,
+        sessionType: String
+    ) async throws -> EmotionSnapshot? {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let response: HumeAnalyzeResponse = try await client.action("humeEmotions:analyzeEmotion", args: [
+            "userId": userId,
+            "audioBase64": audioBase64,
+            "sessionId": sessionId,
+            "sessionType": sessionType
+        ])
+
+        guard response.success, let snapshot = response.snapshot else {
+            if let error = response.error {
+                print("[ConvexService] Hume analysis error: \(error)")
+            }
+            return nil
+        }
+
+        let dominantEmotion = SleepRelevantEmotion(rawValue: snapshot.dominantEmotion) ?? .calm
+
+        return EmotionSnapshot(
+            id: UUID().uuidString,
+            timestamp: Date(),
+            emotions: snapshot.emotions,
+            dominantEmotion: dominantEmotion,
+            arousalLevel: snapshot.arousalLevel,
+            valence: snapshot.valence,
+            speechRate: snapshot.speechRate,
+            voicePitch: snapshot.voicePitch
+        )
+    }
+
+    /// Save emotion session summary to Convex
+    func saveEmotionSummary(_ summary: SessionEmotionSummary) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        // Serialize summary to JSON
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        let summaryData = try encoder.encode(summary)
+        let summaryJson = String(data: summaryData, encoding: .utf8) ?? "{}"
+
+        let _: EmptyConvexResponse = try await client.mutation("humeEmotions:saveSessionSummary", args: [
+            "userId": userId,
+            "sessionId": summary.sessionId,
+            "sessionType": summary.sessionType,
+            "summaryJson": summaryJson,
+            "distressDetected": summary.distressDetected,
+            "averageArousal": summary.averageArousal,
+            "averageValence": summary.averageValence
+        ])
+    }
+}
+
+/// Response from Hume emotion analysis
+struct HumeAnalyzeResponse: Decodable {
+    let success: Bool
+    let snapshot: HumeSnapshotData?
+    let error: String?
+}
+
+struct HumeSnapshotData: Decodable {
+    let emotions: [String: Double]
+    let dominantEmotion: String
+    let arousalLevel: Double
+    let valence: Double
+    let speechRate: Double?
+    let voicePitch: Double?
+}
+
+struct EmptyConvexResponse: Decodable {}
+
+// MARK: - CBT-I Sessions
+
+extension ConvexService {
+
+    /// Save a CBT-I session
+    func saveCBTISession(
+        sessionId: String,
+        sessionType: String,
+        transcript: [(timestamp: Date, role: String, text: String)],
+        sleepWindow: SleepWindow?,
+        emotionSummary: SessionEmotionSummary?
+    ) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        // Serialize transcript
+        let transcriptItems = transcript.map { item -> [String: Any] in
+            [
+                "timestamp": Int(item.timestamp.timeIntervalSince1970 * 1000),
+                "role": item.role,
+                "text": item.text
+            ]
+        }
+        let transcriptData = try JSONSerialization.data(withJSONObject: transcriptItems)
+        let transcriptJson = String(data: transcriptData, encoding: .utf8) ?? "[]"
+
+        // Build args
+        var args: [String: Any] = [
+            "userId": userId,
+            "sessionId": sessionId,
+            "sessionType": sessionType,
+            "transcriptJson": transcriptJson,
+            "completedAt": Int(Date().timeIntervalSince1970 * 1000)
+        ]
+
+        // Serialize sleep window
+        if let window = sleepWindow {
+            let windowDict: [String: Any] = [
+                "bedtime": Int(window.bedtime.timeIntervalSince1970 * 1000),
+                "wakeTime": Int(window.wakeTime.timeIntervalSince1970 * 1000),
+                "durationMinutes": window.durationMinutes
+            ]
+            let windowData = try JSONSerialization.data(withJSONObject: windowDict)
+            args["sleepWindowJson"] = String(data: windowData, encoding: .utf8)
+        }
+
+        // Serialize emotion summary
+        if let summary = emotionSummary {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .millisecondsSince1970
+            let summaryData = try encoder.encode(summary)
+            args["emotionSummaryJson"] = String(data: summaryData, encoding: .utf8)
+        }
+
+        let _: EmptyConvexResponse = try await client.mutation("cbtiSessions:saveSession", args: args)
+    }
+
+    /// Save CBT-I progress
+    func saveCBTIProgress(_ progress: CBTIProgress) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        let progressData = try encoder.encode(progress)
+        let progressJson = String(data: progressData, encoding: .utf8) ?? "{}"
+
+        let _: EmptyConvexResponse = try await client.mutation("cbtiSessions:saveProgress", args: [
+            "userId": userId,
+            "weekNumber": progress.weekNumber,
+            "sessionsCompletedJson": progressJson,
+            "thoughtRecordsCount": progress.thoughtRecordsCount,
+            "relaxationMinutes": progress.relaxationPracticeMinutes
+        ])
+    }
+
+    /// Save a thought record
+    func saveThoughtRecord(_ record: ThoughtRecord, sessionId: String?) async throws {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        let recordData = try encoder.encode(record)
+        let recordJson = String(data: recordData, encoding: .utf8) ?? "{}"
+
+        var args: [String: Any] = [
+            "userId": userId,
+            "recordId": record.id,
+            "recordJson": recordJson
+        ]
+
+        if let sessionId = sessionId {
+            args["sessionId"] = sessionId
+        }
+
+        let _: EmptyConvexResponse = try await client.mutation("cbtiSessions:saveThoughtRecord", args: args)
+    }
+
+    /// Flag a CBT-I session for clinician review
+    func flagCBTISessionForReview(sessionId: String, reason: String) async throws {
+        let _: EmptyConvexResponse = try await client.mutation("cbtiSessions:flagForReview", args: [
+            "sessionId": sessionId,
+            "reason": reason,
+            "timestamp": Int(Date().timeIntervalSince1970 * 1000)
         ])
     }
 }

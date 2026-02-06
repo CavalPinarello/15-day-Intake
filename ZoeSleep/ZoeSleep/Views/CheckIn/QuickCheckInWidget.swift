@@ -17,6 +17,7 @@ struct QuickCheckInWidget: View {
     @ObservedObject private var checkInManager = CheckInManager.shared
 
     @State private var showingCheckIn = false
+    @State private var showingVoiceCheckIn = false
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
@@ -60,6 +61,20 @@ struct QuickCheckInWidget: View {
                 WatchStyleCheckInView(
                     timeSlot: slot,
                     onComplete: handleCheckInComplete
+                )
+                .environmentObject(themeManager)
+            }
+        }
+        .fullScreenCover(isPresented: $showingVoiceCheckIn) {
+            if let slot = currentSlot {
+                RealTimeVoiceCheckInView(
+                    timeSlot: slot,
+                    onComplete: {
+                        // ViewModel handles submission, just reload status
+                        Task {
+                            await checkInManager.loadTodayStatus()
+                        }
+                    }
                 )
                 .environmentObject(themeManager)
             }
@@ -191,15 +206,36 @@ struct QuickCheckInWidget: View {
 
     private func promptMessage(for slot: CheckInTimeSlot) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: "hand.tap.fill")
-                .font(.system(size: 16))
-                .foregroundColor(slot.color)
+            // Tap prompt
+            HStack(spacing: 8) {
+                Image(systemName: "hand.tap.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(slot.color)
 
-            Text("Tap to complete your \(slot.label.lowercased()) check-in")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white.opacity(0.8))
+                Text("Tap to check in")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white.opacity(0.8))
+            }
 
             Spacer()
+
+            // Voice button
+            Button {
+                showingVoiceCheckIn = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 14))
+                    Text("Voice")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .foregroundColor(theme.textOnPrimary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(theme.accent)
+                .cornerRadius(16)
+            }
+            .buttonStyle(.plain)
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 14, weight: .semibold))

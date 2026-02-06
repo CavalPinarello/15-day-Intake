@@ -43,6 +43,10 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Zoe Sleep uses the microphone for Easy Mode voice input, allowing you to answer questions by speaking instead of typing.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Zoe Sleep uses speech recognition to transcribe your spoken answers in Easy Mode.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

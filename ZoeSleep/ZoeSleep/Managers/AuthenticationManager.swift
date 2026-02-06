@@ -2,7 +2,7 @@
 //  AuthenticationManager.swift
 //  Zoe Sleep for Longevity System
 //
-//  Authentication manager using Convex backend directly
+//  Authentication manager using Clerk for auth + Convex for user data
 //
 
 import Foundation
@@ -10,19 +10,20 @@ import Combine
 import AuthenticationServices
 import CryptoKit
 import UIKit
+import Clerk
 
 @MainActor
 class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated = false
-    @Published var user: User?
+    @Published var user: AppUser?
     @Published var isLoading = false
     @Published var isCheckingSession = true  // True until initial session check completes
     @Published var errorMessage: String?
 
     private let convexService = ConvexService.shared
-    private var currentNonce: String?
+    private var clerkObservationTask: Task<Void, Never>?
 
-    struct User {
+    struct AppUser {
         let id: String
         let username: String
         let email: String?
@@ -31,7 +32,35 @@ class AuthenticationManager: ObservableObject {
     }
 
     init() {
+        // Observe Clerk auth state changes
+        setupClerkObserver()
         checkAuthenticationStatus()
+    }
+
+    private func setupClerkObserver() {
+        // Watch for Clerk user changes using polling (Clerk SDK uses @Observable, not Combine)
+        clerkObservationTask?.cancel()
+        clerkObservationTask = Task { [weak self] in
+            var previousUser: User? = Clerk.shared.user
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // Check every 1 second
+                let currentUser = Clerk.shared.user
+                if currentUser?.id != previousUser?.id {
+                    previousUser = currentUser
+                    await self?.handleClerkUserChange(currentUser)
+                }
+            }
+        }
+    }
+
+    private func handleClerkUserChange(_ clerkUser: User?) async {
+        if let clerkUser = clerkUser {
+            // User signed in via Clerk - sync with Convex
+            await syncClerkUserWithConvex(clerkUser)
+        } else if isAuthenticated {
+            // User signed out from Clerk
+            await performSignOut()
+        }
     }
 
     func checkAuthenticationStatus() {
@@ -43,8 +72,15 @@ class AuthenticationManager: ObservableObject {
                 isCheckingSession = false
             }
         } else {
-            // No saved session, done checking
-            isCheckingSession = false
+            // No saved session, check Clerk
+            Task {
+                // Wait a moment for Clerk to load
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                if Clerk.shared.user != nil {
+                    await handleClerkUserChange(Clerk.shared.user)
+                }
+                isCheckingSession = false
+            }
         }
     }
 
@@ -52,7 +88,7 @@ class AuthenticationManager: ObservableObject {
         do {
             let response = try await convexService.validateSession()
             if response.valid, let user = response.user, let userId = response.userId {
-                self.user = User(
+                self.user = AppUser(
                     id: userId,
                     username: user.username,
                     email: user.email,
@@ -101,7 +137,117 @@ class AuthenticationManager: ObservableObject {
         }
     }
 
-    // MARK: - Email/Password Sign In
+    // MARK: - Clerk User Sync
+
+    /// Sync Clerk user with Convex backend - creates or links user account
+    private func syncClerkUserWithConvex(_ clerkUser: User) async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let email = clerkUser.primaryEmailAddress?.emailAddress ?? ""
+            let fullName = "\(clerkUser.firstName ?? "") \(clerkUser.lastName ?? "")".trimmingCharacters(in: .whitespaces)
+            let deviceId = getDeviceId()
+
+            // Call Convex to find or create user linked to Clerk
+            let response = try await convexService.signInWithClerk(
+                clerkUserId: clerkUser.id,
+                email: email,
+                fullName: fullName.isEmpty ? nil : fullName,
+                deviceId: deviceId,
+                deviceInfo: DeviceInfo.current
+            )
+
+            // Update user state
+            self.user = AppUser(
+                id: response.userId,
+                username: response.user.username,
+                email: response.user.email,
+                currentDay: response.user.currentDayInt,
+                role: response.user.role
+            )
+
+            self.isAuthenticated = true
+            print("✅ Clerk user synced with Convex: \(response.user.username)")
+
+            // Reset guides/tour if different user
+            FirstTimeGuideManager.shared.handleUserSignIn(userId: response.userId)
+
+            // Sync credentials to Watch
+            iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
+                userId: response.userId,
+                username: response.user.username
+            )
+
+            // Check onboarding state
+            await OnboardingManager.shared.checkUserOnboardingState(
+                userId: response.userId,
+                serverOnboardingCompleted: response.isNewUser ? false : response.user.onboardingCompleted,
+                serverProfile: response.isNewUser ? nil : (
+                    fullName: response.user.fullName,
+                    measurementSystem: response.user.measurementSystem,
+                    heightCm: response.user.heightCm,
+                    weightKg: response.user.weightKg,
+                    gender: response.user.gender,
+                    birthYear: response.user.birthYearInt
+                )
+            )
+
+            // Pre-fill onboarding data for new users
+            if response.isNewUser {
+                OnboardingManager.shared.prefillFromAuth(
+                    name: fullName.isEmpty ? nil : fullName,
+                    email: email.isEmpty ? nil : email
+                )
+            }
+
+            // Load journey progress
+            await QuestionnaireManager.shared.loadJourneyProgress()
+
+        } catch let error as ConvexError {
+            print("Clerk sync error: \(error)")
+            self.errorMessage = "Failed to sync account. Please try again."
+        } catch {
+            print("Clerk sync error: \(error)")
+            self.errorMessage = "Could not connect to the server. Please check your connection."
+        }
+
+        isLoading = false
+    }
+
+    // MARK: - Sign Out
+
+    func signOut() {
+        Task {
+            await performSignOut()
+
+            // Sign out from Clerk
+            try? await Clerk.shared.signOut()
+        }
+    }
+
+    private func performSignOut() async {
+        // Notify Apple Watch to clear its cached credentials
+        iOSWatchConnectivityManager.shared.notifyWatchLogout()
+
+        // Clear server session asynchronously
+        do {
+            try await convexService.signOut()
+            print("✅ Server session cleared")
+        } catch {
+            print("Sign out error (server): \(error)")
+        }
+
+        // Clear authentication state
+        convexService.clearSession()
+        self.isAuthenticated = false
+        self.user = nil
+        self.errorMessage = nil
+
+        print("✅ Sign out complete - auth state cleared, Watch notified")
+    }
+
+    // MARK: - Legacy Email/Password Sign In (fallback)
 
     func signIn(email: String, password: String) async {
         isLoading = true
@@ -110,7 +256,6 @@ class AuthenticationManager: ObservableObject {
         do {
             print("Attempting to sign in with: \(email)")
 
-            // Hash the password (simple hash for demo - in production use proper hashing)
             let passwordHash = hashPassword(password)
             let deviceId = getDeviceId()
 
@@ -122,7 +267,7 @@ class AuthenticationManager: ObservableObject {
             )
 
             // Update user state
-            self.user = User(
+            self.user = AppUser(
                 id: response.userId,
                 username: response.user.username,
                 email: response.user.email,
@@ -133,16 +278,13 @@ class AuthenticationManager: ObservableObject {
             self.isAuthenticated = true
             print("✅ Sign in successful for user: \(response.user.username)")
 
-            // Reset guides/tour if different user (ensures fresh experience per user)
             FirstTimeGuideManager.shared.handleUserSignIn(userId: response.userId)
 
-            // Sync credentials to Watch for same-user authentication
             iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
                 userId: response.userId,
                 username: response.user.username
             )
 
-            // Check onboarding state for this user with full profile data
             await OnboardingManager.shared.checkUserOnboardingState(
                 userId: response.userId,
                 serverOnboardingCompleted: response.user.onboardingCompleted,
@@ -156,7 +298,6 @@ class AuthenticationManager: ObservableObject {
                 )
             )
 
-            // Load journey progress for this user from server
             await QuestionnaireManager.shared.loadJourneyProgress()
             print("✅ Loaded journey progress for user: \(response.user.username)")
 
@@ -182,7 +323,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
 
-    // MARK: - Email/Password Sign Up
+    // MARK: - Legacy Email/Password Sign Up (fallback)
 
     func signUp(email: String, password: String) async {
         isLoading = true
@@ -199,8 +340,7 @@ class AuthenticationManager: ObservableObject {
                 deviceInfo: DeviceInfo.current
             )
 
-            // Update user state
-            self.user = User(
+            self.user = AppUser(
                 id: response.userId,
                 username: response.user.username,
                 email: response.user.email,
@@ -211,26 +351,21 @@ class AuthenticationManager: ObservableObject {
             self.isAuthenticated = true
             print("✅ Registration successful for user: \(response.user.email ?? "unknown")")
 
-            // Reset guides/tour for new user (ensures fresh experience)
             FirstTimeGuideManager.shared.handleUserSignIn(userId: response.userId)
 
-            // Sync credentials to Watch for same-user authentication
             iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
                 userId: response.userId,
                 username: response.user.username
             )
 
-            // New user always needs onboarding - pass empty profile
             await OnboardingManager.shared.checkUserOnboardingState(
                 userId: response.userId,
-                serverOnboardingCompleted: false, // New user hasn't completed onboarding
-                serverProfile: nil // New user has no profile yet
+                serverOnboardingCompleted: false,
+                serverProfile: nil
             )
 
-            // Pre-fill onboarding data from registration info (name will be collected during onboarding)
             OnboardingManager.shared.prefillFromAuth(name: nil, email: email)
 
-            // New user starts at Day 1 - load journey progress
             await QuestionnaireManager.shared.loadJourneyProgress()
 
         } catch let error as ConvexError {
@@ -267,214 +402,15 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
 
-    // MARK: - Apple Sign In
-
-    func generateNonce() -> String {
-        let nonce = randomNonceString()
-        currentNonce = nonce
-        return nonce
-    }
-
-    func sha256(_ input: String) -> String {
-        let inputData = Data(input.utf8)
-        let hashedData = SHA256.hash(data: inputData)
-        let hashString = hashedData.compactMap {
-            String(format: "%02x", $0)
-        }.joined()
-        return hashString
-    }
-
-    func handleSignInWithApple(_ result: Result<ASAuthorization, Error>) async {
-        isLoading = true
-        errorMessage = nil
-
-        switch result {
-        case .success(let authorization):
-            if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-                guard let nonce = currentNonce else {
-                    self.errorMessage = "Invalid state: A login callback was received, but no login request was sent."
-                    isLoading = false
-                    return
-                }
-
-                guard let appleIDToken = appleIDCredential.identityToken else {
-                    self.errorMessage = "Unable to fetch identity token"
-                    isLoading = false
-                    return
-                }
-
-                guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
-                    self.errorMessage = "Unable to serialize token string from data"
-                    isLoading = false
-                    return
-                }
-
-                // Extract user information
-                let firstName = appleIDCredential.fullName?.givenName
-                let lastName = appleIDCredential.fullName?.familyName
-                let fullName = [firstName, lastName].compactMap { $0 }.joined(separator: " ")
-                let email = appleIDCredential.email
-                let userIdentifier = appleIDCredential.user
-
-                do {
-                    let deviceId = getDeviceId()
-
-                    let response = try await convexService.signInWithApple(
-                        appleUserId: userIdentifier,
-                        identityToken: idTokenString,
-                        email: email,
-                        fullName: fullName.isEmpty ? nil : fullName,
-                        deviceId: deviceId,
-                        deviceInfo: DeviceInfo.current
-                    )
-
-                    // Update user state
-                    self.user = User(
-                        id: response.userId,
-                        username: response.user.username,
-                        email: response.user.email,
-                        currentDay: response.user.currentDayInt,
-                        role: response.user.role
-                    )
-
-                    self.isAuthenticated = true
-
-                    if response.isNewUser {
-                        print("✅ New user created via Apple Sign In: \(response.user.username)")
-                    } else {
-                        print("✅ Existing user signed in via Apple: \(response.user.username)")
-                    }
-
-                    // Reset guides/tour if different user (ensures fresh experience per user)
-                    FirstTimeGuideManager.shared.handleUserSignIn(userId: response.userId)
-
-                    // Sync credentials to Watch for same-user authentication
-                    iOSWatchConnectivityManager.shared.syncCredentialsToWatch(
-                        userId: response.userId,
-                        username: response.user.username
-                    )
-
-                    // Check onboarding state - new users need onboarding
-                    await OnboardingManager.shared.checkUserOnboardingState(
-                        userId: response.userId,
-                        serverOnboardingCompleted: response.isNewUser ? false : response.user.onboardingCompleted,
-                        serverProfile: response.isNewUser ? nil : (
-                            fullName: response.user.fullName,
-                            measurementSystem: response.user.measurementSystem,
-                            heightCm: response.user.heightCm,
-                            weightKg: response.user.weightKg,
-                            gender: response.user.gender,
-                            birthYear: response.user.birthYearInt
-                        )
-                    )
-
-                    // Pre-fill onboarding data for new Apple Sign In users
-                    if response.isNewUser {
-                        OnboardingManager.shared.prefillFromAuth(
-                            name: fullName.isEmpty ? nil : fullName,
-                            email: email
-                        )
-                    }
-
-                    // Load journey progress for this user
-                    await QuestionnaireManager.shared.loadJourneyProgress()
-
-                } catch let error as ConvexError {
-                    print("Apple Sign In error: \(error)")
-                    self.errorMessage = "Apple Sign In failed. Please try again."
-                } catch {
-                    print("Apple Sign In error: \(error)")
-                    self.errorMessage = "Apple Sign In failed: \(error.localizedDescription)"
-                }
-            }
-
-        case .failure(let error):
-            // Handle cancellation gracefully
-            if (error as NSError).code == ASAuthorizationError.canceled.rawValue {
-                self.errorMessage = nil // User cancelled, no error message needed
-            } else {
-                self.errorMessage = "Apple Sign In failed: \(error.localizedDescription)"
-            }
-        }
-
-        isLoading = false
-    }
-
-    private func randomNonceString(length: Int = 32) -> String {
-        precondition(length > 0)
-        var randomBytes = [UInt8](repeating: 0, count: length)
-        let errorCode = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
-        if errorCode != errSecSuccess {
-            fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
-        }
-
-        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
-
-        let nonce = randomBytes.map { byte in
-            charset[Int(byte) % charset.count]
-        }
-
-        return String(nonce)
-    }
-
-    // MARK: - Google Sign In
-
-    func signInWithGoogle() async {
-        isLoading = true
-        errorMessage = nil
-
-        // Google Sign In requires the Google Sign-In SDK to be integrated
-        // This would typically:
-        // 1. Use GIDSignIn to get the user's Google credentials
-        // 2. Send the ID token to Convex for verification
-        // 3. Create/update user in the database
-
-        // For now, show a message - Google Sign In SDK needs to be added
-        self.errorMessage = "Google Sign In requires additional SDK setup. Please use email/password or Apple Sign In."
-
-        isLoading = false
-    }
-
-    // MARK: - Sign Out
-
-    func signOut() {
-        // Notify Apple Watch to clear its cached credentials
-        // Uses transferUserInfo for guaranteed delivery even if Watch is asleep
-        iOSWatchConnectivityManager.shared.notifyWatchLogout()
-
-        // Clear server session asynchronously
-        Task {
-            do {
-                try await convexService.signOut()
-                print("✅ Server session cleared")
-            } catch {
-                print("Sign out error (server): \(error)")
-            }
-        }
-
-        // Clear authentication state immediately (don't wait for server)
-        // Note: We do NOT clear onboarding state - that's tied to the user account
-        // When the same user signs back in, their onboarding status will be restored from server
-        convexService.clearSession()
-        self.isAuthenticated = false
-        self.user = nil
-        self.errorMessage = nil
-
-        print("✅ Sign out complete - auth state cleared, Watch notified")
-    }
-
     // MARK: - Helper Methods
 
     private func hashPassword(_ password: String) -> String {
-        // Simple SHA256 hash for demo purposes
-        // In production, use proper password hashing (bcrypt, argon2, etc.) on the server
         let inputData = Data(password.utf8)
         let hashedData = SHA256.hash(data: inputData)
         return hashedData.compactMap { String(format: "%02x", $0) }.joined()
     }
 
     private func getDeviceId() -> String {
-        // Get or create a unique device identifier
         let key = "device_uuid"
         if let existingId = UserDefaults.standard.string(forKey: key) {
             return existingId

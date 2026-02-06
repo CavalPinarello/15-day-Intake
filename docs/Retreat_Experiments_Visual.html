@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoe Sleep Retreat Experiments</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .cover {
+            text-align: center;
+            padding: 80px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: -60px -60px 60px -60px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .cover h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .cover .subtitle {
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .cover .location {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        h2 {
+            font-size: 36px;
+            font-weight: 700;
+            color: #667eea;
+            margin: 60px 0 30px 0;
+            padding-bottom: 15px;
+            border-bottom: 4px solid #667eea;
+        }
+
+        h3 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #764ba2;
+            margin: 40px 0 20px 0;
+        }
+
+        h4 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #555;
+            margin: 30px 0 15px 0;
+        }
+
+        .experiment-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 40px;
+            margin: 40px 0;
+            border-radius: 15px;
+            border-left: 8px solid #667eea;
+            page-break-inside: avoid;
+        }
+
+        .experiment-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 50px;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .experiment-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .experiment-subtitle {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .group-diagram {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .group-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+        }
+
+        .group-box {
+            flex: 1;
+            margin: 0 10px;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .group-a { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .group-b { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        .group-c { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+
+        .group-box h4 {
+            color: white;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+
+        .group-box .size {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+
+        .group-box .intervention {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .timeline {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .timeline-item {
+            padding: 20px 0;
+            border-bottom: 1px dashed #ddd;
+            position: relative;
+            padding-left: 100px;
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .timeline-time {
+            position: absolute;
+            left: 0;
+            top: 20px;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .timeline-content {
+            font-size: 16px;
+            color: #444;
+        }
+
+        .outcome-box {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            padding: 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+
+        .outcome-box h4 {
+            color: #2d3748;
+            margin-top: 0;
+        }
+
+        .data-viz {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .bar-chart {
+            margin: 20px 0;
+        }
+
+        .bar-item {
+            margin: 15px 0;
+        }
+
+        .bar-label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #444;
+        }
+
+        .bar-container {
+            background: #e2e8f0;
+            height: 30px;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .checklist {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .checklist-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+
+        .checklist-item:before {
+            content: "☐ ";
+            font-size: 18px;
+            color: #667eea;
+            margin-right: 10px;
+        }
+
+        .key-insight {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 6px solid #fa709a;
+        }
+
+        .key-insight h4 {
+            color: #2d3748;
+            margin-top: 0;
+        }
+
+        .key-insight ul {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .key-insight li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .key-insight li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #2d3748;
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
+
+        .priority-high {
+            background: #48bb78;
+            color: white;
+        }
+
+        .priority-medium {
+            background: #ed8936;
+            color: white;
+        }
+
+        .priority-low {
+            background: #cbd5e0;
+            color: #2d3748;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f7fafc;
+        }
+
+        tbody tr:hover {
+            background: #edf2f7;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                padding: 40px;
+            }
+
+            .experiment-card {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="cover">
+            <h1>🌙 Zoe Sleep Retreat</h1>
+            <div class="subtitle">10 Interactive Experiments</div>
+            <div class="location">Half Moon Bay Longevity Retreat | 2-3 Day Protocol</div>
+        </div>
+
+        <h2>📊 Overview</h2>
+        <p style="font-size: 18px; line-height: 1.8; color: #555;">
+            Run live, ad hoc experiments with 30 participants during the retreat without requiring pre-existing Zoe journey data.
+            Each experiment uses group-based assignments delivered via the app to test physiological and lifestyle interventions.
+        </p>
+
+        <div class="data-viz">
+            <h4>Key Constraints</h4>
+            <ul style="font-size: 16px; color: #555; line-height: 2;">
+                <li>✓ 2-3 days maximum (not 10 days)</li>
+                <li>✓ Minimal pre-retreat data dependency</li>
+                <li>✓ Group-based (A/B/C assignments)</li>
+                <li>✓ App-delivered protocols</li>
+                <li>✓ Immediate measurable outcomes</li>
+            </ul>
+        </div>
+
+        <!-- EXPERIMENT 1 -->
+        <div class="experiment-card page-break">
+            <div class="experiment-number">1</div>
+            <div class="experiment-title">🌡️ The Temperature Sweet Spot</div>
+            <div class="experiment-subtitle">Test optimal sleep temperature by assigning participants to different room temperature zones</div>
+
+            <div class="group-diagram">
+                <h4>Group Assignment (30 Participants)</h4>
+                <div class="group-row">
+                    <div class="group-box group-a">
+                        <h4>GROUP A</h4>
+                        <div class="size">n=10</div>
+                        <div class="intervention">COOL<br>66°F</div>
+                    </div>
+                    <div class="group-box group-b">
+                        <h4>GROUP B</h4>
+                        <div class="size">n=10</div>
+                        <div class="intervention">WARM<br>70°F</div>
+                    </div>
+                    <div class="group-box group-c">
+                        <h4>GROUP C</h4>
+                        <div class="size">n=10</div>
+                        <div class="intervention">HOT<br>74°F</div>
+                    </div>
+                </div>
+            </div>
+
+            <h4>📅 Experimental Timeline</h4>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 1<br>3:00 PM</div>
+                    <div class="timeline-content">Martin assigns groups via app</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 1<br>10:00 PM</div>
+                    <div class="timeline-content">Evening check-in: Confirm room temp set correctly</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">Night 1</div>
+                    <div class="timeline-content">Sleep at assigned temperature</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 2<br>7:30 AM</div>
+                    <div class="timeline-content">Complete sleep log: quality, latency, awakenings, thermal comfort</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 2<br>5:00 PM</div>
+                    <div class="timeline-content">Results presentation + SWITCH: All groups try optimal 66-68°F</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 3<br>7:30 AM</div>
+                    <div class="timeline-content">Complete sleep log + view individual improvement</div>
+                </div>
+            </div>
+
+            <h4>🎯 Expected Outcomes</h4>
+            <div class="outcome-box">
+                <div class="data-viz">
+                    <h4>Sleep Quality (1-10 scale)</h4>
+                    <div class="bar-chart">
+                        <div class="bar-item">
+                            <div class="bar-label">Group A (66°F)</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 82%;">8.2</div>
+                            </div>
+                        </div>
+                        <div class="bar-item">
+                            <div class="bar-label">Group B (70°F)</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 71%;">7.1</div>
+                            </div>
+                        </div>
+                        <div class="bar-item">
+                            <div class="bar-label">Group C (74°F)</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 64%;">6.4</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                <h4>💡 Key Insights Delivered</h4>
+                <ul>
+                    <li>Personal optimal: "You sleep best at 66-68°F"</li>
+                    <li>Quantified impact: "Switching from 74°F to 67°F improved your sleep quality by 1.6 points"</li>
+                    <li>Actionable takeaway: "Set your home thermostat to 66-68°F for better sleep"</li>
+                </ul>
+            </div>
+
+            <h4>✅ Martin's Preparation Checklist</h4>
+            <div class="checklist">
+                <div class="checklist-item">Coordinate with Ritz-Carlton: Ensure all rooms have individual climate control</div>
+                <div class="checklist-item">Create group assignments in app (randomized, stratified by age/gender)</div>
+                <div class="checklist-item">Day 1, 3:00 PM: Assign groups via app</div>
+                <div class="checklist-item">Day 2, 8:00 AM: Pull sleep log data and generate charts</div>
+                <div class="checklist-item">Day 2, 5:00 PM: Present findings with visualizations</div>
+            </div>
+
+            <span class="priority-badge priority-high">HIGH PRIORITY</span>
+            <span class="priority-badge priority-high">Minimal Development</span>
+        </div>
+
+        <!-- EXPERIMENT 2 -->
+        <div class="experiment-card page-break">
+            <div class="experiment-number">2</div>
+            <div class="experiment-title">☀️ Morning Light Exposure Race</div>
+            <div class="experiment-subtitle">Test impact of morning light timing on energy and mood</div>
+
+            <div class="group-diagram">
+                <h4>Group Assignment (30 Participants)</h4>
+                <div class="group-row">
+                    <div class="group-box group-a">
+                        <h4>GROUP A</h4>
+                        <div class="size">n=10</div>
+                        <div class="intervention">EARLY LIGHT<br>7:00-7:30 AM<br>30min walk</div>
+                    </div>
+                    <div class="group-box group-b">
+                        <h4>GROUP B</h4>
+                        <div class="size">n=10</div>
+                        <div class="intervention">LATE LIGHT<br>9:00-9:30 AM<br>30min walk</div>
+                    </div>
+                    <div class="group-box group-c">
+                        <h4>GROUP C</h4>
+                        <div class="size">n=10</div>
+                        <div class="intervention">CONTROL<br>Indoor morning<br>No intervention</div>
+                    </div>
+                </div>
+            </div>
+
+            <h4>📅 Experimental Timeline</h4>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 1<br>6:00 PM</div>
+                    <div class="timeline-content">Martin assigns groups + sends morning walk assignments</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 2<br>7:00 AM</div>
+                    <div class="timeline-content">Group A: Guided beach walk (30 min)</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 2<br>9:00 AM</div>
+                    <div class="timeline-content">Group B: Guided beach walk (30 min)</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 2<br>10:00 AM</div>
+                    <div class="timeline-content">ALL GROUPS: Complete morning check-in (energy, mood, focus)</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">Day 3<br>9:00 AM</div>
+                    <div class="timeline-content">Results: Light exposure → next-day energy correlation</div>
+                </div>
+            </div>
+
+            <h4>🎯 Expected Outcomes</h4>
+            <div class="outcome-box">
+                <div class="data-viz">
+                    <h4>Morning Energy Levels (1-6 scale, measured at 10 AM)</h4>
+                    <div class="bar-chart">
+                        <div class="bar-item">
+                            <div class="bar-label">Group A (7 AM light)</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 85%;">5.1</div>
+                            </div>
+                        </div>
+                        <div class="bar-item">
+                            <div class="bar-label">Group B (9 AM light)</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 73%;">4.4</div>
+                            </div>
+                        </div>
+                        <div class="bar-item">
+                            <div class="bar-label">Group C (No exposure)</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 63%;">3.8</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                <h4>💡 Key Insights Delivered</h4>
+                <ul>
+                    <li>Optimal window: "Getting outdoor light before 8 AM boosted your energy by 35%"</li>
+                    <li>Circadian impact: "Early light improved your next-night sleep quality by 0.8 points"</li>
+                    <li>Actionable takeaway: "Aim for 30 minutes of outdoor light within 2 hours of waking"</li>
+                </ul>
+            </div>
+
+            <span class="priority-badge priority-medium">MEDIUM PRIORITY</span>
+        </div>
+
+        <!-- EXPERIMENT 3 -->
+        <div class="experiment-card page-break">
+            <div class="experiment-number">3</div>
+            <div class="experiment-title">☕ Caffeine Cutoff Challenge</div>
+            <div class="experiment-subtitle">Find your personal caffeine half-life and optimal cutoff time</div>
+
+            <div class="group-diagram">
+                <h4>Group Assignment (30 Participants)</h4>
+                <div class="group-row">
+                    <div class="group-box group-a">
+                        <h4>GROUP A</h4>
+                        <div class="size">n=10</div>
+                        <div class="intervention">STRICT<br>No caffeine<br>after 12 PM</div>
+                    </div>
+                    <div class="group-box group-b">
+                        <h4>GROUP B</h4>
+                        <div class="size">n=10</div>
+                        <div class="intervention">MODERATE<br>No caffeine<br>after 2 PM</div>
+                    </div>
+                    <div class="group-box group-c">
+                        <h4>GROUP C</h4>
+                        <div class="size">n=10</div>
+                        <div class="intervention">CONTROL<br>Normal<br>caffeine intake</div>
+                    </div>
+                </div>
+            </div>
+
+            <h4>🎯 Expected Outcomes</h4>
+            <div class="outcome-box">
+                <div class="data-viz">
+                    <h4>Sleep Latency Improvement (Minutes to Fall Asleep)</h4>
+                    <div class="bar-chart">
+                        <div class="bar-item">
+                            <div class="bar-label">Group A (12 PM cutoff) - Night 1: 18min → Night 2: 12min</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 67%; background: linear-gradient(90deg, #48bb78 0%, #38a169 100%);">-6 min ✓</div>
+                            </div>
+                        </div>
+                        <div class="bar-item">
+                            <div class="bar-label">Group B (2 PM cutoff) - Night 1: 17min → Night 2: 14min</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 78%; background: linear-gradient(90deg, #ed8936 0%, #dd6b20 100%);">-3 min</div>
+                            </div>
+                        </div>
+                        <div class="bar-item">
+                            <div class="bar-label">Group C (Control) - Night 1: 18min → Night 2: 18min</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 100%; background: linear-gradient(90deg, #cbd5e0 0%, #a0aec0 100%);">0 min</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                <h4>💡 Key Insights Delivered</h4>
+                <ul>
+                    <li>Personal sensitivity: "Your sleep latency improved by 6 minutes with a 12 PM cutoff"</li>
+                    <li>Half-life calculation: "At age XX, your caffeine half-life is ~6.5 hours"</li>
+                    <li>Optimal window: "Stop caffeine by 12 PM for best sleep (target <15% in system at bedtime)"</li>
+                </ul>
+            </div>
+
+            <span class="priority-badge priority-high">HIGH PRIORITY</span>
+            <span class="priority-badge priority-high">Minimal Development</span>
+        </div>
+
+        <!-- SUMMARY TABLE -->
+        <div class="page-break">
+            <h2>📋 Experiment Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Experiment</th>
+                        <th>Duration</th>
+                        <th>Primary Outcome</th>
+                        <th>Expected Effect</th>
+                        <th>Priority</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>🌡️ Temperature</td>
+                        <td>2 nights</td>
+                        <td>Sleep quality</td>
+                        <td>+1.5 points (cool)</td>
+                        <td><span class="priority-badge priority-high">HIGH</span></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>☀️ Morning Light</td>
+                        <td>1 day + night</td>
+                        <td>Energy, sleep</td>
+                        <td>+1.2 energy (7AM)</td>
+                        <td><span class="priority-badge priority-medium">MEDIUM</span></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>☕ Caffeine Cutoff</td>
+                        <td>2 days</td>
+                        <td>Sleep latency</td>
+                        <td>-6 min (12PM cutoff)</td>
+                        <td><span class="priority-badge priority-high">HIGH</span></td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>🌙 Wind-Down Protocol</td>
+                        <td>1 night</td>
+                        <td>Sleep quality</td>
+                        <td>+1.8 quality (full)</td>
+                        <td><span class="priority-badge priority-medium">MEDIUM</span></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>🍽️ Meal Timing</td>
+                        <td>2 nights</td>
+                        <td>Digestive disruption</td>
+                        <td>60% disruption (late)</td>
+                        <td><span class="priority-badge priority-medium">MEDIUM</span></td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>😴 Nap Study</td>
+                        <td>1 day + night</td>
+                        <td>Night sleep reduction</td>
+                        <td>-40 min (45min nap)</td>
+                        <td><span class="priority-badge priority-low">LOWER</span></td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>🔵 Blue Light Blocking</td>
+                        <td>1 night</td>
+                        <td>Sleepiness onset</td>
+                        <td>-55 min onset (blockers)</td>
+                        <td><span class="priority-badge priority-high">HIGH</span></td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>📝 Gratitude Journal</td>
+                        <td>1 night</td>
+                        <td>Rumination, mood</td>
+                        <td>-1.5 rumination</td>
+                        <td><span class="priority-badge priority-medium">MEDIUM</span></td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>🫁 Breathing Exercise</td>
+                        <td>1 night</td>
+                        <td>Sleep latency</td>
+                        <td>-4 min latency</td>
+                        <td><span class="priority-badge priority-low">LOWER</span></td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>🍷 Alcohol & Sleep</td>
+                        <td>2 nights</td>
+                        <td>REM sleep, awakenings</td>
+                        <td>-25% REM</td>
+                        <td><span class="priority-badge priority-high">HIGH</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="page-break">
+            <h2>🎯 Recommended Experiment Selection</h2>
+
+            <div class="outcome-box">
+                <h3>Top 5 Experiments (Run These)</h3>
+                <div style="font-size: 18px; line-height: 2;">
+                    <p><strong>1. 🌡️ Temperature Sweet Spot</strong> - Easiest logistics, immediate impact, everyone participates</p>
+                    <p><strong>2. ☕ Caffeine Cutoff</strong> - Highly relatable, clear results, minimal development</p>
+                    <p><strong>3. 🔵 Blue Light Blocking</strong> - Just buy glasses, powerful results, "wow" factor</p>
+                    <p><strong>4. 🍷 Alcohol & Sleep</strong> - Very relevant to this demographic, eye-opening REM data</p>
+                    <p><strong>5. ☀️ Morning Light</strong> - Beautiful Half Moon Bay setting, social activity, clear benefits</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 60px; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
+            <h3 style="color: white; margin-bottom: 20px;">Ready to Transform Sleep Science</h3>
+            <p style="font-size: 18px; opacity: 0.95;">These experiments will demonstrate Zoe's unique value: personalized, data-driven sleep optimization that delivers measurable results in just 2-3 days.</p>
+        </div>
+    </div>
+</body>
+</html>

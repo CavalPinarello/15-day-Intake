@@ -10,44 +10,46 @@ import SwiftUI
 
 // MARK: - Circadian Color Helper
 
-/// Provides circadian-aware colors for question components
-/// Evening/Night: Warm amber/orange colors (sleep-safe, no blue light)
-/// Morning/Afternoon: Standard system colors
+/// Provides theme-aware colors for question components
+/// Uses ThemeManager's isDarkMode for simplified two-mode system
+/// Dark Mode: Warm amber/orange colors (sleep-safe, no blue light)
+/// Bright Mode: Standard system colors
 struct CircadianColors {
-    static var isEvening: Bool {
-        TimePeriod.current == .evening || TimePeriod.current == .night
+    /// Check if dark mode is active (simplified system)
+    static var isDarkMode: Bool {
+        ThemeManager.shared.isDarkMode
     }
 
     /// Primary text color - high visibility
     static var primary: Color {
-        if isEvening {
-            return Color(red: 0.996, green: 0.953, blue: 0.780)  // Bright cream #FEF3C7
+        if isDarkMode {
+            return DarkPalette.textPrimary  // Bright cream
         } else {
-            return Color.primary
+            return BrightPalette.textPrimary  // Near-black warm brown
         }
     }
 
     /// Secondary text color - medium visibility
     static var secondary: Color {
-        if isEvening {
-            return Color(red: 0.988, green: 0.827, blue: 0.302)  // Golden yellow #FCD34D
+        if isDarkMode {
+            return DarkPalette.textSecondary  // Golden yellow
         } else {
-            return Color.secondary
+            return BrightPalette.textSecondary  // Medium warm brown
         }
     }
 
     /// Muted text color - lower visibility but still readable
     static var muted: Color {
-        if isEvening {
-            return Color(red: 0.961, green: 0.620, blue: 0.043)  // Amber #F59E0B
+        if isDarkMode {
+            return DarkPalette.textMuted  // Amber
         } else {
-            return Color.secondary.opacity(0.7)
+            return BrightPalette.textMuted  // Light warm brown
         }
     }
 
     /// Background for secondary elements - semi-transparent for glassy effect
     static var secondaryBackground: Color {
-        if isEvening {
+        if isDarkMode {
             return Color(red: 0.25, green: 0.15, blue: 0.1).opacity(0.5)  // Semi-transparent dark brown
         } else {
             return Color(.secondarySystemBackground).opacity(0.6)
@@ -56,10 +58,19 @@ struct CircadianColors {
 
     /// Border color
     static var border: Color {
-        if isEvening {
+        if isDarkMode {
             return Color(red: 0.4, green: 0.25, blue: 0.15)  // Warm brown border
         } else {
             return Color.gray.opacity(0.3)
+        }
+    }
+
+    /// Text on primary accent buttons - for contrast
+    static var textOnPrimary: Color {
+        if isDarkMode {
+            return DarkPalette.textOnPrimary  // Dark brown on amber buttons
+        } else {
+            return BrightPalette.textOnPrimary  // White on blue buttons
         }
     }
 }
@@ -388,7 +399,7 @@ struct DiscreteScaleInput: View {
                                 Circle()
                                     .fill(Int(value) == optionValue ? pillarColor : CircadianColors.secondaryBackground)
                             )
-                            .foregroundColor(Int(value) == optionValue ? .white : CircadianColors.primary)
+                            .foregroundColor(Int(value) == optionValue ? CircadianColors.textOnPrimary : CircadianColors.primary)
 
                         // Label text
                         Text(label(for: optionValue))

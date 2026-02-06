@@ -130,6 +130,63 @@ export const validatePhysicianSession = query({
 });
 
 /**
+ * Get current physician's profile data from session token.
+ * Returns physician details for profile management.
+ */
+export const getCurrentPhysician = query({
+  args: {
+    sessionToken: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      id: v.id("physicians"),
+      email: v.string(),
+      fullName: v.string(),
+      avatarUrl: v.optional(v.string()),
+      permissionLevel: v.string(),
+      title: v.optional(v.string()),
+      specialization: v.optional(v.string()),
+      sessionType: v.string(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    if (!args.sessionToken) {
+      return null;
+    }
+
+    const session = await ctx.db
+      .query("physician_sessions")
+      .withIndex("by_session_token", (q) => q.eq("session_token", args.sessionToken))
+      .first();
+
+    if (!session || !session.is_active || session.expires_at < Date.now()) {
+      return null;
+    }
+
+    // If it's a Clerk-based session, get the physician record
+    if (session.session_type === "clerk_physician" && session.physician_id) {
+      const physician = await ctx.db.get(session.physician_id);
+      if (physician) {
+        return {
+          id: physician._id,
+          email: physician.email,
+          fullName: physician.full_name,
+          avatarUrl: physician.avatar_url ?? undefined,
+          permissionLevel: physician.permission_level,
+          title: physician.title ?? undefined,
+          specialization: physician.specialization ?? undefined,
+          sessionType: "clerk",
+        };
+      }
+    }
+
+    // Master password session - return generic data
+    return null;
+  },
+});
+
+/**
  * Logout - invalidate a session
  */
 export const logout = mutation({

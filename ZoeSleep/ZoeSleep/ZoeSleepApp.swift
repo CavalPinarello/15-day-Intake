@@ -7,6 +7,7 @@
 
 import SwiftUI
 import WatchConnectivity
+import Clerk
 
 @main
 struct ZoeSleepApp: App {
@@ -19,6 +20,9 @@ struct ZoeSleepApp: App {
     private let watchConnectivity = iOSWatchConnectivityManager.shared
 
     init() {
+        // Configure Clerk with publishable key
+        Clerk.shared.configure(publishableKey: Config.clerkPublishableKey)
+
         // Create authManager first, then pass it to healthKitManager
         let auth = AuthenticationManager()
         _authManager = StateObject(wrappedValue: auth)
@@ -28,10 +32,15 @@ struct ZoeSleepApp: App {
     var body: some Scene {
         WindowGroup {
             AppRootView()
+                .environment(\.clerk, Clerk.shared)
                 .environmentObject(authManager)
                 .environmentObject(healthKitManager)
                 .environmentObject(ThemeManager.shared)
                 .environmentObject(onboardingManager)
+                .task {
+                    // Load Clerk session on app start
+                    try? await Clerk.shared.load()
+                }
                 .onAppear {
                     // Only request HealthKit authorization AFTER onboarding is complete
                     // During onboarding, HealthKit is requested at the HealthConnect step

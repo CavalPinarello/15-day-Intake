@@ -8,6 +8,54 @@ import { Id } from "./_generated/dataModel";
  */
 
 // ============================================
+// Wearable Type Detection Helpers
+// ============================================
+
+/**
+ * Detects the consolidated wearable type from bundle ID and source name
+ * Maps device-specific sources to unified wearable categories
+ */
+function detectWearableType(bundleId: string, sourceName: string): string {
+  const combined = (bundleId + " " + sourceName).toLowerCase();
+
+  if (combined.includes("watch") || combined.includes("com.apple.health.")) {
+    return "Apple Watch";
+  } else if (combined.includes("oura") || combined.includes("ouraring")) {
+    return "Oura Ring";
+  } else if (combined.includes("garmin")) {
+    return "Garmin";
+  } else if (combined.includes("fitbit")) {
+    return "Fitbit";
+  } else if (combined.includes("whoop")) {
+    return "WHOOP";
+  }
+  return "Other Device";
+}
+
+/**
+ * Extracts device model from source name
+ * Examples:
+ *   "Apple Watch Series 8" → "Series 8"
+ *   "Garmin Fenix 7" → "Fenix 7"
+ *   "Fitbit Charge 5" → "Charge 5"
+ */
+function extractDeviceModel(sourceName: string): string | undefined {
+  const patterns = [
+    /Apple Watch (.+)/i,
+    /Garmin (.+)/i,
+    /Fitbit (.+)/i,
+    /WHOOP (.+)/i,
+    /Oura Ring (.+)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = sourceName.match(pattern);
+    if (match) return match[1].trim();
+  }
+  return undefined;
+}
+
+// ============================================
 // Sleep Data Functions
 // ============================================
 
@@ -33,6 +81,10 @@ export const syncSleepData = mutation({
     sourceBundleId: v.optional(v.string()),
     allSourcesJson: v.optional(v.string()),
     isMultiSource: v.optional(v.boolean()),
+    // Wearable consolidation fields
+    wearableType: v.optional(v.string()),
+    deviceModel: v.optional(v.string()),
+    allBundleIdsJson: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { userId, date, ...sleepData } = args;
@@ -63,6 +115,9 @@ export const syncSleepData = mutation({
         source_bundle_id: sleepData.sourceBundleId ?? existing.source_bundle_id,
         all_sources_json: sleepData.allSourcesJson ?? existing.all_sources_json,
         is_multi_source: sleepData.isMultiSource ?? existing.is_multi_source,
+        wearable_type: sleepData.wearableType ?? existing.wearable_type,
+        device_model: sleepData.deviceModel ?? existing.device_model,
+        all_bundle_ids_json: sleepData.allBundleIdsJson ?? existing.all_bundle_ids_json,
         synced_at: now,
       });
       return existing._id;
@@ -86,6 +141,9 @@ export const syncSleepData = mutation({
         source_bundle_id: sleepData.sourceBundleId,
         all_sources_json: sleepData.allSourcesJson,
         is_multi_source: sleepData.isMultiSource,
+        wearable_type: sleepData.wearableType,
+        device_model: sleepData.deviceModel,
+        all_bundle_ids_json: sleepData.allBundleIdsJson,
         synced_at: now,
       });
     }
@@ -710,14 +768,17 @@ function sanitizeSourceName(source: string): string {
  * Get sleep data organized by source device for multi-wearable comparison.
  * Returns data grouped by source (Apple Watch, Oura, Fitbit, etc.) with
  * overlapping dates aligned for easy comparison charting.
+ *
+ * @param consolidateByWearable - If true, groups all Apple Watch models as "Apple Watch" (default: true)
  */
 export const getMultiSourceSleepData = query({
   args: {
     userId: v.id("users"),
     days: v.optional(v.number()),
+    consolidateByWearable: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId, days = 15 } = args;
+    const { userId, days = 15, consolidateByWearable = true } = args;
 
     const sleepData = await ctx.db
       .query("user_sleep_data")
@@ -735,18 +796,35 @@ export const getMultiSourceSleepData = query({
       lightMins: number | null;
     }>> = {};
 
+    // Track device models per wearable type
+    const deviceModelsBySource: Record<string, Set<string>> = {};
+
     // Collect all sources mentioned in all_sources_json
     const allSourcesSet = new Set<string>();
 
     for (const record of sleepData) {
       allDates.add(record.date);
 
-      // Add primary source data - sanitize to avoid invalid field name characters
-      const primarySource = sanitizeSourceName(record.primary_source || "Unknown");
-      if (!sourceData[primarySource]) {
-        sourceData[primarySource] = [];
+      // Determine source key: use wearable_type if consolidating, otherwise primary_source
+      let sourceKey: string;
+      if (consolidateByWearable && record.wearable_type) {
+        sourceKey = sanitizeSourceName(record.wearable_type);
+      } else {
+        sourceKey = sanitizeSourceName(record.primary_source || "Unknown");
       }
-      sourceData[primarySource].push({
+
+      // Initialize source data array if needed
+      if (!sourceData[sourceKey]) {
+        sourceData[sourceKey] = [];
+        deviceModelsBySource[sourceKey] = new Set();
+      }
+
+      // Track device model
+      if (record.device_model) {
+        deviceModelsBySource[sourceKey].add(record.device_model);
+      }
+
+      sourceData[sourceKey].push({
         date: record.date,
         totalSleepMins: record.total_sleep_mins ?? null,
         efficiency: record.sleep_efficiency ?? null,
@@ -754,13 +832,22 @@ export const getMultiSourceSleepData = query({
         remMins: record.rem_sleep_mins ?? null,
         lightMins: record.light_sleep_mins ?? null,
       });
-      allSourcesSet.add(primarySource);
+      allSourcesSet.add(sourceKey);
 
       // Parse all_sources_json to find all contributing sources
       if (record.all_sources_json) {
         try {
           const allSources = JSON.parse(record.all_sources_json) as string[];
-          allSources.forEach(s => allSourcesSet.add(sanitizeSourceName(s)));
+          allSources.forEach(s => {
+            const sanitized = sanitizeSourceName(s);
+            // If consolidating, map to wearable type
+            if (consolidateByWearable) {
+              const wearableType = detectWearableType("", s);
+              allSourcesSet.add(sanitizeSourceName(wearableType));
+            } else {
+              allSourcesSet.add(sanitized);
+            }
+          });
         } catch {
           // Ignore parse errors
         }
@@ -803,13 +890,25 @@ export const getMultiSourceSleepData = query({
         ? Math.round(records.reduce((sum, r) => sum + (r.totalSleepMins || 0), 0) / records.length)
         : null;
 
+      // Get device models for this source (if consolidating)
+      const deviceModels = Array.from(deviceModelsBySource[source] || []);
+
+      // Find date range
+      const dates = sourceData[source].map(r => r.date).sort();
+      const dateRange = dates.length > 0 ? {
+        first: dates[0],
+        last: dates[dates.length - 1]
+      } : null;
+
       return {
         source,
+        deviceModels,  // e.g., ["Series 7", "Ultra"] for Apple Watch
         dataPoints: sourceData[source].length,
         avgEfficiency,
         avgSleepHours: avgSleepMins ? avgSleepMins / 60 : null,
         hasDeepSleep: sourceData[source].some(r => r.deepMins !== null && r.deepMins > 0),
         hasHeartRate: false, // Would need to check heart rate table
+        dateRange,
       };
     });
 
@@ -1777,5 +1876,484 @@ export const computeAllSleepMetricsFromResponses = mutation({
     }
 
     return { success: true, daysProcessed };
+  },
+});
+
+// ============================================
+// HRV Data Functions (Intra-Night Recovery)
+// ============================================
+
+/**
+ * Sync individual HRV samples to Convex
+ * Used for detailed HRV charting
+ */
+export const syncHRVSamples = mutation({
+  args: {
+    userId: v.id("users"),
+    samples: v.array(v.object({
+      date: v.string(),
+      sampleTime: v.number(),
+      hrvValue: v.number(),
+      sampleType: v.string(),
+      source: v.string(),
+      sourceBundleId: v.optional(v.string()),
+      isDuringSleep: v.boolean(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const { userId, samples } = args;
+    const now = Date.now();
+    let insertedCount = 0;
+
+    for (const sample of samples) {
+      // Check for existing sample at same timestamp
+      const existing = await ctx.db
+        .query("user_hrv_samples")
+        .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", sample.date))
+        .filter((q) => q.eq(q.field("sample_time"), sample.sampleTime))
+        .first();
+
+      if (!existing) {
+        await ctx.db.insert("user_hrv_samples", {
+          user_id: userId,
+          date: sample.date,
+          sample_time: sample.sampleTime,
+          hrv_value: sample.hrvValue,
+          sample_type: sample.sampleType,
+          source: sample.source,
+          source_bundle_id: sample.sourceBundleId,
+          is_during_sleep: sample.isDuringSleep,
+          synced_at: now,
+        });
+        insertedCount++;
+      }
+    }
+
+    return { success: true, samplesInserted: insertedCount };
+  },
+});
+
+/**
+ * Sync HRV nightly summary to Convex
+ * Aggregated evening/night/morning HRV data for a single night
+ */
+export const syncHRVNightlySummary = mutation({
+  args: {
+    userId: v.id("users"),
+    date: v.string(),
+    eveningHrvAvg: v.optional(v.number()),
+    eveningHrvMin: v.optional(v.number()),
+    eveningHrvMax: v.optional(v.number()),
+    eveningSampleCount: v.optional(v.number()),
+    intraNightHrvAvg: v.optional(v.number()),
+    intraNightHrvPeak: v.optional(v.number()),
+    peakTime: v.optional(v.number()),
+    sampleCount: v.optional(v.number()),
+    sampleIntervalMins: v.optional(v.number()),
+    morningHrvAvg: v.optional(v.number()),
+    morningSampleCount: v.optional(v.number()),
+    recoveryRatio: v.optional(v.number()),
+    timeToPeakMins: v.optional(v.number()),
+    primarySource: v.optional(v.string()),
+    hrvCapability: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, date, ...summaryData } = args;
+    const now = Date.now();
+
+    // Check for existing summary
+    const existing = await ctx.db
+      .query("user_hrv_nightly_summary")
+      .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", date))
+      .first();
+
+    const data = {
+      evening_hrv_avg: summaryData.eveningHrvAvg,
+      evening_hrv_min: summaryData.eveningHrvMin,
+      evening_hrv_max: summaryData.eveningHrvMax,
+      evening_sample_count: summaryData.eveningSampleCount,
+      intra_night_hrv_avg: summaryData.intraNightHrvAvg,
+      intra_night_hrv_peak: summaryData.intraNightHrvPeak,
+      peak_time: summaryData.peakTime,
+      sample_count: summaryData.sampleCount,
+      sample_interval_mins: summaryData.sampleIntervalMins,
+      morning_hrv_avg: summaryData.morningHrvAvg,
+      morning_sample_count: summaryData.morningSampleCount,
+      recovery_ratio: summaryData.recoveryRatio,
+      time_to_peak_mins: summaryData.timeToPeakMins,
+      primary_source: summaryData.primarySource,
+      hrv_capability: summaryData.hrvCapability,
+      synced_at: now,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return { success: true, action: "updated" };
+    } else {
+      await ctx.db.insert("user_hrv_nightly_summary", {
+        user_id: userId,
+        date,
+        ...data,
+      });
+      return { success: true, action: "inserted" };
+    }
+  },
+});
+
+/**
+ * Sync HRV Charge (recovery score) to Convex
+ */
+export const syncHRVCharge = mutation({
+  args: {
+    userId: v.id("users"),
+    date: v.string(),
+    chargeScore: v.number(),
+    recoveryTrajectory: v.string(),
+    confidence: v.number(),
+    eveningComponent: v.optional(v.number()),
+    recoveryComponent: v.optional(v.number()),
+    trendModifier: v.optional(v.number()),
+    eveningHrvUsed: v.optional(v.number()),
+    peakHrvUsed: v.optional(v.number()),
+    morningHrvUsed: v.optional(v.number()),
+    baselineUsed: v.string(),
+    deviationFromBaseline: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, date, ...chargeData } = args;
+    const now = Date.now();
+
+    // Check for existing charge
+    const existing = await ctx.db
+      .query("user_hrv_charge")
+      .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", date))
+      .first();
+
+    const data = {
+      charge_score: chargeData.chargeScore,
+      recovery_trajectory: chargeData.recoveryTrajectory,
+      confidence: chargeData.confidence,
+      evening_component: chargeData.eveningComponent,
+      recovery_component: chargeData.recoveryComponent,
+      trend_modifier: chargeData.trendModifier,
+      evening_hrv_used: chargeData.eveningHrvUsed,
+      peak_hrv_used: chargeData.peakHrvUsed,
+      morning_hrv_used: chargeData.morningHrvUsed,
+      baseline_used: chargeData.baselineUsed,
+      deviation_from_baseline: chargeData.deviationFromBaseline,
+      computed_at: now,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return { success: true, action: "updated" };
+    } else {
+      await ctx.db.insert("user_hrv_charge", {
+        user_id: userId,
+        date,
+        ...data,
+      });
+      return { success: true, action: "inserted" };
+    }
+  },
+});
+
+/**
+ * Update or create personal HRV baseline
+ */
+export const updateHRVBaseline = mutation({
+  args: {
+    userId: v.id("users"),
+    avgEveningHrv: v.number(),
+    avgMorningHrv: v.number(),
+    avgPeakHrv: v.number(),
+    avgRecoveryRatio: v.number(),
+    stdEveningHrv: v.number(),
+    stdMorningHrv: v.number(),
+    daysInBaseline: v.number(),
+    oldestDate: v.string(),
+    newestDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, ...baselineData } = args;
+    const now = Date.now();
+
+    // Check for existing baseline
+    const existing = await ctx.db
+      .query("user_hrv_baseline")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .first();
+
+    const data = {
+      avg_evening_hrv: baselineData.avgEveningHrv,
+      avg_morning_hrv: baselineData.avgMorningHrv,
+      avg_peak_hrv: baselineData.avgPeakHrv,
+      avg_recovery_ratio: baselineData.avgRecoveryRatio,
+      std_evening_hrv: baselineData.stdEveningHrv,
+      std_morning_hrv: baselineData.stdMorningHrv,
+      days_in_baseline: baselineData.daysInBaseline,
+      oldest_date: baselineData.oldestDate,
+      newest_date: baselineData.newestDate,
+      last_updated: now,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return { success: true, action: "updated" };
+    } else {
+      await ctx.db.insert("user_hrv_baseline", {
+        user_id: userId,
+        ...data,
+      });
+      return { success: true, action: "inserted" };
+    }
+  },
+});
+
+/**
+ * Get HRV baseline for a user
+ */
+export const getHRVBaseline = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("user_hrv_baseline")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+  },
+});
+
+/**
+ * Get HRV nightly summaries for a user (last N days)
+ */
+export const getHRVSummaries = query({
+  args: {
+    userId: v.id("users"),
+    daysBack: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const summaries = await ctx.db
+      .query("user_hrv_nightly_summary")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Sort by date descending and limit
+    const sorted = summaries.sort((a, b) => b.date.localeCompare(a.date));
+    const limit = args.daysBack ?? 30;
+    return sorted.slice(0, limit);
+  },
+});
+
+/**
+ * Get HRV Charge history for a user (last N days)
+ */
+export const getHRVChargeHistory = query({
+  args: {
+    userId: v.id("users"),
+    daysBack: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const charges = await ctx.db
+      .query("user_hrv_charge")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Sort by date descending and limit
+    const sorted = charges.sort((a, b) => b.date.localeCompare(a.date));
+    const limit = args.daysBack ?? 30;
+    return sorted.slice(0, limit);
+  },
+});
+
+/**
+ * Get HRV samples for a specific date (for charting)
+ */
+export const getHRVSamplesForDate = query({
+  args: {
+    userId: v.id("users"),
+    date: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const samples = await ctx.db
+      .query("user_hrv_samples")
+      .withIndex("by_user_date", (q) => q.eq("user_id", args.userId).eq("date", args.date))
+      .collect();
+
+    // Sort by sample time
+    return samples.sort((a, b) => a.sample_time - b.sample_time);
+  },
+});
+
+// ============================================
+// Sleep Score Functions (Unified Scoring)
+// ============================================
+
+/**
+ * Sync sleep score to Convex
+ */
+export const syncSleepScore = mutation({
+  args: {
+    userId: v.id("users"),
+    date: v.string(),
+    zoeScore: v.number(),
+    componentsJson: v.string(),
+    nativeScoresJson: v.optional(v.string()),
+    hrvCharge: v.optional(v.number()),
+    hrvChargeTrajectory: v.optional(v.string()),
+    primarySource: v.string(),
+    allSourcesJson: v.optional(v.string()),
+    confidence: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { userId, date, ...scoreData } = args;
+    const now = Date.now();
+
+    // Check for existing score
+    const existing = await ctx.db
+      .query("user_sleep_scores")
+      .withIndex("by_user_date", (q) => q.eq("user_id", userId).eq("date", date))
+      .first();
+
+    const data = {
+      zoe_sleep_score: scoreData.zoeScore,
+      zoe_score_components_json: scoreData.componentsJson,
+      native_scores_json: scoreData.nativeScoresJson,
+      hrv_charge: scoreData.hrvCharge,
+      hrv_charge_trajectory: scoreData.hrvChargeTrajectory,
+      primary_source: scoreData.primarySource,
+      all_sources_json: scoreData.allSourcesJson,
+      confidence: scoreData.confidence,
+      computed_at: now,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return { success: true, action: "updated" };
+    } else {
+      await ctx.db.insert("user_sleep_scores", {
+        user_id: userId,
+        date,
+        ...data,
+      });
+      return { success: true, action: "inserted" };
+    }
+  },
+});
+
+/**
+ * Get sleep score history for a user
+ */
+export const getSleepScoreHistory = query({
+  args: {
+    userId: v.id("users"),
+    daysBack: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const scores = await ctx.db
+      .query("user_sleep_scores")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    // Sort by date descending and limit
+    const sorted = scores.sort((a, b) => b.date.localeCompare(a.date));
+    const limit = args.daysBack ?? 30;
+    return sorted.slice(0, limit);
+  },
+});
+
+/**
+ * Get combined sleep + HRV data for dashboard
+ */
+export const getSleepDashboardData = query({
+  args: {
+    userId: v.id("users"),
+    daysBack: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.daysBack ?? 7;
+
+    // Get sleep scores
+    const scores = await ctx.db
+      .query("user_sleep_scores")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+    const sortedScores = scores.sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit);
+
+    // Get HRV charges
+    const charges = await ctx.db
+      .query("user_hrv_charge")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+    const sortedCharges = charges.sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit);
+
+    // Get HRV baseline
+    const baseline = await ctx.db
+      .query("user_hrv_baseline")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    return {
+      sleepScores: sortedScores,
+      hrvCharges: sortedCharges,
+      hrvBaseline: baseline,
+    };
+  },
+});
+
+// ============================================
+// Source Preferences Functions
+// ============================================
+
+/**
+ * Save or update sleep source preferences
+ */
+export const saveSourcePreferences = mutation({
+  args: {
+    userId: v.id("users"),
+    connectedSourcesJson: v.string(),
+    visibleSourcesJson: v.string(),
+    priorityOverrideJson: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, ...prefsData } = args;
+    const now = Date.now();
+
+    // Check for existing preferences
+    const existing = await ctx.db
+      .query("user_sleep_source_preferences")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .first();
+
+    const data = {
+      connected_sources_json: prefsData.connectedSourcesJson,
+      visible_sources_json: prefsData.visibleSourcesJson,
+      priority_override_json: prefsData.priorityOverrideJson,
+      last_source_discovery: now,
+      updated_at: now,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return { success: true, action: "updated" };
+    } else {
+      await ctx.db.insert("user_sleep_source_preferences", {
+        user_id: userId,
+        ...data,
+      });
+      return { success: true, action: "inserted" };
+    }
+  },
+});
+
+/**
+ * Get sleep source preferences for a user
+ */
+export const getSourcePreferences = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("user_sleep_source_preferences")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
   },
 });

@@ -182,15 +182,15 @@ export function ComplianceChart({
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
           <XAxis
             dataKey="day"
-            tick={{ fill: "#9CA3AF", fontSize: 11 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
+            tick={{ fill: "#E5E7EB", fontSize: 11 }}
+            tickLine={{ stroke: "#6B7280" }}
+            axisLine={{ stroke: "#6B7280" }}
           />
           <YAxis
             domain={[0, 100]}
-            tick={{ fill: "#9CA3AF", fontSize: 11 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
+            tick={{ fill: "#E5E7EB", fontSize: 11 }}
+            tickLine={{ stroke: "#6B7280" }}
+            axisLine={{ stroke: "#6B7280" }}
             tickFormatter={(value) => `${value}%`}
           />
           <Tooltip content={<CustomTooltip />} />
@@ -217,7 +217,7 @@ export function ComplianceChart({
             height={24}
             iconType="rect"
             iconSize={10}
-            formatter={(value) => <span className="text-gray-400 text-xs">{value}</span>}
+            formatter={(value) => <span className="text-gray-200 text-xs">{value}</span>}
           />
 
           {/* Stacked bars for each segment */}
@@ -337,7 +337,7 @@ export function ComplianceSummary({
     <div className="space-y-3">
       {/* Overall percentage */}
       <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-400">Overall Compliance</span>
+        <span className="text-sm text-gray-200">Overall Compliance</span>
         <span
           className="text-xl font-bold"
           style={{ color: getComplianceColor(overallPercentage) }}
@@ -371,7 +371,7 @@ export function ComplianceSummary({
             >
               {item.rate}%
             </div>
-            <div className="text-xs text-gray-500">{item.label}</div>
+            <div className="text-xs text-gray-200">{item.label}</div>
           </div>
         ))}
       </div>
@@ -443,7 +443,7 @@ export function ModularComplianceSummary({
     <div className="space-y-3">
       {/* Overall percentage */}
       <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-400">Overall Compliance</span>
+        <span className="text-sm text-gray-200">Overall Compliance</span>
         <span
           className="text-xl font-bold"
           style={{ color: getComplianceColor(overall.rate) }}
@@ -499,8 +499,8 @@ export function ModularComplianceSummary({
           >
             {sleepLog.rate}%
           </div>
-          <div className="text-xs text-gray-500">Sleep Log</div>
-          <div className="text-[10px] text-gray-600 mt-0.5">
+          <div className="text-xs text-gray-200">Sleep Log</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">
             {sleepLog.daysCompleted}/{sleepLog.totalDays} days
           </div>
         </div>
@@ -514,8 +514,8 @@ export function ModularComplianceSummary({
           >
             {coreAssessment.rate}%
           </div>
-          <div className="text-xs text-gray-500">Core Assessment</div>
-          <div className="text-[10px] text-gray-600 mt-0.5">
+          <div className="text-xs text-gray-200">Core Assessment</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">
             {coreAssessment.questionsAnswered}/{coreAssessment.totalQuestions} Q
           </div>
         </div>
@@ -530,8 +530,8 @@ export function ModularComplianceSummary({
             >
               {expansionPacks.rate}%
             </div>
-            <div className="text-xs text-gray-500">Expansion</div>
-            <div className="text-[10px] text-gray-600 mt-0.5">
+            <div className="text-xs text-gray-200">Expansion</div>
+            <div className="text-[10px] text-gray-400 mt-0.5">
               {expansionPacks.modules.length} modules
             </div>
           </div>

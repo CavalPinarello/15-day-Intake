@@ -17,6 +17,8 @@ import { WellnessMetricsChart } from "./WellnessMetricsChart";
 import { CircadianMetricsCard } from "./CircadianMetricsCard";
 import { SleepHealthFactorsCard } from "./SleepHealthFactorsCard";
 import { ActivityLightCard } from "./ActivityLightCard";
+import { HealthKitDataCard } from "./HealthKitDataCard";
+import { HealthKitDataModal } from "./HealthKitDataModal";
 import { PrioritySection } from "./PrioritySection";
 import { PerceptionGapCard } from "./PerceptionGapCard";
 import { AdaptiveDifficultyPanel } from "./AdaptiveDifficultyPanel";
@@ -70,6 +72,7 @@ interface Patient360TabProps {
 
 export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [healthKitModalOpen, setHealthKitModalOpen] = useState(false);
 
   // Fetch HealthKit data
   const healthSummary = useQuery(api.healthkit.getPatientHealthSummary, { userId });
@@ -786,6 +789,12 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
         {/* Activity & Light Exposure - Combined view with charts */}
         <ActivityLightCard userId={userId} />
 
+        {/* HealthKit Data Viewer - Wearable metrics & trends */}
+        <HealthKitDataCard
+          userId={userId}
+          onOpenModal={() => setHealthKitModalOpen(true)}
+        />
+
         {/* Sleep Health Factors - Naps, Medications, Caffeine */}
         <SleepHealthFactorsCard userId={userId} />
       </div>
@@ -821,6 +830,55 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
           <div className="mt-4">
             <SourceComparisonSummary sourceStats={multiSourceData.sourceStats} />
           </div>
+
+          {/* Device Upgrade Timeline */}
+          {multiSourceData.sourceStats.some(s => s.deviceModels && s.deviceModels.length > 1) && (
+            <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+              <div className="flex items-center gap-2 mb-3">
+                <Watch className="w-4 h-4 text-blue-400" />
+                <h4 className="text-sm font-semibold text-blue-300">Device Upgrade History</h4>
+              </div>
+              <div className="space-y-2">
+                {multiSourceData.sourceStats
+                  .filter(s => s.deviceModels && s.deviceModels.length > 1)
+                  .map((stat) => {
+                    const models = stat.deviceModels || [];
+                    const upgradeTimeline = models.join(" → ");
+                    const dateRange = stat.dateRange
+                      ? `${new Date(stat.dateRange.first).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to ${new Date(stat.dateRange.last).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                      : "Date range unavailable";
+
+                    return (
+                      <div key={stat.source} className="flex items-center gap-3">
+                        <div className="flex-shrink-0 w-20 text-xs font-medium text-blue-400">
+                          {stat.source}
+                        </div>
+                        <div className="flex-1 flex items-center gap-2 text-xs text-gray-300">
+                          <div className="flex items-center gap-2">
+                            {models.map((model, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <span className="px-2 py-1 rounded bg-blue-500/20 border border-blue-500/30 font-medium">
+                                  {model}
+                                </span>
+                                {idx < models.length - 1 && (
+                                  <span className="text-blue-400">→</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0 text-xs text-gray-500">
+                          {stat.dataPoints} days
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+              <p className="text-xs text-gray-400 mt-3">
+                <span className="text-blue-400">ℹ️</span> Timeline shows continuous data collection across device upgrades
+              </p>
+            </div>
+          )}
 
           {/* Source details table */}
           {sourceDetails && sourceDetails.length > 1 && (
@@ -1082,6 +1140,13 @@ export function Patient360Tab({ userId, patientId, patient }: Patient360TabProps
           pillarStatus={pillarStatuses.find((p) => p.pillar === selectedPillar)!}
         />
       )}
+
+      {/* HealthKit Data Modal */}
+      <HealthKitDataModal
+        isOpen={healthKitModalOpen}
+        onClose={() => setHealthKitModalOpen(false)}
+        userId={userId}
+      />
     </div>
   );
 }

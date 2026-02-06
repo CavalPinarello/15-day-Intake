@@ -16,7 +16,7 @@ npx convex dev && ./setup-convex.sh   # Convex cloud mode
 - **Test Users:** user1-user10, password: "1"
 - **Registration:** Email + password only (username auto-generated)
 - **Xcode:** `/ZoeSleep/ZoeSleep.xcodeproj`
-- **Bundle IDs:** iOS: `com.zoesleep.app`, Watch: `com.zoesleep.app.watchkitapp`
+- **Bundle IDs:** iOS: `com.sleep360.app`, Watch: `com.sleep360.app.watchkitapp`
 
 ## Circadian Design System (CRITICAL)
 

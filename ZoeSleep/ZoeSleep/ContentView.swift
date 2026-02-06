@@ -211,7 +211,7 @@ struct MainDashboardView: View {
         // Hidden NavigationLinks for deep link navigation (from Watch)
         .background(
             NavigationLink(
-                destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true)
+                destination: QuestionnaireRouterView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true)
                     .environmentObject(healthKitManager)
                     .environmentObject(themeManager),
                 isActive: $navigateToSleepLog
@@ -222,7 +222,7 @@ struct MainDashboardView: View {
         )
         .background(
             NavigationLink(
-                destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true)
+                destination: QuestionnaireRouterView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true)
                     .environmentObject(healthKitManager)
                     .environmentObject(themeManager),
                 isActive: $navigateToAssessment
@@ -1047,7 +1047,7 @@ struct MainDashboardView: View {
                         .coachMarkTarget(.sleepLogRow)
                         .id("sleepLogRow")
                     } else {
-                        NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                        NavigationLink(destination: QuestionnaireRouterView(currentDay: $currentDay, startSection: .sleepLog, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
                             TaskRowView(
                                 icon: "moon.zzz.fill",
                                 title: "Sleep Log",
@@ -1073,7 +1073,7 @@ struct MainDashboardView: View {
                     } else {
                         let minutes = getAssessmentMinutes()
                         if minutes > 0 {
-                            NavigationLink(destination: QuestionnaireView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
+                            NavigationLink(destination: QuestionnaireRouterView(currentDay: $currentDay, startSection: .assessment, sectionOnly: true).environmentObject(healthKitManager).environmentObject(themeManager)) {
                                 TaskRowView(
                                     icon: currentDay > 5 ? "sparkles" : "list.bullet.clipboard",
                                     title: getAssessmentTitle(),

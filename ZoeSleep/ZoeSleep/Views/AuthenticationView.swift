@@ -2,21 +2,17 @@
 //  AuthenticationView.swift
 //  Zoe Sleep for Longevity System
 //
-//  SwiftUI view for user authentication
+//  SwiftUI view for user authentication using Clerk
 //
 
 import SwiftUI
-import AuthenticationServices
+import Clerk
 
 struct AuthenticationView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var identifier = ""  // For sign-in: email
-    @State private var password = ""
-    @State private var signUpEmail = ""     // For sign-up only
-    @State private var isSignUp = false
-    @State private var showingAlert = false
-    @State private var alertMessage = ""
+    @Environment(\.clerk) private var clerk
+    @State private var showAuthView = false
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
@@ -24,162 +20,77 @@ struct AuthenticationView: View {
     private let logoColor = Color(red: 0.96, green: 0.90, blue: 0.83) // #F5E6D3 warm cream
 
     var body: some View {
-        NavigationView {
-            ZStack {
-                // Dark background for aurora to show on
-                Color(red: 0.05, green: 0.05, blue: 0.08)
-                    .ignoresSafeArea()
-
-                // Aurora background - fully visible
-                AuroraBorealisView()
-                    .ignoresSafeArea()
-
-                // Gradient overlay - darker at top for logo, lighter at bottom
-                LinearGradient(
-                    colors: [
-                        Color.black.opacity(0.3),
-                        Color.black.opacity(0.1),
-                        Color.clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+        ZStack {
+            // Dark background for aurora to show on
+            Color(red: 0.05, green: 0.05, blue: 0.08)
                 .ignoresSafeArea()
 
-                VStack(spacing: 20) {
-                    // App Logo/Title
-                    VStack(spacing: 12) {
-                        // Spiral crescent moon logo with glow
-                        ZoeLogoSVG(size: 80, color: logoColor)
-                            .shadow(color: logoColor.opacity(0.4), radius: 20, x: 0, y: 0)
+            // Aurora background - fully visible
+            AuroraBorealisView()
+                .ignoresSafeArea()
 
-                        Text("Zoé Sleep")
-                            .font(.largeTitle)
-                            .bold()
-                            .foregroundColor(.white)
+            // Gradient overlay - darker at top for logo, lighter at bottom
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.3),
+                    Color.black.opacity(0.1),
+                    Color.clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
-                        Text("Your comprehensive sleep journey")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    .padding(.top, 40)
+            VStack(spacing: 20) {
+                // App Logo/Title
+                VStack(spacing: 12) {
+                    // Spiral crescent moon logo with glow
+                    ZoeLogoSVG(size: 80, color: logoColor)
+                        .shadow(color: logoColor.opacity(0.4), radius: 20, x: 0, y: 0)
+
+                    Text("Zoé Sleep")
+                        .font(.largeTitle)
+                        .bold()
+                        .foregroundColor(.white)
+
+                    Text("Your comprehensive sleep journey")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.top, 60)
 
                 Spacer()
 
-                // Authentication Form
-                VStack(spacing: 16) {
-                    // Email field (used for both sign-in and sign-up)
-                    TextField("Email", text: isSignUp ? $signUpEmail : $identifier)
-                        .padding()
-                        .background(Color.white.opacity(0.9))
-                        .foregroundColor(Color(red: 0.15, green: 0.1, blue: 0.05))
-                        .cornerRadius(10)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .textContentType(.emailAddress)
-                        .tint(Color(red: 0.6, green: 0.4, blue: 0.2)) // Cursor color
-
-                    // Password
-                    SecureField("Password", text: $password)
-                        .padding()
-                        .background(Color.white.opacity(0.9))
-                        .foregroundColor(Color(red: 0.15, green: 0.1, blue: 0.05))
-                        .cornerRadius(10)
-                        .tint(Color(red: 0.6, green: 0.4, blue: 0.2)) // Cursor color
-
-                    // Sign In/Up Button
+                // Main CTA - Sign In Button
+                VStack(spacing: 24) {
+                    // Sign In Button - opens Clerk AuthView
                     Button(action: {
-                        Task {
-                            if isSignUp {
-                                await authManager.signUp(
-                                    email: signUpEmail,
-                                    password: password
-                                )
-                            } else {
-                                await authManager.signIn(email: identifier, password: password)
-                            }
-
-                            if let errorMessage = authManager.errorMessage {
-                                self.alertMessage = errorMessage
-                                self.showingAlert = true
-                            }
-                        }
+                        showAuthView = true
                     }) {
-                        HStack {
-                            if authManager.isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                            }
-                            Text(isSignUp ? "Sign Up" : "Sign In")
+                        HStack(spacing: 12) {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                            Text("Sign In or Sign Up")
                                 .fontWeight(.semibold)
+                                .font(.body)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding()
+                        .padding(.vertical, 16)
                         .background(theme.primary)
                         .foregroundColor(.white)
-                        .cornerRadius(10)
-                    }
-                    .disabled(isSignUp
-                        ? (signUpEmail.isEmpty || password.isEmpty || authManager.isLoading)
-                        : (identifier.isEmpty || password.isEmpty || authManager.isLoading))
-
-                    // Divider
-                    HStack {
-                        Rectangle()
-                            .frame(height: 1)
-                            .foregroundColor(.white.opacity(0.3))
-                        Text("OR")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.6))
-                            .padding(.horizontal, 8)
-                        Rectangle()
-                            .frame(height: 1)
-                            .foregroundColor(.white.opacity(0.3))
-                    }
-                    .padding(.vertical, 8)
-
-                    // Social Login Buttons
-                    VStack(spacing: 12) {
-                        // Sign in with Apple
-                        SignInWithAppleButton(
-                            onRequest: { request in
-                                request.requestedScopes = [.fullName, .email]
-                                request.nonce = authManager.generateNonce()
-                            },
-                            onCompletion: { result in
-                                Task {
-                                    await authManager.handleSignInWithApple(result)
-                                    if let errorMessage = authManager.errorMessage {
-                                        self.alertMessage = errorMessage
-                                        self.showingAlert = true
-                                    }
-                                }
-                            }
-                        )
-                        .signInWithAppleButtonStyle(.black)
-                        .frame(height: 50)
-                        .cornerRadius(10)
-                        .disabled(authManager.isLoading)
-
+                        .cornerRadius(12)
                     }
 
-                    // Toggle Sign In/Up
-                    Button(action: {
-                        isSignUp.toggle()
-                        // Clear fields when switching
-                        identifier = ""
-                        signUpEmail = ""
-                        password = ""
-                        authManager.errorMessage = nil
-                    }) {
-                        Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                    // Info text
+                    VStack(spacing: 8) {
+                        Text("Continue with email, Google, or Apple")
                             .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
+                            .foregroundColor(.white.opacity(0.7))
+
+                        Text("Forgot your password? We'll help you reset it.")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.5))
                     }
-                    .padding(.top, 8)
                 }
                 .padding(.horizontal, 32)
 
@@ -192,21 +103,41 @@ struct AuthenticationView: View {
                         .foregroundColor(.white.opacity(0.5))
                 }
                 .padding(.bottom, 20)
-                }
-
             }
-            .navigationTitle("")
-            .navigationBarHidden(true)
+
+            // Loading overlay
+            if authManager.isLoading {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .tint(.white)
+                    Text("Signing in...")
+                        .foregroundColor(.white)
+                        .font(.subheadline)
+                }
+            }
         }
-        .alert("Authentication Error", isPresented: $showingAlert) {
-            Button("OK", role: .cancel) { }
+        .sheet(isPresented: $showAuthView) {
+            // Clerk's built-in AuthView handles sign-in, sign-up, password reset, and social logins
+            AuthView()
+        }
+        .alert("Authentication Error", isPresented: .init(
+            get: { authManager.errorMessage != nil },
+            set: { if !$0 { authManager.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {
+                authManager.errorMessage = nil
+            }
         } message: {
-            Text(alertMessage)
+            Text(authManager.errorMessage ?? "")
         }
     }
 }
 
-// MARK: - Main App View
+// MARK: - Main App View (Legacy - kept for compatibility)
 
 struct MainAppView: View {
     @EnvironmentObject var authManager: AuthenticationManager
@@ -303,4 +234,3 @@ struct AuthenticationView_Previews: PreviewProvider {
             .environmentObject(ThemeManager.shared)
     }
 }
-

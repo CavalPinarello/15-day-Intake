@@ -94,9 +94,37 @@ struct QuestionnaireView: View {
         currentSection == .sleepLog ? sleepLogResponses : assessmentResponses
     }
 
+    /// Current question for voice input (used by VoiceAssistantPanel)
+    private var currentQuestionForVoice: Question? {
+        guard !currentQuestions.isEmpty, currentIndex < currentQuestions.count else { return nil }
+        return currentQuestions[currentIndex]
+    }
+
     // Theme-based background color to avoid white flash during navigation
     private var loadingBackgroundColor: Color {
         themeManager.circadianPalette.backgroundStart
+    }
+
+    // MARK: - Voice Input Support
+
+    /// Set an answer from voice input
+    private func setAnswerFromVoice(_ value: Any) {
+        guard let question = currentQuestionForVoice else { return }
+
+        // Haptic feedback
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+
+        // Set the response based on current section
+        if currentSection == .sleepLog {
+            sleepLogResponses[question.id] = value
+            sleepLogUserInteracted.insert(question.id)
+        } else {
+            assessmentResponses[question.id] = value
+            assessmentUserInteracted.insert(question.id)
+        }
+
+        print("[Voice] Set answer for \(question.id) = \(value)")
     }
 
     var body: some View {
@@ -287,6 +315,7 @@ struct QuestionnaireView: View {
                 .zIndex(101)
             }
         }
+        // Note: Voice assistant panel removed - Easy Mode now routes to SeamlessVoiceQuestionnaireView via QuestionnaireRouterView
         // First-Time Feature Guides
         .fullScreenCover(isPresented: $guideManager.isShowingGuide) {
             if let guide = guideManager.currentGuide {

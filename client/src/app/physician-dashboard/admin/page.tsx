@@ -1541,40 +1541,78 @@ export default function AdminToolsPage() {
       )}
 
       {/* Reset Progress Confirmation Modal */}
-      {showResetProgressConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center gap-3 text-amber-600 mb-4">
-              <RotateCcw className="w-6 h-6" />
-              <h3 className="text-lg font-semibold">Reset User Progress</h3>
-            </div>
-            <p className="text-gray-600 mb-4">
-              This will delete all questionnaire responses, insights, and progress for this user. The user account will remain intact but reset to Day 1.
-            </p>
+      {showResetProgressConfirm && (() => {
+        const user = users?.find((u: UserData) => u._id === showResetProgressConfirm);
+        const isTestUser = user?.isTestUser;
 
-            {/* Wearable Data Toggle */}
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 mb-6">
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+              <div className="flex items-center gap-3 text-amber-600 mb-4">
+                <RotateCcw className="w-6 h-6" />
+                <h3 className="text-lg font-semibold">Reset User Progress</h3>
+              </div>
+              <p className="text-gray-600 mb-4">
+                This will delete all questionnaire responses, insights, and progress for this user. The user account will remain intact but reset to Day 1.
+              </p>
+
+              {/* Testing Helper for Test Users */}
+              {isTestUser && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Testing Mode</p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        This is a test user. The "clear wearable data" option below lets you fully reset all HealthKit data for clean testing.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Wearable Data Toggle */}
+              <div className={`p-4 rounded-lg border mb-6 ${
+                resetIncludeWearables
+                  ? "bg-red-50 border-red-300"
+                  : "bg-gray-50 border-gray-200"
+              }`}>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={resetIncludeWearables}
                   onChange={(e) => setResetIncludeWearables(e.target.checked)}
-                  className="w-5 h-5 mt-0.5 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                  className="w-6 h-6 mt-0.5 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer"
                 />
-                <div>
-                  <span className="font-medium text-gray-900 flex items-center gap-2">
-                    <Watch className="w-4 h-4" />
+                <div className="flex-1">
+                  <span className="font-semibold text-gray-900 flex items-center gap-2 text-base">
+                    <Watch className="w-5 h-5 text-blue-600" />
                     Also clear wearable data
                   </span>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Include HealthKit/Apple Watch data (sleep stages, heart rate, activity, etc.)
+                  <p className="text-sm text-gray-600 mt-1.5 font-medium">
+                    HealthKit/Apple Watch data: sleep stages, heart rate, HRV, activity, circadian signals
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Check this to fully reset everything for clean testing
                   </p>
                 </div>
               </label>
 
               {resetIncludeWearables && (
-                <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                  <strong>Warning:</strong> This will permanently delete all synced wearable data including sleep stages, heart rate, activity metrics, and circadian data.
+                <div className="mt-3 p-3 bg-red-100 border border-red-300 rounded-lg text-sm text-red-800">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold">Full Data Purge</p>
+                      <p className="mt-1">This will permanently delete ALL synced wearable data including sleep stages, heart rate, HRV, activity metrics, and circadian data.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!resetIncludeWearables && isTestUser && (
+                <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                  <strong>Note:</strong> Wearable data will be preserved. To test with fresh HealthKit data, check the box above.
                 </div>
               )}
             </div>
@@ -1596,7 +1634,7 @@ export default function AdminToolsPage() {
               </button>
               <button
                 onClick={() => handleResetProgress(showResetProgressConfirm as Id<"users">, resetIncludeWearables)}
-                className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium ${
                   resetIncludeWearables
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-amber-600 hover:bg-amber-700"
@@ -1604,12 +1642,13 @@ export default function AdminToolsPage() {
                 disabled={isLoading}
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                Reset {resetIncludeWearables ? "All Data" : "Progress"}
+                {resetIncludeWearables ? "Reset Everything" : "Reset Progress Only"}
               </button>
             </div>
           </div>
         </div>
-      )}
+      );
+      })()}
 
       {/* Complete Reset Confirmation Modal */}
       {showCompleteResetConfirm && (

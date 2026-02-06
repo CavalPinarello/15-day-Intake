@@ -964,6 +964,7 @@ export const getAllPatientsWithProgress = query({
       username: v.string(),
       name: v.optional(v.string()),
       email: v.optional(v.string()),
+      profile_picture: v.optional(v.string()), // Profile picture URL
       current_day: v.number(),
       started_at: v.number(),
       last_accessed: v.number(),
@@ -1028,6 +1029,7 @@ export const getAllPatientsWithProgress = query({
           username: user.username,
           name: fullName, // Full name if available, null otherwise
           email: user.email,
+          profile_picture: user.profile_picture, // Profile picture URL
           current_day: user.current_day,
           started_at: user.started_at,
           last_accessed: user.last_accessed,
@@ -1081,6 +1083,7 @@ export const getPatientDetails = query({
       _id: v.id("users"),
       username: v.string(),
       email: v.optional(v.string()),
+      profile_picture: v.optional(v.string()), // Profile picture URL
       current_day: v.number(),
       started_at: v.number(),
       last_accessed: v.number(),
@@ -1198,6 +1201,7 @@ export const getPatientDetails = query({
         _id: user._id,
         username: user.username,
         email: user.email,
+        profile_picture: user.profile_picture, // Profile picture URL
         current_day: user.current_day,
         started_at: user.started_at,
         last_accessed: user.last_accessed,
@@ -5298,31 +5302,45 @@ export const getHealthKitDataForPhysician = query({
         .collect(),
     ]);
 
-    // Filter by source if specified
+    // Filter by source if specified (supports both wearable_type and bundle_id filtering)
     const filteredSleep = sourceFilter
-      ? sleepData.filter((s) => s.source_bundle_id === sourceFilter)
+      ? sleepData.filter((s) =>
+          s.wearable_type === sourceFilter || s.source_bundle_id === sourceFilter
+        )
       : sleepData;
 
-    // Extract available sources from sleep data
-    const sourcesSet = new Set<string>();
+    // Build consolidated source list (groups by wearable type with device models)
+    const sourcesMap = new Map<string, {
+      name: string;
+      bundleIds: Set<string>;
+      deviceModels: Set<string>;
+      dataPoints: number;
+    }>();
+
     sleepData.forEach((s) => {
-      if (s.all_sources_json) {
-        try {
-          const sources = JSON.parse(s.all_sources_json);
-          sources.forEach((src: string) => sourcesSet.add(src));
-        } catch {
-          // Ignore parse errors
-        }
+      const wearableType = s.wearable_type || "Other Device";
+      if (!sourcesMap.has(wearableType)) {
+        sourcesMap.set(wearableType, {
+          name: wearableType,
+          bundleIds: new Set(),
+          deviceModels: new Set(),
+          dataPoints: 0
+        });
       }
-      if (s.primary_source) sourcesSet.add(s.primary_source);
+
+      const source = sourcesMap.get(wearableType)!;
+      if (s.source_bundle_id) source.bundleIds.add(s.source_bundle_id);
+      if (s.device_model) source.deviceModels.add(s.device_model);
+      source.dataPoints++;
     });
 
-    const availableSources = Array.from(sourcesSet).map((name) => ({
-      name,
-      bundleIdentifier:
-        sleepData.find((s) => s.primary_source === name)?.source_bundle_id || "",
-      displayName: name,
-      dataPoints: sleepData.filter((s) => s.primary_source === name).length,
+    // Convert to array format expected by frontend
+    const availableSources = Array.from(sourcesMap.entries()).map(([wearableType, data]) => ({
+      name: wearableType,
+      bundleIdentifier: Array.from(data.bundleIds).join(","), // Multiple bundle IDs separated by comma
+      displayName: wearableType,
+      deviceModels: Array.from(data.deviceModels),
+      dataPoints: data.dataPoints,
     }));
 
     // Data quality flags
@@ -5365,6 +5383,116 @@ export const getHealthKitDataForPhysician = query({
         hasHeartRate,
         hasHRV,
         hasLightExposure,
+      },
+    };
+  },
+});
+
+// ============================================
+// HealthKit Sync Status Query (for debugging)
+// ============================================
+
+/**
+ * Get detailed sync status for a user's HealthKit data.
+ * Useful for debugging why wearable data isn't showing up.
+ */
+export const getHealthKitSyncStatus = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    // Get user info
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      return { error: "User not found" };
+    }
+
+    // Get sync records from ios_healthkit_sync table
+    const syncRecords = await ctx.db
+      .query("ios_healthkit_sync")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Get sleep data counts by source
+    const allSleepData = await ctx.db
+      .query("user_sleep_data")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Categorize sleep data by source
+    const sourceBreakdown: Record<string, { count: number; dateRange: { first: string; last: string } | null }> = {};
+    for (const record of allSleepData) {
+      const source = record.primary_source || "Unknown";
+      if (!sourceBreakdown[source]) {
+        sourceBreakdown[source] = { count: 0, dateRange: null };
+      }
+      sourceBreakdown[source].count++;
+
+      if (!sourceBreakdown[source].dateRange) {
+        sourceBreakdown[source].dateRange = { first: record.date, last: record.date };
+      } else {
+        if (record.date < sourceBreakdown[source].dateRange!.first) {
+          sourceBreakdown[source].dateRange!.first = record.date;
+        }
+        if (record.date > sourceBreakdown[source].dateRange!.last) {
+          sourceBreakdown[source].dateRange!.last = record.date;
+        }
+      }
+    }
+
+    // Get heart rate count
+    const heartRateData = await ctx.db
+      .query("user_heart_rate")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Get activity count
+    const activityData = await ctx.db
+      .query("user_activity")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+
+    // Check for wearable vs questionnaire data
+    const wearableData = allSleepData.filter(s => s.primary_source && s.primary_source !== "Questionnaire");
+    const questionnaireData = allSleepData.filter(s => s.primary_source === "Questionnaire" || !s.primary_source);
+
+    return {
+      user: {
+        email: user.email,
+        fullName: user.full_name,
+        appleHealthConnected: user.apple_health_connected === true,
+        createdAt: user.created_at,
+      },
+      syncRecords: syncRecords.map(r => ({
+        deviceId: r.device_id,
+        lastSyncAt: r.last_sync_at ? new Date(r.last_sync_at).toISOString() : null,
+        syncStatus: r.sync_status,
+        dataTypesSynced: r.data_types_synced,
+        recordsSynced: r.records_synced,
+      })),
+      dataCounts: {
+        totalSleepRecords: allSleepData.length,
+        wearableSleepRecords: wearableData.length,
+        questionnaireSleepRecords: questionnaireData.length,
+        heartRateRecords: heartRateData.length,
+        activityRecords: activityData.length,
+      },
+      sourceBreakdown,
+      latestSleepDate: allSleepData.length > 0
+        ? allSleepData.sort((a, b) => b.date.localeCompare(a.date))[0].date
+        : null,
+      diagnosis: {
+        hasAppleHealthFlag: user.apple_health_connected === true,
+        hasSyncRecords: syncRecords.length > 0,
+        hasWearableData: wearableData.length > 0,
+        hasAnyData: allSleepData.length > 0,
+        issue: !user.apple_health_connected
+          ? "Apple Health not marked as connected - user needs to sync from iOS app"
+          : syncRecords.length === 0
+            ? "No sync records found - sync may have failed or never completed"
+            : wearableData.length === 0
+              ? "No wearable data found - check if user has Apple Watch or other wearable"
+              : "Data looks healthy - check date range filters in dashboard",
       },
     };
   },

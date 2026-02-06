@@ -2550,7 +2550,12 @@ class QuestionnaireManager: ObservableObject {
                 sleepLogCompleted: progress.sleepLogCompleted ?? false,
                 assessmentCompleted: progress.assessmentCompleted ?? false,
                 dayReadyAt: progress.dayReadyAt,
-                expansionPackCompleted: progress.expansionPackCompleted ?? false
+                expansionPackCompleted: progress.expansionPackCompleted ?? false,
+                // Calendar gating fields
+                calendarUnlocked: progress.calendarUnlocked ?? true,
+                calendarLockMessage: progress.calendarLockMessage,
+                maxDayAllowed: progress.maxDayAllowed,
+                nextDayUnlocksOn: progress.nextDayUnlocksOn
             )
             newProgress.completedExpansionGateways = completedExpansionGateways
 

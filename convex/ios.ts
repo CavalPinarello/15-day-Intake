@@ -523,6 +523,153 @@ export const signInWithApple = mutation({
 });
 
 /**
+ * Sign in with Clerk
+ * Handles both new users and linking existing email/password accounts to Clerk
+ */
+export const signInWithClerk = mutation({
+  args: {
+    clerkUserId: v.string(),
+    email: v.string(),
+    fullName: v.optional(v.string()),
+    deviceId: v.string(),
+    deviceInfo: v.optional(v.object({
+      deviceName: v.optional(v.string()),
+      deviceModel: v.optional(v.string()),
+      osVersion: v.optional(v.string()),
+      appVersion: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // First, check if this Clerk user already exists (by oauth provider + id)
+    let user = await ctx.db
+      .query("users")
+      .withIndex("by_oauth", (q) => q.eq("oauth_provider", "clerk").eq("oauth_id", args.clerkUserId))
+      .first();
+
+    let isNewUser = false;
+
+    if (!user && args.email) {
+      // Check if user exists with this email (for account linking)
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .first();
+
+      if (user) {
+        // Link existing account to Clerk
+        await ctx.db.patch(user._id, {
+          oauth_provider: "clerk",
+          oauth_id: args.clerkUserId,
+          email_verified: true, // Clerk verifies email
+          last_accessed: now,
+        });
+        console.log(`Linked existing user ${user.username} to Clerk ID ${args.clerkUserId}`);
+      }
+    }
+
+    if (!user) {
+      // Create new user
+      isNewUser = true;
+      const username = args.email?.split("@")[0] || `user_${args.clerkUserId.slice(0, 8)}`;
+
+      // Ensure username is unique
+      let finalUsername = username;
+      let counter = 1;
+      while (await ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", finalUsername)).first()) {
+        finalUsername = `${username}${counter}`;
+        counter++;
+      }
+
+      const userId = await ctx.db.insert("users", {
+        username: finalUsername,
+        password_hash: "", // No password for Clerk users
+        email: args.email,
+        full_name: args.fullName,
+        oauth_provider: "clerk",
+        oauth_id: args.clerkUserId,
+        current_day: 1,
+        started_at: now,
+        last_accessed: now,
+        created_at: now,
+        email_verified: true, // Clerk verifies email
+        role: "patient",
+      });
+
+      user = await ctx.db.get(userId);
+      console.log(`Created new Clerk user ${finalUsername} with ID ${userId}`);
+    }
+
+    if (!user) {
+      throw new Error("Failed to create or find user");
+    }
+
+    // Generate session token
+    const sessionToken = generateSessionToken();
+    const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
+
+    // Create iOS session
+    await ctx.db.insert("ios_sessions", {
+      user_id: user._id,
+      session_token: sessionToken,
+      device_id: args.deviceId,
+      expires_at: expiresAt,
+      created_at: now,
+      last_refreshed_at: now,
+      is_active: true,
+    });
+
+    // Update or create device record
+    const existingDevice = await ctx.db
+      .query("ios_devices")
+      .withIndex("by_device_id", (q) => q.eq("device_id", args.deviceId))
+      .first();
+
+    if (!existingDevice) {
+      await ctx.db.insert("ios_devices", {
+        user_id: user._id,
+        device_token: "",
+        device_id: args.deviceId,
+        device_name: args.deviceInfo?.deviceName,
+        device_model: args.deviceInfo?.deviceModel,
+        os_version: args.deviceInfo?.osVersion,
+        app_version: args.deviceInfo?.appVersion,
+        push_enabled: false,
+        last_active_at: now,
+        created_at: now,
+      });
+    }
+
+    // Update user last accessed
+    await ctx.db.patch(user._id, {
+      last_accessed: now,
+    });
+
+    return {
+      userId: user._id,
+      sessionToken,
+      expiresAt,
+      isNewUser,
+      user: {
+        username: user.username,
+        email: user.email,
+        currentDay: user.current_day,
+        role: user.role,
+        onboardingCompleted: user.onboarding_completed,
+        appleHealthConnected: user.apple_health_connected,
+        fullName: user.full_name,
+        measurementSystem: user.measurement_system,
+        heightCm: user.height_cm,
+        weightKg: user.weight_kg,
+        gender: user.gender,
+        birthYear: user.birth_year,
+      },
+    };
+  },
+});
+
+/**
  * Register new user
  */
 export const register = mutation({
@@ -1020,6 +1167,10 @@ export const syncSleepData = mutation({
       sourceBundleId: v.optional(v.string()),
       allSourcesJson: v.optional(v.string()), // JSON array of source names
       isMultiSource: v.optional(v.boolean()),
+      // Wearable consolidation fields
+      wearableType: v.optional(v.string()), // "Apple Watch", "Oura Ring", "Garmin", etc.
+      deviceModel: v.optional(v.string()), // "Series 8", "Ultra", etc.
+      allBundleIdsJson: v.optional(v.string()), // JSON array of all bundle IDs
     })),
   },
   handler: async (ctx, args) => {
@@ -1062,6 +1213,10 @@ export const syncSleepData = mutation({
           source_bundle_id: data.sourceBundleId,
           all_sources_json: data.allSourcesJson,
           is_multi_source: data.isMultiSource,
+          // Wearable consolidation fields
+          wearable_type: data.wearableType,
+          device_model: data.deviceModel,
+          all_bundle_ids_json: data.allBundleIdsJson,
         });
       } else {
         await ctx.db.insert("user_sleep_data", {
@@ -1084,6 +1239,10 @@ export const syncSleepData = mutation({
           source_bundle_id: data.sourceBundleId,
           all_sources_json: data.allSourcesJson,
           is_multi_source: data.isMultiSource,
+          // Wearable consolidation fields
+          wearable_type: data.wearableType,
+          device_model: data.deviceModel,
+          all_bundle_ids_json: data.allBundleIdsJson,
         });
       }
       recordsSynced++;
@@ -2940,6 +3099,49 @@ export const getJourneyDebugInfo = query({
       responsesCount: responses.length,
       triggeredGateways: gatewayStates.filter(g => g.triggered).map(g => g.gateway_id),
       progressByDay: progressWithDays,
+    };
+  },
+});
+
+// ============================================
+// Physician Assignment Queries
+// ============================================
+
+/**
+ * Get the assigned physician for a patient.
+ * Used by iOS app to display physician info in Treatment Dashboard.
+ */
+export const getAssignedPhysician = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Find active assignment for this patient
+    const assignment = await ctx.db
+      .query("physician_patient_assignments")
+      .withIndex("by_patient_status", (q) =>
+        q.eq("patient_id", args.userId).eq("status", "active")
+      )
+      .first();
+
+    if (!assignment) {
+      return null;
+    }
+
+    // Get physician details
+    const physician = await ctx.db.get(assignment.physician_id);
+    if (!physician) {
+      return null;
+    }
+
+    return {
+      id: physician._id,
+      fullName: physician.full_name,
+      title: physician.title ?? null,
+      avatarUrl: physician.avatar_url ?? null,
+      email: physician.email,
+      specialization: physician.specialization ?? null,
+      assignedAt: assignment.assigned_at,
     };
   },
 });

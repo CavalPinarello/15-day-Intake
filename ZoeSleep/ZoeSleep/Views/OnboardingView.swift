@@ -586,10 +586,14 @@ struct GenderAgeStepView: View {
             HStack {
                 Picker("Birth Year", selection: $onboardingManager.profile.birthYear) {
                     ForEach((1920...currentYear).reversed(), id: \.self) { year in
-                        Text(String(year)).tag(year)
+                        Text(String(year))
+                            .foregroundColor(palette.textPrimary)
+                            .tag(year)
                     }
                 }
                 .pickerStyle(.wheel)
+                .tint(palette.textPrimary)
+                .accentColor(palette.textPrimary)
                 .frame(height: isCompact ? 90 : 100)
                 .frame(maxWidth: 140)
 

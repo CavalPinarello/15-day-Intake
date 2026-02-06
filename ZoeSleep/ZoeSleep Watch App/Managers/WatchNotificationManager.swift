@@ -57,7 +57,7 @@ class WatchNotificationManager: ObservableObject {
 
     // MARK: - Master Schedule (Call on App Activation)
 
-    /// Schedule all notifications - checks Convex first to avoid unnecessary reminders
+    /// Schedule all notifications - only 2 per day (midday and evening check-ins)
     func scheduleAllNotifications() async {
         guard isAuthorized else { return }
 
@@ -67,14 +67,11 @@ class WatchNotificationManager: ObservableObject {
         // Cancel all existing notifications and reschedule
         cancelAllNotifications()
 
-        // Schedule based on what's NOT completed
-        scheduleSleepLogReminders()
-        scheduleAssessmentReminders()
+        // Only schedule check-in reminders (midday and evening)
         scheduleCheckInReminders()
-        scheduleEnergyNudges()
         scheduleDayUnlockNotification()
 
-        print("[Notifications] Scheduled all notifications (SleepLog=\(lastKnownSleepLogComplete), Assessment=\(lastKnownAssessmentComplete))")
+        print("[Notifications] Scheduled 2 daily check-in notifications")
     }
 
     /// Refresh completion status from Convex (ground truth)
@@ -95,398 +92,130 @@ class WatchNotificationManager: ObservableObject {
         }
     }
 
-    // MARK: - Sleep Log Reminders (Morning Focus)
+    // MARK: - Sleep Log & Assessment Reminders REMOVED
+    // Sleep log and assessment notifications are now handled by iPhone only
 
-    /// Schedule sleep log reminders - only if not completed
-    private func scheduleSleepLogReminders() {
-        // Don't schedule if already complete
-        guard !lastKnownSleepLogComplete else {
-            print("[Notifications] Sleep log already complete - skipping reminders")
-            return
-        }
+    // MARK: - Check-In Reminders (2x Daily - Simplified)
 
-        // Sleep log should be filled in the morning (best recall)
-        // Schedule 3 reminders with increasing urgency
-        let times: [(hour: Int, minute: Int)] = [
-            (7, 30),   // First gentle reminder
-            (9, 15),   // Second reminder
-            (11, 0),   // Final reminder before noon
-        ]
-
-        for (index, time) in times.enumerated() {
-            let reminderNumber = index + 1
-            let message = EncouragementMessages.randomSleepLogReminder()
-
-            let content = UNMutableNotificationContent()
-            content.title = reminderNumber == 3 ? "Sleep Log Needed!" : "Sleep Log"
-            content.body = message
-            content.sound = reminderNumber >= 2 ? .default : nil
-            content.categoryIdentifier = "SLEEP_LOG"
-
-            var dateComponents = DateComponents()
-            dateComponents.hour = time.hour
-            dateComponents.minute = time.minute
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
-
-            let request = UNNotificationRequest(
-                identifier: "sleep_log_\(reminderNumber)",
-                content: content,
-                trigger: trigger
-            )
-
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("[Notifications] Failed to schedule sleep log \(reminderNumber): \(error)")
-                }
-            }
-        }
-    }
-
-    // MARK: - Assessment Reminders (Flexible Timing)
-
-    /// Schedule assessment reminders - only if not completed
-    private func scheduleAssessmentReminders() {
-        // Don't schedule if already complete
-        guard !lastKnownAssessmentComplete else {
-            print("[Notifications] Assessment already complete - skipping reminders")
-            return
-        }
-
-        // Assessment can be done anytime, but we want varied reminder times
-        // These use semi-random times to feel less robotic
-        let times: [(hour: Int, minute: Int)] = [
-            (10, 45),  // Late morning
-            (14, 20),  // Early afternoon
-            (16, 35),  // Late afternoon
-            (19, 10),  // Evening (before wind-down)
-        ]
-
-        for (index, time) in times.enumerated() {
-            let reminderNumber = index + 1
-            let message = EncouragementMessages.randomAssessmentReminder()
-
-            let content = UNMutableNotificationContent()
-            content.title = reminderNumber == 4 ? "Assessment Today!" : "Daily Questions"
-            content.body = message
-            content.sound = reminderNumber >= 3 ? .default : nil
-            content.categoryIdentifier = "ASSESSMENT"
-
-            var dateComponents = DateComponents()
-            dateComponents.hour = time.hour
-            dateComponents.minute = time.minute
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
-
-            let request = UNNotificationRequest(
-                identifier: "assessment_\(reminderNumber)",
-                content: content,
-                trigger: trigger
-            )
-
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("[Notifications] Failed to schedule assessment \(reminderNumber): \(error)")
-                }
-            }
-        }
-    }
-
-    // MARK: - Check-In Reminders (3x Daily)
-
-    /// Schedule check-in reminders (morning, midday, evening)
+    /// Schedule check-in reminders - only midday and evening (2 total per day)
+    /// Uses times synced from iPhone if available, otherwise defaults to 1 PM and 6 PM
     func scheduleCheckInReminders() {
-        scheduleMorningCheckInReminders()
-        scheduleMiddayCheckInReminders()
-        scheduleEveningCheckInReminders()
-
-        print("[Notifications] Scheduled 9 daily check-in reminders")
+        updateNotificationTimesFromSettings()
+        print("[Notifications] Scheduled 2 daily check-in reminders (midday + evening)")
     }
 
-    private func scheduleMorningCheckInReminders() {
-        // Varied times to feel less robotic
-        let times: [(hour: Int, minute: Int)] = [
-            (7, 0),
-            (8, 45),
-            (10, 30),
-        ]
+    /// Update notification times from settings synced from iPhone
+    func updateNotificationTimesFromSettings() {
+        let defaults = UserDefaults.standard
 
-        for (index, time) in times.enumerated() {
-            let reminderNumber = index + 1
-            let notificationContent = EncouragementMessages.notificationContent(
-                for: .morning,
-                reminderNumber: reminderNumber
-            )
+        // Read synced times from iPhone (via WCSession)
+        let middayHour = defaults.integer(forKey: "middayHour")
+        let middayMinute = defaults.integer(forKey: "middayMinute")
+        let eveningHour = defaults.integer(forKey: "eveningHour")
+        let eveningMinute = defaults.integer(forKey: "eveningMinute")
 
-            let content = UNMutableNotificationContent()
-            content.title = notificationContent.title
-            content.body = notificationContent.body
-            content.sound = notificationContent.sound ? .default : nil
-            content.categoryIdentifier = "CHECKIN_MORNING"
+        // Use defaults if not set (13:00 and 18:00)
+        let finalMiddayHour = middayHour > 0 ? middayHour : 13
+        let finalMiddayMinute = middayMinute >= 0 ? middayMinute : 0
+        let finalEveningHour = eveningHour > 0 ? eveningHour : 18
+        let finalEveningMinute = eveningMinute >= 0 ? eveningMinute : 0
 
-            var dateComponents = DateComponents()
-            dateComponents.hour = time.hour
-            dateComponents.minute = time.minute
+        print("[Notifications] Using times - Midday: \(finalMiddayHour):\(String(format: "%02d", finalMiddayMinute)), Evening: \(finalEveningHour):\(String(format: "%02d", finalEveningMinute))")
 
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
+        // Reschedule with new times
+        scheduleMiddayCheckInReminder(hour: finalMiddayHour, minute: finalMiddayMinute)
+        scheduleEveningCheckInReminder(hour: finalEveningHour, minute: finalEveningMinute)
+    }
 
-            let request = UNNotificationRequest(
-                identifier: "checkin_morning_\(reminderNumber)",
-                content: content,
-                trigger: trigger
-            )
+    private func scheduleMiddayCheckInReminder(hour: Int, minute: Int) {
+        // Single midday check-in at specified time
+        let notificationContent = EncouragementMessages.notificationContent(
+            for: .midday,
+            reminderNumber: 1
+        )
 
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("[Notifications] Failed to schedule morning \(reminderNumber): \(error)")
-                }
+        let content = UNMutableNotificationContent()
+        content.title = notificationContent.title
+        content.body = notificationContent.body
+        content.sound = .default
+        content.categoryIdentifier = "CHECKIN_MIDDAY"
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: dateComponents,
+            repeats: true
+        )
+
+        let request = UNNotificationRequest(
+            identifier: "checkin_midday",
+            content: content,
+            trigger: trigger
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("[Notifications] Failed to schedule midday check-in: \(error)")
+            } else {
+                print("[Notifications] Scheduled midday at \(hour):\(String(format: "%02d", minute))")
             }
         }
     }
 
-    private func scheduleMiddayCheckInReminders() {
-        let times: [(hour: Int, minute: Int)] = [
-            (12, 30),
-            (14, 15),
-            (16, 45),
-        ]
+    private func scheduleEveningCheckInReminder(hour: Int, minute: Int) {
+        // Single evening check-in at specified time
+        let notificationContent = EncouragementMessages.notificationContent(
+            for: .evening,
+            reminderNumber: 1
+        )
 
-        for (index, time) in times.enumerated() {
-            let reminderNumber = index + 1
-            let notificationContent = EncouragementMessages.notificationContent(
-                for: .midday,
-                reminderNumber: reminderNumber
-            )
+        let content = UNMutableNotificationContent()
+        content.title = notificationContent.title
+        content.body = notificationContent.body
+        content.sound = .default
+        content.categoryIdentifier = "CHECKIN_EVENING"
 
-            let content = UNMutableNotificationContent()
-            content.title = notificationContent.title
-            content.body = notificationContent.body
-            content.sound = notificationContent.sound ? .default : nil
-            content.categoryIdentifier = "CHECKIN_MIDDAY"
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
 
-            var dateComponents = DateComponents()
-            dateComponents.hour = time.hour
-            dateComponents.minute = time.minute
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: dateComponents,
+            repeats: true
+        )
 
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
+        let request = UNNotificationRequest(
+            identifier: "checkin_evening",
+            content: content,
+            trigger: trigger
+        )
 
-            let request = UNNotificationRequest(
-                identifier: "checkin_midday_\(reminderNumber)",
-                content: content,
-                trigger: trigger
-            )
-
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("[Notifications] Failed to schedule midday \(reminderNumber): \(error)")
-                }
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("[Notifications] Failed to schedule evening check-in: \(error)")
+            } else {
+                print("[Notifications] Scheduled evening at \(hour):\(String(format: "%02d", minute))")
             }
         }
     }
 
-    private func scheduleEveningCheckInReminders() {
-        // Sleep-friendly timing - no late night disturbances!
-        let times: [(hour: Int, minute: Int)] = [
-            (18, 0),
-            (19, 20),
-            (20, 15),  // Last reminder at 8:15 PM
-        ]
-
-        for (index, time) in times.enumerated() {
-            let reminderNumber = index + 1
-            let notificationContent = EncouragementMessages.notificationContent(
-                for: .evening,
-                reminderNumber: reminderNumber
-            )
-
-            let content = UNMutableNotificationContent()
-            content.title = notificationContent.title
-            content.body = notificationContent.body
-            content.sound = notificationContent.sound ? .default : nil
-            content.categoryIdentifier = "CHECKIN_EVENING"
-
-            var dateComponents = DateComponents()
-            dateComponents.hour = time.hour
-            dateComponents.minute = time.minute
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
-
-            let request = UNNotificationRequest(
-                identifier: "checkin_evening_\(reminderNumber)",
-                content: content,
-                trigger: trigger
-            )
-
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("[Notifications] Failed to schedule evening \(reminderNumber): \(error)")
-                }
-            }
-        }
-    }
-
-    // MARK: - Energy Nudges (Varied Throughout Day)
-
-    /// Schedule energy and wellness nudges at varied times
-    private func scheduleEnergyNudges() {
-        // Morning energy nudges (circadian light exposure)
-        scheduleMorningEnergyNudges()
-
-        // Afternoon energy nudges (movement, alertness)
-        scheduleAfternoonEnergyNudges()
-
-        // Evening wind-down nudges
-        scheduleEveningWindDownNudges()
-
-        print("[Notifications] Scheduled 6 daily energy nudges")
-    }
-
-    private func scheduleMorningEnergyNudges() {
-        // Semi-random times in morning window
-        let times: [(hour: Int, minute: Int)] = [
-            (6, 45),   // Early - catch early risers
-            (8, 20),   // Mid-morning - light exposure reminder
-        ]
-
-        for (index, time) in times.enumerated() {
-            let message = EncouragementMessages.randomEnergyNudge(for: .morning)
-
-            let content = UNMutableNotificationContent()
-            content.title = "Energy Boost"
-            content.body = message
-            content.sound = nil  // Silent nudges
-            content.categoryIdentifier = "ENERGY_NUDGE"
-
-            var dateComponents = DateComponents()
-            dateComponents.hour = time.hour
-            dateComponents.minute = time.minute
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
-
-            let request = UNNotificationRequest(
-                identifier: "energy_morning_\(index + 1)",
-                content: content,
-                trigger: trigger
-            )
-
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("[Notifications] Failed to schedule morning energy: \(error)")
-                }
-            }
-        }
-    }
-
-    private func scheduleAfternoonEnergyNudges() {
-        // Target the afternoon slump window
-        let times: [(hour: Int, minute: Int)] = [
-            (13, 45),  // Post-lunch slump
-            (15, 30),  // Mid-afternoon dip
-        ]
-
-        for (index, time) in times.enumerated() {
-            let message = EncouragementMessages.randomEnergyNudge(for: .afternoon)
-
-            let content = UNMutableNotificationContent()
-            content.title = "Afternoon Boost"
-            content.body = message
-            content.sound = nil
-            content.categoryIdentifier = "ENERGY_NUDGE"
-
-            var dateComponents = DateComponents()
-            dateComponents.hour = time.hour
-            dateComponents.minute = time.minute
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
-
-            let request = UNNotificationRequest(
-                identifier: "energy_afternoon_\(index + 1)",
-                content: content,
-                trigger: trigger
-            )
-
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("[Notifications] Failed to schedule afternoon energy: \(error)")
-                }
-            }
-        }
-    }
-
-    private func scheduleEveningWindDownNudges() {
-        // Evening circadian wind-down reminders
-        let times: [(hour: Int, minute: Int)] = [
-            (19, 45),  // Pre-bedtime - dim lights
-            (21, 0),   // Bedtime prep - blue light reminder
-        ]
-
-        for (index, time) in times.enumerated() {
-            let message = EncouragementMessages.randomEnergyNudge(for: .evening)
-
-            let content = UNMutableNotificationContent()
-            content.title = "Wind Down"
-            content.body = message
-            content.sound = nil  // Silent for evening
-            content.categoryIdentifier = "WIND_DOWN"
-
-            var dateComponents = DateComponents()
-            dateComponents.hour = time.hour
-            dateComponents.minute = time.minute
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true
-            )
-
-            let request = UNNotificationRequest(
-                identifier: "winddown_\(index + 1)",
-                content: content,
-                trigger: trigger
-            )
-
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("[Notifications] Failed to schedule wind-down: \(error)")
-                }
-            }
-        }
-    }
+    // MARK: - Energy Nudges REMOVED
+    // Energy nudges removed to reduce notification overload
 
     // MARK: - Completion Handlers
 
-    /// Call when sleep log is completed - cancels remaining reminders
+    /// Call when sleep log is completed (no reminders to cancel since handled by iPhone)
     func markSleepLogComplete() {
         lastKnownSleepLogComplete = true
-        cancelSleepLogReminders()
-        showCompletionNotification(type: "Sleep Log")
+        // No Watch reminders to cancel - handled by iPhone
     }
 
-    /// Call when assessment is completed - cancels remaining reminders
+    /// Call when assessment is completed (no reminders to cancel since handled by iPhone)
     func markAssessmentComplete() {
         lastKnownAssessmentComplete = true
-        cancelAssessmentReminders()
-        showCompletionNotification(type: "Assessment")
+        // No Watch reminders to cancel - handled by iPhone
     }
 
     /// Call when check-in is completed
@@ -510,14 +239,14 @@ class WatchNotificationManager: ObservableObject {
         UNUserNotificationCenter.current().add(request)
     }
 
-    /// Call when full day is completed
+    /// Call when full day is completed (all check-ins done)
     func markDayComplete() {
         lastKnownSleepLogComplete = true
         lastKnownAssessmentComplete = true
 
         // Show celebration notification
         let content = UNMutableNotificationContent()
-        content.title = "Day Complete!"
+        content.title = "All Check-Ins Complete!"
         content.body = EncouragementMessages.randomDayCompleteMessage()
         content.sound = .default
 
@@ -525,27 +254,6 @@ class WatchNotificationManager: ObservableObject {
 
         let request = UNNotificationRequest(
             identifier: "day_complete_\(UUID().uuidString)",
-            content: content,
-            trigger: trigger
-        )
-
-        UNUserNotificationCenter.current().add(request)
-
-        // Cancel all task reminders for today
-        cancelSleepLogReminders()
-        cancelAssessmentReminders()
-    }
-
-    private func showCompletionNotification(type: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "\(type) Complete!"
-        content.body = EncouragementMessages.randomCompletionMessage()
-        content.sound = .default
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-
-        let request = UNNotificationRequest(
-            identifier: "\(type.lowercased())_complete_\(UUID().uuidString)",
             content: content,
             trigger: trigger
         )
@@ -611,33 +319,17 @@ class WatchNotificationManager: ObservableObject {
         print("[Notifications] Cancelled all notifications")
     }
 
-    private func cancelSleepLogReminders() {
-        let identifiers = (1...3).map { "sleep_log_\($0)" }
-        UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: identifiers
-        )
-    }
-
-    private func cancelAssessmentReminders() {
-        let identifiers = (1...4).map { "assessment_\($0)" }
-        UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: identifiers
-        )
-    }
-
     private func cancelCheckInReminders(for type: String) {
-        let identifiers = (1...3).map { "checkin_\(type)_\($0)" }
+        // Only 2 check-ins now: midday and evening
+        let identifier = "checkin_\(type)"
         UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: identifiers
+            withIdentifiers: [identifier]
         )
     }
 
     func cancelCheckInReminders() {
-        let identifiers = [
-            "checkin_morning_1", "checkin_morning_2", "checkin_morning_3",
-            "checkin_midday_1", "checkin_midday_2", "checkin_midday_3",
-            "checkin_evening_1", "checkin_evening_2", "checkin_evening_3",
-        ]
+        // Cancel both check-in notifications
+        let identifiers = ["checkin_midday", "checkin_evening"]
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: identifiers
         )
@@ -653,13 +345,6 @@ class WatchNotificationManager: ObservableObject {
             options: [.foreground]
         )
 
-        // Log action
-        let logAction = UNNotificationAction(
-            identifier: "LOG_ACTION",
-            title: "Log Now",
-            options: [.foreground]
-        )
-
         // Snooze action
         let snoozeAction = UNNotificationAction(
             identifier: "SNOOZE_ACTION",
@@ -667,30 +352,7 @@ class WatchNotificationManager: ObservableObject {
             options: []
         )
 
-        // Sleep Log category
-        let sleepLogCategory = UNNotificationCategory(
-            identifier: "SLEEP_LOG",
-            actions: [logAction, snoozeAction],
-            intentIdentifiers: [],
-            options: []
-        )
-
-        // Assessment category
-        let assessmentCategory = UNNotificationCategory(
-            identifier: "ASSESSMENT",
-            actions: [logAction, snoozeAction],
-            intentIdentifiers: [],
-            options: []
-        )
-
-        // Check-in categories
-        let morningCategory = UNNotificationCategory(
-            identifier: "CHECKIN_MORNING",
-            actions: [checkInAction, snoozeAction],
-            intentIdentifiers: [],
-            options: []
-        )
-
+        // Check-in categories (only midday and evening now)
         let middayCategory = UNNotificationCategory(
             identifier: "CHECKIN_MIDDAY",
             actions: [checkInAction, snoozeAction],
@@ -705,33 +367,12 @@ class WatchNotificationManager: ObservableObject {
             options: []
         )
 
-        // Energy nudge category (no actions - passive reminder)
-        let energyCategory = UNNotificationCategory(
-            identifier: "ENERGY_NUDGE",
-            actions: [],
-            intentIdentifiers: [],
-            options: []
-        )
-
-        // Wind-down category
-        let windDownCategory = UNNotificationCategory(
-            identifier: "WIND_DOWN",
-            actions: [],
-            intentIdentifiers: [],
-            options: []
-        )
-
         UNUserNotificationCenter.current().setNotificationCategories([
-            sleepLogCategory,
-            assessmentCategory,
-            morningCategory,
             middayCategory,
             eveningCategory,
-            energyCategory,
-            windDownCategory,
         ])
 
-        print("[Notifications] Registered notification categories")
+        print("[Notifications] Registered 2 notification categories (midday + evening)")
     }
 
     // MARK: - Debug

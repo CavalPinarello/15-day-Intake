@@ -18,6 +18,7 @@ struct TreatmentDashboardView: View {
     @State private var showingMorningCheckIn = false
     @State private var showingMiddayCheckIn = false
     @State private var showingEveningReport = false
+    @State private var assignedPhysician: AssignedPhysician?
 
     private var theme: ColorTheme { themeManager.currentTheme }
 
@@ -26,6 +27,11 @@ struct TreatmentDashboardView: View {
             VStack(spacing: 20) {
                 // Header with greeting
                 headerSection
+
+                // Physician Card (if assigned)
+                if let physician = assignedPhysician {
+                    physicianCard(physician)
+                }
 
                 // Check-in Status Card
                 checkInStatusCard
@@ -60,12 +66,14 @@ struct TreatmentDashboardView: View {
         .onAppear {
             loadTasks()
             loadCheckInStatus()
+            loadAssignedPhysician()
             // Auto-expand current window
             expandedWindows.insert(TimeWindow.current().id)
         }
         .refreshable {
             loadTasks()
             loadCheckInStatus()
+            loadAssignedPhysician()
         }
         .sheet(isPresented: $showingMorningCheckIn) {
             MorningCheckInView()
@@ -159,6 +167,61 @@ struct TreatmentDashboardView: View {
             return "Good afternoon"
         } else {
             return "Good evening"
+        }
+    }
+
+    // MARK: - Physician Card
+
+    /// Display the assigned physician's information
+    private func physicianCard(_ physician: AssignedPhysician) -> some View {
+        HStack(spacing: 12) {
+            // Physician avatar
+            AvatarView(
+                imageUrl: physician.avatarUrl,
+                name: physician.fullName,
+                size: .md
+            )
+
+            // Physician info
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Your Care Team")
+                    .font(.caption)
+                    .foregroundColor(theme.secondaryText)
+
+                Text(physician.displayName)
+                    .font(.headline)
+                    .foregroundColor(theme.primaryText)
+
+                if let specialization = physician.specialization {
+                    Text(specialization)
+                        .font(.caption)
+                        .foregroundColor(theme.secondaryText)
+                }
+            }
+
+            Spacer()
+
+            // Visual indicator
+            Image(systemName: "stethoscope")
+                .font(.title2)
+                .foregroundColor(theme.accent.opacity(0.7))
+        }
+        .padding()
+        .background(theme.cardBackground)
+        .cornerRadius(16)
+    }
+
+    /// Load the assigned physician from Convex
+    private func loadAssignedPhysician() {
+        Task {
+            do {
+                let physician = try await ConvexService.shared.getAssignedPhysician()
+                await MainActor.run {
+                    self.assignedPhysician = physician
+                }
+            } catch {
+                print("[TreatmentDashboard] Failed to load assigned physician: \(error)")
+            }
         }
     }
 

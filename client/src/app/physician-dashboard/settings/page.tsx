@@ -7,7 +7,7 @@ interface ModelOption {
 }
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { PhysicianLogoutButton } from "@/components/PhysicianAuthGuard";
@@ -29,6 +29,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
+import { ProfilePictureUpload } from "@/components/ui/ProfilePictureUpload";
 
 // SHA256 hash function for browser
 async function sha256(message: string): Promise<string> {
@@ -63,7 +64,21 @@ export default function PhysicianSettingsPage() {
     text: string;
   } | null>(null);
 
+  // Get session token from localStorage (client-side only)
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+
+  // Initialize session token on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSessionToken(localStorage.getItem("physician_session"));
+    }
+  }, []);
+
   // Queries and mutations
+  const currentPhysician = useQuery(
+    api.physicianAuth.getCurrentPhysician,
+    sessionToken ? { sessionToken } : "skip"
+  );
   const changeMasterPassword = useMutation(api.physicianAuth.changeMasterPassword);
   const llmSettings = useQuery(api.systemSettings.getLLMSettings);
   const modelOptions = useQuery(api.systemSettings.getModelOptions);
@@ -279,18 +294,52 @@ export default function PhysicianSettingsPage() {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-bold text-2xl">
-              P
-            </div>
-            <div>
-              <h4 className="text-xl font-semibold text-gray-900">
-                Physician Access
-              </h4>
-              <p className="text-gray-500">Shared master password authentication</p>
-              <span className="inline-block mt-2 px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm font-medium">
-                Physician
-              </span>
-            </div>
+            {currentPhysician ? (
+              <>
+                <ProfilePictureUpload
+                  currentImageUrl={currentPhysician.avatarUrl}
+                  name={currentPhysician.fullName}
+                  size="xl"
+                  entityType="physician"
+                  entityId={currentPhysician.id}
+                />
+                <div>
+                  <h4 className="text-xl font-semibold text-gray-900">
+                    {currentPhysician.fullName}
+                  </h4>
+                  <p className="text-gray-500">{currentPhysician.email}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm font-medium">
+                      {currentPhysician.permissionLevel === "admin" ? "Admin" :
+                       currentPhysician.permissionLevel === "clinician" ? "Clinician" : "Viewer"}
+                    </span>
+                    {currentPhysician.specialization && (
+                      <span className="text-sm text-gray-500">
+                        {currentPhysician.specialization}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Click photo to update profile picture
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-bold text-2xl">
+                  P
+                </div>
+                <div>
+                  <h4 className="text-xl font-semibold text-gray-900">
+                    Physician Access
+                  </h4>
+                  <p className="text-gray-500">Shared master password authentication</p>
+                  <span className="inline-block mt-2 px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm font-medium">
+                    Physician
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

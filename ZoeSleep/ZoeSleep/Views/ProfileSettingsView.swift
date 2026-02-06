@@ -22,6 +22,17 @@ struct ProfileSettingsView: View {
     @State private var showingBodyMetricsEditor = false
     @State private var isSyncingToWatch = false
     @State private var watchSyncSuccess = false
+    @State private var showingTourRestartAlert = false
+
+    // Profile picture states
+    @State private var showingImageSourcePicker = false
+    @State private var showingPhotoPicker = false
+    @State private var showingCamera = false
+    @State private var selectedImage: UIImage?
+    @State private var showingCropView = false
+    @State private var profilePictureUrl: String?
+    @State private var isUploadingPhoto = false
+    @State private var uploadError: String?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -95,6 +106,14 @@ struct ProfileSettingsView: View {
                 Text("This will reset your profile information and show the onboarding again.")
             }
 
+            .alert("Guided Tour Reset", isPresented: $showingTourRestartAlert) {
+                Button("OK") {
+                    dismiss()  // Go back to dashboard to see the tour
+                }
+            } message: {
+                Text("The guided tour will start when you return to the dashboard.")
+            }
+
             // Body Metrics Editor Sheet
             .sheet(isPresented: $showingBodyMetricsEditor) {
                 BodyMetricsEditorView(onboardingManager: onboardingManager, themeManager: themeManager)
@@ -121,28 +140,51 @@ struct ProfileSettingsView: View {
     private var profileHeaderSection: some View {
         Section {
             HStack(spacing: 16) {
-                // Profile avatar
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [theme.primary.opacity(0.3), theme.primary.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                // Profile avatar with edit button
+                ZStack(alignment: .bottomTrailing) {
+                    // Avatar (with image or initials)
+                    AvatarView(
+                        imageUrl: profilePictureUrl,
+                        name: onboardingManager.profile.name.isEmpty ? "User" : onboardingManager.profile.name,
+                        size: .lg,
+                        gradient: LinearGradient(
+                            colors: [theme.primary.opacity(0.3), theme.primary.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                        .frame(width: 70, height: 70)
+                    )
 
-                    if !onboardingManager.profile.name.isEmpty {
-                        Text(String(onboardingManager.profile.name.prefix(1)).uppercased())
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .foregroundColor(theme.primary)
-                    } else {
-                        Image(systemName: "person.fill")
-                            .font(.title)
-                            .foregroundColor(theme.primary)
+                    // Loading overlay
+                    if isUploadingPhoto {
+                        Circle()
+                            .fill(Color.black.opacity(0.5))
+                            .frame(width: 64, height: 64)
+                        ProgressView()
+                            .tint(.white)
                     }
+
+                    // Camera button
+                    if !isUploadingPhoto {
+                        Button(action: { showingImageSourcePicker = true }) {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.white)
+                                .padding(6)
+                                .background(theme.accent)
+                                .clipShape(Circle())
+                                .shadow(radius: 2)
+                        }
+                        .offset(x: 4, y: 4)
+                    }
+                }
+                .confirmationDialog("Choose Photo", isPresented: $showingImageSourcePicker) {
+                    Button("Photo Library") {
+                        showingPhotoPicker = true
+                    }
+                    Button("Take Selfie") {
+                        showingCamera = true
+                    }
+                    Button("Cancel", role: .cancel) {}
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -170,6 +212,60 @@ struct ProfileSettingsView: View {
                 Spacer()
             }
             .padding(.vertical, 8)
+        }
+        .sheet(isPresented: $showingPhotoPicker) {
+            PhotoLibraryPicker(selectedImage: $selectedImage)
+        }
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraPicker(selectedImage: $selectedImage)
+        }
+        .fullScreenCover(isPresented: $showingCropView) {
+            if let image = selectedImage {
+                CircleCropView(image: image, croppedImage: Binding(
+                    get: { nil },
+                    set: { croppedImage in
+                        if let cropped = croppedImage {
+                            uploadProfilePicture(cropped)
+                        }
+                    }
+                ))
+            }
+        }
+        .onChange(of: selectedImage) { _, newImage in
+            if newImage != nil {
+                showingCropView = true
+            }
+        }
+        .alert("Upload Error", isPresented: .init(
+            get: { uploadError != nil },
+            set: { if !$0 { uploadError = nil } }
+        )) {
+            Button("OK") { uploadError = nil }
+        } message: {
+            Text(uploadError ?? "Unknown error occurred")
+        }
+    }
+
+    /// Upload profile picture to Convex storage
+    private func uploadProfilePicture(_ image: UIImage) {
+        isUploadingPhoto = true
+        uploadError = nil
+
+        Task {
+            do {
+                let url = try await ImageUploadService.shared.uploadProfilePicture(image)
+                await MainActor.run {
+                    profilePictureUrl = url
+                    isUploadingPhoto = false
+                    selectedImage = nil
+                }
+            } catch {
+                await MainActor.run {
+                    uploadError = error.localizedDescription
+                    isUploadingPhoto = false
+                    selectedImage = nil
+                }
+            }
         }
     }
 
@@ -215,6 +311,25 @@ struct ProfileSettingsView: View {
                         .environmentObject(authManager)
                 } label: {
                     Label("Health Data Settings", systemImage: "waveform.path.ecg")
+                }
+                .accessibleTapTarget()
+
+                // Sleep Data menu
+                NavigationLink {
+                    SleepDataMenuView()
+                        .environmentObject(healthKitManager)
+                        .environmentObject(themeManager)
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Sleep Data")
+                            Text("HRV recovery, scores & trends")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "chart.bar.xaxis")
+                    }
                 }
                 .accessibleTapTarget()
             }
@@ -541,17 +656,29 @@ struct ProfileSettingsView: View {
 
     private var appearanceSection: some View {
         Section {
-            // Color Theme Picker (simplified - removed accent color selector per Issue 15)
+            // Color Theme Picker - uses visible cases only (hides legacy circadian)
             Picker(selection: $themeManager.appearanceMode) {
-                ForEach(ThemeManager.AppearanceMode.allCases) { mode in
+                ForEach(ThemeManager.AppearanceMode.visibleCases) { mode in
                     HStack {
                         Image(systemName: mode.icon)
-                        Text(mode.rawValue)
+                        Text(mode.displayName)
                     }
                     .tag(mode)
                 }
             } label: {
                 Label("Color Theme", systemImage: "paintbrush.fill")
+            }
+
+            // Explanation for auto mode
+            if themeManager.appearanceMode == .autoBrightDark {
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(theme.accent)
+                    Text("Switches to sleep-safe dark mode at 5 PM")
+                        .font(.caption)
+                        .foregroundColor(theme.textSecondary)
+                }
+                .padding(.vertical, 4)
             }
 
             // Sleep Science Cards Toggle
@@ -566,10 +693,26 @@ struct ProfileSettingsView: View {
             }
             .tint(themeManager.accentColor)
             .accessibleTapTarget()
+
+            // Redo Guided Tour
+            Button {
+                FirstTimeGuideManager.shared.resetAllCoachMarks()
+                showingTourRestartAlert = true
+            } label: {
+                HStack {
+                    Label("Redo Guided Tour", systemImage: "arrow.clockwise.circle")
+                        .font(.headline)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .foregroundColor(.primary)
         } header: {
             Text("Appearance")
         } footer: {
-            Text("Circadian mode automatically adjusts colors based on time of day to support healthy sleep.")
+            Text("Dark mode uses warm amber colors only to protect melatonin and support healthy sleep.")
         }
     }
 
@@ -589,6 +732,59 @@ struct ProfileSettingsView: View {
             }
             .tint(.green)
             .accessibleTapTarget()
+
+            // Easy Mode - Voice-first interface for elderly patients
+            Toggle(isOn: $themeManager.easyModeEnabled) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Easy Mode (Voice)", systemImage: "waveform.circle")
+                        .font(.headline)
+                    Text("Answer questions by speaking")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .tint(.green)
+            .accessibleTapTarget()
+
+            // Easy Mode active indicator
+            if themeManager.easyModeEnabled {
+                HStack {
+                    Image(systemName: "mic.fill")
+                        .foregroundColor(.green)
+                    Text("Questions will be read aloud")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+
+                // Conversational Assessment toggle (only shown when Easy Mode is on)
+                Toggle(isOn: $themeManager.conversationalAssessmentEnabled) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Conversational Assessment", systemImage: "person.bubble")
+                            .font(.headline)
+                        Text("Natural conversation with Zoe for assessments")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .tint(.purple)
+                .accessibleTapTarget()
+                .padding(.leading, 20)
+
+                if themeManager.conversationalAssessmentEnabled {
+                    HStack {
+                        Image(systemName: "quote.bubble.fill")
+                            .foregroundColor(.purple)
+                        Text("Assessments will flow like a natural conversation")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                    .padding(.leading, 20)
+                }
+            }
 
             // Divider row to separate enhanced mode from individual settings
             if themeManager.enhancedReadabilityMode {
@@ -657,6 +853,19 @@ struct ProfileSettingsView: View {
 
     private var developerSection: some View {
         Section {
+            // Legacy 8-Phase Circadian Mode Toggle
+            Toggle(isOn: $themeManager.circadianModeEnabled) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Legacy Circadian Mode", systemImage: "waveform.path.ecg")
+                        .font(.headline)
+                    Text("Enable 8-phase smooth color interpolation")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .tint(.purple)
+            .accessibleTapTarget()
+
             // Unified Debug Tools (combines all debug functionality)
             // Available in all builds (including TestFlight) when Debug Mode is enabled
             NavigationLink {
@@ -697,7 +906,7 @@ struct ProfileSettingsView: View {
         } header: {
             Text("Developer")
         } footer: {
-            Text("Debug Tools provides mock data generation, journey controls, gateway testing, and repair utilities in one place.")
+            Text("Legacy Circadian Mode enables smooth 8-phase color interpolation. Enable this and set Color Theme to 'Circadian (Legacy)' in Appearance settings.")
                 .font(.caption)
         }
     }

@@ -243,9 +243,13 @@ struct CircadianWaveBackground: View {
     /// Wave intensity (0-1, affects opacity)
     var intensity: Double = 1.0
 
-    /// Get current palette based on ThemeManager's time period (single source of truth)
+    /// Get current palette based on ThemeManager - uses simplified mode unless legacy circadian is enabled
     private var currentPalette: WaveCircadianPalette {
-        WaveCircadianPalette.forPeriod(themeManager.currentTimePeriod)
+        if themeManager.appearanceMode == .circadian && themeManager.circadianModeEnabled {
+            return WaveCircadianPalette.forPeriod(themeManager.currentTimePeriod)
+        } else {
+            return WaveCircadianPalette.forMode(isDark: themeManager.isDarkMode)
+        }
     }
 
     var body: some View {
@@ -271,6 +275,8 @@ struct CircadianWaveBackground: View {
             }
         }
         .ignoresSafeArea()
+        // Force view recreation when appearance mode or dark mode changes
+        .id("circadian-\(themeManager.isDarkMode)")
     }
 
     private var backgroundGradient: some View {
@@ -461,11 +467,21 @@ struct SplashGlowLine: View {
 
 /// Animated wave background for questionnaire - uses same circadian system as dashboard
 struct QuestionnaireWaveBackground: View {
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var phase1: CGFloat = 0
     @State private var phase2: CGFloat = 0
 
+    /// Get palette from ThemeManager - uses simplified mode unless legacy circadian is enabled
+    private var palette: WaveCircadianPalette {
+        if themeManager.appearanceMode == .circadian && themeManager.circadianModeEnabled {
+            return WaveCircadianPalette.current
+        } else {
+            return WaveCircadianPalette.forMode(isDark: themeManager.isDarkMode)
+        }
+    }
+
     var body: some View {
-        let palette = WaveCircadianPalette.current
+        let palette = self.palette
 
         GeometryReader { geometry in
             ZStack {
@@ -514,6 +530,8 @@ struct QuestionnaireWaveBackground: View {
             }
         }
         .ignoresSafeArea()
+        // Force view recreation when dark mode changes
+        .id("questionnaire-\(themeManager.isDarkMode)")
         .onAppear {
             withAnimation(.linear(duration: 25).repeatForever(autoreverses: false)) {
                 phase1 = .pi * 2
@@ -539,7 +557,41 @@ struct WaveCircadianPalette {
     let textPrimary: Color
     let textSecondary: Color
 
-    /// Get palette for a specific time period (used by wave backgrounds)
+    /// Get simplified two-mode palette (NEW - recommended)
+    /// - Parameter isDark: true for dark (sleep-safe) mode, false for bright mode
+    static func forMode(isDark: Bool) -> WaveCircadianPalette {
+        if isDark {
+            // Dark mode: warm ambers/oranges only - NO blue light
+            return WaveCircadianPalette(
+                background: [
+                    Color(hex: "#1A0F0A")!,  // Very dark warm brown
+                    Color(hex: "#221410")!,
+                    Color(hex: "#2D1810")!   // Dark brown
+                ],
+                wave: DarkPalette.primary,       // Warm amber/orange
+                accent: DarkPalette.accent,      // Amber
+                isDark: true,
+                textPrimary: DarkPalette.textPrimary,   // Bright warm cream
+                textSecondary: DarkPalette.textSecondary // Golden yellow
+            )
+        } else {
+            // Bright mode: blue accents OK
+            return WaveCircadianPalette(
+                background: [
+                    Color(hex: "#FDFBF7")!,  // Warm off-white
+                    Color(hex: "#F9F6F1")!,
+                    Color(hex: "#F5F2ED")!   // Soft cream
+                ],
+                wave: BrightPalette.primary,     // Sky blue
+                accent: BrightPalette.secondary, // Cyan
+                isDark: false,
+                textPrimary: BrightPalette.textPrimary,   // Near-black warm brown
+                textSecondary: BrightPalette.textSecondary // Medium warm brown
+            )
+        }
+    }
+
+    /// Get palette for a specific time period (LEGACY - kept for backwards compatibility)
     static func forPeriod(_ period: TimePeriod) -> WaveCircadianPalette {
         switch period {
         case .evening, .night:
@@ -688,18 +740,26 @@ struct DashboardWaveBackground: View {
     @State private var phase2: CGFloat = 0
     @State private var phase3: CGFloat = 0
 
-    /// Get palette from ThemeManager so it updates when time changes
+    /// Get palette from ThemeManager - uses simplified mode unless legacy circadian is enabled
     private var palette: WaveCircadianPalette {
-        WaveCircadianPalette.forPeriod(themeManager.currentTimePeriod)
+        if themeManager.appearanceMode == .circadian && themeManager.circadianModeEnabled {
+            // Legacy circadian mode: use time-based palette
+            return WaveCircadianPalette.forPeriod(themeManager.currentTimePeriod)
+        } else {
+            // Simplified two-mode system
+            return WaveCircadianPalette.forMode(isDark: themeManager.isDarkMode)
+        }
     }
 
     var body: some View {
+        // Get current palette based on appearance mode
+        let currentPalette = palette
 
         GeometryReader { geometry in
             ZStack {
                 // Base gradient with circadian colors
                 LinearGradient(
-                    colors: palette.background,
+                    colors: currentPalette.background,
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -714,8 +774,8 @@ struct DashboardWaveBackground: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            palette.wave.opacity(0.35),
-                            palette.wave.opacity(0.15)
+                            currentPalette.wave.opacity(0.35),
+                            currentPalette.wave.opacity(0.15)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -732,8 +792,8 @@ struct DashboardWaveBackground: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            palette.wave.opacity(0.28),
-                            palette.wave.opacity(0.10)
+                            currentPalette.wave.opacity(0.28),
+                            currentPalette.wave.opacity(0.10)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -750,8 +810,8 @@ struct DashboardWaveBackground: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            palette.accent.opacity(0.25),
-                            palette.accent.opacity(0.08)
+                            currentPalette.accent.opacity(0.25),
+                            currentPalette.accent.opacity(0.08)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -760,6 +820,8 @@ struct DashboardWaveBackground: View {
             }
         }
         .ignoresSafeArea()
+        // Force view recreation when dark mode changes
+        .id("dashboard-\(themeManager.isDarkMode)")
         .onAppear {
             startAnimations()
         }
@@ -843,9 +905,13 @@ struct GlassyCardBackground: View {
     var tint: Color? = nil
     var blur: CGFloat = 0  // Kept for API compatibility
 
-    /// Get palette from ThemeManager so it updates when time changes
+    /// Get palette from ThemeManager - uses simplified mode unless legacy circadian is enabled
     private var palette: WaveCircadianPalette {
-        WaveCircadianPalette.forPeriod(themeManager.currentTimePeriod)
+        if themeManager.appearanceMode == .circadian && themeManager.circadianModeEnabled {
+            return WaveCircadianPalette.forPeriod(themeManager.currentTimePeriod)
+        } else {
+            return WaveCircadianPalette.forMode(isDark: themeManager.isDarkMode)
+        }
     }
 
     var body: some View {
@@ -899,6 +965,8 @@ struct GlassyCardBackground: View {
                     lineWidth: 0.5
                 )
         }
+        // Force view recreation when dark mode changes
+        .id("glassy-\(themeManager.isDarkMode)")
     }
 }
 

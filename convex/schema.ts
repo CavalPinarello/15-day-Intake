@@ -1978,5 +1978,283 @@ export default defineSchema({
   })
     .index("by_key", ["key"])
     .index("by_category", ["category"]),
+
+  // ============================================
+  // HRV (Heart Rate Variability) Data
+  // Individual samples and nightly summaries for recovery tracking
+  // ============================================
+
+  // Individual HRV measurement samples
+  user_hrv_samples: defineTable({
+    user_id: v.id("users"),
+    date: v.string(),                    // YYYY-MM-DD (wake date)
+    sample_time: v.number(),             // Unix timestamp (ms)
+    hrv_value: v.number(),               // SDNN in milliseconds
+    sample_type: v.string(),             // "evening", "intra_night", "morning"
+    source: v.string(),                  // Wearable type (e.g., "Apple Watch")
+    source_bundle_id: v.optional(v.string()),
+    is_during_sleep: v.boolean(),
+    synced_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "date"])
+    .index("by_user_date_type", ["user_id", "date", "sample_type"]),
+
+  // Aggregated HRV data for each night
+  user_hrv_nightly_summary: defineTable({
+    user_id: v.id("users"),
+    date: v.string(),                    // YYYY-MM-DD
+
+    // Evening baseline (2-3 hours before bed)
+    evening_hrv_avg: v.optional(v.number()),
+    evening_hrv_min: v.optional(v.number()),
+    evening_hrv_max: v.optional(v.number()),
+    evening_sample_count: v.optional(v.number()),
+
+    // Intra-night metrics
+    intra_night_hrv_avg: v.optional(v.number()),
+    intra_night_hrv_peak: v.optional(v.number()),
+    peak_time: v.optional(v.number()),   // Unix timestamp
+    sample_count: v.optional(v.number()),
+    sample_interval_mins: v.optional(v.number()),
+
+    // Morning metrics
+    morning_hrv_avg: v.optional(v.number()),
+    morning_sample_count: v.optional(v.number()),
+
+    // Computed metrics
+    recovery_ratio: v.optional(v.number()),  // Peak / Evening
+    time_to_peak_mins: v.optional(v.number()),
+
+    // Source tracking
+    primary_source: v.optional(v.string()),
+    hrv_capability: v.optional(v.string()),  // "full", "periodic", "morning_only"
+
+    synced_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "date"]),
+
+  // ============================================
+  // HRV Charge (Recovery Score)
+  // Daily recovery score based on nighttime HRV patterns
+  // ============================================
+
+  user_hrv_charge: defineTable({
+    user_id: v.id("users"),
+    date: v.string(),                    // YYYY-MM-DD
+
+    // Final score
+    charge_score: v.number(),            // 0-100
+    recovery_trajectory: v.string(),     // "excellent", "good", "moderate", "poor", "very_low"
+    confidence: v.number(),              // 0.0-1.0
+
+    // Component scores
+    evening_component: v.optional(v.number()),
+    recovery_component: v.optional(v.number()),
+    trend_modifier: v.optional(v.number()),
+
+    // Raw data references
+    evening_hrv_used: v.optional(v.number()),
+    peak_hrv_used: v.optional(v.number()),
+    morning_hrv_used: v.optional(v.number()),
+
+    // Personal baseline comparison
+    baseline_used: v.string(),           // "personal" or "population"
+    deviation_from_baseline: v.optional(v.number()),
+
+    computed_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "date"]),
+
+  // ============================================
+  // Personal HRV Baseline (7-day rolling)
+  // Personalized baseline for HRV Charge calculation
+  // ============================================
+
+  user_hrv_baseline: defineTable({
+    user_id: v.id("users"),
+
+    // Rolling averages
+    avg_evening_hrv: v.number(),
+    avg_morning_hrv: v.number(),
+    avg_peak_hrv: v.number(),
+    avg_recovery_ratio: v.number(),
+
+    // Variability
+    std_evening_hrv: v.number(),
+    std_morning_hrv: v.number(),
+
+    // Metadata
+    days_in_baseline: v.number(),        // 1-7+
+    oldest_date: v.string(),
+    newest_date: v.string(),
+    last_updated: v.number(),
+  })
+    .index("by_user", ["user_id"]),
+
+  // ============================================
+  // Unified Sleep Scores (Multi-Device)
+  // Zoe Sleep Score and native device scores
+  // ============================================
+
+  user_sleep_scores: defineTable({
+    user_id: v.id("users"),
+    date: v.string(),                    // YYYY-MM-DD
+
+    // Zoe unified score
+    zoe_sleep_score: v.number(),         // 0-100
+    zoe_score_components_json: v.string(), // JSON: duration, efficiency, deep, rem, consistency
+
+    // Native device scores (when available)
+    native_scores_json: v.optional(v.string()), // JSON: { "Oura Ring": 85, "Apple Watch": null }
+
+    // HRV Charge reference
+    hrv_charge: v.optional(v.number()),  // 0-100
+    hrv_charge_trajectory: v.optional(v.string()),
+
+    // Source tracking
+    primary_source: v.string(),
+    all_sources_json: v.optional(v.string()),
+    confidence: v.number(),              // 0.0-1.0
+
+    computed_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "date"]),
+
+  // ============================================
+  // User Sleep Data Source Preferences
+  // Which sources are visible and their priority
+  // ============================================
+
+  user_sleep_source_preferences: defineTable({
+    user_id: v.id("users"),
+
+    // Connected sources
+    connected_sources_json: v.string(),  // JSON array of source info
+
+    // Visibility preferences (for Sleep Data menu)
+    visible_sources_json: v.string(),    // JSON array of enabled source bundle IDs
+
+    // Priority override (optional - user can adjust auto-priority)
+    priority_override_json: v.optional(v.string()),
+
+    // Last discovery
+    last_source_discovery: v.number(),
+
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"]),
+
+  // ============================================
+  // Voice AI - Emotional Analysis Results (Hume AI)
+  // Stores emotional snapshots and session summaries
+  // ============================================
+
+  emotional_analysis_results: defineTable({
+    user_id: v.id("users"),
+    session_id: v.string(),
+    session_type: v.string(),  // "assessment", "check_in", "cbti", "sleep_log"
+
+    // Summary data
+    summary_json: v.string(),  // Full SessionEmotionSummary as JSON
+
+    // Key metrics for querying
+    distress_detected: v.boolean(),
+    average_arousal: v.number(),  // 0.0-1.0
+    average_valence: v.number(),  // -1.0 to 1.0
+
+    // Optional question-specific emotions
+    question_id: v.optional(v.string()),
+
+    created_at: v.number(),
+  })
+    .index("by_user_id", ["user_id"])
+    .index("by_session", ["session_id"])
+    .index("by_user_session", ["user_id", "session_id"]),
+
+  // ============================================
+  // Voice AI - CBT-I Sessions
+  // Stores CBT-I coaching session data
+  // ============================================
+
+  cbti_sessions: defineTable({
+    user_id: v.id("users"),
+    session_id: v.string(),  // UUID for the session
+    session_type: v.string(),  // "introduction", "sleep_restriction", "stimulus_control", "cognitive", "relaxation", "weekly_review"
+
+    // Session content
+    transcript_json: v.optional(v.string()),  // Full conversation transcript
+    sleep_window_json: v.optional(v.string()),  // Calculated sleep window
+    emotion_summary_json: v.optional(v.string()),  // Emotion analysis summary
+
+    // Review flags
+    flagged_for_review: v.optional(v.boolean()),
+    review_reason: v.optional(v.string()),
+    flagged_at: v.optional(v.number()),
+
+    // Timestamps
+    created_at: v.number(),
+    completed_at: v.optional(v.number()),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_type", ["user_id", "session_type"])
+    .index("by_session_id", ["session_id"]),
+
+  // ============================================
+  // Voice AI - CBT-I User Protocols
+  // Tracks user's CBT-I treatment progress
+  // ============================================
+
+  cbti_user_protocols: defineTable({
+    user_id: v.id("users"),
+    protocol_type: v.string(),  // "standard", "sleep_restriction", "stimulus_control", etc.
+    status: v.string(),  // "not_started", "active", "completed", "paused"
+
+    // Sleep restriction specific
+    current_sleep_window_json: v.optional(v.string()),  // {bedtime, wakeTime, durationMinutes}
+
+    // Progress
+    sessions_completed: v.optional(v.number()),
+    compliance_score: v.optional(v.number()),  // 0-100
+
+    // Timestamps
+    created_at: v.number(),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_id", ["user_id"])
+    .index("by_user_protocol", ["user_id", "protocol_type"]),
+
+  // ============================================
+  // Voice AI - Thought Records (Cognitive Restructuring)
+  // Individual thought records from CBT-I sessions
+  // ============================================
+
+  cbti_thought_records: defineTable({
+    user_id: v.id("users"),
+    record_id: v.string(),  // UUID for the record
+    session_id: v.optional(v.string()),  // UUID of the session
+
+    // The thought process
+    situation: v.string(),  // "What was happening?"
+    automatic_thought: v.string(),  // "What went through your mind?"
+    emotion: v.string(),  // Primary emotion
+    emotion_intensity: v.number(),  // 0-100
+
+    // Cognitive restructuring
+    cognitive_distortion: v.optional(v.string()),  // "catastrophizing", "all_or_nothing", etc.
+    evidence_for: v.optional(v.string()),  // Evidence supporting the thought
+    evidence_against: v.optional(v.string()),  // Evidence against
+    balanced_thought: v.optional(v.string()),  // Restructured thought
+    new_emotion_intensity: v.optional(v.number()),  // After restructuring
+
+    created_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_id", ["user_id"])
+    .index("by_session", ["session_id"]),
 });
 

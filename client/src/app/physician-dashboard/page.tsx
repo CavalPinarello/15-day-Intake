@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { ZoeLogo } from "@/components/ZoeLogo";
 import ZoeLogoFull from "@/components/ZoeLogoFull";
+import { Avatar } from "@/components/ui/Avatar";
 
 interface PatientData {
   _id: string;
@@ -384,10 +385,11 @@ export default function PhysicianDashboard() {
                         className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
                       >
                         {/* Avatar */}
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-semibold text-lg">
-                          {(patient.name || patient.username)?.[0]?.toUpperCase() ||
-                            "?"}
-                        </div>
+                        <Avatar
+                          imageUrl={patient.profile_picture}
+                          name={patient.name || patient.username}
+                          size="md"
+                        />
 
                         {/* Patient Info */}
                         <div className="flex-1 min-w-0">

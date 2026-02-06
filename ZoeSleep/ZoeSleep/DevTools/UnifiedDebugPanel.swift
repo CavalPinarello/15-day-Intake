@@ -119,9 +119,6 @@ struct UnifiedDebugPanel: View {
     // Time Travel Manager
     @StateObject private var timeTravelManager = TimeTravelManager.shared
 
-    // Unlock Test Manager
-    @StateObject private var unlockTestManager = UnlockTestManager.shared
-
     // Day Advancement Logger
     @ObservedObject private var advancementLogger = DayAdvancementLogger.shared
 
@@ -183,9 +180,6 @@ struct UnifiedDebugPanel: View {
 
                 // MARK: - Section 6: Time Travel Mode
                 timeTravelModeSection
-
-                // MARK: - Section 6.5: Test Day Unlock
-                testDayUnlockSection
 
                 // MARK: - Section 7: Journey Controls
                 journeyControlsSection
@@ -888,294 +882,15 @@ struct UnifiedDebugPanel: View {
         return max(0, components.day ?? 0)
     }
 
-    // MARK: - Test Day Unlock Section
-
-    private var testDayUnlockSection: some View {
-        Section {
-            // Status Display
-            VStack(alignment: .leading, spacing: 8) {
-                // Completion Status
-                HStack {
-                    Image(systemName: unlockTestManager.sleepLogCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(unlockTestManager.sleepLogCompleted ? .green : .secondary)
-                    Text("Sleep Log")
-                        .font(.subheadline)
-                    Spacer()
-                    Text(unlockTestManager.sleepLogCompleted ? "Done" : "Pending")
-                        .font(.caption)
-                        .foregroundColor(unlockTestManager.sleepLogCompleted ? .green : .orange)
-                }
-
-                HStack {
-                    Image(systemName: unlockTestManager.assessmentCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(unlockTestManager.assessmentCompleted ? .green : .secondary)
-                    Text("Assessment")
-                        .font(.subheadline)
-                    Spacer()
-                    Text(unlockTestManager.assessmentCompleted ? "Done" : "Pending")
-                        .font(.caption)
-                        .foregroundColor(unlockTestManager.assessmentCompleted ? .green : .orange)
-                }
-
-                Divider()
-
-                // Timing Info
-                if unlockTestManager.isReadyForTest {
-                    HStack {
-                        Text("Day completed:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(unlockTestManager.formattedDayReadyAt)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                    }
-
-                    HStack {
-                        Text("Unlock time:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(unlockTestManager.formattedUnlockTime)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.cyan)
-                    }
-
-                    if let timeRemaining = unlockTestManager.timeUntilNaturalUnlock {
-                        HStack {
-                            Text("Natural unlock in:")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text(timeRemaining)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(timeRemaining == "Already unlocked" ? .green : .orange)
-                        }
-                    }
-                } else {
-                    Text("Complete sleep log & assessment to enable unlock testing")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .italic()
-                }
-            }
-            .padding(.vertical, 4)
-
-            // Test Running State
-            if unlockTestManager.isTestRunning {
-                VStack(spacing: 12) {
-                    // Progress
-                    HStack {
-                        Text("Testing unlock...")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        Spacer()
-                        Text("\(unlockTestManager.currentTestSecond)/10")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    // Progress Bar
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(height: 8)
-                                .cornerRadius(4)
-
-                            Rectangle()
-                                .fill(Color.cyan)
-                                .frame(width: geometry.size.width * CGFloat(unlockTestManager.currentTestSecond) / 10.0, height: 8)
-                                .cornerRadius(4)
-                                .animation(.easeInOut(duration: 0.2), value: unlockTestManager.currentTestSecond)
-                        }
-                    }
-                    .frame(height: 8)
-
-                    // Results so far
-                    if !unlockTestManager.testResults.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 4) {
-                                ForEach(unlockTestManager.testResults) { result in
-                                    VStack(spacing: 2) {
-                                        Image(systemName: result.isUnlocked ? "lock.open.fill" : "lock.fill")
-                                            .font(.caption2)
-                                            .foregroundColor(result.isUnlocked ? .green : .red)
-                                        Text(result.formattedTime)
-                                            .font(.system(size: 8))
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 2)
-                                    .background(result.isUnlocked ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
-                                    .cornerRadius(4)
-                                }
-                            }
-                        }
-                    }
-
-                    // Cancel Button
-                    Button {
-                        unlockTestManager.cancelTest()
-                    } label: {
-                        HStack {
-                            Image(systemName: "stop.fill")
-                            Text("Cancel Test")
-                        }
-                        .font(.caption)
-                        .foregroundColor(.red)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-
-            // Test Outcome
-            if let outcome = unlockTestManager.testOutcome {
-                HStack {
-                    switch outcome {
-                    case .success(let second, let newDay):
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Unlock Successful!")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.green)
-                            Text("Unlocked at second \(second), advanced to Day \(newDay)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                    case .failure(let reason):
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.red)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Test Failed")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.red)
-                            Text(reason)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                    case .alreadyUnlocked:
-                        Image(systemName: "lock.open.fill")
-                            .foregroundColor(.cyan)
-                        Text("Already unlocked - use regular advance")
-                            .font(.subheadline)
-                            .foregroundColor(.cyan)
-
-                    case .notReady(let reason):
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.orange)
-                        Text(reason)
-                            .font(.subheadline)
-                            .foregroundColor(.orange)
-
-                    case .cancelled:
-                        Image(systemName: "stop.circle.fill")
-                            .foregroundColor(.secondary)
-                        Text("Test cancelled")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                }
-                .padding(.vertical, 4)
-            }
-
-            // Start Test Button (when not running)
-            if !unlockTestManager.isTestRunning {
-                Button {
-                    Task {
-                        await unlockTestManager.startTest()
-                        // Refresh questionnaire progress after test
-                        await questionnaireManager.loadJourneyProgress()
-                    }
-                } label: {
-                    VStack(spacing: 4) {
-                        HStack {
-                            Image(systemName: "clock.badge.checkmark")
-                            Text("Start Unlock Test")
-                                .fontWeight(.semibold)
-                            Spacer()
-                            if unlockTestManager.isAdvancing {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            }
-                        }
-                        .foregroundColor(unlockTestManager.isReadyForTest ? .white : .secondary)
-
-                        if unlockTestManager.isReadyForTest {
-                            Text(unlockTestManager.testScenarioDescription)
-                                .font(.caption2)
-                                .foregroundColor(.white.opacity(0.8))
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                .disabled(!unlockTestManager.isReadyForTest || unlockTestManager.isAdvancing)
-                .listRowBackground(unlockTestManager.isReadyForTest ? Color.cyan : Color.gray.opacity(0.3))
-
-                // Reset outcome button
-                if unlockTestManager.testOutcome != nil {
-                    Button {
-                        unlockTestManager.reset()
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.counterclockwise")
-                            Text("Reset Test Results")
-                        }
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    }
-                }
-            }
-        } header: {
-            HStack {
-                Label("Test Day Unlock (4 AM)", systemImage: "clock.badge.checkmark")
-                Spacer()
-                if unlockTestManager.isTestRunning {
-                    Text("TESTING")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(.cyan))
-                }
-            }
-        } footer: {
-            Text("Simulates timestamps from 10 seconds before 4 AM to verify unlock logic. Auto-advances on success.")
-        }
-        .task {
-            await unlockTestManager.refreshStatus()
-        }
-    }
+    // NOTE: Test Day Unlock Section removed - 4 AM unlock logic no longer used
+    // Day advancement is now completion-gated only (no time restrictions)
 
     // MARK: - Journey Controls Section
 
     private var journeyControlsSection: some View {
         Section {
-            // Bypass Time Check Toggle
-            Toggle(isOn: $themeManager.unlockTimeOverride) {
-                HStack {
-                    Image(systemName: "clock.badge.xmark")
-                        .foregroundColor(.orange)
-                        .frame(width: 24)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Bypass 4 AM Time Check")
-                            .font(.subheadline)
-                        Text("Skip waiting until 4 AM to advance days")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .tint(.orange)
+            // Time bypass toggle removed - calendar-gated system replaces time-based unlock
+            // Users can catch up on missed days but cannot complete future days
 
             // Reset Progress
             Button {
@@ -1203,7 +918,7 @@ struct UnifiedDebugPanel: View {
         } header: {
             Label("Journey Controls", systemImage: "slider.horizontal.3")
         } footer: {
-            Text("Bypass Time Check allows advancing days immediately. Use Test Day Unlock above to test the actual 4 AM logic.")
+            Text("Day advancement is now completion-gated only. Complete Sleep Log + Assessment to advance.")
         }
     }
 
@@ -1438,10 +1153,178 @@ struct UnifiedDebugPanel: View {
                     }
                 }
             }
+
+            // Voice API Test Section
+            voiceTestSection
         } header: {
             Label("Experimental Features", systemImage: "flask")
         } footer: {
             Text("These features are still in development. Enable to test them on the main dashboard.")
+        }
+    }
+
+    // MARK: - Voice Test Section
+
+    @State private var voiceTestStatus: String = "Not tested"
+    @State private var voiceTestInProgress: Bool = false
+    @State private var ttsTestResult: String = ""
+    @State private var sttTestResult: String = ""
+
+    @ViewBuilder
+    private var voiceTestSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Divider()
+                .padding(.vertical, Spacing.xs)
+
+            Text("🎤 Voice API Tests")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.purple)
+
+            // TTS Test
+            Button {
+                testTTS()
+            } label: {
+                HStack {
+                    Image(systemName: "speaker.wave.3.fill")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Test ElevenLabs TTS")
+                            .font(.subheadline)
+                        Text("Speak: \"Hello, this is a test\"")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    if voiceTestInProgress {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                }
+            }
+            .disabled(voiceTestInProgress)
+
+            if !ttsTestResult.isEmpty {
+                Text(ttsTestResult)
+                    .font(.caption)
+                    .foregroundColor(ttsTestResult.contains("✅") ? .green : .red)
+                    .padding(.leading, 28)
+            }
+
+            // STT Test
+            Button {
+                testSTT()
+            } label: {
+                HStack {
+                    Image(systemName: "waveform")
+                        .foregroundColor(.orange)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Test Whisper STT")
+                            .font(.subheadline)
+                        Text("Record 3 seconds and transcribe")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+            }
+            .disabled(voiceTestInProgress)
+
+            if !sttTestResult.isEmpty {
+                Text(sttTestResult)
+                    .font(.caption)
+                    .foregroundColor(sttTestResult.contains("✅") ? .green : .red)
+                    .padding(.leading, 28)
+            }
+        }
+    }
+
+    private func testTTS() {
+        voiceTestInProgress = true
+        ttsTestResult = "Testing..."
+
+        Task {
+            do {
+                let audioData = try await ConvexService.shared.callVoiceSynthesize(
+                    text: "Hello, this is a test of the voice synthesis system.",
+                    voiceId: "rachel",
+                    speed: 1.0
+                )
+
+                print("TTS Test: Got \(audioData.count) bytes of audio")
+
+                // Play the audio
+                try await AudioSessionManager.shared.playAudio(data: audioData)
+
+                await MainActor.run {
+                    ttsTestResult = "✅ Success! \(audioData.count) bytes"
+                    voiceTestInProgress = false
+                }
+            } catch {
+                print("TTS Test Error: \(error)")
+                await MainActor.run {
+                    ttsTestResult = "❌ Error: \(error.localizedDescription)"
+                    voiceTestInProgress = false
+                }
+            }
+        }
+    }
+
+    private func testSTT() {
+        voiceTestInProgress = true
+        sttTestResult = "Recording for 3 seconds..."
+
+        Task {
+            do {
+                // Request mic permission if needed
+                let audioManager = AudioSessionManager.shared
+                if audioManager.hasMicrophonePermission != true {
+                    let granted = await audioManager.requestMicrophonePermission()
+                    if !granted {
+                        await MainActor.run {
+                            sttTestResult = "❌ Mic permission denied"
+                            voiceTestInProgress = false
+                        }
+                        return
+                    }
+                }
+
+                // Start recording
+                try await audioManager.startRecording()
+
+                // Wait 3 seconds
+                try await Task.sleep(nanoseconds: 3_000_000_000)
+
+                // Stop and get audio
+                guard let audioData = audioManager.stopRecording() else {
+                    await MainActor.run {
+                        sttTestResult = "❌ No audio recorded"
+                        voiceTestInProgress = false
+                    }
+                    return
+                }
+
+                await MainActor.run {
+                    sttTestResult = "Transcribing \(audioData.count) bytes..."
+                }
+
+                // Transcribe
+                let base64Audio = audioData.base64EncodedString()
+                let transcript = try await ConvexService.shared.callVoiceTranscribe(audioBase64: base64Audio)
+
+                await MainActor.run {
+                    sttTestResult = "✅ Heard: \"\(transcript)\""
+                    voiceTestInProgress = false
+                }
+            } catch {
+                print("STT Test Error: \(error)")
+                await MainActor.run {
+                    sttTestResult = "❌ Error: \(error.localizedDescription)"
+                    voiceTestInProgress = false
+                }
+            }
         }
     }
 
@@ -1742,8 +1625,8 @@ struct UnifiedDebugPanel: View {
 
         Task {
             do {
-                // Use the explicit bypass toggle, not debugMode
-                let response = try await ConvexService.shared.advanceToNextDay(bypassTimeCheck: themeManager.unlockTimeOverride)
+                // Calendar-gated: no time bypass needed, backend validates completion + calendar date
+                let response = try await ConvexService.shared.advanceToNextDay()
                 await MainActor.run {
                     if response.success {
                         questionnaireManager.currentDay = response.newDay ?? questionnaireManager.currentDay

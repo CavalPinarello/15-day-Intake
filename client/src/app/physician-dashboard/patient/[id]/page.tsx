@@ -36,7 +36,8 @@ import {
   Code,
   Shield,
 } from "lucide-react";
-import { ZoeLogo } from "@/components/ZoeLogo";
+import ZoeLogoFull from "@/components/ZoeLogoFull";
+import { Avatar } from "@/components/ui/Avatar";
 
 type TabType = "overview" | "responses" | "questionnaires" | "ai-insights" | "compliance" | "interventions" | "notes";
 
@@ -228,10 +229,9 @@ export default function PatientDetailPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <ZoeLogo size={40} />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Zoé Sleep</h1>
-                <p className="text-xs text-gray-500">Physician Dashboard</p>
+              <ZoeLogoFull height={32} />
+              <div className="border-l border-gray-300 pl-3 ml-1">
+                <p className="text-sm font-medium text-gray-600">Physician Dashboard</p>
               </div>
             </div>
 
@@ -284,9 +284,11 @@ export default function PatientDetailPage() {
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-bold text-2xl">
-                {(patient.name || patient.user.username)?.[0]?.toUpperCase() || "?"}
-              </div>
+              <Avatar
+                imageUrl={patient.user.profile_picture}
+                name={patient.name || patient.user.username}
+                size="lg"
+              />
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
                   {patient.name ? (

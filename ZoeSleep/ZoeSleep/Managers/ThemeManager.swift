@@ -55,19 +55,36 @@ class ThemeManager: ObservableObject {
 
     enum AppearanceMode: String, CaseIterable, Identifiable {
         case system = "System"
-        case light = "Light"
+        case bright = "Bright"
         case dark = "Dark"
-        case circadian = "Circadian"
+        case autoBrightDark = "Auto"
+        case circadian = "Circadian"  // Legacy - kept behind feature flag
 
         var id: String { rawValue }
 
         var icon: String {
             switch self {
             case .system: return "circle.lefthalf.filled"
-            case .light: return "sun.max.fill"
+            case .bright: return "sun.max.fill"
             case .dark: return "moon.fill"
-            case .circadian: return "clock.fill"
+            case .autoBrightDark: return "clock.fill"
+            case .circadian: return "waveform.path.ecg"
             }
+        }
+
+        var displayName: String {
+            switch self {
+            case .system: return "System"
+            case .bright: return "Bright"
+            case .dark: return "Dark (Sleep-Safe)"
+            case .autoBrightDark: return "Auto (Time-Based)"
+            case .circadian: return "Circadian (Legacy)"
+            }
+        }
+
+        /// Only show these modes in picker (hide legacy circadian unless enabled)
+        static var visibleCases: [AppearanceMode] {
+            [.system, .bright, .dark, .autoBrightDark]
         }
     }
 
@@ -122,8 +139,14 @@ class ThemeManager: ObservableObject {
     @Published var appearanceMode: AppearanceMode = .system {
         didSet {
             UserDefaults.standard.set(appearanceMode.rawValue, forKey: "colorTheme")
+            // Update isDarkMode when appearance mode changes
+            updateIsDarkMode()
         }
     }
+
+    /// Whether the current appearance mode results in dark mode (PUBLISHED for reactivity)
+    /// Used by the simplified two-mode color system
+    @Published private(set) var isDarkMode: Bool = false
 
     @Published var accentColorOption: AccentColorOption = .teal {
         didSet {
@@ -175,6 +198,27 @@ class ThemeManager: ObservableObject {
         }
     }
 
+    /// Easy Mode - voice-first questionnaire interface for elderly patients
+    /// Questions are read aloud, answers captured via speech-to-text
+    /// Uses OpenAI Whisper for STT and ElevenLabs for TTS
+    @Published var easyModeEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(easyModeEnabled, forKey: "easyModeEnabled")
+            if easyModeEnabled {
+                applyEasyModePreset()
+            }
+        }
+    }
+
+    /// Conversational Assessment Mode - full conversational experience with Zoe
+    /// When enabled (and Easy Mode is on), assessments use a natural conversation flow
+    /// with Zoe's introduction, guardrails, and contextual understanding
+    @Published var conversationalAssessmentEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(conversationalAssessmentEnabled, forKey: "conversationalAssessmentEnabled")
+        }
+    }
+
     @Published var debugMode: Bool = false {
         didSet {
             UserDefaults.standard.set(debugMode, forKey: "debugMode")
@@ -223,6 +267,13 @@ class ThemeManager: ObservableObject {
         }
     }
 
+    /// Legacy 8-phase circadian color mode (DISABLED by default - kept for potential future use)
+    @Published var circadianModeEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(circadianModeEnabled, forKey: "circadianModeEnabled")
+        }
+    }
+
     /// Show Sleep Science Cards - the educational splash screens between questions
     /// These explain the science behind each day's assessment
     @Published var showSleepScienceCards: Bool = true {
@@ -248,6 +299,8 @@ class ThemeManager: ObservableObject {
     private init() {
         loadFromUserDefaults()
         startCircadianTimer()
+        // Initialize isDarkMode after loading settings
+        updateIsDarkMode()
     }
 
     /// Starts a timer that checks for circadian changes every 60 seconds
@@ -264,6 +317,20 @@ class ThemeManager: ObservableObject {
             name: UIApplication.significantTimeChangeNotification,
             object: nil
         )
+        // Listen for app becoming active (to catch system appearance changes)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppBecameActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleAppBecameActive() {
+        // Update isDarkMode when app becomes active (catches system appearance changes)
+        DispatchQueue.main.async {
+            self.updateIsDarkMode()
+        }
     }
 
     /// Check for changes in both TimePeriod and CircadianPhase
@@ -285,6 +352,9 @@ class ThemeManager: ObservableObject {
             if newPeriod != self.currentTimePeriod {
                 self.currentTimePeriod = newPeriod
             }
+
+            // Update isDarkMode for auto/system/circadian modes that depend on time
+            self.updateIsDarkMode()
         }
     }
 
@@ -298,10 +368,13 @@ class ThemeManager: ObservableObject {
     }
 
     private func loadFromUserDefaults() {
-        // Load appearance mode
-        if let modeString = UserDefaults.standard.string(forKey: "colorTheme"),
-           let mode = AppearanceMode(rawValue: modeString) {
-            self.appearanceMode = mode
+        // Load appearance mode with migration from old "Light" to new "Bright"
+        if let modeString = UserDefaults.standard.string(forKey: "colorTheme") {
+            // Migration: "Light" was renamed to "Bright"
+            let migratedString = (modeString == "Light") ? "Bright" : modeString
+            if let mode = AppearanceMode(rawValue: migratedString) {
+                self.appearanceMode = mode
+            }
         }
 
         // Load accent color
@@ -331,6 +404,7 @@ class ThemeManager: ObservableObject {
         self.gamificationEnabled = UserDefaults.standard.bool(forKey: "gamificationEnabled")
         self.showWatchStyleCheckIns = UserDefaults.standard.bool(forKey: "showWatchStyleCheckIns")
         self.sleepProfileEnabled = UserDefaults.standard.bool(forKey: "sleepProfileEnabled")
+        self.circadianModeEnabled = UserDefaults.standard.bool(forKey: "circadianModeEnabled")
 
         // Load Sleep Science Cards setting (enabled by default)
         if UserDefaults.standard.object(forKey: "showSleepScienceCards") == nil {
@@ -344,6 +418,12 @@ class ThemeManager: ObservableObject {
         if self.enhancedReadabilityMode {
             applyEnhancedReadabilityPreset()
         }
+
+        // Load easy mode (voice-first interface)
+        self.easyModeEnabled = UserDefaults.standard.bool(forKey: "easyModeEnabled")
+
+        // Load conversational assessment mode
+        self.conversationalAssessmentEnabled = UserDefaults.standard.bool(forKey: "conversationalAssessmentEnabled")
     }
 
     // MARK: - Enhanced Readability Mode
@@ -382,20 +462,77 @@ class ThemeManager: ObservableObject {
         UserDefaults.standard.set(reduceMotion, forKey: "reduceMotion")
     }
 
+    // MARK: - Easy Mode (Voice-First Interface)
+
+    /// Applies visual presets for Easy Mode
+    /// Easy Mode also enables Enhanced Readability for maximum visibility
+    private func applyEasyModePreset() {
+        // Easy Mode includes all Enhanced Readability settings
+        self.textSizeMultiplier = 1.5
+        self.largeIconsMode = true
+        self.highContrast = true
+        self.reduceMotion = true
+
+        // Persist the individual settings
+        UserDefaults.standard.set(textSizeMultiplier, forKey: "textSizeMultiplier")
+        UserDefaults.standard.set(largeIconsMode, forKey: "largeIconsMode")
+        UserDefaults.standard.set(highContrast, forKey: "highContrast")
+        UserDefaults.standard.set(reduceMotion, forKey: "reduceMotion")
+    }
+
+    /// Minimum tap target for Easy Mode (2x standard for elderly users)
+    var easyModeTapTarget: CGFloat {
+        easyModeEnabled ? 80 : minimumTapTarget
+    }
+
+    /// Font scale multiplier for Easy Mode
+    var easyModeFontScale: CGFloat {
+        easyModeEnabled ? 1.75 : textSizeMultiplier
+    }
+
     // MARK: - Computed Properties
 
     var accentColor: Color {
         accentColorOption.color
     }
 
+    /// Updates the isDarkMode @Published property based on current appearance mode
+    /// Call this when appearance mode changes or periodically for auto/system modes
+    private func updateIsDarkMode() {
+        let newValue: Bool
+        switch appearanceMode {
+        case .system:
+            newValue = UITraitCollection.current.userInterfaceStyle == .dark
+        case .bright:
+            newValue = false
+        case .dark:
+            newValue = true
+        case .autoBrightDark:
+            let hour = Calendar.current.component(.hour, from: Date())
+            newValue = hour < 7 || hour >= 17  // Dark from 5 PM to 7 AM
+        case .circadian:
+            guard circadianModeEnabled else {
+                newValue = false
+                break
+            }
+            newValue = !CircadianPalette.current.phase.allowsBlueLight
+        }
+
+        // Only update if changed to avoid unnecessary view refreshes
+        if isDarkMode != newValue {
+            isDarkMode = newValue
+        }
+    }
+
     /// Returns the current ColorTheme based on appearance mode
-    /// When in circadian mode, uses currentTimePeriod to ensure UI updates when time changes
+    /// Uses simplified two-mode system (Bright/Dark) unless legacy circadian mode is enabled
     var currentTheme: ColorTheme {
-        if appearanceMode == .circadian {
-            // Use currentTimePeriod to ensure dependency tracking for SwiftUI refresh
+        if appearanceMode == .circadian && circadianModeEnabled {
+            // Legacy circadian mode - uses time period for smooth interpolation
             return ColorTheme(period: currentTimePeriod)
         } else {
-            return ColorTheme(accentColor: accentColorOption)
+            // Simplified two-mode system
+            return ColorTheme(isDarkMode: isDarkMode)
         }
     }
 
@@ -417,11 +554,14 @@ class ThemeManager: ObservableObject {
         switch appearanceMode {
         case .system:
             return nil
-        case .light:
+        case .bright:
             return .light
         case .dark:
             return .dark
+        case .autoBrightDark:
+            return isDarkMode ? .dark : .light
         case .circadian:
+            guard circadianModeEnabled else { return .light }
             return circadianScheme()
         }
     }
@@ -635,7 +775,7 @@ struct CalmButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: Typography.headline, weight: .semibold, design: .rounded))
-            .foregroundColor(isPrimary ? .white : theme.primary)
+            .foregroundColor(isPrimary ? theme.textOnPrimary : theme.primary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
             .padding(.horizontal, Spacing.lg)

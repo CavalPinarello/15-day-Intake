@@ -307,6 +307,78 @@ struct CircadianPalette {
     }
 }
 
+// MARK: - Simplified Two-Mode Color Palettes
+
+/// Bright mode palette (light theme with proper contrast)
+/// Blue accents are OK in bright mode
+struct BrightPalette {
+    // Backgrounds
+    static let backgroundPrimary = Color(hex: "#FDFBF7")!     // Warm off-white
+    static let backgroundSecondary = Color(hex: "#F5F2ED")!   // Soft cream
+    static let cardBackground = Color(hex: "#FFFFFF")!        // Pure white cards
+
+    // Text (dark on light - HIGH CONTRAST)
+    static let textPrimary = Color(hex: "#1A1612")!           // Near-black warm brown
+    static let textSecondary = Color(hex: "#5A4E42")!         // Medium warm brown
+    static let textMuted = Color(hex: "#8C7E70")!             // Light warm brown
+
+    // Accent colors (blue is OK in bright mode)
+    static let primary = Color(hex: "#0EA5E9")!               // Sky blue
+    static let secondary = Color(hex: "#06B6D4")!             // Cyan
+    static let accent = Color(hex: "#0EA5E9")!                // Sky blue
+
+    // Status colors
+    static let success = Color(hex: "#10B981")!               // Emerald green
+    static let warning = Color(hex: "#F59E0B")!               // Amber
+    static let error = Color(hex: "#EF4444")!                 // Red
+
+    // Text on colored backgrounds
+    static let textOnPrimary = Color.white
+
+    // Gradient
+    static var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [backgroundPrimary, backgroundSecondary],
+            startPoint: .top, endPoint: .bottom
+        )
+    }
+}
+
+/// Dark mode palette (NO blue light - warm ambers/oranges only for sleep health)
+/// CRITICAL: Zero blue light to protect melatonin production
+struct DarkPalette {
+    // Backgrounds (deep warm brown - zero blue)
+    static let backgroundPrimary = Color(hex: "#1A0F0A")!     // Very dark warm brown
+    static let backgroundSecondary = Color(hex: "#2D1810")!   // Dark brown
+    static let cardBackground = Color(hex: "#2E1914")!        // Slightly lighter brown
+
+    // Text (bright on dark - HIGH CONTRAST)
+    static let textPrimary = Color(hex: "#FEF3C7")!           // Bright warm cream
+    static let textSecondary = Color(hex: "#FCD34D")!         // Golden yellow
+    static let textMuted = Color(hex: "#D97706")!             // Deep amber
+
+    // Accent colors (warm only - NO blue, NO green, NO purple)
+    static let primary = Color(hex: "#F28C40")!               // Warm amber/orange
+    static let secondary = Color(hex: "#D97706")!             // Deep amber
+    static let accent = Color(hex: "#F59E0B")!                // Amber
+
+    // Status colors (warm variants - no green/blue)
+    static let success = Color(hex: "#D4A543")!               // Golden (replaces green)
+    static let warning = Color(hex: "#F59E0B")!               // Amber
+    static let error = Color(hex: "#E07A5F")!                 // Warm coral-red
+
+    // Text on colored backgrounds
+    static let textOnPrimary = Color(hex: "#1A0F0A")!         // Dark brown on amber buttons
+
+    // Gradient
+    static var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [backgroundPrimary, backgroundSecondary],
+            startPoint: .top, endPoint: .bottom
+        )
+    }
+}
+
 // MARK: - Legacy Time Period Enum (Maps to CircadianPhase)
 
 enum TimePeriod: Equatable {
@@ -353,104 +425,149 @@ struct ColorTheme {
     let period: TimePeriod?
     let accentColorOption: ThemeManager.AccentColorOption?
 
+    /// Whether using simplified two-mode system (bright/dark)
+    private let _useSimplifiedMode: Bool
+    private let _isDarkModeSimplified: Bool
+
     /// The underlying circadian palette for smooth color interpolation
     private var palette: CircadianPalette {
         CircadianPalette.current
     }
 
-    /// Whether circadian mode is active (no custom accent selected)
+    /// Whether circadian mode is active (no custom accent selected, not using simplified mode)
     var isCircadianMode: Bool {
-        accentColorOption == nil
+        !_useSimplifiedMode && accentColorOption == nil
     }
 
-    /// Initialize with time-based circadian colors
+    /// Whether using simplified two-mode system
+    var isSimplifiedMode: Bool {
+        _useSimplifiedMode
+    }
+
+    /// Initialize with time-based circadian colors (LEGACY - kept for backwards compatibility)
     init(period: TimePeriod = .current) {
         self.period = period
         self.accentColorOption = nil
+        self._useSimplifiedMode = false
+        self._isDarkModeSimplified = false
     }
 
-    /// Initialize with user-selected accent color
+    /// Initialize with user-selected accent color (LEGACY - kept for backwards compatibility)
     init(accentColor: ThemeManager.AccentColorOption) {
         self.period = nil
         self.accentColorOption = accentColor
+        self._useSimplifiedMode = false
+        self._isDarkModeSimplified = false
     }
 
-    // MARK: - Primary Colors (Sleep-Optimized, INTERPOLATED)
-    // CRITICAL: NO blue/teal/purple at night - only warm amber/orange for sleep health
-    // Colors now smoothly interpolate between phases!
+    /// Initialize with simplified two-mode system (NEW - recommended)
+    /// - Parameter isDarkMode: true for dark (sleep-safe) mode, false for bright mode
+    init(isDarkMode: Bool) {
+        self.period = nil
+        self.accentColorOption = nil
+        self._useSimplifiedMode = true
+        self._isDarkModeSimplified = isDarkMode
+    }
 
-    /// Main accent color - smoothly interpolated throughout the day
+    // MARK: - Primary Colors (Sleep-Optimized)
+    // Simplified mode: Uses BrightPalette or DarkPalette
+    // Legacy circadian mode: Uses smooth interpolation between 8 phases
+
+    /// Main accent color
     var primary: Color {
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.primary : BrightPalette.primary
+        }
         if let accent = accentColorOption {
             return accent.color
         }
-        return palette.primary  // Smoothly interpolated!
+        return palette.primary  // Legacy: smoothly interpolated
     }
 
-    /// Secondary accent for subtle elements - smoothly interpolated
+    /// Secondary accent for subtle elements
     var secondary: Color {
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.secondary : BrightPalette.secondary
+        }
         if let accent = accentColorOption {
             return accent.color.opacity(0.7)
         }
-        return palette.secondary  // Smoothly interpolated!
+        return palette.secondary  // Legacy: smoothly interpolated
     }
 
     /// Tertiary color for accents and highlights
     var tertiary: Color {
+        if _useSimplifiedMode {
+            let p = _isDarkModeSimplified ? DarkPalette.primary : BrightPalette.primary
+            let s = _isDarkModeSimplified ? DarkPalette.secondary : BrightPalette.secondary
+            return CircadianPalette.interpolate(p, to: s, progress: 0.5)
+        }
         if let accent = accentColorOption {
             return accent.color.opacity(0.5)
         }
-        // Interpolate between primary and secondary
         return CircadianPalette.interpolate(palette.primary, to: palette.secondary, progress: 0.5)
     }
 
-    // MARK: - Background Colors (Sleep-Optimized, INTERPOLATED)
+    // MARK: - Background Colors
 
-    /// Subtle background tint - smoothly interpolated
+    /// Subtle background tint
     var backgroundTint: Color {
+        if _useSimplifiedMode {
+            return (_isDarkModeSimplified ? DarkPalette.primary : BrightPalette.primary).opacity(0.08)
+        }
         if let accent = accentColorOption {
             return accent.color.opacity(0.08)
         }
         return palette.primary.opacity(0.08)
     }
 
-    /// Card background with smoothly interpolated time-based warmth
-    /// CIRCADIAN: Cards smoothly transition throughout the day
+    /// Card background color
     var cardBackground: Color {
-        // CRITICAL: Use circadian card backgrounds in dark phases for proper contrast
-        // Text colors use bright cream/gold in dark phases, so cards MUST be dark too
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.cardBackground : BrightPalette.cardBackground
+        }
+        // Legacy circadian mode: use dark cards in dark phases for contrast
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            return currentPalette.cardBackground  // Dark brown for dark phases
+            return currentPalette.cardBackground
         }
         if accentColorOption != nil {
             return Color(.secondarySystemBackground)
         }
-        return palette.cardBackground  // Smoothly interpolated!
+        return palette.cardBackground
     }
 
-    // MARK: - Status Colors (Circadian-aware - no harsh colors at night)
+    // MARK: - Status Colors
 
     var success: Color {
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.success : BrightPalette.success
+        }
+        // Legacy: warm golden for dark phases
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            // Warm golden for dark phases (avoids green's blue light)
             return Color(hex: "#D4A543")!
         }
-        return Color(hex: "#10B981")!  // Emerald green for day
+        return Color(hex: "#10B981")!
     }
 
     var warning: Color {
-        Color(hex: "#F59E0B")!  // Amber - already circadian-safe
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.warning : BrightPalette.warning
+        }
+        return Color(hex: "#F59E0B")!
     }
 
     var error: Color {
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.error : BrightPalette.error
+        }
+        // Legacy: warm coral-red for dark phases
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            // Warm coral-red for dark phases (softer on eyes)
             return Color(hex: "#E07A5F")!
         }
-        return Color(hex: "#EF4444")!  // Bright red for day
+        return Color(hex: "#EF4444")!
     }
 
     var info: Color {
@@ -474,19 +591,23 @@ struct ColorTheme {
         primary
     }
 
-    /// Pending/Inactive state - circadian-aware for proper contrast
+    /// Pending/Inactive state
     var inactive: Color {
+        if _useSimplifiedMode {
+            if _isDarkModeSimplified {
+                return Color(red: 0.6, green: 0.45, blue: 0.25).opacity(0.5)  // Warm muted amber
+            }
+            return Color(hex: "#9CA3AF")!.opacity(0.4)  // Gray for light
+        }
+        // Legacy: warm amber for dark phases
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            // Warm muted amber for dark backgrounds
             return Color(red: 0.6, green: 0.45, blue: 0.25).opacity(0.5)
         }
-        return Color(hex: "#9CA3AF")!.opacity(0.4)  // Gray for light backgrounds
+        return Color(hex: "#9CA3AF")!.opacity(0.4)
     }
 
-    // MARK: - Text Colors (Sleep-Optimized, INTERPOLATED for dark evening backgrounds)
-    // CRITICAL: Must be HIGH CONTRAST on dark brown backgrounds in evening/night!
-    // Colors now smoothly interpolate between phases!
+    // MARK: - Text Colors (HIGH CONTRAST for readability)
 
     /// Get current period - uses stored period or falls back to current time
     private var effectivePeriod: TimePeriod {
@@ -498,96 +619,114 @@ struct ColorTheme {
         palette.phase
     }
 
-    /// Whether we're in a dark phase (after dusk)
+    /// Whether we're in a dark phase (simplified: check isDarkModeSimplified, legacy: check circadian)
     var isDarkPhase: Bool {
-        !palette.phase.allowsBlueLight
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified
+        }
+        return !palette.phase.allowsBlueLight
     }
 
     var textPrimary: Color {
-        // CRITICAL: Even in non-circadian mode, backgrounds use circadian colors
-        // So we MUST use bright text in dark phases for readability
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.textPrimary : BrightPalette.textPrimary
+        }
+        // Legacy circadian mode
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            return currentPalette.textPrimary  // Bright cream for dark backgrounds
+            return currentPalette.textPrimary
         }
         if accentColorOption != nil {
-            // Non-circadian mode during day: use system colors
             return Color.primary
         }
-        return palette.textPrimary  // Smoothly interpolated!
+        return palette.textPrimary
     }
 
     var textSecondary: Color {
-        // CRITICAL: Match dark phase check for consistency
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.textSecondary : BrightPalette.textSecondary
+        }
+        // Legacy circadian mode
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            return currentPalette.textSecondary  // Golden amber for dark backgrounds
+            return currentPalette.textSecondary
         }
         if accentColorOption != nil {
             return Color.secondary
         }
-        return palette.textSecondary  // Smoothly interpolated!
+        return palette.textSecondary
     }
 
     /// Muted text for hints, timestamps, etc.
     var textMuted: Color {
-        // CRITICAL: Match dark phase check for consistency
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.textMuted : BrightPalette.textMuted
+        }
+        // Legacy circadian mode
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            return currentPalette.textSecondary.opacity(0.7)  // Warm amber muted
+            return currentPalette.textSecondary.opacity(0.7)
         }
         if accentColorOption != nil {
             return Color.secondary.opacity(0.7)
         }
-        // Interpolate between secondary and a more muted version
         return palette.textSecondary.opacity(0.7)
     }
 
     var textOnPrimary: Color {
-        // On amber/orange buttons in evening, use dark text for contrast
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.textOnPrimary : BrightPalette.textOnPrimary
+        }
+        // Legacy: dark text on amber buttons in evening
         if isDarkPhase && isCircadianMode {
-            return Color(red: 0.15, green: 0.10, blue: 0.08)  // Dark brown on amber buttons
+            return Color(red: 0.15, green: 0.10, blue: 0.08)
         }
         return .white
     }
 
-    // MARK: - Card Text Colors (CIRCADIAN-AWARE, INTERPOLATED for high contrast)
-    // Colors smoothly interpolate for gradual transitions!
+    // MARK: - Card Text Colors (HIGH CONTRAST for readability)
 
-    /// Primary text ON cards - circadian-aware for contrast
-    /// CRITICAL: Cards use circadian backgrounds (GlassyCardBackground), so text must match
+    /// Primary text ON cards
     var textOnCard: Color {
-        // CRITICAL: Card backgrounds ALWAYS use circadian colors (GlassyCardBackground)
-        // So we MUST use bright text in dark phases regardless of appearance mode
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.textPrimary : BrightPalette.textPrimary
+        }
+        // Legacy circadian mode
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            return currentPalette.textPrimary  // Bright warm cream on dark cards
+            return currentPalette.textPrimary
         }
         if accentColorOption != nil {
-            return Color(red: 0.15, green: 0.10, blue: 0.08)  // Dark on light cards
+            return Color(red: 0.15, green: 0.10, blue: 0.08)
         }
-        return palette.textPrimary  // Same as textPrimary for cards
+        return palette.textPrimary
     }
 
-    /// Secondary text ON cards - circadian-aware
+    /// Secondary text ON cards
     var textOnCardSecondary: Color {
-        // CRITICAL: Match dark phase check for card text consistency
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.textSecondary : BrightPalette.textSecondary
+        }
+        // Legacy circadian mode
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            return currentPalette.textSecondary  // Golden amber on dark cards
+            return currentPalette.textSecondary
         }
         if accentColorOption != nil {
             return Color(red: 0.35, green: 0.25, blue: 0.20)
         }
-        return palette.textSecondary  // Same as textSecondary for cards
+        return palette.textSecondary
     }
 
-    /// Muted text ON cards - circadian-aware
+    /// Muted text ON cards
     var textOnCardMuted: Color {
-        // CRITICAL: Match dark phase check for card text consistency
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.textMuted : BrightPalette.textMuted
+        }
+        // Legacy circadian mode
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            return currentPalette.textSecondary.opacity(0.7)  // Warm amber muted on dark cards
+            return currentPalette.textSecondary.opacity(0.7)
         }
         if accentColorOption != nil {
             return Color(red: 0.50, green: 0.40, blue: 0.35)
@@ -714,8 +853,24 @@ struct ColorTheme {
 
     // MARK: - Gradient Definitions
 
-    /// Primary gradient for headers and accents (Sleep-Optimized)
+    /// Primary gradient for headers and accents
     var primaryGradient: LinearGradient {
+        if _useSimplifiedMode {
+            if _isDarkModeSimplified {
+                return LinearGradient(
+                    colors: [DarkPalette.primary, DarkPalette.secondary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            } else {
+                return LinearGradient(
+                    colors: [BrightPalette.primary, BrightPalette.secondary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        }
+        // Legacy circadian mode
         if let accent = accentColorOption {
             return LinearGradient(
                 colors: [accent.color, accent.color.opacity(0.7)],
@@ -729,7 +884,7 @@ struct ColorTheme {
         switch period {
         case .morning:
             return LinearGradient(
-                colors: [Color(hex: "#0EA5E9")!, Color(hex: "#38BDF8")!],  // Blue OK for morning
+                colors: [Color(hex: "#0EA5E9")!, Color(hex: "#38BDF8")!],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -741,13 +896,13 @@ struct ColorTheme {
             )
         case .evening:
             return LinearGradient(
-                colors: [Color(hex: "#F28C40")!, Color(hex: "#D97706")!],  // Warm amber/orange
+                colors: [Color(hex: "#F28C40")!, Color(hex: "#D97706")!],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .night:
             return LinearGradient(
-                colors: [Color(hex: "#F28C40")!, Color(hex: "#D97706")!],  // Warm amber - NO PURPLE (sleep-safe)
+                colors: [Color(hex: "#F28C40")!, Color(hex: "#D97706")!],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -797,20 +952,21 @@ struct ColorTheme {
     /// Background gradient for full-screen views - SMOOTHLY INTERPOLATED
     /// Colors transition gradually throughout the day for natural feel
     var backgroundGradient: LinearGradient {
-        // CRITICAL: Use circadian backgrounds in dark phases for proper contrast
+        if _useSimplifiedMode {
+            return _isDarkModeSimplified ? DarkPalette.backgroundGradient : BrightPalette.backgroundGradient
+        }
+        // Legacy circadian mode: dark gradient in dark phases
         let currentPalette = CircadianPalette.current
         if currentPalette.isDark {
-            return currentPalette.backgroundGradient  // Dark gradient for dark phases
+            return currentPalette.backgroundGradient
         }
         if accentColorOption != nil {
-            // Non-circadian mode during day: use subtle system background
             return LinearGradient(
                 colors: [Color(.systemBackground), Color(.secondarySystemBackground)],
                 startPoint: .top,
                 endPoint: .bottom
             )
         }
-        // Use palette's interpolated gradient
         return palette.backgroundGradient
     }
 
@@ -2056,13 +2212,22 @@ struct JourneyProgressData: Codable {
     // Section completion status for current day
     var sleepLogCompleted: Bool = false
     var assessmentCompleted: Bool = false
-    // Day ready timestamp - when both required sections were completed (milliseconds since epoch)
-    // Used to calculate when next day unlocks (4 AM of next calendar day after this timestamp)
+    // Legacy: Day ready timestamp (no longer used for unlock calculation, kept for backwards compat)
     var dayReadyAt: Double? = nil
     // Expansion pack completion for current day (tracked locally)
     var expansionPackCompleted: Bool = false
     // Gateways whose expansion questions have been answered (persists across days)
     var completedExpansionGateways: [GatewayType] = []
+
+    // MARK: - Calendar Gating (replaces 4 AM time-based unlock)
+    /// True if next day is calendar-available (Day N unlocks on journey start + N-1 days)
+    var calendarUnlocked: Bool = true
+    /// User-friendly message when calendar-locked (e.g., "Day 2 unlocks on Wed, Jan 8")
+    var calendarLockMessage: String? = nil
+    /// The highest day number allowed by calendar date (1-10)
+    var maxDayAllowed: Int? = nil
+    /// ISO date string when next day unlocks ("YYYY-MM-DD")
+    var nextDayUnlocksOn: String? = nil
 
     var progressPercentage: Double {
         return Double(completedDays.count) / Double(totalDays) * 100.0
