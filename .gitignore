@@ -64,3 +64,7 @@ linear_client.py
 
 ZoeSleep/build/
 .build/
+
+# Auto-generated Claude directory docs
+**/CLAUDE.md
+!CLAUDE.md
