@@ -3195,6 +3195,36 @@ struct VoiceParseResponse: Codable {
 
 extension ConvexService {
 
+    // MARK: - EVI Voice Token
+
+    /// Get a Hume EVI access token for WebSocket connection (server-side token generation)
+    func getEVIAccessToken() async throws -> String {
+        guard let userId = currentUserId else {
+            throw ConvexError.notAuthenticated
+        }
+
+        struct EVITokenResponse: Codable {
+            let accessToken: String?
+            let error: String?
+        }
+
+        let response: EVITokenResponse = try await client.action(
+            "humeEmotions:getEVIAccessToken",
+            args: ["userId": userId]
+        )
+
+        if let error = response.error {
+            print("[ConvexService] EVI token error: \(error)")
+            throw ConvexError.serverError(error)
+        }
+
+        guard let token = response.accessToken, !token.isEmpty else {
+            throw ConvexError.serverError("No access token returned")
+        }
+
+        return token
+    }
+
     /// Analyze audio emotions via Hume AI (proxied through Convex)
     func analyzeEmotion(
         audioBase64: String,

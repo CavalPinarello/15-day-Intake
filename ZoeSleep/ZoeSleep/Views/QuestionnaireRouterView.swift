@@ -32,7 +32,21 @@ struct QuestionnaireRouterView: View {
 
     var body: some View {
         Group {
-            if themeManager.easyModeEnabled {
+            if themeManager.humeVoiceEnabled {
+                // Hume EVI empathic voice conversation
+                HumeVoiceIntakeView(
+                    dayNumber: currentDay,
+                    section: sectionArg,
+                    userName: "", // TODO: fetch from user profile
+                    onComplete: {
+                        dismiss()
+                    },
+                    onSwitchToManual: { remainingQuestions in
+                        // Fall back to standard questionnaire
+                        dismiss()
+                    }
+                )
+            } else if themeManager.easyModeEnabled {
                 // Check if we should use the full conversational assessment
                 if shouldUseConversationalAssessment {
                     // Full conversational experience with Zoe intro and guardrails
@@ -59,6 +73,14 @@ struct QuestionnaireRouterView: View {
                 .environmentObject(healthKitManager)
                 .environmentObject(themeManager)
             }
+        }
+    }
+
+    /// Map QuestionnaireSection to Convex API section string
+    private var sectionArg: String {
+        switch startSection {
+        case .sleepLog: return "sleepLog"
+        case .assessment, .expansionPack: return "assessment"
         }
     }
 

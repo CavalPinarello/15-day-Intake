@@ -15,6 +15,70 @@ import { v } from "convex/values";
 
 // Hume API configuration
 const HUME_API_URL = "https://api.hume.ai/v0/batch/jobs";
+const HUME_TOKEN_URL = "https://api.hume.ai/oauth2-cc/token";
+
+// ============================================
+// EVI Access Token (for iOS WebSocket connection)
+// ============================================
+
+export const getEVIAccessToken = action({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (_ctx, _args): Promise<{
+    accessToken: string | null;
+    error: string | null;
+  }> => {
+    const apiKey = process.env.HUME_API_KEY;
+    const secretKey = process.env.HUME_SECRET_KEY;
+
+    if (!apiKey || !secretKey) {
+      console.log("[humeEmotions:getEVIAccessToken] HUME_API_KEY or HUME_SECRET_KEY not configured");
+      // Return API key directly as fallback for development
+      if (apiKey) {
+        return { accessToken: `apikey:${apiKey}`, error: null };
+      }
+      return { accessToken: null, error: "Hume API credentials not configured" };
+    }
+
+    try {
+      // Base64 encode "apiKey:secretKey"
+      const credentials = Buffer.from(`${apiKey}:${secretKey}`).toString("base64");
+
+      const response = await fetch(HUME_TOKEN_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Basic ${credentials}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "grant_type=client_credentials",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[humeEmotions:getEVIAccessToken] Token error:", response.status, errorText);
+        return { accessToken: null, error: `Token request failed: ${response.status}` };
+      }
+
+      const result = await response.json() as { access_token?: string };
+      const token = result.access_token;
+
+      if (!token) {
+        return { accessToken: null, error: "No access_token in response" };
+      }
+
+      console.log("[humeEmotions:getEVIAccessToken] Token obtained successfully");
+      return { accessToken: token, error: null };
+
+    } catch (error) {
+      console.error("[humeEmotions:getEVIAccessToken] Error:", error);
+      return {
+        accessToken: null,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  }
+});
 
 // Sleep-relevant emotions we track
 const SLEEP_RELEVANT_EMOTIONS = [

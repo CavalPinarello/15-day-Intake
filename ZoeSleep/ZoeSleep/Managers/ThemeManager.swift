@@ -219,6 +219,14 @@ class ThemeManager: ObservableObject {
         }
     }
 
+    /// Hume EVI voice intake - empathic conversational questionnaire
+    /// Uses Hume AI for natural voice conversations with emotion tracking
+    @Published var humeVoiceEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(humeVoiceEnabled, forKey: "humeVoiceEnabled")
+        }
+    }
+
     @Published var debugMode: Bool = false {
         didSet {
             UserDefaults.standard.set(debugMode, forKey: "debugMode")
@@ -424,6 +432,9 @@ class ThemeManager: ObservableObject {
 
         // Load conversational assessment mode
         self.conversationalAssessmentEnabled = UserDefaults.standard.bool(forKey: "conversationalAssessmentEnabled")
+
+        // Load Hume voice mode
+        self.humeVoiceEnabled = UserDefaults.standard.bool(forKey: "humeVoiceEnabled")
     }
 
     // MARK: - Enhanced Readability Mode

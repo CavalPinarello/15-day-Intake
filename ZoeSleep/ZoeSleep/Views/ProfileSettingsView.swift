@@ -786,6 +786,31 @@ struct ProfileSettingsView: View {
                 }
             }
 
+            // Hume Voice - Empathic AI voice intake
+            Toggle(isOn: $themeManager.humeVoiceEnabled) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Hume Voice (Beta)", systemImage: "brain.head.profile")
+                        .font(.headline)
+                    Text("Empathic AI conversations with emotion tracking")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .tint(.purple)
+            .accessibleTapTarget()
+
+            if themeManager.humeVoiceEnabled {
+                HStack {
+                    Image(systemName: "waveform.and.person.filled")
+                        .foregroundColor(.purple)
+                    Text("Voice intake uses Hume AI emotional intelligence")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+            }
+
             // Divider row to separate enhanced mode from individual settings
             if themeManager.enhancedReadabilityMode {
                 HStack {
