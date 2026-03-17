@@ -189,6 +189,9 @@
 		CSLIB01012C8E123456789CS1 /* ConversationScriptLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CSLIB02012C8E123456789CS2 /* ConversationScriptLibrary.swift */; };
 		RTVCB01012C8E123456789RT1 /* RealTimeVoiceCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RTVC001012C8E123456789RT2 /* RealTimeVoiceCheckInView.swift */; };
 		RTVCB02012C8E123456789RT3 /* RealTimeVoiceCheckInViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = RTVC002012C8E123456789RT4 /* RealTimeVoiceCheckInViewModel.swift */; };
+		HVIV001A1B2C3D4E5F6A7B8C /* HumeVoiceIntakeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = HVIV002A1B2C3D4E5F6A7B8C /* HumeVoiceIntakeView.swift */; };
+		HVSR001D1E2F3A4B5C6D7E8F /* HumeVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = HVSR002D1E2F3A4B5C6D7E8F /* HumeVoiceService.swift */; };
+		VQOR001F1A2B3C4D5E6F7A8B /* VoiceQuestionnaireOrchestrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = VQOR002F1A2B3C4D5E6F7A8B /* VoiceQuestionnaireOrchestrator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -416,6 +419,9 @@
 		CSLIB02012C8E123456789CS2 /* ConversationScriptLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConversationScriptLibrary.swift; path = Services/ConversationScriptLibrary.swift; sourceTree = "<group>"; };
 		RTVC001012C8E123456789RT2 /* RealTimeVoiceCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RealTimeVoiceCheckInView.swift; path = Views/CheckIn/RealTimeVoiceCheckInView.swift; sourceTree = "<group>"; };
 		RTVC002012C8E123456789RT4 /* RealTimeVoiceCheckInViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RealTimeVoiceCheckInViewModel.swift; path = Views/CheckIn/RealTimeVoiceCheckInViewModel.swift; sourceTree = "<group>"; };
+		HVIV002A1B2C3D4E5F6A7B8C /* HumeVoiceIntakeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HumeVoiceIntakeView.swift; path = Views/EasyMode/HumeVoiceIntakeView.swift; sourceTree = "<group>"; };
+		HVSR002D1E2F3A4B5C6D7E8F /* HumeVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HumeVoiceService.swift; path = Services/Voice/HumeVoiceService.swift; sourceTree = "<group>"; };
+		VQOR002F1A2B3C4D5E6F7A8B /* VoiceQuestionnaireOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceQuestionnaireOrchestrator.swift; path = Managers/VoiceQuestionnaireOrchestrator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -459,6 +465,7 @@
 				B48089132E5784210A5A416B /* AudioSessionManager.swift */,
 				ELEVENCONV002 /* ElevenLabsConversationService.swift */,
 				HUME001012C8E123456789H01 /* HumeEmotionService.swift */,
+				HVSR002D1E2F3A4B5C6D7E8F /* HumeVoiceService.swift */,
 			);
 			name = Voice;
 			sourceTree = "<group>";
@@ -491,6 +498,7 @@
 				ZOEORB002 /* ZoeOrbView.swift */,
 				VOICECONV002 /* VoiceConversationView.swift */,
 				SEAMLESSVOICE002 /* SeamlessVoiceQuestionnaireView.swift */,
+				HVIV002A1B2C3D4E5F6A7B8C /* HumeVoiceIntakeView.swift */,
 			);
 			name = EasyMode;
 			sourceTree = "<group>";
@@ -914,6 +922,7 @@
 				CBTI002012C8E123456789C02 /* CBTISessionManager.swift */,
 				ACCS001012C8E123456789A01 /* AccessibilityVoiceManager.swift */,
 				VASM002012C8E123456789V02 /* VoiceAssessmentSessionManager.swift */,
+				VQOR002F1A2B3C4D5E6F7A8B /* VoiceQuestionnaireOrchestrator.swift */,
 			);
 			name = Managers;
 			sourceTree = "<group>";
@@ -1307,6 +1316,9 @@
 				F901E03A9B680FE3D4018475 /* CircleCropView.swift in Sources */,
 				ED1D5DE68870999C9A6E923D /* ImageUploadService.swift in Sources */,
 				3F1F8C56A5E6CDEC03023803 /* PhysicianModels.swift in Sources */,
+				HVIV001A1B2C3D4E5F6A7B8C /* HumeVoiceIntakeView.swift in Sources */,
+				HVSR001D1E2F3A4B5C6D7E8F /* HumeVoiceService.swift in Sources */,
+				VQOR001F1A2B3C4D5E6F7A8B /* VoiceQuestionnaireOrchestrator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
